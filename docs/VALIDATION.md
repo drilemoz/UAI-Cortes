@@ -1,20 +1,25 @@
-# Validação do Uai Cortes 0.1.2
+# Validação do Uai Cortes 0.1.3
 
-## Evidência de falha, GitHub Actions #2, 18/10/2026
-- O Android SDK API 36 e Build Tools 36.0.0 foram instalados e verificados.
-- Os quatro Secrets estavam disponíveis e a keystore foi decodificada para assinatura persistente.
-- O Gradle 8.11.1 iniciou normalmente e a tarefa `:app:compileDebugKotlin` falhou.
-- Erros `Unresolved reference 'OverlaySettings'` e `Unresolved reference 'VideoCompositorSettings'` em `ExportEngine.kt`, acompanhados por dois `overrides nothing` e um `Argument type mismatch` (7 diagnósticos no total).
-- O build não chegou a `:app:assembleRelease` e não gerou APK.
+## Evidência: GitHub Actions Gerar APK #3 (18/10/2026)
 
-## Correção aplicada
-- Imports substituídos pelos tipos documentados `androidx.media3.common.OverlaySettings` e `androidx.media3.common.VideoCompositorSettings`.
-- `StaticOverlaySettings` continua em `androidx.media3.effect`, conforme referência Media3.
-- Sincronizados Gradle, Sobre, README, workflow e notas para `0.1.2`/versionCode `3`.
-- Referências oficiais: https://developer.android.com/reference/androidx/media3/common/OverlaySettings e https://developer.android.com/reference/androidx/media3/common/VideoCompositorSettings
+- Android API 36 e Build Tools 36.0.0: instalação concluída.
+- Assinatura persistente: chave preparada a partir dos quatro Secrets (seus valores não são incluídos na distribuição).
+- `:app:compileDebugKotlin` e `:app:compileReleaseKotlin`: concluídos, com avisos de APIs de ícones depreciadas.
+- `:app:testDebugUnitTest`: concluído.
+- `:app:assembleRelease`: concluído e APK empacotado no runner.
+- `:app:lintDebug`: **falha**, com dois erros `UnsafeOptInUsageError` em `MainActivity.kt:343`, ligados ao `PlayerView.setShowBuffering(...)`, além de 30 avisos.
+- Resultado geral: job falhou em `lintDebug`; verificação e publicação do APK não foram executadas.
 
-## Validações de fonte
-- Executar `python3 tools/validate_source.py` para checar imports, versões, arquivos e workflow.
-- Validar sintaxe do YAML e integridade/CRC do ZIP.
-- **Não houve validação do APK Android completo neste ambiente.** Repetir `:app:testDebugUnitTest :app:lintDebug :app:assembleRelease` no Actions e confirmar a verificação `apksigner`.
-- PiP, volume e exportação continuam dependentes de testes reais de funcionamento em aparelhos com hardware e codecs distintos.
+## Correção aplicada na 0.1.3
+
+- `MainActivity.kt`: `@androidx.annotation.OptIn(UnstableApi::class)` apenas em `EditorScreen`, conforme https://developer.android.com/media/media3/exoplayer/troubleshooting
+- Conservados os controles da prévia e seu indicador de buffering.
+- `tools/validate_source.py`: valida a presença do opt-in e a versão. A análise de Lint permanece obrigatória, sem baseline ou `abortOnError = false`.
+- Sincronizado `versionCode=4`, `versionName=0.1.3`, APK `UaiCortes-v0.1.3.apk` e GitHub Release `v0.1.3`.
+
+## Validação local possível
+
+- `python3 tools/validate_source.py`
+- Sintaxe do workflow YAML, integridade/CRC do ZIP e inspeção do versionamento.
+- Ambiente local sem Android SDK/Gradle completos: **não afirmar que Lint da versão 0.1.3 passou antes da execução no GitHub Actions**.
+- Testes físicos e exportação real, incluindo PiP/vídeo/áudio, continuam pendentes.

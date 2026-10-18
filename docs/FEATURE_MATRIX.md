@@ -18,4 +18,4 @@
 | Progresso e cancelamento | Implementado | Pendente |
 | Exportação em serviço de primeiro plano | Não | Pendente |
 
-As funcionalidades listadas como implementadas foram escritas, mas não verificadas por compilação Android e testes em aparelho. Esta versão deve ser tratada como uma **alpha de desenvolvimento**.
+As funcionalidades marcadas como implementadas passaram por compilação Debug/Release no workflow #3 da versão 0.1.2, mas não foram testadas em aparelho. O fluxo foi interrompido pelo Android Lint e a correção do opt-in na 0.1.3 ainda depende de nova execução do workflow. Tratar como **alpha de desenvolvimento**.

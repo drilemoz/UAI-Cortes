@@ -36,6 +36,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.delay
 import java.text.DateFormat
 import java.util.Date
@@ -299,13 +301,14 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.2 (3)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.3 (4)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: projetos locais, editor de clipes, sobreposição PiP, volume, áudio e exportação MP4.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
+@OptIn(UnstableApi::class)
 @Composable
 private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     onSelected:(String)->Unit,onPosition:(Long)->Unit,onBack:()->Unit,onEdit:(String)->Unit,
