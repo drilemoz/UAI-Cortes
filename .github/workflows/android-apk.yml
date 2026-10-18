@@ -1,0 +1,79 @@
+name: Gerar APK Uai Cortes
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    name: Compilar, testar e publicar APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: SDK Android
+        uses: android-actions/setup-android@v3
+      - name: Instalar Android API 36
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+      - name: Gradle 8.11.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Preparar assinatura persistente (quando configurada)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/uai-cortes-release.p12"
+            echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/uai-cortes-release.p12" >> "$GITHUB_ENV"
+            echo 'Assinatura persistente ativada.'
+          else
+            echo 'AVISO: usando assinatura debug do runner. Para atualizações, configure os quatro Secrets.'
+          fi
+      - name: Testes e build Release
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleRelease
+      - name: Verificar APK, nome e assinatura
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          APK="$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -1)"
+          test -n "$APK"
+          cp "$APK" dist/UaiCortes-v0.1.0.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose dist/UaiCortes-v0.1.0.apk
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging dist/UaiCortes-v0.1.0.apk | grep -E 'package:|sdkVersion:|targetSdkVersion:'
+          test "$(find dist -type f | wc -l)" -eq 1
+      # Não utilizar actions/upload-artifact: o GitHub empacota os artifacts em ZIP.
+      # Na ação manual e nas tags, disponibilizar o APK diretamente em Release Assets.
+      - name: Publicar APK direto em GitHub Releases
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="v0.1.0"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/UaiCortes-v0.1.0.apk --clobber
+          else
+            gh release create "$TAG" dist/UaiCortes-v0.1.0.apk --title "Uai Cortes v0.1.0" --notes-file RELEASE_NOTES.md --prerelease
+          fi
