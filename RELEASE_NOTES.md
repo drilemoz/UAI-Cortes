@@ -1,12 +1,11 @@
-# Uai Cortes v0.1.7
+# Uai Cortes v0.1.8
 
-- PiP com ações **Posição**, **Tamanho** e **Duração** em janelas personalizadas que seguem os temas do aplicativo.
-- Grade com nove alinhamentos, gestos preservados, tamanhos predefinidos (5% a 90%), entrada manual e controle deslizante.
-- Janela de duração com início, fim e faixa visual.
-- Novo gerenciador interno para escolher o PiP com abas **Imagens / Vídeos**, pastas, miniaturas e tempo dos vídeos. Bibliotecas com acesso total ou parcial conforme permissões concedidas pelo Android; opção de abrir o seletor de documentos do sistema.
-- Botão independente de som para PiP em vídeo, permitindo silenciar e reativar mantendo o nível ajustado, também na exportação.
-- Ajustado versionCode para 8, publicação em Releases de `UaiCortes-v0.1.7.apk`.
+- Até quatro PiPs simultâneos, cada um com mídia, posição, tamanho, duração e áudio independentes.
+- Painéis de edição no próprio layout: botões quadrados que se expandem, sem pop-ups.
+- Reposicionamento automático sem colisões nos intervalos temporais simultâneos; quando a área livre é insuficiente, mostra aviso.
+- Faixas individuais no editor e migração de projetos antigos com PiP único.
+- Composição de até quatro camadas Media3 e faixas de áudio opcionais.
+- Biblioteca Imagens/Vídeos e alternativas SAF preservadas.
+- versionCode 9, release `UaiCortes-v0.1.8.apk`.
 
-- Corrigida falha do build 7: `PrimaryTabRow` no `MediaBrowser.kt` precisava de `@OptIn(ExperimentalMaterial3Api::class)`. O opt-in foi aplicado apenas à função `DeviceMediaBrowser`.
-
-**Validação:** checagens estáticas e testes locais isolados; build, permissões reais, interface e exportação Media3 ainda precisam de confirmação no Android.
+**Observação:** Testes locais de posicionamento e sintaxe não substituem build GitHub Actions nem validação Android. Prévia e exportação de quatro vídeos precisam de testes físicos de codecs, memória e sincronismo.

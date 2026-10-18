@@ -1,29 +1,22 @@
-# Uai Cortes 0.1.7 | Validação
+# Uai Cortes 0.1.8 | Validação
 
-## Correção do build 7 (versão 0.1.6)
-- Log GitHub Actions de 18/10/2026: `:app:compileDebugKotlin` e `:app:compileReleaseKotlin` falharam em `MediaBrowser.kt:165:9`, componente `PrimaryTabRow` (Material 3 experimental sem opt-in).
-- Correção local na função `DeviceMediaBrowser`: `@OptIn(ExperimentalMaterial3Api::class)`, sem desativar Lint ou warnings.
-- A execução da versão 0.1.7 permanece pendente; não declarar APK aprovado antes do CI.
+## Funcionalidade implementada no código
+- Persistência de até quatro PiPs no campo `overlays`, `schemaVersion=2`, IDs estáveis; projetos com `pip` legado migrados em leitura.
+- Painel de edição com quatro botões quadrados, animação de expansão, nove atalhos, barra/entrada percentual, duração e mídia sem pop-ups.
+- Adição e substituição via MediaStore/SAF, controles independentes de volume e de silêncio.
+- Layout anticolisão usa aspecto da mídia e do quadro, horário de início/fim e prioridade do PiP editado. Rejeita layouts impossíveis com Toast.
+- Timeline individual por PiP e composição Media3 com entradas de vídeo ordenadas antes do vídeo base e faixas de áudio independentes.
 
-## Alterações funcionais inspecionadas
-- PiP reorganizado em três diálogos personalizados baseados no tema, com posição 3×3, escala 5–90% (atalhos, texto, slider, pinça) e duração início/fim.
-- Botão separado para ativar/silenciar PiP em vídeo e controle de volume; `Overlay.muted` serializado com padrão `false` para compatibilidade com projetos antigos.
-- Visualização PiP configura ExoPlayer com volume nulo quando silenciado; exportação omite faixa de áudio PiP quando `muted`.
-- Seleção PiP pela biblioteca MediaStore e permissão progressiva: READ_EXTERNAL_STORAGE até 32, READ_MEDIA_IMAGES/VIDEO na 33+, READ_MEDIA_VISUAL_USER_SELECTED na 34+.
-- Grade lazy de miniaturas em 4 dp, geradas via loadThumbnail (API 29+) e fallback em APIs anteriores, em Dispatchers.IO. Cache LRU de 20 MiB, limite de 3000 itens mais recentes por tipo.
-- Botão de gerenciador de documentos do Android preserva seleção SAF como alternativa a permissões, com concessão persistível.
+## Testes disponíveis
+- Parser Kotlin PSI: sintaxe dos arquivos Kotlin, não valida tipos/dependências Android.
+- Smoke test Kotlin/JVM de geometria: quatro PiPs simultâneos, separação, reutilização temporal, bloqueio de layouts impossíveis e limite quatro.
+- Testes JUnit adicionados para colisões, priorização, limites e migração JSON.
+- `python3 tools/validate_source.py`: versão, workflow, referências a múltiplos PiPs e remoção dos diálogos PiP.
+- ZIP: validação CRC, presença de fontes e documentação.
 
-## Verificações locais
-- Em 18/10/2026: `python3 tools/validate_source.py` aprovado; parser Kotlin PSI validou 7 arquivos sem erro sintático; smoke test Kotlin puro de escala, presets e duração aprovado.
-- Build Gradle completo não executado localmente: SDK/Gradle Android não disponíveis neste ambiente.
-- `python3 tools/validate_source.py`: metadados, workflow, integrações de mídia, código PiP e regressões de Media3/opt-in Compose Material3.
-- `kotlinc`: compilar/testar cálculo puro de posições, escala e intervalos com entradas 5%, 10%, 15% e inválidas.
-- Inspeção de arquivo AndroidManifest.xml e consistência de release/versionCode.
-- Verificação de integridade ZIP do código-fonte.
-
-## Pendências importantes
-- Build Android completo (Gradle/SDK 36, CI) e Android Lint.
-- Teste em aparelho do acesso total/parcial, pastas (incluindo WhatsApp), miniaturas em versões 26–36 e persistência de permissões.
-- Testar memória ao percorrer galerias grandes, prévia e exportação PiP (vídeos com/sem som, proporção e sincronismo).
-- Confirmar tamanho exibido e exportado, navegação e diálogos em tema claro, escuro e AMOLED.
-- Transição fade/dissolvência ainda não implementada.
+## Pendências antes de considerar validado
+- Executar workflow `:app:testDebugUnitTest :app:lintDebug :app:assembleRelease` e verificar APK/assinatura.
+- Testar física e visualmente: animação de expansão sem corte, gestos, layouts com PiPs grandes ou vídeos verticais, Tema Escuro/AMOLED.
+- Testar prévia/exportação com 1, 2, 3 e 4 PiPs em vídeo; H.264/H.265, áudios opcionais, posições, proporção e sincronismo.
+- A disponibilidade de 4 decodificadores simultâneos depende do hardware. Não afirmar compatibilidade antes de medir.
+- Confirmar permissões de galerias (parcial e total) e URI SAF persistente após reiniciar.

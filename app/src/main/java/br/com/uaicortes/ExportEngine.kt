@@ -50,39 +50,38 @@ class GainProcessor(private val gain: Float) : BaseAudioProcessor() {
 }
 
 @OptIn(UnstableApi::class)
-class PipCompositor(private val pip: Overlay) : VideoCompositorSettings {
-    private var pipScaleX = pip.scale
-    private var pipScaleY = pip.scale
-    private var xCenter = pip.x
-    private var yCenter = pip.y
+class PipCompositor(private val overlays: List<Overlay>) : VideoCompositorSettings {
+    private data class Placement(val scaleX: Float, val scaleY: Float, val x: Float, val y: Float)
+    private var computed: List<Placement> = emptyList()
 
     override fun getOutputSize(inputSizes: MutableList<Size>): Size {
-        // Media3 entrega os tamanhos dos quadros das entradas do compositor.
-        // A sequência 0 é o PiP; a sequência 1 é o vídeo principal.
-        val output = inputSizes.getOrElse(1) { inputSizes[0] }
-        val input = inputSizes[0]
-        val outputWidth = output.width.coerceAtLeast(1).toFloat()
-        val outputHeight = output.height.coerceAtLeast(1).toFloat()
-        val inputWidth = input.width.coerceAtLeast(1).toFloat()
-        val inputHeight = input.height.coerceAtLeast(1).toFloat()
-        val (wf, hf) = OverlayEditorLogic.dimensions(
-            pip.scale, inputWidth / inputHeight, outputWidth / outputHeight)
-        pipScaleX = wf * outputWidth / inputWidth
-        pipScaleY = hf * outputHeight / inputHeight
-        xCenter = OverlayEditorLogic.clampCenter(pip.x, wf)
-        yCenter = OverlayEditorLogic.clampCenter(pip.y, hf)
-        return output
+        // A ordem das sequências de VÍDEO é overlays[0..n-1], depois o vídeo principal.
+        val main = inputSizes.getOrElse(overlays.size) { inputSizes.last() }
+        val outW = main.width.coerceAtLeast(1).toFloat()
+        val outH = main.height.coerceAtLeast(1).toFloat()
+        computed = overlays.mapIndexed { index, pip ->
+            val input = inputSizes[index]
+            val inW = input.width.coerceAtLeast(1).toFloat()
+            val inH = input.height.coerceAtLeast(1).toFloat()
+            val (wf, hf) = OverlayEditorLogic.dimensions(pip.scale, inW / inH, outW / outH)
+            Placement(wf * outW / inW, hf * outH / inH,
+                OverlayEditorLogic.clampCenter(pip.x, wf),
+                OverlayEditorLogic.clampCenter(pip.y, hf))
+        }
+        return main
     }
 
     override fun getOverlaySettings(inputId: Int, presentationTimeUs: Long): OverlaySettings {
-        return if (inputId == 0) StaticOverlaySettings.Builder()
-            .setScale(pipScaleX, pipScaleY)
+        val pip = overlays.getOrNull(inputId) ?: return StaticOverlaySettings.Builder().build()
+        val placement = computed.getOrNull(inputId) ?: return StaticOverlaySettings.Builder()
+            .setAlphaScale(0f).build()
+        return StaticOverlaySettings.Builder()
+            .setScale(placement.scaleX, placement.scaleY)
             .setOverlayFrameAnchor(0f, 0f)
-            .setBackgroundFrameAnchor(xCenter * 2f - 1f, 1f - yCenter * 2f)
-            .setAlphaScale(if (presentationTimeUs < pip.startAtMs * 1000L ||
-                presentationTimeUs >= (pip.startAtMs + pip.durationMs) * 1000L) 0f else 1f)
+            .setBackgroundFrameAnchor(placement.x * 2f - 1f, 1f - placement.y * 2f)
+            .setAlphaScale(if (presentationTimeUs >= pip.startAtMs * 1000L &&
+                presentationTimeUs < (pip.startAtMs + pip.durationMs) * 1000L) 1f else 0f)
             .build()
-        else StaticOverlaySettings.Builder().build()
     }
 }
 
@@ -106,6 +105,7 @@ class ExportEngine(private val context: Context) {
     fun start(project: VideoProject, height: Int, fileName: String,
               onSuccess: (Uri) -> Unit, onError: (String) -> Unit) {
         require(project.clips.isNotEmpty()) { "Projeto sem vídeos" }
+        require(project.overlays.size <= OverlayPlacement.MAX_PIPS) { "O limite é de 4 PiPs" }
         cancel()
         val mainItems = project.clips.map { clip ->
             val item = MediaItem.Builder().setUri(clip.uri).setClippingConfiguration(
@@ -116,7 +116,8 @@ class ExportEngine(private val context: Context) {
         }
         val mainSequence = EditedMediaItemSequence.withAudioAndVideoFrom(mainItems)
         val sequences = mutableListOf<EditedMediaItemSequence>()
-        project.pip?.let { pip ->
+        // Ordem estável das entradas de vídeo; áudio é adicionado DEPOIS do vídeo principal.
+        for (pip in project.overlays.take(OverlayPlacement.MAX_PIPS)) {
             val media = if (pip.isImage) MediaItem.Builder().setUri(pip.uri)
                 .setImageDurationMs(pip.durationMs).build()
                 else MediaItem.Builder().setUri(pip.uri).setClippingConfiguration(
@@ -129,18 +130,19 @@ class ExportEngine(private val context: Context) {
             val trailing = project.durationMs - pip.startAtMs - pip.durationMs
             if (trailing > 0) overlayTrack.addGap(trailing * 1000L)
             sequences += overlayTrack.build()
-            if (!pip.isImage && !pip.muted && pip.volume > 0f) {
-                val audioTrack = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_AUDIO))
-                if (pip.startAtMs > 0) audioTrack.addGap(pip.startAtMs * 1000L)
-                audioTrack.addItem(EditedMediaItem.Builder(media)
-                    .setDurationUs(pip.durationMs * 1000L)
-                    .setEffects(Effects(listOf(GainProcessor(pip.volume)), emptyList())).build())
-                sequences += audioTrack.build()
-            }
         }
-        // O compositor desenha a primeira sequência sobre a segunda.
-        // A faixa PiP vem primeiro, mas inclui lacunas transparentes até a duração principal.
-        sequences.add(if (project.pip != null) 1 else 0, mainSequence)
+        sequences += mainSequence
+        for (pip in project.overlays.take(OverlayPlacement.MAX_PIPS)) {
+            if (pip.isImage || pip.muted || pip.volume <= 0f) continue
+            val media = MediaItem.Builder().setUri(pip.uri).setClippingConfiguration(
+                MediaItem.ClippingConfiguration.Builder().setEndPositionMs(pip.durationMs).build()).build()
+            val audioTrack = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_AUDIO))
+            if (pip.startAtMs > 0) audioTrack.addGap(pip.startAtMs * 1000L)
+            audioTrack.addItem(EditedMediaItem.Builder(media)
+                .setDurationUs(pip.durationMs * 1000L)
+                .setEffects(Effects(listOf(GainProcessor(pip.volume)), emptyList())).build())
+            sequences += audioTrack.build()
+        }
         project.music?.let { music ->
             val track = EditedMediaItem.Builder(MediaItem.fromUri(music.uri))
                 .setEffects(Effects(listOf(GainProcessor(music.volume)), emptyList())).build()
@@ -148,7 +150,7 @@ class ExportEngine(private val context: Context) {
                 .buildUpon().setIsLooping(true).build()
         }
         val composition = Composition.Builder(sequences).apply {
-            if (project.pip != null) setVideoCompositorSettings(PipCompositor(project.pip))
+            if (project.overlays.isNotEmpty()) setVideoCompositorSettings(PipCompositor(project.overlays.take(4)))
             setEffects(Effects(emptyList(), listOf(Presentation.createForHeight(height))))
         }.build()
         val target = File(context.cacheDir, "uai-export-${System.currentTimeMillis()}.mp4")

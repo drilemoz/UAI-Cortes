@@ -30,18 +30,19 @@ data class Overlay(
     val uri: String, val isImage: Boolean, val durationMs: Long,
     val startAtMs: Long = 0, val x: Float = 0.5f, val y: Float = 0.5f,
     val scale: Float = 0.36f, val volume: Float = 0.5f,
-    val muted: Boolean = false
+    val muted: Boolean = false,
+    val id: String = UUID.randomUUID().toString()
 ) {
     fun json() = JSONObject().put("uri", uri).put("isImage", isImage)
         .put("durationMs", durationMs).put("startAtMs", startAtMs)
         .put("x", x.toDouble()).put("y", y.toDouble()).put("scale", scale.toDouble())
-        .put("volume", volume.toDouble()).put("muted", muted)
+        .put("volume", volume.toDouble()).put("muted", muted).put("id", id)
     companion object {
         fun read(j: JSONObject) = Overlay(j.getString("uri"), j.optBoolean("isImage"),
             j.optLong("durationMs", 5000), j.optLong("startAtMs"),
             j.optDouble("x", 0.5).toFloat(), j.optDouble("y", 0.5).toFloat(),
             j.optDouble("scale", 0.36).toFloat(), j.optDouble("volume", 0.5).toFloat(),
-            j.optBoolean("muted", false))
+            j.optBoolean("muted", false), j.optString("id").ifBlank { UUID.randomUUID().toString() })
     }
 }
 
@@ -53,19 +54,27 @@ data class Music(val uri: String, val title: String, val volume: Float = 0.35f) 
 data class VideoProject(
     val id: String = UUID.randomUUID().toString(), val title: String = "Meu vídeo",
     val updated: Long = System.currentTimeMillis(),
-    val clips: List<Clip> = emptyList(), val pip: Overlay? = null,
+    val clips: List<Clip> = emptyList(), val overlays: List<Overlay> = emptyList(),
     val music: Music? = null, val transition: String = "Corte direto"
 ) {
     val durationMs get() = clips.sumOf { it.durationMs }
+    val pip: Overlay? get() = overlays.firstOrNull() // acesso legado somente leitura
     fun json(): JSONObject = JSONObject().put("id", id).put("title", title).put("updated", updated)
         .put("clips", JSONArray().also { a -> clips.forEach { a.put(it.json()) } })
-        .put("pip", pip?.json()).put("music", music?.json()).put("transition", transition)
+        .put("schemaVersion", 2)
+        .put("overlays", JSONArray().also { a -> overlays.take(4).forEach { a.put(it.json()) } })
+        .put("music", music?.json()).put("transition", transition)
     companion object {
         fun read(j: JSONObject): VideoProject {
             val a = j.optJSONArray("clips") ?: JSONArray()
             return VideoProject(j.getString("id"), j.optString("title", "Meu vídeo"), j.optLong("updated"),
                 (0 until a.length()).map { Clip.read(a.getJSONObject(it)) },
-                j.optJSONObject("pip")?.let(Overlay::read), j.optJSONObject("music")?.let(Music::read),
+                (j.optJSONArray("overlays")?.let { overlays ->
+                    (0 until overlays.length()).mapNotNull { index ->
+                        runCatching { Overlay.read(overlays.getJSONObject(index)) }.getOrNull()
+                    }.take(4)
+                } ?: listOfNotNull(j.optJSONObject("pip")?.let(Overlay::read))),
+                j.optJSONObject("music")?.let(Music::read),
                 j.optString("transition", "Corte direto"))
         }
     }

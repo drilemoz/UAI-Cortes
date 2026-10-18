@@ -8,7 +8,7 @@
 | Definir início e fim e dividir clipes | Implementado no modelo/Transformer | Pendente |
 | Mudar ordem e remover clipes | Implementado | Pendente |
 | Prévia dos vídeos com ExoPlayer | Implementado | Pendente |
-| PiP com prévia do vídeo, arrasto, pinça, nove posições e intervalos | Implementado em código, não validado em aparelho | Pendente |
+| Até 4 PiPs, painel expansível, posicionamento anticolisão e áudio individual | Implementado em código, sem build Android confirmado | Pendente |
 | Controle de volume e música | Implementado no modelo e processo de composição | Pendente |
 | Silenciar primeiro clipe | Implementado | Pendente |
 | Corte preciso de áudio por trecho arbitrário | Não | Pendente |
@@ -18,4 +18,4 @@
 | Progresso e cancelamento | Implementado | Pendente |
 | Exportação em serviço de primeiro plano | Não | Pendente |
 
-Os recursos novos da versão 0.1.5 ainda **não foram validados por compilação Gradle ou testes físicos**. A execução #3 comprovou compilação Kotlin na versão 0.1.2, que não abrange estas alterações. Manter classificação **alpha de desenvolvimento**.
+Os recursos novos da versão 0.1.8 ainda **não foram validados por compilação Gradle ou testes físicos**. A execução #3 comprovou compilação Kotlin na versão 0.1.2, que não abrange estas alterações. Manter classificação **alpha de desenvolvimento**.

@@ -17,7 +17,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.window.Dialog
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -73,6 +78,8 @@ fun UaiApp() {
     var positionMs by remember { mutableLongStateOf(0L) }
     var pendingPicker by remember { mutableStateOf("") }
     var mediaOrigin by remember { mutableStateOf("editor") }
+    var selectedOverlayId by remember { mutableStateOf("") }
+    var mediaAction by remember { mutableStateOf("add") }
     var previous by remember { mutableStateOf("home") }
     val dark = when (theme) {
         "Claro" -> false
@@ -83,7 +90,52 @@ fun UaiApp() {
         surface = if(theme=="AMOLED") Color.Black else Color(0xFF202124))
     else lightColorScheme(primary = Blue, background = LightBg, surface = Color.White)
     fun write(p: VideoProject) { project = p; store.save(p); projects = store.load() }
-    fun navTo(s: String) { previous = screen; screen = s }
+    fun navTo(s: String) {
+        if (s == "pip" && project != null && project!!.overlays.none { it.id == selectedOverlayId })
+            selectedOverlayId = project!!.overlays.firstOrNull()?.id.orEmpty()
+        previous = screen; screen = s
+    }
+    fun saveOverlays(current: VideoProject, requested: List<Overlay>, preferredId: String?): Boolean {
+        val canvasAspect = current.clips.firstOrNull()?.let { mediaAspect(context, it.uri, false) } ?: 16f/9f
+        val slots = requested.map { pip ->
+            val aspect = mediaAspect(context, pip.uri, pip.isImage)
+            val (w, h) = OverlayEditorLogic.dimensions(pip.scale, aspect, canvasAspect)
+            PlacementItem(pip.id, pip.startAtMs, pip.durationMs, pip.x, pip.y, w, h)
+        }
+        val resolved = OverlayPlacement.arrange(slots, preferredId)
+        if (resolved == null) {
+            android.widget.Toast.makeText(context,
+                "Sem espaço para todos os PiPs. Reduza o tamanho ou ajuste a duração.",
+                android.widget.Toast.LENGTH_LONG).show()
+            return false
+        }
+        write(current.copy(overlays = requested.map { pip ->
+            val (x, y) = resolved.getValue(pip.id)
+            pip.copy(x = x, y = y)
+        }))
+        return true
+    }
+    fun insertOverlay(uri: Uri, isImage: Boolean, mediaMs: Long) {
+        val current = project ?: return
+        val replacing = mediaAction == "replace"
+        if (!replacing && current.overlays.size >= OverlayPlacement.MAX_PIPS) {
+            android.widget.Toast.makeText(context, "Limite de quatro PiPs atingido", android.widget.Toast.LENGTH_SHORT).show()
+            screen = "pip"; return
+        }
+        val previousPip = if (replacing) current.overlays.firstOrNull { it.id == selectedOverlayId } else null
+        val start = (previousPip?.startAtMs ?: positionMs).coerceIn(0L, (current.durationMs - 1).coerceAtLeast(0))
+        val remaining = (current.durationMs - start).coerceAtLeast(1L)
+        val duration = (if (isImage) (previousPip?.durationMs ?: 5000L) else mediaMs)
+            .coerceIn(1L, remaining)
+        val added = previousPip?.copy(uri = uri.toString(), isImage = isImage,
+            durationMs = duration) ?: Overlay(uri.toString(), isImage, duration,
+            startAtMs = start, scale = .30f)
+        val requested = if (previousPip != null) current.overlays.map {
+            if (it.id == previousPip.id) added else it
+        } else current.overlays + added
+        if (saveOverlays(current, requested, added.id)) selectedOverlayId = added.id
+        screen = "pip"
+    }
     val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) {
             val clips = uris.map { uri ->
@@ -102,8 +154,7 @@ fun UaiApp() {
             val image = context.contentResolver.getType(uri)?.startsWith("image/") == true
             val duration = (if (image) 5000L else mediaDuration(context, uri))
                 .coerceAtMost(((project?.durationMs ?: 5000) - positionMs).coerceAtLeast(1L))
-            project?.let { write(it.copy(pip = Overlay(uri.toString(), image, duration, positionMs))) }
-            screen = "pip"
+            insertOverlay(uri, image, duration)
         }
     }
     val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -140,23 +191,38 @@ fun UaiApp() {
                     onSelected = { selectedClip = it }, onPosition = { positionMs = it }, onBack = ::back,
                     onEdit = { navTo(it) }, onUpdate = { write(it) },
                     onAddVideo = { pendingPicker = "append"; videoPicker.launch(arrayOf("video/*")) },
-                    onPiP = { mediaOrigin = "editor"; screen = "media" },
-                    onAudio = { audioPicker.launch(arrayOf("audio/*")) }) }
+                    onPiP = {
+                        selectedOverlayId = project?.overlays?.firstOrNull()?.id.orEmpty()
+                        screen = "pip"
+                    },
+                    onAudio = { audioPicker.launch(arrayOf("audio/*")) },
+                    onSelectOverlay = { selectedOverlayId = it }) }
                 "trim" -> project?.let { TrimScreen(it, selectedClip, positionMs, ::back, { write(it) }, { selectedClip = it }) }
                 "audio" -> project?.let { AudioScreen(it, ::back, { write(it) }, { audioPicker.launch(arrayOf("audio/*")) }) }
-                "pip" -> project?.let { PipScreen(it, ::back, { write(it) }, {
-                    mediaOrigin = "pip"; screen = "media"
-                }) }
+                "pip" -> project?.let { current -> PipScreen(current, selectedOverlayId,
+                    onSelect = { selectedOverlayId = it }, back = ::back,
+                    onChange = { changed ->
+                        saveOverlays(current, current.overlays.map {
+                            if (it.id == changed.id) changed else it
+                        }, changed.id)
+                    },
+                    onRemove = { id ->
+                        write(current.copy(overlays = current.overlays.filterNot { it.id == id }))
+                        selectedOverlayId = current.overlays.firstOrNull { it.id != id }?.id.orEmpty()
+                    },
+                    choose = { replace ->
+                        if (!replace && current.overlays.size >= OverlayPlacement.MAX_PIPS) {
+                            android.widget.Toast.makeText(context, "Limite de quatro PiPs atingido",
+                                android.widget.Toast.LENGTH_SHORT).show()
+                        } else {
+                            mediaAction = if (replace) "replace" else "add"
+                            mediaOrigin = "pip"; screen = "media"
+                        }
+                    }) }
                 "media" -> DeviceMediaBrowser(::back, onSelect = { chosen ->
-                    project?.let { current ->
-                        val start = positionMs.coerceIn(0L, (current.durationMs - 1L).coerceAtLeast(0L))
-                        val remaining = (current.durationMs - start).coerceAtLeast(1L)
-                        val duration = (if (chosen.isImage) 5000L else chosen.durationMs.takeIf { it > 0 }
-                            ?: mediaDuration(context, chosen.uri)).coerceAtMost(remaining)
-                        write(current.copy(pip = Overlay(chosen.uri.toString(), chosen.isImage,
-                            duration, start)))
-                    }
-                    screen = "pip"
+                    val videoMs = if (chosen.isImage) 5000L else
+                        chosen.durationMs.takeIf { it > 0 } ?: mediaDuration(context, chosen.uri)
+                    insertOverlay(chosen.uri, chosen.isImage, videoMs)
                 }, openDocuments = { overlayPicker.launch(arrayOf("image/*", "video/*")) })
                 "transition" -> project?.let { TransitionScreen(it, ::back, { write(it) }) }
                 "export" -> project?.let { ExportScreen(it, store.quality(), ::back) }
@@ -320,7 +386,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.7 (8)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.8 (9)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: biblioteca por tipo de mídia, PiP com ajustes em janelas e controle independente de som.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -331,7 +397,8 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
 @Composable
 private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     onSelected:(String)->Unit,onPosition:(Long)->Unit,onBack:()->Unit,onEdit:(String)->Unit,
-    onUpdate:(VideoProject)->Unit,onAddVideo:()->Unit,onPiP:()->Unit,onAudio:()->Unit) {
+    onUpdate:(VideoProject)->Unit,onAddVideo:()->Unit,onPiP:()->Unit,onAudio:()->Unit,
+    onSelectOverlay:(String)->Unit) {
     val context=LocalContext.current
     val player=remember { ExoPlayer.Builder(context).build() }
     DisposableEffect(player) { onDispose { player.release() } }
@@ -375,10 +442,12 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                     resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                     setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
                 } }, update = { it.player = player }, modifier = Modifier.fillMaxSize())
-                p.pip?.let { pip ->
+                p.overlays.forEach { pip ->
                     if (currentMs >= pip.startAtMs && currentMs < pip.startAtMs + pip.durationMs) {
-                        PipLayer(pip, currentMs - pip.startAtMs, player.isPlaying,
-                            editable = false) { overlay -> onUpdate(p.copy(pip = overlay)) }
+                        key(pip.id) {
+                            PipLayer(pip, currentMs - pip.startAtMs, player.isPlaying,
+                                editable = false) { }
+                        }
                     }
                 }
             }
@@ -406,7 +475,7 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             },valueRange=0f..p.durationMs.toFloat(),modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp))
         TimelineRow("Vídeo",Blue,p.clips.map{ it.title to it.durationMs },p.durationMs,currentMs,selectedId,
             onClip={ id -> onSelected(p.clips[id].id);player.seekTo(id,0L) })
-        TimelineRow("PiP",Purple,p.pip?.let{listOf((if(it.isImage) "Imagem" else "Vídeo") to it.durationMs)} ?: emptyList(),p.durationMs,currentMs,"",onClip={onEdit("pip")})
+        OverlayTimeline(p.overlays, p.durationMs, onClick = { id -> onSelectOverlay(id); onEdit("pip") })
         TimelineRow("Áudio",Green,p.music?.let{listOf(it.title to p.durationMs)} ?: emptyList(),p.durationMs,currentMs,"",onClip={onEdit("audio")})
         Spacer(Modifier.height(5.dp));HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
         Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(10.dp), horizontalArrangement=Arrangement.SpaceEvenly) {
@@ -414,7 +483,7 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 Triple("PiP",Icons.Default.Layers,"pip"),Triple("Áudio",Icons.Default.MusicNote,"audio"),
                 Triple("Transição",Icons.Default.AutoAwesomeMotion,"transition")).forEach { (name,icon,key) ->
                 Column(Modifier.weight(1f).clickable {
-                    when(key) {"add"->onAddVideo();"pip"->if(p.pip==null)onPiP() else onEdit("pip");
+                    when(key) {"add"->onAddVideo();"pip"->onPiP();
                         "audio"->onEdit("audio");else->onEdit(key)}
                 },horizontalAlignment=Alignment.CenterHorizontally) {
                     Box(Modifier.size(52.dp).clip(RoundedCornerShape(16.dp))
@@ -443,6 +512,36 @@ private fun TimelineRow(label:String,color:Color, segments:List<Pair<String,Long
                     .background(color.copy(alpha=0.22f)).clickable {onClip(index)},contentAlignment=Alignment.Center) {
                     Text(title,maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=11.sp,
                         color=MaterialTheme.colorScheme.onSurface,modifier=Modifier.padding(horizontal=4.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OverlayTimeline(overlays: List<Overlay>, total: Long, onClick: (String) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        if (overlays.isEmpty()) {
+            TimelineRow("PiP", Purple, emptyList(), total, 0L, "") { }
+        } else overlays.forEachIndexed { index, layer ->
+            Row(Modifier.fillMaxWidth().height(29.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.width(58.dp).fillMaxHeight().clip(RoundedCornerShape(7.dp))
+                    .background(Purple), contentAlignment = Alignment.Center) {
+                    Text("PiP ${index + 1}", color = Color.White, fontSize = 11.sp)
+                }
+                Spacer(Modifier.width(6.dp))
+                BoxWithConstraints(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(6.dp))
+                    .background(Purple.copy(alpha = .14f))) {
+                    val start = (layer.startAtMs.toFloat() / total.coerceAtLeast(1)).coerceIn(0f, 1f)
+                    val len = (layer.durationMs.toFloat() / total.coerceAtLeast(1)).coerceIn(0f, 1f - start)
+                    Box(Modifier.offset(x = maxWidth * start).width(maxWidth * len)
+                        .fillMaxHeight().clip(RoundedCornerShape(5.dp))
+                        .background(Purple.copy(alpha = .45f)).clickable { onClick(layer.id) },
+                        contentAlignment = Alignment.Center) {
+                        Text(if (layer.isImage) "Imagem" else "Vídeo", fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
+                    }
                 }
             }
         }
@@ -630,12 +729,13 @@ private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit
 
 @OptIn(UnstableApi::class)
 @Composable
-private fun PipScreen(p: VideoProject, back: () -> Unit, update: (VideoProject) -> Unit,
-                      choose: () -> Unit) {
+private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -> Unit,
+                      back: () -> Unit, onChange: (Overlay) -> Unit,
+                      onRemove: (String) -> Unit, choose: (Boolean) -> Unit) {
     val context = LocalContext.current
-    val pip = p.pip
+    val pip = p.overlays.firstOrNull { it.id == selectedId } ?: p.overlays.firstOrNull()
     val total = p.durationMs.coerceAtLeast(1L)
-    val sourceAspect = remember(pip?.uri) {
+    val sourceAspect = remember(pip?.uri, pip?.isImage) {
         pip?.let { mediaAspect(context, it.uri, it.isImage) } ?: 16f / 9f
     }
     val canvasAspect = remember(p.clips) {
@@ -644,6 +744,10 @@ private fun PipScreen(p: VideoProject, back: () -> Unit, update: (VideoProject) 
     val player = remember(p.id) { ExoPlayer.Builder(context).build() }
     var playing by remember(p.id) { mutableStateOf(false) }
     var previewTime by remember(p.id) { mutableLongStateOf(pip?.startAtMs ?: 0L) }
+    var expanded by remember(p.id) { mutableStateOf<String?>(null) }
+    var manual by remember(pip?.id) {
+        mutableStateOf(pip?.let { (it.scale * 100f).toInt().toString() } ?: "30")
+    }
     DisposableEffect(player) { onDispose { player.release() } }
     LaunchedEffect(p.clips) {
         if (p.clips.isNotEmpty()) {
@@ -654,14 +758,16 @@ private fun PipScreen(p: VideoProject, back: () -> Unit, update: (VideoProject) 
                 ).build()
             })
             player.prepare()
-            seekProjectPosition(player, p.clips, pip?.startAtMs ?: 0L)
+            seekProjectPosition(player, p.clips, previewTime)
         }
     }
-    LaunchedEffect(pip?.startAtMs) {
-        if (!player.isPlaying && pip != null && p.clips.isNotEmpty()) {
+    // A seleção de camada posiciona o cursor no início dela; mexer no slider não força seek.
+    LaunchedEffect(pip?.id) {
+        if (pip != null && p.clips.isNotEmpty() && !player.isPlaying) {
             previewTime = pip.startAtMs
-            seekProjectPosition(player, p.clips, pip.startAtMs)
+            seekProjectPosition(player, p.clips, previewTime)
         }
+        expanded = null
     }
     LaunchedEffect(player, p.clips) {
         while (true) {
@@ -671,219 +777,287 @@ private fun PipScreen(p: VideoProject, back: () -> Unit, update: (VideoProject) 
         }
     }
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-        Heading("Editar sobreposição", back)
-        if (pip == null) {
-            Spacer(Modifier.height(40.dp))
-            Button(onClick = choose, modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp)
-                .height(56.dp), shape = RoundedCornerShape(18.dp)) {
-                Icon(Icons.Default.AddPhotoAlternate, null)
-                Text(" Adicionar imagem ou vídeo")
-            }
-            return@Column
-        }
+        Heading("Editar sobreposições", back)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
-            .padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Prévia no vídeo", fontWeight = FontWeight.SemiBold)
-            // A área PiP corresponde ao quadro real, não às barras pretas do player.
-            BoxWithConstraints(Modifier.fillMaxWidth().height(246.dp)
-                .clip(RoundedCornerShape(18.dp)).background(Color(0xFF141414)),
-                contentAlignment = Alignment.Center) {
-                val canvasWidth = minOf(maxWidth, maxHeight * canvasAspect)
-                val canvasHeight = canvasWidth / canvasAspect
-                Box(Modifier.width(canvasWidth).height(canvasHeight)
-                    .background(Color.Black)) {
-                    AndroidView(factory = { previewPlayer(it).apply {
-                        this.player = player; useController = false
-                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                    } }, update = { it.player = player }, modifier = Modifier.fillMaxSize())
-                    PipLayer(pip, (previewTime - pip.startAtMs).coerceAtLeast(0L), playing,
-                        editable = true) { overlay -> update(p.copy(pip = overlay)) }
+            .padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("PiPs · ${p.overlays.size} de 4", fontWeight = FontWeight.SemiBold)
+                TextButton(onClick = { choose(false) },
+                    enabled = p.overlays.size < OverlayPlacement.MAX_PIPS) {
+                    Icon(Icons.Default.Add, null)
+                    Text(" Adicionar PiP")
                 }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically) {
-                Text("Vídeo: ${formatMs(previewTime)} / ${formatMs(p.durationMs)}",
+            if (p.overlays.isEmpty()) {
+                Text("Adicione até quatro imagens ou vídeos para sobrepor ao projeto.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    p.overlays.forEachIndexed { index, item ->
+                        val selected = pip?.id == item.id
+                        OutlinedButton(onClick = { onSelect(item.id) },
+                            border = BorderStroke(if (selected) 2.dp else 1.dp,
+                                if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
+                            shape = RoundedCornerShape(14.dp)) {
+                            Icon(if (item.isImage) Icons.Default.Image else Icons.Default.Videocam,
+                                null, Modifier.size(18.dp))
+                            Text(" PiP ${index + 1}")
+                            if (selected) Icon(Icons.Default.Check, null, Modifier.size(16.dp))
+                        }
+                    }
+                }
+                Text("Prévia no vídeo", fontWeight = FontWeight.SemiBold)
+                BoxWithConstraints(Modifier.fillMaxWidth().height(246.dp)
+                    .clip(RoundedCornerShape(18.dp)).background(Color(0xFF141414)),
+                    contentAlignment = Alignment.Center) {
+                    val canvasWidth = minOf(maxWidth, maxHeight * canvasAspect)
+                    val canvasHeight = canvasWidth / canvasAspect
+                    Box(Modifier.width(canvasWidth).height(canvasHeight).background(Color.Black)) {
+                        AndroidView(factory = { previewPlayer(it).apply {
+                            this.player = player
+                            useController = false
+                            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        } }, update = { it.player = player }, modifier = Modifier.fillMaxSize())
+                        p.overlays.forEach { layer ->
+                            val active = previewTime >= layer.startAtMs &&
+                                previewTime < layer.startAtMs + layer.durationMs
+                            if (active || (layer.id == pip?.id && !playing)) {
+                                key(layer.id) {
+                                    PipLayer(layer, (previewTime - layer.startAtMs).coerceAtLeast(0L),
+                                        playing && active, editable = layer.id == pip?.id,
+                                        onUpdate = onChange)
+                                }
+                            }
+                        }
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Text("Vídeo: ${formatMs(previewTime)} / ${formatMs(p.durationMs)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    TextButton(onClick = {
+                        if (player.isPlaying) player.pause() else player.play()
+                        playing = player.isPlaying
+                    }) {
+                        Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            "Reproduzir ou pausar vídeo")
+                        Text(if (playing) "Pausar" else "Ver prévia")
+                    }
+                }
+                Slider(value = previewTime.toFloat().coerceIn(0f, total.toFloat()),
+                    onValueChange = { next ->
+                        previewTime = next.toLong()
+                        seekProjectPosition(player, p.clips, previewTime)
+                    }, valueRange = 0f..total.toFloat())
+                Text("Toque em um quadrado para expandir os ajustes. Arraste ou pince o PiP selecionado na prévia.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TextButton(onClick = {
-                    if (player.isPlaying) player.pause() else player.play()
-                    playing = player.isPlaying
-                }) {
-                    Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        "Reproduzir ou pausar vídeo")
-                    Text(if (playing) "Pausar" else "Ver prévia")
-                }
-            }
-            Text("Arraste a imagem ou use os atalhos de posição. Pinça para ajustar o tamanho.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            var popup by remember { mutableStateOf<String?>(null) }
-            ItemCard(Icons.Default.OpenWith, "Posição", "Alinhar em nove pontos ou arrastar na prévia") {
-                popup = "position"
-            }
-            ItemCard(Icons.Default.AspectRatio, "Tamanho", "${(pip.scale * 100).toInt()}% · atalhos, barra ou valor manual") {
-                popup = "size"
-            }
-            ItemCard(Icons.Default.Schedule, "Duração", "${formatPipMs(pip.startAtMs)} até ${formatPipMs((pip.startAtMs + pip.durationMs).coerceAtMost(total))}") {
-                popup = "duration"
-            }
-            if (!pip.isImage) {
-                Surface(shape = RoundedCornerShape(18.dp), tonalElevation = 1.dp,
-                    color = MaterialTheme.colorScheme.surface) {
-                    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()) {
-                            Icon(if (pip.muted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
-                                null, tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(28.dp))
-                            Spacer(Modifier.width(16.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text("Som do vídeo PiP", fontWeight = FontWeight.SemiBold)
-                                Text(if (pip.muted) "Silenciado" else "Volume ${(pip.volume * 100).toInt()}%",
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    style = MaterialTheme.typography.bodySmall)
+                // Quando um quadrado é aberto, seu painel substitui os quatro botões na página.
+                Column(Modifier.fillMaxWidth().animateContentSize()) {
+                    AnimatedVisibility(expanded == null,
+                        enter = slideInVertically { it / 3 } + fadeIn(),
+                        exit = slideOutVertically { -it / 3 } + fadeOut()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            val options = listOf(
+                                Triple("position", "Posição", Icons.Default.OpenWith),
+                                Triple("size", "Tamanho", Icons.Default.AspectRatio),
+                                Triple("duration", "Duração", Icons.Default.Schedule),
+                                Triple("media", "Mídia", Icons.Default.PermMedia))
+                            options.chunked(2).forEach { row ->
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    row.forEach { (key, label, icon) ->
+                                        Surface(onClick = { expanded = key },
+                                            modifier = Modifier.weight(1f).aspectRatio(1.38f),
+                                            shape = RoundedCornerShape(18.dp),
+                                            color = MaterialTheme.colorScheme.surfaceVariant) {
+                                            Column(Modifier.fillMaxSize().padding(10.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.Center) {
+                                                Icon(icon, null, tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(29.dp))
+                                                Spacer(Modifier.height(8.dp))
+                                                Text(label, fontWeight = FontWeight.SemiBold)
+                                            }
+                                        }
+                                    }
+                                }
                             }
-                            Switch(checked = !pip.muted,
-                                onCheckedChange = { update(p.copy(pip = pip.copy(muted = !it))) })
                         }
-                        if (!pip.muted) Slider(value = pip.volume.coerceIn(0f, 1f),
-                            onValueChange = { update(p.copy(pip = pip.copy(volume = it))) },
-                            valueRange = 0f..1f)
                     }
-                }
-            }
-            ItemCard(Icons.Default.PermMedia, "Trocar imagem ou vídeo", "Abrir biblioteca de mídia") { choose() }
-
-            if (popup == "position") {
-                PipPopup("Alinhar posição", Icons.Default.OpenWith, onDismiss = { popup = null }) {
-                    Text("Escolha um alinhamento. O arrasto livre continua disponível na prévia.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    val names = listOf("Superior esquerdo", "Superior central", "Superior direito",
-                        "Meio esquerdo", "Centro", "Meio direito", "Inferior esquerdo",
-                        "Inferior central", "Inferior direito")
-                    val icons = listOf(Icons.Default.NorthWest, Icons.Default.North,
-                        Icons.Default.NorthEast, Icons.Default.West, Icons.Default.CenterFocusStrong,
-                        Icons.Default.East, Icons.Default.SouthWest, Icons.Default.South,
-                        Icons.Default.SouthEast)
-                    for (row in 0..2) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            for (col in 0..2) {
-                                val i = row * 3 + col
-                                OutlinedButton(onClick = {
-                                    val (wf, hf) = OverlayEditorLogic.dimensions(
-                                        pip.scale, sourceAspect, canvasAspect)
-                                    val (x, y) = OverlayEditorLogic.preset(row, col, wf, hf)
-                                    update(p.copy(pip = pip.copy(x = x, y = y)))
-                                }, modifier = Modifier.weight(1f).height(54.dp)
-                                    .semantics { contentDescription = names[i] },
-                                    shape = RoundedCornerShape(12.dp),
-                                    contentPadding = PaddingValues(0.dp)) {
-                                    Icon(icons[i], contentDescription = null)
+                    AnimatedVisibility(expanded != null,
+                        enter = slideInVertically { it / 2 } + fadeIn(),
+                        exit = slideOutVertically { -it / 3 } + fadeOut()) {
+                        Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant) {
+                            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(onClick = { expanded = null }) {
+                                        Icon(Icons.Default.ArrowBack, "Voltar aos quadrados")
+                                    }
+                                    Text(when (expanded) {
+                                        "position" -> "Posição do PiP"
+                                        "size" -> "Tamanho do PiP"
+                                        "duration" -> "Duração do PiP"
+                                        else -> "Arquivo de mídia"
+                                    }, style = MaterialTheme.typography.titleMedium,
+                                        modifier = Modifier.weight(1f))
+                                    IconButton(onClick = { expanded = null }) {
+                                        Icon(Icons.Default.ExpandLess, "Recolher controles")
+                                    }
+                                }
+                                when (expanded) {
+                                    "position" -> {
+                                        Text("Escolha um dos nove pontos. Se houver outro PiP, ele será reposicionado automaticamente.",
+                                            style = MaterialTheme.typography.bodySmall)
+                                        val names = listOf("Superior esquerdo", "Superior central", "Superior direito",
+                                            "Meio esquerdo", "Centro", "Meio direito",
+                                            "Inferior esquerdo", "Inferior central", "Inferior direito")
+                                        val icons = listOf(Icons.Default.NorthWest, Icons.Default.North,
+                                            Icons.Default.NorthEast, Icons.Default.West, Icons.Default.CenterFocusStrong,
+                                            Icons.Default.East, Icons.Default.SouthWest, Icons.Default.South,
+                                            Icons.Default.SouthEast)
+                                        if (pip != null) for (row in 0..2) {
+                                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                for (col in 0..2) {
+                                                    val i = row * 3 + col
+                                                    OutlinedButton(onClick = {
+                                                        val (wf, hf) = OverlayEditorLogic.dimensions(
+                                                            pip.scale, sourceAspect, canvasAspect)
+                                                        val (x, y) = OverlayEditorLogic.preset(row, col, wf, hf)
+                                                        onChange(pip.copy(x = x, y = y))
+                                                    }, modifier = Modifier.weight(1f).height(50.dp)
+                                                        .semantics { contentDescription = names[i] },
+                                                        shape = RoundedCornerShape(12.dp),
+                                                        contentPadding = PaddingValues(0.dp)) {
+                                                        Icon(icons[i], null)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    "size" -> {
+                                        if (pip != null) {
+                                            Text("Tamanho: ${(pip.scale * 100f).toInt()}%",
+                                                fontWeight = FontWeight.Medium)
+                                            listOf(5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 90).chunked(4).forEach { row ->
+                                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                                    row.forEach { percent ->
+                                                        OutlinedButton(onClick = {
+                                                            val scale = percent / 100f
+                                                            onChange(pip.copy(scale = scale))
+                                                            manual = percent.toString()
+                                                        }, modifier = Modifier.weight(1f),
+                                                            shape = RoundedCornerShape(10.dp),
+                                                            contentPadding = PaddingValues(0.dp),
+                                                            border = BorderStroke(if ((pip.scale * 100f).toInt() == percent) 2.dp else 1.dp,
+                                                                MaterialTheme.colorScheme.primary)) {
+                                                            Text("$percent%")
+                                                        }
+                                                    }
+                                                    repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+                                                }
+                                            }
+                                            Slider(value = pip.scale.coerceIn(.05f, .90f),
+                                                onValueChange = {
+                                                    onChange(pip.copy(scale = it))
+                                                    manual = (it * 100f).toInt().toString()
+                                                }, valueRange = .05f..90f/100f)
+                                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                OutlinedTextField(value = manual, onValueChange = { value ->
+                                                    if (value.length <= 3 && value.all(Char::isDigit)) manual = value
+                                                }, modifier = Modifier.weight(1f), singleLine = true,
+                                                    label = { Text("Porcentagem manual") }, suffix = { Text("%") },
+                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                    isError = manual.isNotBlank() && OverlayEditorLogic.parsePercentage(manual) == null)
+                                                Button(onClick = {
+                                                    OverlayEditorLogic.parsePercentage(manual)?.let {
+                                                        onChange(pip.copy(scale = it))
+                                                    }
+                                                }, enabled = OverlayEditorLogic.parsePercentage(manual) != null) {
+                                                    Icon(Icons.Default.Check, null)
+                                                    Text(" Usar")
+                                                }
+                                            }
+                                            Text("De 5% a 90%; aspecto original preservado.",
+                                                style = MaterialTheme.typography.bodySmall)
+                                        }
+                                    }
+                                    "duration" -> {
+                                        if (pip != null) {
+                                            val end = (pip.startAtMs + pip.durationMs).coerceAtMost(total)
+                                            Text("Começa em: ${formatPipMs(pip.startAtMs)}")
+                                            Slider(value = pip.startAtMs.coerceIn(0L, end).toFloat(),
+                                                onValueChange = { value ->
+                                                    val (newStart, newDuration) = OverlayEditorLogic.startChanged(
+                                                        value.toLong(), pip.startAtMs, pip.durationMs, total)
+                                                    onChange(pip.copy(startAtMs = newStart, durationMs = newDuration))
+                                                }, valueRange = 0f..end.coerceAtLeast(1L).toFloat())
+                                            Text("Termina em: ${formatPipMs(end)}")
+                                            val minEnd = (pip.startAtMs + 500L).coerceAtMost(total)
+                                            if (minEnd < total) {
+                                                Slider(value = end.coerceIn(minEnd, total).toFloat(),
+                                                    onValueChange = { value ->
+                                                        onChange(pip.copy(durationMs = OverlayEditorLogic.endChanged(
+                                                            value.toLong(), pip.startAtMs, total)))
+                                                    }, valueRange = minEnd.toFloat()..total.toFloat())
+                                            } else Text("Limite do vídeo alcançado")
+                                            BoxWithConstraints(Modifier.fillMaxWidth().height(16.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(MaterialTheme.colorScheme.primary.copy(alpha = .14f))) {
+                                                Box(Modifier.offset(x = maxWidth * (pip.startAtMs.toFloat() / total))
+                                                    .width(maxWidth * (pip.durationMs.toFloat() / total))
+                                                    .fillMaxHeight().clip(RoundedCornerShape(8.dp))
+                                                    .background(MaterialTheme.colorScheme.primary))
+                                            }
+                                        }
+                                    }
+                                    "media" -> {
+                                        Text("Troque somente a mídia do PiP selecionado.",
+                                            style = MaterialTheme.typography.bodySmall)
+                                        Button(onClick = { choose(true) }, modifier = Modifier.fillMaxWidth()) {
+                                            Icon(Icons.Default.PermMedia, null)
+                                            Text(" Escolher imagem ou vídeo")
+                                        }
+                                    }
+                                }
+                                OutlinedButton(onClick = { expanded = null },
+                                    modifier = Modifier.align(Alignment.End)) {
+                                    Icon(Icons.Default.Check, null)
+                                    Text(" Concluir")
                                 }
                             }
                         }
                     }
                 }
-            }
-            if (popup == "size") {
-                var manual by remember(popup) { mutableStateOf((pip.scale * 100).toInt().toString()) }
-                PipPopup("Tamanho do PiP", Icons.Default.AspectRatio, onDismiss = { popup = null }) {
-                    Text("Tamanho: ${(pip.scale * 100).toInt()}%",
-                        fontWeight = FontWeight.SemiBold)
-                    val presets = listOf(5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 90)
-                    for (row in presets.chunked(4)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            row.forEach { percent ->
-                                OutlinedButton(onClick = {
-                                    val scale = percent / 100f
-                                    val (wf, hf) = OverlayEditorLogic.dimensions(scale, sourceAspect, canvasAspect)
-                                    update(p.copy(pip = pip.copy(scale = scale,
-                                        x = OverlayEditorLogic.clampCenter(pip.x, wf),
-                                        y = OverlayEditorLogic.clampCenter(pip.y, hf))))
-                                    manual = percent.toString()
-                                }, modifier = Modifier.weight(1f),
-                                    contentPadding = PaddingValues(horizontal = 0.dp),
-                                    border = BorderStroke(1.dp, if ((pip.scale * 100).toInt() == percent)
-                                        MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)) {
-                                    Text("$percent%")
-                                }
+                // Som é independente dos demais controles e das demais sobreposições.
+                if (pip != null && !pip.isImage) {
+                    Surface(color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(if (pip.muted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                                    "Som deste PiP", tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(10.dp))
+                                Text("Som do PiP selecionado", modifier = Modifier.weight(1f))
+                                Switch(checked = !pip.muted,
+                                    onCheckedChange = { onChange(pip.copy(muted = !it)) })
                             }
-                            repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+                            if (!pip.muted) Slider(value = pip.volume.coerceIn(0f, 1f),
+                                onValueChange = { onChange(pip.copy(volume = it)) }, valueRange = 0f..1f)
                         }
                     }
-                    Slider(value = pip.scale.coerceIn(.05f, .90f), onValueChange = { value ->
-                        val (wf, hf) = OverlayEditorLogic.dimensions(value, sourceAspect, canvasAspect)
-                        update(p.copy(pip = pip.copy(scale = value,
-                            x = OverlayEditorLogic.clampCenter(pip.x, wf),
-                            y = OverlayEditorLogic.clampCenter(pip.y, hf))))
-                        manual = (value * 100).toInt().toString()
-                    }, valueRange = 0.05f..0.90f)
-                    Row(verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(value = manual, onValueChange = { value ->
-                            if (value.length <= 3 && value.all(Char::isDigit)) manual = value
-                        }, modifier = Modifier.weight(1f), singleLine = true,
-                            label = { Text("Porcentagem manual") }, suffix = { Text("%") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            isError = manual.isNotBlank() && OverlayEditorLogic.parsePercentage(manual) == null)
-                        Button(onClick = {
-                            OverlayEditorLogic.parsePercentage(manual)?.let { scale ->
-                                val (wf, hf) = OverlayEditorLogic.dimensions(scale, sourceAspect, canvasAspect)
-                                update(p.copy(pip = pip.copy(scale = scale,
-                                    x = OverlayEditorLogic.clampCenter(pip.x, wf),
-                                    y = OverlayEditorLogic.clampCenter(pip.y, hf))))
-                            }
-                        }, enabled = OverlayEditorLogic.parsePercentage(manual) != null) {
-                            Icon(Icons.Default.Check, null)
-                            Text(" Usar")
-                        }
-                    }
-                    Text("Valores de 5% a 90%. A proporção original é preservada.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-            }
-            if (popup == "duration") {
-                PipPopup("Tempo na tela", Icons.Default.Schedule, onDismiss = { popup = null }) {
-                    val end = (pip.startAtMs + pip.durationMs).coerceAtMost(total)
-                    Text("Começa em: ${formatPipMs(pip.startAtMs)}", fontWeight = FontWeight.Medium)
-                    Slider(value = pip.startAtMs.coerceIn(0L, end).toFloat(),
-                        onValueChange = { value ->
-                            val (newStart, newDuration) = OverlayEditorLogic.startChanged(
-                                value.toLong(), pip.startAtMs, pip.durationMs, total)
-                            update(p.copy(pip = pip.copy(startAtMs = newStart,
-                                durationMs = newDuration)))
-                        }, valueRange = 0f..end.coerceAtLeast(1L).toFloat())
-                    Text("Termina em: ${formatPipMs(end)}", fontWeight = FontWeight.Medium)
-                    val minEnd = (pip.startAtMs + 500L).coerceAtMost(total)
-                    if (minEnd < total) {
-                        Slider(value = end.coerceIn(minEnd, total).toFloat(),
-                            onValueChange = { value ->
-                                update(p.copy(pip = pip.copy(durationMs =
-                                    OverlayEditorLogic.endChanged(value.toLong(), pip.startAtMs, total))))
-                            }, valueRange = minEnd.toFloat()..total.toFloat())
-                    } else {
-                        Text("Limite do vídeo alcançado",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    BoxWithConstraints(Modifier.fillMaxWidth().height(16.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = .15f))) {
-                        Box(Modifier.offset(x = maxWidth * (pip.startAtMs.toFloat() / total))
-                            .width(maxWidth * (pip.durationMs.toFloat() / total))
-                            .fillMaxHeight().clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.primary))
-                    }
-                    Text("O trecho destacado mostra quando o PiP aparece no vídeo.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                Text("Os outros PiPs continuam independentes. Se não houver espaço livre, a alteração não será aplicada.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(onClick = { update(p.copy(pip = null)); back() },
+            OutlinedButton(onClick = { pip?.let { onRemove(it.id) } }, enabled = pip != null,
                 modifier = Modifier.weight(1f).height(52.dp),
                 shape = RoundedCornerShape(16.dp)) {
                 Icon(Icons.Default.Delete, null)
@@ -893,30 +1067,6 @@ private fun PipScreen(p: VideoProject, back: () -> Unit, update: (VideoProject) 
                 shape = RoundedCornerShape(16.dp)) {
                 Icon(Icons.Default.Check, null)
                 Text(" Aplicar")
-            }
-        }
-    }
-}
-
-@Composable
-private fun PipPopup(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector,
-                     onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 5.dp, modifier = Modifier.fillMaxWidth().heightIn(max = 620.dp)) {
-            Column(Modifier.verticalScroll(rememberScrollState()).padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
-                    Text(title, style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold)
-                }
-                content()
-                Button(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
-                    Icon(Icons.Default.Check, null)
-                    Text(" Concluído")
-                }
             }
         }
     }

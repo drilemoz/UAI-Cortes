@@ -1,3 +1,12 @@
+## 0.1.8 (versionCode 9) — 18/10/2026
+- PiPs múltiplos (até 4) em um projeto, com seleção e edição independentes.
+- Interface quadrada expansível na própria tela (Posição/Tamanho/Duração/Mídia); removidos os pop-ups de configuração.
+- Motor de colisões espacial e temporal com prioridade para o PiP editado e aviso quando não houver espaço livre.
+- Linha do tempo dividida em uma faixa por PiP, posição de início e duração corretas.
+- Prévia e composição Media3 das até quatro fontes visuais; áudio independente para cada vídeo PiP.
+- Modelo JSON `overlays` e `schemaVersion=2`; leitura automática do campo `pip` dos projetos antigos.
+- Documentação/workflow atualizados para 0.1.8 e versionCode 9; APK ainda depende de compilação CI.
+
 ## 0.1.7 (versionCode 8) — 18/10/2026
 - Corrigida compilação Debug/Release relatada no workflow 7: `PrimaryTabRow` do Material 3 requer `@OptIn(ExperimentalMaterial3Api::class)` na `DeviceMediaBrowser`.
 - Preservadas biblioteca de mídia PiP, controles de posição/tamanho/duração e áudio individual do PiP.
