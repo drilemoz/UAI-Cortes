@@ -20,6 +20,16 @@ class OverlayEditorLogicTest {
         assertTrue(w < .85f)
         assertTrue(h <= .91f)
     }
+    @Test fun acceptsSmallAndManualPercentages() {
+        assertEquals(.05f, OverlayEditorLogic.parsePercentage("5"))
+        assertEquals(.10f, OverlayEditorLogic.parsePercentage("10%"))
+        assertEquals(.15f, OverlayEditorLogic.parsePercentage(" 15 "))
+        assertEquals(null, OverlayEditorLogic.parsePercentage("0"))
+        assertEquals(null, OverlayEditorLogic.parsePercentage("91"))
+        assertEquals(null, OverlayEditorLogic.parsePercentage("qualquer"))
+        val (w, h) = OverlayEditorLogic.dimensions(.05f, 16f / 9f, 16f / 9f)
+        assertTrue(w <= .051f && w >= .049f && h > 0f)
+    }
     @Test fun startMoveMaintainsEnd() {
         val (s, len) = OverlayEditorLogic.startChanged(9000L, 7000L, 5000L, 45000L)
         assertEquals(9000L, s)

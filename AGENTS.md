@@ -6,5 +6,6 @@
 - Não declarar recurso pronto sem implementação e teste. Fade/dissolvência continuam pendentes.
 - Nunca adicionar chaves, tokens ou keystores ao repositório.
 
-- PiP: manter aspecto original ao carregar logotipos, sem crop, controles Começa em/Termina em e nove atalhos de posição.
+- PiP: manter aspecto original ao carregar logotipos, sem crop, controles Começa em/Termina em e nove atalhos de posição, agora dentro de pop-up temático.
+- PiP: manter biblioteca por imagens/vídeos e pastas, alternativa SAF, controle de áudio de vídeo separado e opção silenciosa persistida.
 - Confirmar fidelidade entre visualização e exportação no aparelho físico antes de afirmar funcionamento completo.

@@ -1,3 +1,10 @@
+## 0.1.6 (versionCode 7) — 18/10/2026
+- Menu compacto para PiP: janelas de Posição (9 atalhos), Tamanho (5% a 90%, slider e entrada manual) e Duração (início/fim e faixa).
+- Nova biblioteca local de mídia: abas Imagens/Vídeos, filtros por pasta, miniaturas em grade com espaço reduzido, ícone e tempo dos vídeos. Usa MediaStore, permissões Android e alternativa pelo seletor de arquivos.
+- Áudio de vídeo PiP em cartão próprio: silenciar/ativar sem perder volume escolhido; o estado é persistido e respeitado na prévia e na exportação.
+- Ajustes de geometria para 5%, testes para entrada manual e serialização do estado mudo, documentação e workflow sequenciais.
+- Compilação Android e verificação em aparelho pendentes.
+
 ## 0.1.5 (versionCode 6) — 18/10/2026
 - PiP com visualização do vídeo principal, posição rápida 3×3, exibição proporcional e tempos de início/fim.
 - Corrigida a posição central e limites da área de arrasto, guias centrais e prévia reproduzível.

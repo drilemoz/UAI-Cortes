@@ -1,11 +1,10 @@
-# Uai Cortes v0.1.5
+# Uai Cortes v0.1.6
 
-- Prévia PiP agora mostra o vídeo principal real por trás da imagem/vídeo sobreposto.
-- Posição rápida: grade de nove posições com alinhamento aos cantos, bordas ou centro.
-- Novo cálculo de coordenadas da sobreposição, com arrasto e pinça mantendo o conteúdo dentro da tela.
-- Imagens PiP exibidas com proporção original, sem corte (`ContentScale.Fit`).
-- Controle de tempo renomeado para **Começa em** e **Termina em**, com faixa visual destacando o período.
-- Controles de reprodução da prévia e linhas-guia centrais.
-- API 36, assinatura e publicação obrigatória do APK preservadas.
+- PiP com ações **Posição**, **Tamanho** e **Duração** em janelas personalizadas que seguem os temas do aplicativo.
+- Grade com nove alinhamentos, gestos preservados, tamanhos predefinidos (5% a 90%), entrada manual e controle deslizante.
+- Janela de duração com início, fim e faixa visual.
+- Novo gerenciador interno para escolher o PiP com abas **Imagens / Vídeos**, pastas, miniaturas e tempo dos vídeos. Bibliotecas com acesso total ou parcial conforme permissões concedidas pelo Android; opção de abrir o seletor de documentos do sistema.
+- Botão independente de som para PiP em vídeo, permitindo silenciar e reativar mantendo o nível ajustado, também na exportação.
+- Ajustado versionCode para 7, publicação em Releases de `UaiCortes-v0.1.6.apk`.
 
-**Nota:** mudança na interface e prévia; composição/exportação Media3 ainda requer teste no aparelho real. Transições de dissolvência ainda não estão disponíveis.
+**Validação:** checagens estáticas e testes locais isolados; build, permissões reais, interface e exportação Media3 ainda precisam de confirmação no Android.

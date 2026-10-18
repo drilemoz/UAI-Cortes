@@ -10,7 +10,7 @@ object OverlayEditorLogic {
     fun dimensions(scale: Float, contentAspect: Float, canvasAspect: Float): Pair<Float, Float> {
         val ratio = contentAspect.coerceAtLeast(0.05f)
         val canvas = canvasAspect.coerceAtLeast(0.05f)
-        val w = min(scale.coerceIn(0.10f, 0.90f), 0.90f * ratio / canvas)
+        val w = min(scale.coerceIn(0.05f, 0.90f), 0.90f * ratio / canvas)
         return w to (w * canvas / ratio)
     }
 
@@ -25,6 +25,10 @@ object OverlayEditorLogic {
         val y = when(row) { 0 -> 0f; 1 -> 0.5f; else -> 1f }
         return clampCenter(x, widthFraction) to clampCenter(y, heightFraction)
     }
+
+    /** A entrada manual precisa estar entre 5% e 90% da largura do quadro. */
+    fun parsePercentage(input: String): Float? = input.trim().removeSuffix("%").trim()
+        .toIntOrNull()?.takeIf { it in 5..90 }?.div(100f)
 
     fun startChanged(start: Long, oldStart: Long, duration: Long, total: Long): Pair<Long, Long> {
         val end = (oldStart + duration).coerceIn(0L, total)

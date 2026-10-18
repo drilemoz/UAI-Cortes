@@ -129,7 +129,7 @@ class ExportEngine(private val context: Context) {
             val trailing = project.durationMs - pip.startAtMs - pip.durationMs
             if (trailing > 0) overlayTrack.addGap(trailing * 1000L)
             sequences += overlayTrack.build()
-            if (!pip.isImage && pip.volume > 0f) {
+            if (!pip.isImage && !pip.muted && pip.volume > 0f) {
                 val audioTrack = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_AUDIO))
                 if (pip.startAtMs > 0) audioTrack.addGap(pip.startAtMs * 1000L)
                 audioTrack.addItem(EditedMediaItem.Builder(media)

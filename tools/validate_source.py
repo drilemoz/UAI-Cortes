@@ -18,14 +18,14 @@ assert "import androidx.media3.transformer.VideoCompositorSettings" not in sourc
 assert "class PipCompositor" in source and "setVideoCompositorSettings(PipCompositor" in source
 assert re.search(r"compileSdk\s*=\s*36", gradle)
 assert re.search(r"targetSdk\s*=\s*36", gradle)
-assert re.search(r"versionCode\s*=\s*6", gradle)
-assert re.search(r'versionName\s*=\s*"0.1.5"', gradle)
-assert "Versão 0.1.5 (6)" in about
-assert "UaiCortes-v0.1.5.apk" in workflow
-assert "TAG=\"v0.1.5\"" in workflow
+assert re.search(r"versionCode\s*=\s*7", gradle)
+assert re.search(r'versionName\s*=\s*"0.1.6"', gradle)
+assert "Versão 0.1.6 (7)" in about
+assert "UaiCortes-v0.1.6.apk" in workflow
+assert "TAG=\"v0.1.6\"" in workflow
 assert "android-actions/setup-android@v4" in workflow
 assert "platforms;android-36" in workflow
-assert "v0.1.5" in release and "0.1.5 (versionCode 6)" in changelog
+assert "v0.1.6" in release and "0.1.6 (versionCode 7)" in changelog
 # Regression for GitHub Actions #3: media3 PlayerView#setShowBuffering is @UnstableApi.
 # Android Lint requires androidx.annotation.OptIn, not kotlin.OptIn.
 assert "import androidx.annotation.OptIn" in about
@@ -42,8 +42,8 @@ assert "GITHUB_STEP_SUMMARY" in workflow
 assert "branches: [main]" in workflow and "workflow_dispatch:" in workflow
 assert "if: github.event_name == 'workflow_dispatch'" not in workflow
 assert "if: startsWith(github.ref" not in workflow
-assert "name: UaiCortes-v0.1.5-apk" in workflow
-assert "private fun PipScreen(" in about and "Posição rápida" in about
+assert "name: UaiCortes-v0.1.6-apk" in workflow
+assert "private fun PipScreen(" in about and "Alinhar posição" in about
 assert "Começa em:" in about and "Termina em:" in about
 assert "ContentScale.Fit" in about and "ContentScale.Crop" not in about
 assert "seekProjectPosition(player, p.clips" in about
@@ -52,5 +52,16 @@ assert "OverlayEditorLogic.dimensions(" in source
 assert "getOutputSize(inputSizes:" in source
 assert "editable = false" in about
 assert "R.layout.player_preview_texture" in about
-assert "positionNames[i]" in about
-print("OK: Media3, SDK 36, versão 0.1.5 e publicação obrigatória Artifacts + Releases")
+assert "names[i]" in about
+media_browser = (root / "app/src/main/java/br/com/uaicortes/MediaBrowser.kt").read_text()
+manifest = (root / "app/src/main/AndroidManifest.xml").read_text()
+project_store = (root / "app/src/main/java/br/com/uaicortes/ProjectStore.kt").read_text()
+assert "DeviceMediaBrowser" in media_browser and "LazyVerticalGrid" in media_browser
+assert "READ_MEDIA_VISUAL_USER_SELECTED" in media_browser and "READ_MEDIA_VISUAL_USER_SELECTED" in manifest
+assert "READ_EXTERNAL_STORAGE" in manifest and "READ_MEDIA_VIDEO" in manifest
+assert "loadThumbnail" in media_browser and "MediaStore.Images.Media.EXTERNAL_CONTENT_URI" in media_browser
+assert 'PipPopup("Tamanho do PiP"' in about and "parsePercentage" in about
+assert 'PipPopup("Tempo na tela"' in about and 'PipPopup("Alinhar posição"' in about
+assert "muted" in project_store and "pip.muted" in source and "pip.muted" in about
+assert "coerceIn(.05f, .90f)" in about
+print("OK: Media3, SDK 36, versão 0.1.6 e publicação obrigatória Artifacts + Releases")

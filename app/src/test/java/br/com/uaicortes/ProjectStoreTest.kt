@@ -19,6 +19,16 @@ class ProjectStoreTest {
         assertEquals(2000L,restored.pip?.durationMs)
         assertEquals(0.25f,restored.music!!.volume,0.0001f)
     }
+    @Test fun mutedOverlaySurvivesProjectSerialization() {
+        val overlay = Overlay("content://example/video", false, 1800,
+            volume = .72f, muted = true)
+        val project = VideoProject(pip = overlay)
+        val restored = VideoProject.read(project.json())
+        assertEquals(true, restored.pip?.muted)
+        assertEquals(.72f, restored.pip!!.volume, .0001f)
+        val legacy = overlay.json().apply { remove("muted") }
+        assertEquals(false, Overlay.read(legacy).muted)
+    }
     @Test fun formatTime() {
         assertEquals("01:05",formatMs(65000))
         assertEquals("00:00",formatMs(-1))
