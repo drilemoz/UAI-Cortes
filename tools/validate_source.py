@@ -18,14 +18,14 @@ assert "import androidx.media3.transformer.VideoCompositorSettings" not in sourc
 assert "class PipCompositor" in source and "setVideoCompositorSettings(PipCompositor" in source
 assert re.search(r"compileSdk\s*=\s*36", gradle)
 assert re.search(r"targetSdk\s*=\s*36", gradle)
-assert re.search(r"versionCode\s*=\s*5", gradle)
-assert re.search(r'versionName\s*=\s*"0.1.4"', gradle)
-assert "Versão 0.1.4 (5)" in about
-assert "UaiCortes-v0.1.4.apk" in workflow
-assert "TAG=\"v0.1.4\"" in workflow
+assert re.search(r"versionCode\s*=\s*6", gradle)
+assert re.search(r'versionName\s*=\s*"0.1.5"', gradle)
+assert "Versão 0.1.5 (6)" in about
+assert "UaiCortes-v0.1.5.apk" in workflow
+assert "TAG=\"v0.1.5\"" in workflow
 assert "android-actions/setup-android@v4" in workflow
 assert "platforms;android-36" in workflow
-assert "v0.1.4" in release and "0.1.4 (versionCode 5)" in changelog
+assert "v0.1.5" in release and "0.1.5 (versionCode 6)" in changelog
 # Regression for GitHub Actions #3: media3 PlayerView#setShowBuffering is @UnstableApi.
 # Android Lint requires androidx.annotation.OptIn, not kotlin.OptIn.
 assert "import androidx.annotation.OptIn" in about
@@ -42,5 +42,15 @@ assert "GITHUB_STEP_SUMMARY" in workflow
 assert "branches: [main]" in workflow and "workflow_dispatch:" in workflow
 assert "if: github.event_name == 'workflow_dispatch'" not in workflow
 assert "if: startsWith(github.ref" not in workflow
-assert "name: UaiCortes-v0.1.4-apk" in workflow
-print("OK: Media3, SDK 36, versão 0.1.4 e publicação obrigatória Artifacts + Releases")
+assert "name: UaiCortes-v0.1.5-apk" in workflow
+assert "private fun PipScreen(" in about and "Posição rápida" in about
+assert "Começa em:" in about and "Termina em:" in about
+assert "ContentScale.Fit" in about and "ContentScale.Crop" not in about
+assert "seekProjectPosition(player, p.clips" in about
+assert "OverlayEditorLogic.dimensions(" in about
+assert "OverlayEditorLogic.dimensions(" in source
+assert "getOutputSize(inputSizes:" in source
+assert "editable = false" in about
+assert "R.layout.player_preview_texture" in about
+assert "positionNames[i]" in about
+print("OK: Media3, SDK 36, versão 0.1.5 e publicação obrigatória Artifacts + Releases")

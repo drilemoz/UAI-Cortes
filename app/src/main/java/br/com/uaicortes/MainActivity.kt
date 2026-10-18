@@ -26,13 +26,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.unit.IntSize
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
@@ -301,7 +303,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.4 (5)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.5 (6)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: projetos locais, editor de clipes, sobreposição PiP, volume, áudio e exportação MP4.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -342,13 +344,24 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             }
             BlueButton("Exportar",{ onEdit("export") },Modifier.width(102.dp),enabled=p.clips.isNotEmpty())
         }
-        Box(Modifier.fillMaxWidth().weight(1f).background(Color(0xFF101014)).padding(10.dp),contentAlignment=Alignment.Center) {
-            AndroidView(factory={ ctx -> PlayerView(ctx).apply {this.player=player;useController=false;setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING) }},
-                update={it.player=player}, modifier=Modifier.fillMaxSize())
-            p.pip?.let { pip ->
-                if (currentMs in pip.startAtMs..(pip.startAtMs+pip.durationMs)) {
-                    PipLayer(pip, currentMs-pip.startAtMs, player.isPlaying) { update ->
-                        onUpdate(p.copy(pip=update))
+        BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)
+            .background(Color(0xFF101014)).padding(10.dp), contentAlignment = Alignment.Center) {
+            val actualAspect = remember(p.clips) {
+                p.clips.firstOrNull()?.let { mediaAspect(context, it.uri, false) } ?: 16f / 9f
+            }
+            val videoW = minOf(maxWidth, maxHeight * actualAspect)
+            val videoH = videoW / actualAspect
+            Box(Modifier.width(videoW).height(videoH)) {
+                AndroidView(factory = { ctx -> previewPlayer(ctx).apply {
+                    this.player = player
+                    useController = false
+                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                } }, update = { it.player = player }, modifier = Modifier.fillMaxSize())
+                p.pip?.let { pip ->
+                    if (currentMs >= pip.startAtMs && currentMs < pip.startAtMs + pip.durationMs) {
+                        PipLayer(pip, currentMs - pip.startAtMs, player.isPlaying,
+                            editable = false) { overlay -> onUpdate(p.copy(pip = overlay)) }
                     }
                 }
             }
@@ -419,41 +432,91 @@ private fun TimelineRow(label:String,color:Color, segments:List<Pair<String,Long
     }
 }
 
+@OptIn(UnstableApi::class)
 @Composable
-private fun PipLayer(pip:Overlay,timeMs:Long,playing:Boolean,onUpdate:(Overlay)->Unit) {
-    val context=LocalContext.current
-    val pipPlayer=remember(pip.uri) {if(!pip.isImage)ExoPlayer.Builder(context).build() else null}
-    DisposableEffect(pipPlayer) { onDispose {pipPlayer?.release()} }
-    LaunchedEffect(pip.uri) { pipPlayer?.apply {setMediaItem(MediaItem.fromUri(pip.uri));prepare()} }
-    LaunchedEffect(playing,timeMs) {
+private fun PipLayer(pip: Overlay, timeMs: Long, playing: Boolean,
+                     editable: Boolean = true, onUpdate: (Overlay) -> Unit) {
+    val context = LocalContext.current
+    val sourceAspect = remember(pip.uri, pip.isImage) { mediaAspect(context, pip.uri, pip.isImage) }
+    val pipPlayer = remember(pip.uri) { if (!pip.isImage) ExoPlayer.Builder(context).build() else null }
+    DisposableEffect(pipPlayer) { onDispose { pipPlayer?.release() } }
+    LaunchedEffect(pip.uri) {
+        pipPlayer?.apply { setMediaItem(MediaItem.fromUri(pip.uri)); prepare() }
+    }
+    LaunchedEffect(playing, timeMs) {
         pipPlayer?.apply {
-            if(kotlin.math.abs(currentPosition-timeMs)>400)seekTo(timeMs)
-            if(playing)play() else pause()
+            if (kotlin.math.abs(currentPosition - timeMs) > 400L) seekTo(timeMs.coerceAtLeast(0L))
+            if (playing) play() else pause()
         }
     }
+    val currentPip by rememberUpdatedState(pip)
+    val currentUpdate by rememberUpdatedState(onUpdate)
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val width=maxWidth
-        val height=maxHeight
-        val containerW=constraints.maxWidth.coerceAtLeast(1)
-        val containerH=constraints.maxHeight.coerceAtLeast(1)
-        val pipWidth=width*pip.scale.coerceIn(.15f,.85f)
-        Box(Modifier.offset(x=width*(pip.x-pip.scale/2f),y=height*(pip.y-0.12f))
-            .width(pipWidth).aspectRatio(16f/9f)
-            .border(2.dp,Color(0xFF5796FF),RoundedCornerShape(6.dp))
-            .pointerInput(pip) {
-                detectTransformGestures { _,pan,zoom,_ ->
-                    onUpdate(pip.copy(
-                        x=(pip.x+pan.x/containerW).coerceIn(0f,1f),
-                        y=(pip.y+pan.y/containerH).coerceIn(0f,1f),
-                        scale=(pip.scale*zoom).coerceIn(.15f,.85f)))
-                }
-            }.clip(RoundedCornerShape(6.dp)).background(Color.DarkGray)) {
+        val canvasW = constraints.maxWidth.coerceAtLeast(1)
+        val canvasH = constraints.maxHeight.coerceAtLeast(1)
+        val (wFrac, hFrac) = OverlayEditorLogic.dimensions(pip.scale, sourceAspect,
+            canvasW.toFloat() / canvasH)
+        val centerX = OverlayEditorLogic.clampCenter(pip.x, wFrac)
+        val centerY = OverlayEditorLogic.clampCenter(pip.y, hFrac)
+        val pipWidth = maxWidth * wFrac
+        val pipHeight = maxHeight * hFrac
+        if (editable && kotlin.math.abs(centerX - 0.5f) < 0.012f) {
+            Box(Modifier.align(Alignment.Center).width(1.dp).fillMaxHeight()
+                .background(Blue.copy(alpha = 0.6f)))
+        }
+        if (editable && kotlin.math.abs(centerY - 0.5f) < 0.012f) {
+            Box(Modifier.align(Alignment.Center).height(1.dp).fillMaxWidth()
+                .background(Blue.copy(alpha = 0.6f)))
+        }
+        Box(
+            Modifier.offset(x = maxWidth * (centerX - wFrac / 2f),
+                            y = maxHeight * (centerY - hFrac / 2f))
+                .width(pipWidth).height(pipHeight)
+                .then(if (editable) Modifier.border(2.dp, Color(0xFF5796FF), RoundedCornerShape(6.dp))
+                    else Modifier)
+                .then(if (editable) Modifier.pointerInput(pip.uri) {
+                    detectTransformGestures { _, pan, zoom, _ ->
+                        val live = currentPip
+                        val (wf, hf) = OverlayEditorLogic.dimensions(
+                            (live.scale * zoom).coerceIn(.15f, .85f), sourceAspect,
+                            canvasW.toFloat() / canvasH)
+                        currentUpdate(live.copy(
+                            scale = (live.scale * zoom).coerceIn(.15f, .85f),
+                            x = OverlayEditorLogic.clampCenter(live.x + pan.x / canvasW, wf),
+                            y = OverlayEditorLogic.clampCenter(live.y + pan.y / canvasH, hf)
+                        ))
+                    }
+                } else Modifier)
+                .clip(RoundedCornerShape(6.dp))
+                .background(Color.Transparent)
+        ) {
             if (pip.isImage) {
-                val bitmap=remember(pip.uri) {runCatching { context.contentResolver.openInputStream(Uri.parse(pip.uri))?.use { android.graphics.BitmapFactory.decodeStream(it) } }.getOrNull()}
-                if(bitmap!=null) Image(bitmap.asImageBitmap(),"Imagem sobreposta",Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+                val bitmap = remember(pip.uri) {
+                    runCatching {
+                        val options = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                        context.contentResolver.openInputStream(Uri.parse(pip.uri))?.use {
+                            android.graphics.BitmapFactory.decodeStream(it, null, options)
+                        }
+                        var sample = 1
+                        while (options.outWidth / sample > 1400 || options.outHeight / sample > 1400) {
+                            sample *= 2
+                        }
+                        options.inJustDecodeBounds = false
+                        options.inSampleSize = sample
+                        context.contentResolver.openInputStream(Uri.parse(pip.uri))?.use {
+                            android.graphics.BitmapFactory.decodeStream(it, null, options)
+                        }
+                    }.getOrNull()
+                }
+                // FIT + proporção original evita cortar letras ou bordas de logotipos.
+                if (bitmap != null) Image(bitmap.asImageBitmap(), "Imagem sobreposta",
+                    Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
             } else {
-                AndroidView(factory={PlayerView(it).apply{player=pipPlayer;useController=false}},
-                    modifier=Modifier.fillMaxSize(),update={it.player=pipPlayer})
+                AndroidView(factory = { previewPlayer(it).apply {
+                    player = pipPlayer; useController = false
+                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+                } }, modifier = Modifier.fillMaxSize(), update = { it.player = pipPlayer })
             }
         }
     }
@@ -547,48 +610,174 @@ private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit
     }
 }
 
+@OptIn(UnstableApi::class)
 @Composable
-private fun PipScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit,choose:()->Unit) {
-    val pip=p.pip
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp)) {
-        Heading("Editar sobreposição",back)
-        if(pip==null) {
-            Spacer(Modifier.height(40.dp))
-            BlueButton("+ Adicionar imagem ou vídeo",choose,Modifier.fillMaxWidth())
-            return@Column
-        }
-        Box(Modifier.fillMaxWidth().height(230.dp).clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF141414)).padding(10.dp)) {
-            PipLayer(pip,0L,false) {update(p.copy(pip=it))}
-        }
-        Spacer(Modifier.height(14.dp));Text("Arraste para posicionar e use dois dedos para redimensionar",
-            textAlign=androidx.compose.ui.text.style.TextAlign.Center,color=MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(18.dp))
-        Text("Tamanho: ${(pip.scale*100).toInt()}%")
-        Slider(value=pip.scale,onValueChange={update(p.copy(pip=pip.copy(scale=it)))},valueRange=0.15f..0.85f)
-        if(!pip.isImage) {
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
-                Text("Áudio do PiP",fontWeight=FontWeight.SemiBold)
-                Text("${(pip.volume*100).toInt()}%")
-            }
-            Slider(value=pip.volume,onValueChange={update(p.copy(pip=pip.copy(volume=it)))})
-        }
-        Text("Início: ${formatMs(pip.startAtMs)}",color=MaterialTheme.colorScheme.onSurfaceVariant)
-        Slider(value=pip.startAtMs.toFloat(),onValueChange={v->
-            val start=v.toLong();update(p.copy(pip=pip.copy(startAtMs=start,
-                durationMs=pip.durationMs.coerceAtMost((p.durationMs-start).coerceAtLeast(1L)))))
-        },valueRange=0f..(p.durationMs-1000).coerceAtLeast(1L).toFloat())
-        Text("Duração: ${formatMs(pip.durationMs)}")
-        Slider(value=pip.durationMs.toFloat(),onValueChange={v->update(p.copy(pip=pip.copy(durationMs=v.toLong())))},
-            valueRange=1000f..(p.durationMs-pip.startAtMs).coerceAtLeast(1001L).toFloat())
-        Spacer(Modifier.height(10.dp))
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(onClick={update(p.copy(pip=null));back()},modifier=Modifier.weight(1f)) {
-                Icon(Icons.Default.Delete,null);Text(" Remover")
-            }
-            BlueButton("✓ Aplicar",back,Modifier.weight(1f))
+private fun PipScreen(p: VideoProject, back: () -> Unit, update: (VideoProject) -> Unit,
+                      choose: () -> Unit) {
+    val context = LocalContext.current
+    val pip = p.pip
+    val total = p.durationMs.coerceAtLeast(1L)
+    val sourceAspect = remember(pip?.uri) {
+        pip?.let { mediaAspect(context, it.uri, it.isImage) } ?: 16f / 9f
+    }
+    val canvasAspect = remember(p.clips) {
+        p.clips.firstOrNull()?.let { mediaAspect(context, it.uri, false) } ?: 16f / 9f
+    }
+    val player = remember(p.id) { ExoPlayer.Builder(context).build() }
+    var playing by remember(p.id) { mutableStateOf(false) }
+    var previewTime by remember(p.id) { mutableLongStateOf(pip?.startAtMs ?: 0L) }
+    DisposableEffect(player) { onDispose { player.release() } }
+    LaunchedEffect(p.clips) {
+        if (p.clips.isNotEmpty()) {
+            player.setMediaItems(p.clips.map { clip ->
+                MediaItem.Builder().setUri(clip.uri).setClippingConfiguration(
+                    MediaItem.ClippingConfiguration.Builder()
+                        .setStartPositionMs(clip.startMs).setEndPositionMs(clip.endMs).build()
+                ).build()
+            })
+            player.prepare()
+            seekProjectPosition(player, p.clips, pip?.startAtMs ?: 0L)
         }
     }
+    LaunchedEffect(pip?.startAtMs) {
+        if (!player.isPlaying && pip != null && p.clips.isNotEmpty()) {
+            previewTime = pip.startAtMs
+            seekProjectPosition(player, p.clips, pip.startAtMs)
+        }
+    }
+    LaunchedEffect(player, p.clips) {
+        while (true) {
+            playing = player.isPlaying
+            if (player.isPlaying) previewTime = projectPosition(player, p.clips, p.durationMs)
+            delay(150)
+        }
+    }
+    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+        Heading("Editar sobreposição", back)
+        if (pip == null) {
+            Spacer(Modifier.height(40.dp))
+            BlueButton("+ Adicionar imagem ou vídeo", choose,
+                Modifier.fillMaxWidth().padding(horizontal = 18.dp))
+            return@Column
+        }
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
+            .padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Prévia no vídeo", fontWeight = FontWeight.SemiBold)
+            // A área PiP corresponde ao quadro real, não às barras pretas do player.
+            BoxWithConstraints(Modifier.fillMaxWidth().height(246.dp)
+                .clip(RoundedCornerShape(18.dp)).background(Color(0xFF141414)),
+                contentAlignment = Alignment.Center) {
+                val canvasWidth = minOf(maxWidth, maxHeight * canvasAspect)
+                val canvasHeight = canvasWidth / canvasAspect
+                Box(Modifier.width(canvasWidth).height(canvasHeight)
+                    .background(Color.Black)) {
+                    AndroidView(factory = { previewPlayer(it).apply {
+                        this.player = player; useController = false
+                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    } }, update = { it.player = player }, modifier = Modifier.fillMaxSize())
+                    PipLayer(pip, (previewTime - pip.startAtMs).coerceAtLeast(0L), playing,
+                        editable = true) { overlay -> update(p.copy(pip = overlay)) }
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically) {
+                Text("Vídeo: ${formatMs(previewTime)} / ${formatMs(p.durationMs)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick = {
+                    if (player.isPlaying) player.pause() else player.play()
+                    playing = player.isPlaying
+                }) {
+                    Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        "Reproduzir ou pausar vídeo")
+                    Text(if (playing) "Pausar" else "Ver prévia")
+                }
+            }
+            Text("Arraste a imagem ou use os atalhos de posição. Pinça para ajustar o tamanho.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Posição rápida", fontWeight = FontWeight.SemiBold)
+            val symbols = listOf("↖", "↑", "↗", "←", "●", "→", "↙", "↓", "↘")
+            val positionNames = listOf("Canto superior esquerdo", "Topo central", "Canto superior direito",
+                "Centro esquerdo", "Centro", "Centro direito", "Canto inferior esquerdo",
+                "Base central", "Canto inferior direito")
+                    for (row in 0..2) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for (col in 0..2) {
+                        val i = row * 3 + col
+                        OutlinedButton(onClick = {
+                            val (wf, hf) = OverlayEditorLogic.dimensions(pip.scale, sourceAspect, canvasAspect)
+                            val (x, y) = OverlayEditorLogic.preset(row, col, wf, hf)
+                            update(p.copy(pip = pip.copy(x = x, y = y)))
+                        }, modifier = Modifier.weight(1f).height(43.dp).semantics { contentDescription = positionNames[i] },
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(0.dp)) {
+                            Text(symbols[i], fontSize = 19.sp)
+                        }
+                    }
+                }
+            }
+            Text("Tamanho: ${(pip.scale * 100).toInt()}%", fontWeight = FontWeight.Medium)
+            Slider(value = pip.scale.coerceIn(.15f, .85f),
+                onValueChange = { update(p.copy(pip = pip.copy(scale = it))) },
+                valueRange = 0.15f..0.85f)
+            Text("Tempo na tela", fontWeight = FontWeight.SemiBold)
+            Text("Começa em: ${formatPipMs(pip.startAtMs)}",
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val end = (pip.startAtMs + pip.durationMs).coerceAtMost(total)
+            Slider(value = pip.startAtMs.coerceIn(0L, end).toFloat(),
+                onValueChange = { v ->
+                    val (newStart, newDuration) = OverlayEditorLogic.startChanged(
+                        v.toLong(), pip.startAtMs, pip.durationMs, total)
+                    update(p.copy(pip = pip.copy(startAtMs = newStart, durationMs = newDuration)))
+                }, valueRange = 0f..end.coerceAtLeast(1L).toFloat())
+            Text("Termina em: ${formatPipMs(end)}",
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val minEnd = (pip.startAtMs + 500L).coerceAtMost(total)
+            if (minEnd < total) {
+                Slider(value = end.coerceIn(minEnd, total).toFloat(), onValueChange = { value ->
+                    update(p.copy(pip = pip.copy(durationMs = OverlayEditorLogic.endChanged(
+                        value.toLong(), pip.startAtMs, total))))
+                }, valueRange = minEnd.toFloat()..total.toFloat())
+            } else {
+                Text("Limite do vídeo alcançado", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            BoxWithConstraints(Modifier.fillMaxWidth().height(15.dp).clip(RoundedCornerShape(8.dp))
+                .background(Purple.copy(alpha = 0.15f))) {
+                Box(Modifier.offset(x = maxWidth * (pip.startAtMs.toFloat() / total))
+                    .width(maxWidth * (pip.durationMs.toFloat() / total))
+                    .fillMaxHeight().clip(RoundedCornerShape(8.dp))
+                    .background(Purple))
+            }
+            Text("Faixa roxa: período em que a sobreposição aparece no vídeo.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (!pip.isImage) {
+                Text("Som do vídeo sobreposto: ${(pip.volume * 100).toInt()}%")
+                Slider(value = pip.volume, onValueChange = {
+                    update(p.copy(pip = pip.copy(volume = it)))
+                })
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedButton(onClick = { update(p.copy(pip = null)); back() },
+                modifier = Modifier.weight(1f).height(52.dp),
+                shape = RoundedCornerShape(16.dp)) {
+                Icon(Icons.Default.Delete, null)
+                Text(" Remover")
+            }
+            BlueButton("✓ Aplicar", back, Modifier.weight(1f))
+        }
+    }
+}
+
+private fun formatPipMs(ms: Long): String {
+    val minutes = (ms / 60000L)
+    val seconds = (ms % 60000L) / 1000L
+    val tenths = (ms % 1000L) / 100L
+    return "%02d:%02d.%d".format(minutes, seconds, tenths)
 }
 
 @Composable
@@ -636,7 +825,7 @@ private fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
         Spacer(Modifier.height(8.dp))
         Box(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(20.dp))
             .background(Color(0xFF151515)),contentAlignment=Alignment.Center) {
-            AndroidView(factory={PlayerView(it).apply { player=previewPlayer;useController=false }},
+            AndroidView(factory={previewPlayer(it).apply { player=previewPlayer;useController=false }},
                 modifier=Modifier.fillMaxSize(),update={it.player=previewPlayer})
             IconButton(onClick={
                 previewPlaying=!previewPlaying
@@ -689,3 +878,49 @@ private fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
             color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
     }
 }
+
+/** Calcula proporção sem carregar um bitmap integral em memória. */
+private fun mediaAspect(context: android.content.Context, uri: String, isImage: Boolean): Float {
+    return runCatching {
+        if (isImage) {
+            val options = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            context.contentResolver.openInputStream(Uri.parse(uri))?.use {
+                android.graphics.BitmapFactory.decodeStream(it, null, options)
+            }
+            if (options.outWidth > 0 && options.outHeight > 0)
+                options.outWidth.toFloat() / options.outHeight else 16f / 9f
+        } else {
+            val r = android.media.MediaMetadataRetriever()
+            try {
+                r.setDataSource(context, Uri.parse(uri))
+                val w = r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toFloatOrNull() ?: 16f
+                val h = r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toFloatOrNull() ?: 9f
+                val rotation = r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)?.toIntOrNull() ?: 0
+                if (rotation % 180 != 0) h / w.coerceAtLeast(1f) else w / h.coerceAtLeast(1f)
+            } finally { r.release() }
+        }
+    }.getOrDefault(16f / 9f).coerceIn(0.1f, 10f)
+}
+
+private fun projectPosition(player: ExoPlayer, clips: List<Clip>, total: Long): Long {
+    if (clips.isEmpty()) return 0L
+    val index = player.currentMediaItemIndex.coerceIn(0, clips.lastIndex)
+    return (clips.take(index).sumOf { it.durationMs } + player.currentPosition).coerceIn(0L, total)
+}
+
+private fun seekProjectPosition(player: ExoPlayer, clips: List<Clip>, position: Long) {
+    if (clips.isEmpty()) return
+    var remaining = position.coerceIn(0, clips.sumOf { it.durationMs })
+    clips.forEachIndexed { index, clip ->
+        if (remaining <= clip.durationMs || index == clips.lastIndex) {
+            player.seekTo(index, remaining.coerceIn(0L, clip.durationMs))
+            return
+        }
+        remaining -= clip.durationMs
+    }
+}
+
+/** TextureView permite compor PiP e linhas-guia por cima do vídeo em Compose. */
+private fun previewPlayer(context: android.content.Context): PlayerView =
+    android.view.LayoutInflater.from(context)
+        .inflate(R.layout.player_preview_texture, null, false) as PlayerView

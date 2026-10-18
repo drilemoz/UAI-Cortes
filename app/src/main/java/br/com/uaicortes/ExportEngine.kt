@@ -51,13 +51,36 @@ class GainProcessor(private val gain: Float) : BaseAudioProcessor() {
 
 @OptIn(UnstableApi::class)
 class PipCompositor(private val pip: Overlay) : VideoCompositorSettings {
-    override fun getOutputSize(inputSizes: MutableList<Size>): Size = inputSizes.getOrElse(1) { inputSizes[0] }
+    private var pipScaleX = pip.scale
+    private var pipScaleY = pip.scale
+    private var xCenter = pip.x
+    private var yCenter = pip.y
+
+    override fun getOutputSize(inputSizes: MutableList<Size>): Size {
+        // Media3 entrega os tamanhos dos quadros das entradas do compositor.
+        // A sequência 0 é o PiP; a sequência 1 é o vídeo principal.
+        val output = inputSizes.getOrElse(1) { inputSizes[0] }
+        val input = inputSizes[0]
+        val outputWidth = output.width.coerceAtLeast(1).toFloat()
+        val outputHeight = output.height.coerceAtLeast(1).toFloat()
+        val inputWidth = input.width.coerceAtLeast(1).toFloat()
+        val inputHeight = input.height.coerceAtLeast(1).toFloat()
+        val (wf, hf) = OverlayEditorLogic.dimensions(
+            pip.scale, inputWidth / inputHeight, outputWidth / outputHeight)
+        pipScaleX = wf * outputWidth / inputWidth
+        pipScaleY = hf * outputHeight / inputHeight
+        xCenter = OverlayEditorLogic.clampCenter(pip.x, wf)
+        yCenter = OverlayEditorLogic.clampCenter(pip.y, hf)
+        return output
+    }
+
     override fun getOverlaySettings(inputId: Int, presentationTimeUs: Long): OverlaySettings {
         return if (inputId == 0) StaticOverlaySettings.Builder()
-            .setScale(pip.scale, pip.scale)
+            .setScale(pipScaleX, pipScaleY)
             .setOverlayFrameAnchor(0f, 0f)
-            .setBackgroundFrameAnchor(pip.x * 2f - 1f, 1f - pip.y * 2f)
-            .setAlphaScale(if (presentationTimeUs < pip.startAtMs * 1000L || presentationTimeUs >= (pip.startAtMs + pip.durationMs) * 1000L) 0f else 1f)
+            .setBackgroundFrameAnchor(xCenter * 2f - 1f, 1f - yCenter * 2f)
+            .setAlphaScale(if (presentationTimeUs < pip.startAtMs * 1000L ||
+                presentationTimeUs >= (pip.startAtMs + pip.durationMs) * 1000L) 0f else 1f)
             .build()
         else StaticOverlaySettings.Builder().build()
     }

@@ -1,7 +1,10 @@
-# Histórico de versões
+## 0.1.5 (versionCode 6) — 18/10/2026
+- PiP com visualização do vídeo principal, posição rápida 3×3, exibição proporcional e tempos de início/fim.
+- Corrigida a posição central e limites da área de arrasto, guias centrais e prévia reproduzível.
+- Adicionados testes Kotlin da geometria e da janela temporal.
+- Workflow e documentação atualizados para UaiCortes-v0.1.5.apk.
 
-## 0.1.4 (versionCode 5)
-- Publicação obrigatória de APK em Actions Artifacts e GitHub Releases para push na main, tags e acionamento manual. Verificação do asset e resumo com links.
+# Histórico de versões
 
 ## 0.1.3 (versionCode 4)
 - Opt-in pontual do Media3 UnstableApi no indicador de buffering da prévia, corrigindo falha Lint #3; sem ocultar erros do Lint.
