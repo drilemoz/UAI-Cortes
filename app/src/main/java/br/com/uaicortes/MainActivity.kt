@@ -17,12 +17,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -32,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -386,7 +381,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.8 (9)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.9 (10)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: biblioteca por tipo de mídia, PiP com ajustes em janelas e controle independente de som.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -728,6 +723,7 @@ private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit
 }
 
 @OptIn(UnstableApi::class)
+@kotlin.OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -> Unit,
                       back: () -> Unit, onChange: (Overlay) -> Unit,
@@ -852,62 +848,111 @@ private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) ->
                         previewTime = next.toLong()
                         seekProjectPosition(player, p.clips, previewTime)
                     }, valueRange = 0f..total.toFloat())
-                Text("Toque em um quadrado para expandir os ajustes. Arraste ou pince o PiP selecionado na prévia.",
+                Text("Toque em uma ferramenta para abrir os ajustes de baixo para cima. Arraste ou pince o PiP selecionado na prévia.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                // Quando um quadrado é aberto, seu painel substitui os quatro botões na página.
-                Column(Modifier.fillMaxWidth().animateContentSize()) {
-                    AnimatedVisibility(expanded == null,
-                        enter = slideInVertically { it / 3 } + fadeIn(),
-                        exit = slideOutVertically { -it / 3 } + fadeOut()) {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            val options = listOf(
-                                Triple("position", "Posição", Icons.Default.OpenWith),
-                                Triple("size", "Tamanho", Icons.Default.AspectRatio),
-                                Triple("duration", "Duração", Icons.Default.Schedule),
-                                Triple("media", "Mídia", Icons.Default.PermMedia))
-                            options.chunked(2).forEach { row ->
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    row.forEach { (key, label, icon) ->
-                                        Surface(onClick = { expanded = key },
-                                            modifier = Modifier.weight(1f).aspectRatio(1.38f),
-                                            shape = RoundedCornerShape(18.dp),
-                                            color = MaterialTheme.colorScheme.surfaceVariant) {
-                                            Column(Modifier.fillMaxSize().padding(10.dp),
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                                verticalArrangement = Arrangement.Center) {
-                                                Icon(icon, null, tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(29.dp))
-                                                Spacer(Modifier.height(8.dp))
-                                                Text(label, fontWeight = FontWeight.SemiBold)
-                                            }
-                                        }
-                                    }
-                                }
+                // Quatro ferramentas compactas na MESMA linha; os ajustes ficam em um sheet inferior.
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(
+                        Triple("position", "Posição", Icons.Default.OpenWith),
+                        Triple("size", "Tamanho", Icons.Default.AspectRatio),
+                        Triple("duration", "Duração", Icons.Default.Schedule),
+                        Triple("media", "Mídia", Icons.Default.PermMedia)
+                    ).forEach { (key, label, icon) ->
+                        Surface(onClick = { if (pip != null) expanded = key },
+                            modifier = Modifier.weight(1f).aspectRatio(1f),
+                            enabled = pip != null,
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant) {
+                            Column(Modifier.fillMaxSize().padding(4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center) {
+                                Icon(icon, contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp))
+                                Spacer(Modifier.height(5.dp))
+                                Text(label, fontWeight = FontWeight.SemiBold,
+                                    fontSize = 12.sp, maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }
-                    AnimatedVisibility(expanded != null,
-                        enter = slideInVertically { it / 2 } + fadeIn(),
-                        exit = slideOutVertically { -it / 3 } + fadeOut()) {
-                        Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant) {
-                            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                    IconButton(onClick = { expanded = null }) {
-                                        Icon(Icons.Default.ArrowBack, "Voltar aos quadrados")
-                                    }
-                                    Text(when (expanded) {
-                                        "position" -> "Posição do PiP"
-                                        "size" -> "Tamanho do PiP"
-                                        "duration" -> "Duração do PiP"
-                                        else -> "Arquivo de mídia"
-                                    }, style = MaterialTheme.typography.titleMedium,
-                                        modifier = Modifier.weight(1f))
-                                    IconButton(onClick = { expanded = null }) {
-                                        Icon(Icons.Default.ExpandLess, "Recolher controles")
-                                    }
-                                }
+                }
+                // Som é independente dos demais controles e das demais sobreposições.
+                if (pip != null && !pip.isImage) {
+                    Surface(color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(if (pip.muted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                                    "Som deste PiP", tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(10.dp))
+                                Text("Som do PiP selecionado", modifier = Modifier.weight(1f))
+                                Switch(checked = !pip.muted,
+                                    onCheckedChange = { onChange(pip.copy(muted = !it)) })
+                            }
+                            if (!pip.muted) Slider(value = pip.volume.coerceIn(0f, 1f),
+                                onValueChange = { onChange(pip.copy(volume = it)) }, valueRange = 0f..1f)
+                        }
+                    }
+                }
+                Text("Os outros PiPs continuam independentes. Se não houver espaço livre, a alteração não será aplicada.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedButton(onClick = { pip?.let { onRemove(it.id) } }, enabled = pip != null,
+                modifier = Modifier.weight(1f).height(52.dp),
+                shape = RoundedCornerShape(16.dp)) {
+                Icon(Icons.Default.Delete, null)
+                Text(" Remover")
+            }
+            Button(onClick = back, modifier = Modifier.weight(1f).height(52.dp),
+                shape = RoundedCornerShape(16.dp)) {
+                Icon(Icons.Default.Check, null)
+                Text(" Aplicar")
+            }
+        }
+    }
+    // ModalBottomSheet ocupa a parte inferior e fica POR CIMA dos botões.
+    // A altura é limitada para preservar a visualização do vídeo na parte superior.
+    if (expanded != null && pip != null) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        val sheetHeight = (LocalConfiguration.current.screenHeightDp * 0.64f).dp
+        ModalBottomSheet(
+            onDismissRequest = { expanded = null },
+            sheetState = sheetState,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            scrimColor = Color.Black.copy(alpha = 0.12f),
+            dragHandle = { BottomSheetDefaults.DragHandle() }
+        ) {
+            Column(Modifier.fillMaxWidth()
+                .heightIn(max = sheetHeight)
+                .verticalScroll(rememberScrollState())
+                .imePadding()
+                .padding(horizontal = 18.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(when (expanded) {
+                        "position" -> Icons.Default.OpenWith
+                        "size" -> Icons.Default.AspectRatio
+                        "duration" -> Icons.Default.Schedule
+                        else -> Icons.Default.PermMedia
+                    }, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(10.dp))
+                    Text(when (expanded) {
+                        "position" -> "Alinhar posição"
+                        "size" -> "Tamanho do PiP"
+                        "duration" -> "Duração do PiP"
+                        else -> "Selecionar mídia"
+                    }, style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.weight(1f))
+                    IconButton(onClick = { expanded = null }) {
+                        Icon(Icons.Default.Close, "Fechar painel")
+                    }
+                }
                                 when (expanded) {
                                     "position" -> {
                                         Text("Escolha um dos nove pontos. Se houver outro PiP, ele será reposicionado automaticamente.",
@@ -1018,55 +1063,19 @@ private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) ->
                                     "media" -> {
                                         Text("Troque somente a mídia do PiP selecionado.",
                                             style = MaterialTheme.typography.bodySmall)
-                                        Button(onClick = { choose(true) }, modifier = Modifier.fillMaxWidth()) {
+                                        Button(onClick = { expanded = null; choose(true) }, modifier = Modifier.fillMaxWidth()) {
                                             Icon(Icons.Default.PermMedia, null)
                                             Text(" Escolher imagem ou vídeo")
                                         }
                                     }
                                 }
-                                OutlinedButton(onClick = { expanded = null },
-                                    modifier = Modifier.align(Alignment.End)) {
-                                    Icon(Icons.Default.Check, null)
-                                    Text(" Concluir")
-                                }
-                            }
-                        }
-                    }
+                Button(onClick = { expanded = null },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp)) {
+                    Icon(Icons.Default.Check, null)
+                    Text(" Concluído")
                 }
-                // Som é independente dos demais controles e das demais sobreposições.
-                if (pip != null && !pip.isImage) {
-                    Surface(color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp)) {
-                        Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(if (pip.muted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
-                                    "Som deste PiP", tint = MaterialTheme.colorScheme.primary)
-                                Spacer(Modifier.width(10.dp))
-                                Text("Som do PiP selecionado", modifier = Modifier.weight(1f))
-                                Switch(checked = !pip.muted,
-                                    onCheckedChange = { onChange(pip.copy(muted = !it)) })
-                            }
-                            if (!pip.muted) Slider(value = pip.volume.coerceIn(0f, 1f),
-                                onValueChange = { onChange(pip.copy(volume = it)) }, valueRange = 0f..1f)
-                        }
-                    }
-                }
-                Text("Os outros PiPs continuam independentes. Se não houver espaço livre, a alteração não será aplicada.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(onClick = { pip?.let { onRemove(it.id) } }, enabled = pip != null,
-                modifier = Modifier.weight(1f).height(52.dp),
-                shape = RoundedCornerShape(16.dp)) {
-                Icon(Icons.Default.Delete, null)
-                Text(" Remover")
-            }
-            Button(onClick = back, modifier = Modifier.weight(1f).height(52.dp),
-                shape = RoundedCornerShape(16.dp)) {
-                Icon(Icons.Default.Check, null)
-                Text(" Aplicar")
+                Spacer(Modifier.height(8.dp))
             }
         }
     }

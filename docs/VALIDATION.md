@@ -1,8 +1,8 @@
-# Uai Cortes 0.1.8 | Validação
+# Uai Cortes 0.1.9 | Validação
 
 ## Funcionalidade implementada no código
 - Persistência de até quatro PiPs no campo `overlays`, `schemaVersion=2`, IDs estáveis; projetos com `pip` legado migrados em leitura.
-- Painel de edição com quatro botões quadrados, animação de expansão, nove atalhos, barra/entrada percentual, duração e mídia sem pop-ups.
+- Quatro botões quadrados na mesma linha, Bottom Sheet ancorado embaixo, sobreposição dos controles sem deslocamento da prévia, nove atalhos, barra/entrada percentual, duração e mídia.
 - Adição e substituição via MediaStore/SAF, controles independentes de volume e de silêncio.
 - Layout anticolisão usa aspecto da mídia e do quadro, horário de início/fim e prioridade do PiP editado. Rejeita layouts impossíveis com Toast.
 - Timeline individual por PiP e composição Media3 com entradas de vídeo ordenadas antes do vídeo base e faixas de áudio independentes.
