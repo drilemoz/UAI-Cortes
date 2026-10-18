@@ -1,3 +1,9 @@
+## 0.1.7 (versionCode 8) — 18/10/2026
+- Corrigida compilação Debug/Release relatada no workflow 7: `PrimaryTabRow` do Material 3 requer `@OptIn(ExperimentalMaterial3Api::class)` na `DeviceMediaBrowser`.
+- Preservadas biblioteca de mídia PiP, controles de posição/tamanho/duração e áudio individual do PiP.
+- Versionamento e publicação APK sincronizados (Gradle, tela Sobre, workflow, README, release, validador).
+- Ainda requer validação de build Android completo no GitHub Actions e testes físicos.
+
 ## 0.1.6 (versionCode 7) — 18/10/2026
 - Menu compacto para PiP: janelas de Posição (9 atalhos), Tamanho (5% a 90%, slider e entrada manual) e Duração (início/fim e faixa).
 - Nova biblioteca local de mídia: abas Imagens/Vídeos, filtros por pasta, miniaturas em grade com espaço reduzido, ícone e tempo dos vídeos. Usa MediaStore, permissões Android e alternativa pelo seletor de arquivos.

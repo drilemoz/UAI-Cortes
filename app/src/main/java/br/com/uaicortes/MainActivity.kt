@@ -320,7 +320,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.6 (7)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.7 (8)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: biblioteca por tipo de mídia, PiP com ajustes em janelas e controle independente de som.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)

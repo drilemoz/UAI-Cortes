@@ -127,6 +127,7 @@ private fun thumbnail(context: Context, media: DeviceMedia): Bitmap? {
     return bmp
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DeviceMediaBrowser(onBack: () -> Unit, onSelect: (DeviceMedia) -> Unit,
                                 openDocuments: () -> Unit) {

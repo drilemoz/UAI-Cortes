@@ -1,4 +1,9 @@
-# Uai Cortes 0.1.6 | Validação
+# Uai Cortes 0.1.7 | Validação
+
+## Correção do build 7 (versão 0.1.6)
+- Log GitHub Actions de 18/10/2026: `:app:compileDebugKotlin` e `:app:compileReleaseKotlin` falharam em `MediaBrowser.kt:165:9`, componente `PrimaryTabRow` (Material 3 experimental sem opt-in).
+- Correção local na função `DeviceMediaBrowser`: `@OptIn(ExperimentalMaterial3Api::class)`, sem desativar Lint ou warnings.
+- A execução da versão 0.1.7 permanece pendente; não declarar APK aprovado antes do CI.
 
 ## Alterações funcionais inspecionadas
 - PiP reorganizado em três diálogos personalizados baseados no tema, com posição 3×3, escala 5–90% (atalhos, texto, slider, pinça) e duração início/fim.
@@ -9,7 +14,9 @@
 - Botão de gerenciador de documentos do Android preserva seleção SAF como alternativa a permissões, com concessão persistível.
 
 ## Verificações locais
-- `python3 tools/validate_source.py`: metadados, workflow, integrações de mídia, código PiP e regressões de Media3.
+- Em 18/10/2026: `python3 tools/validate_source.py` aprovado; parser Kotlin PSI validou 7 arquivos sem erro sintático; smoke test Kotlin puro de escala, presets e duração aprovado.
+- Build Gradle completo não executado localmente: SDK/Gradle Android não disponíveis neste ambiente.
+- `python3 tools/validate_source.py`: metadados, workflow, integrações de mídia, código PiP e regressões de Media3/opt-in Compose Material3.
 - `kotlinc`: compilar/testar cálculo puro de posições, escala e intervalos com entradas 5%, 10%, 15% e inválidas.
 - Inspeção de arquivo AndroidManifest.xml e consistência de release/versionCode.
 - Verificação de integridade ZIP do código-fonte.
