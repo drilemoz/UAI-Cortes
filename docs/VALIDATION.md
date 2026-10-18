@@ -1,25 +1,22 @@
-# Validação do Uai Cortes 0.1.3
+# Uai Cortes 0.1.4: validação do pipeline de entrega
 
-## Evidência: GitHub Actions Gerar APK #3 (18/10/2026)
+## Causa verificável no workflow da versão 0.1.3
 
-- Android API 36 e Build Tools 36.0.0: instalação concluída.
-- Assinatura persistente: chave preparada a partir dos quatro Secrets (seus valores não são incluídos na distribuição).
-- `:app:compileDebugKotlin` e `:app:compileReleaseKotlin`: concluídos, com avisos de APIs de ícones depreciadas.
-- `:app:testDebugUnitTest`: concluído.
-- `:app:assembleRelease`: concluído e APK empacotado no runner.
-- `:app:lintDebug`: **falha**, com dois erros `UnsafeOptInUsageError` em `MainActivity.kt:343`, ligados ao `PlayerView.setShowBuffering(...)`, além de 30 avisos.
-- Resultado geral: job falhou em `lintDebug`; verificação e publicação do APK não foram executadas.
+- O gatilho `push` para `main` era permitido, mas a etapa `Publicar APK direto em GitHub Releases` tinha `if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')`.
+- Portanto, o build de um push em `main` pulava a única etapa de publicação e o job poderia ficar verde sem entregar um APK.
+- Não existia etapa `actions/upload-artifact`.
+- Não foi anexado o log da execução relatada como aprovada; a causa é deduzida diretamente do YAML entregue anteriormente, e o evento exato da execução ainda não foi confirmado.
 
-## Correção aplicada na 0.1.3
+## Correção
 
-- `MainActivity.kt`: `@androidx.annotation.OptIn(UnstableApi::class)` apenas em `EditorScreen`, conforme https://developer.android.com/media/media3/exoplayer/troubleshooting
-- Conservados os controles da prévia e seu indicador de buffering.
-- `tools/validate_source.py`: valida a presença do opt-in e a versão. A análise de Lint permanece obrigatória, sem baseline ou `abortOnError = false`.
-- Sincronizado `versionCode=4`, `versionName=0.1.3`, APK `UaiCortes-v0.1.3.apk` e GitHub Release `v0.1.3`.
+- Após testes, Lint e `assembleRelease`, o workflow valida arquivo APK e assinatura com `apksigner`, além dos metadados com `aapt` (package ID, 0.1.4, versionCode 5, targetSdk 36).
+- Usa `actions/upload-artifact@v4` em **todas** as execuções, com `if-no-files-found: error`.
+- Usa `gh release create/upload` em **todas** as execuções sem filtro por tipo de evento.
+- Valida que o APK individual está em Release Assets e gera resumo da execução.
+- Artifacts são compactados pelo GitHub ao baixar; Releases fornece APK sem ZIP.
 
-## Validação local possível
+## Validações locais
 
-- `python3 tools/validate_source.py`
-- Sintaxe do workflow YAML, integridade/CRC do ZIP e inspeção do versionamento.
-- Ambiente local sem Android SDK/Gradle completos: **não afirmar que Lint da versão 0.1.3 passou antes da execução no GitHub Actions**.
-- Testes físicos e exportação real, incluindo PiP/vídeo/áudio, continuam pendentes.
+- `python3 tools/validate_source.py`.
+- YAML parseável, versão consistente, integridade ZIP, confirmação das duas etapas obrigatórias de entrega.
+- Não há Gradle nem Android SDK no ambiente local; executar workflow e testar APK em dispositivo para comprovar implementação.

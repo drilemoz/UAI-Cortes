@@ -1,9 +1,9 @@
-# Uai Cortes v0.1.3 (alpha, correção Android Lint Media3)
+# Uai Cortes v0.1.4 (alpha, correção de entrega do APK)
 
-- Corrige a falha confirmada no GitHub Actions **Gerar APK #3** durante `:app:lintDebug`: dois erros `UnsafeOptInUsageError` ao usar `PlayerView.setShowBuffering()` e a constante `SHOW_BUFFERING_WHEN_PLAYING`.
-- Adiciona `import androidx.annotation.OptIn` e `import androidx.media3.common.util.UnstableApi` e aplica `@OptIn(UnstableApi::class)` **somente** à função `EditorScreen`. Não usa `kotlin.OptIn`, conforme orientação oficial Media3.
-- Mantém o indicador de buffering visível, o Android Lint habilitado e nenhuma supressão geral de erros.
-- Atualiza `versionName=0.1.3` e `versionCode=4`, tela Sobre, README, validação de fonte, workflow, tag `v0.1.3` e APK `UaiCortes-v0.1.3.apk`.
-- Preserva Android API 36, ícone, interface, Media3 e o mecanismo de assinatura pelos quatro Secrets existentes.
-- O workflow #3 comprovou compilação Debug e Release, testes unitários e `:app:assembleRelease` na 0.1.2; apenas o Lint impediu que o job chegasse à publicação. O ZIP desta entrega é apenas o código-fonte.
-- **Pendente:** validar a compilação/Lint do 0.1.3 no GitHub Actions, publicação do APK em Release Assets e execução em dispositivo físico, incluindo PiP/áudio. Fade/dissolvência e corte fino de áudio ainda não estão implementados.
+- Corrige erro de distribuição encontrado após execução aprovada: na versão 0.1.3, um `push` em `main` pulava a publicação porque a etapa aceitava somente `workflow_dispatch` ou tags; não existia etapa `upload-artifact`.
+- Toda execução iniciada por push em `main`, tag `v*` ou manual publica o APK no GitHub Releases e também disponibiliza um artifact na execução de Actions.
+- O download direto em **Releases > Assets** será `UaiCortes-v0.1.4.apk`. Em Actions > Artifacts, o GitHub entrega automaticamente um ZIP com o APK, e não é possível alterar esse comportamento de download da plataforma.
+- O workflow verifica assinatura, package ID, versionCode=5, versionName=0.1.4 e targetSdkVersion=36 antes da publicação; falha se não encontrar o APK ou se a publicação/validação da Release falhar.
+- Adiciona resumo com link direto da Release, instruções para localizar o artifact e SHA-256.
+- Mantém API 36, Media3, interfaces, ícone, Secrets de assinatura e verificações Lint/testes.
+- Ainda não houve build desta versão no GitHub Actions neste pacote; testar o APK instalado e a exportação em dispositivo real. Dissolvência/fade e corte fino do áudio seguem não implementados.

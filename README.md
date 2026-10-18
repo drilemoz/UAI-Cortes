@@ -1,51 +1,49 @@
-# Uai Cortes 0.1.3
+# Uai Cortes 0.1.4
 
-Editor offline Android nativo em Kotlin + Jetpack Compose + Media3.
+Editor Android offline em Kotlin, Jetpack Compose/Material 3 e Media3. Visual desenvolvido com base nas referências de tela fornecidas; o ícone está integrado nos recursos `mipmap-*`.
 
-## Tecnologias
+## Configuração Android
+
 - `compileSdk = 36`, `targetSdk = 36`, `minSdk = 26`.
-- Kotlin 2.1.21; AGP 8.10.1; Gradle 8.11.1; Compose Material 3.
-- Media3 1.10.1 para prévia ExoPlayer e exportação Transformer em H.264/AAC.
-- Importação de arquivos por `ACTION_OPEN_DOCUMENT`, com permissões persistentes apenas nos arquivos escolhidos.
-- Exportação para `Movies/UaiCortes` via MediaStore, sem INTERNET e sem acesso amplo ao armazenamento.
+- `versionName = 0.1.4`, `versionCode = 5`; APK de saída: **`UaiCortes-v0.1.4.apk`**.
+- Kotlin 2.1.21, AGP 8.10.1, Gradle 8.11.1, Compose Material 3 e Media3 1.10.1.
+- Edição e exportação local H.264/AAC; importação via Storage Access Framework e salvamento via MediaStore.
 
-## Telas incluídas
-1. Início (cartão azul de Nova edição, edições recentes, barra inferior).
-2. Projetos locais persistentes.
-3. Editor com prévia, lista de clipes, faixas PiP/áudio, execução e posição no tempo.
-4. Cortar, dividir, reorganizar ou remover clipes.
-5. PiP imagem/vídeo: posição por arrasto, escala por pinça, duração e áudio independente.
-6. Áudio: volume original, silenciar, inclusão de música local, volume separado; silêncio do primeiro clipe.
-7. Transições: corte direto. Fade/dissolvência ainda não implementados.
-8. Exportação 720p/1080p com progresso, cancelamento e salvamento na galeria.
-9. Configurações em páginas completas: Geral, Tela, Sobre.
+## Funcionalidades de desenvolvimento
 
-## Histórico de correções do GitHub Actions
-- A primeira execução (18/10/2026) falhou no passo `SDK Android`, antes do Gradle.
-- Causa comprovada: `android-actions/setup-android@v3` tentava instalar `sdkmanager tools`, um pacote removido do repositório Android.
-- Ajuste: `android-actions/setup-android@v4` com `packages: 'platform-tools'`, instalação explícita da API 36 e ferramentas 36.0.0, e validação dos executáveis `apksigner`/`aapt`.
-- No workflow #2 (18/10/2026), o Android SDK 36, Gradle e assinatura foram preparados corretamente, mas `:app:compileDebugKotlin` falhou por dois imports Media3 desatualizados em `ExportEngine.kt`.
-- A versão 0.1.2 apontou `OverlaySettings` e `VideoCompositorSettings` para `androidx.media3.common` e o workflow #3 compilou Debug/Release e executou testes unitários com sucesso. Entretanto `:app:lintDebug` falhou com dois erros `UnsafeOptInUsageError` no uso de `PlayerView.setShowBuffering()` em `MainActivity.kt` (30 avisos adicionais).
-- A versão 0.1.3 adiciona `@androidx.annotation.OptIn(UnstableApi::class)` exclusivamente à função `EditorScreen`, preservando o indicador de buffering e a verificação Android Lint. Inclui teste estático para evitar regressão. O novo build ainda precisa confirmar a correção.
+- Início, projetos locais, editor de clipes, corte, divisão e ordenação.
+- PiP de imagem/vídeo posicionável com gestos; controle de volume separado, mídia de áudio local e exportação 720p/1080p.
+- Configurações, Tela e Sobre em módulos/telas, não em pop-ups.
+- Transições: corte direto. Dissolvência/fade e corte fino de áudio ainda pendentes.
+- Arquivos originais não são alterados; os projetos dependem das URIs dos arquivos escolhidos.
 
-## Como gerar APK
-1. Envie os arquivos da raiz para um repositório GitHub (não coloque o ZIP dentro do repositório).
-2. Abra **Actions > Gerar APK Uai Cortes > Run workflow**.
-3. O workflow roda testes, Lint e `assembleRelease` com API 36.
-4. Após sucesso, a **Release v0.1.3** conterá o arquivo individual `UaiCortes-v0.1.3.apk` em *Assets* (não um ZIP do APK).
+## Como baixar o APK do workflow
 
-### Assinatura
-Use os Secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` para assinatura estável de Release (o workflow cria a keystore privada somente no runner). Se não forem informados, é usada uma chave DEBUG gerada no runner: útil apenas para testes, **não garante atualização entre builds**. Nunca coloque a keystore no ZIP ou no GitHub.
+1. Envie **os arquivos extraídos deste ZIP** para a raiz da branch `main` do repositório.
+2. O **push na main já inicia** `Gerar APK Uai Cortes`; alternativamente, execute manualmente em **Actions > Gerar APK Uai Cortes > Run workflow**.
+3. Quando a execução terminar com sucesso, há **dois destinos obrigatórios**:
+   - **Releases > v0.1.4 > Assets:** baixar diretamente `UaiCortes-v0.1.4.apk` sem ZIP.
+   - **Actions > Gerar APK Uai Cortes > execução > Artifacts:** baixar `UaiCortes-v0.1.4-apk`, pacote ZIP automático do GitHub contendo o APK.
+4. O resumo da execução (*Summary*) inclui o link direto de download do APK e seu SHA-256.
+5. **Se o APK não for publicado em algum desses destinos, o job deve falhar** em vez de mostrar sucesso sem entrega.
 
-## Limitações e pontos a validar no dispositivo
-- O workflow #3 comprovou compilação Kotlin Debug/Release, testes unitários e `assembleRelease`, mas `lintDebug` falhou e interrompeu a publicação. A versão 0.1.3 precisa ser validada em novo workflow; ainda não há teste em aparelho.
-- Media3 Transformer tem limitações documentadas para crossfade; por isso o menu **Transições** só ativa corte direto nesta versão.
-- PiP simultâneo e mistura de áudio dependem dos codecs disponíveis e precisam de testes reais de exportação em aparelhos diferentes. A prévia PiP usa duas instâncias ExoPlayer aproximadas, podendo apresentar defasagem.
-- Os projetos guardam URIs persistentes, não cópias: se o arquivo original for movido ou excluído, não será possível reabrir sua mídia.
-- Renderização de vídeos longos pode aumentar consumo, temperatura e espaço temporário ocupado; exportação ainda não usa Foreground Service.
+## Origem do problema na 0.1.3
 
-## Ícone
-Ícone azul original do Uai Cortes integrado em `mipmap-*/ic_launcher.png`, além do arquivo mestre `design/icone-uai-cortes.png`.
+O workflow anterior não tinha `actions/upload-artifact` e a publicação no GitHub Releases usava:
 
-## Versionamento
-VersionName `0.1.3`, versionCode `4`; arquivo de APK previsto `UaiCortes-v0.1.3.apk`.
+```yaml
+if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+```
+
+Logo, builds acionados por push na branch `main` terminavam verdes sem publicar nenhuma saída para download. A versão 0.1.4 remove esse bloqueio, adiciona o artifact a cada execução e valida a existência do asset na Release.
+
+## Assinatura
+
+Mantenha os quatro Secrets do repositório: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` e `KEY_PASSWORD`. O workflow carrega o keystore só no runner. Se faltarem, poderá produzir APK assinado com chave debug do runner que talvez não atualize versões anteriores. **Nunca commitar TXT de Secrets, keystore ou credenciais**.
+
+## Verificações e limitações
+
+- As compilações e o Lint desta **0.1.4 não foram executados localmente** (sem Android SDK/Gradle disponível); dependem de GitHub Actions.
+- O workflow #3 da antiga 0.1.2 compilou Debug/Release e testes, mas falhou no Lint; a 0.1.3 corrigiu o opt-in experimental do Media3. A execução bem-sucedida relatada posteriormente ainda não foi disponibilizada em logs neste pacote.
+- Media3, PiP, sincronização, codecs e renderização 720p/1080p precisam de testes físicos de exportação e estabilidade.
+- Para mais detalhes, veja `docs/FEATURE_MATRIX.md`, `docs/VALIDATION.md` e `RELEASE_NOTES.md`.
