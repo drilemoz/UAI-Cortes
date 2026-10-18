@@ -1,4 +1,4 @@
-# Uai Cortes 0.1.0
+# Uai Cortes 0.1.1
 
 Editor offline Android nativo em Kotlin + Jetpack Compose + Media3.
 
@@ -20,11 +20,17 @@ Editor offline Android nativo em Kotlin + Jetpack Compose + Media3.
 8. Exportação 720p/1080p com progresso, cancelamento e salvamento na galeria.
 9. Configurações em páginas completas: Geral, Tela, Sobre.
 
+## Correção do workflow no GitHub Actions 1
+- A primeira execução (18/10/2026) falhou no passo `SDK Android`, antes do Gradle.
+- Causa comprovada: `android-actions/setup-android@v3` tentava instalar `sdkmanager tools`, um pacote removido do repositório Android.
+- Ajuste: `android-actions/setup-android@v4` com `packages: 'platform-tools'`, instalação explícita da API 36 e ferramentas 36.0.0, e validação dos executáveis `apksigner`/`aapt`.
+- Nenhum erro de Kotlin foi observado nos logs recebidos, pois o build não começou. A compilação e os testes de dispositivo continuam pendentes.
+
 ## Como gerar APK
 1. Envie os arquivos da raiz para um repositório GitHub (não coloque o ZIP dentro do repositório).
 2. Abra **Actions > Gerar APK Uai Cortes > Run workflow**.
 3. O workflow roda testes, Lint e `assembleRelease` com API 36.
-4. Após sucesso, a **Release v0.1.0** conterá o arquivo individual `UaiCortes-v0.1.0.apk` em *Assets* (não um ZIP do APK).
+4. Após sucesso, a **Release v0.1.1** conterá o arquivo individual `UaiCortes-v0.1.1.apk` em *Assets* (não um ZIP do APK).
 
 ### Assinatura
 Use os Secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` para assinatura estável de Release (o workflow cria a keystore privada somente no runner). Se não forem informados, é usada uma chave DEBUG gerada no runner: útil apenas para testes, **não garante atualização entre builds**. Nunca coloque a keystore no ZIP ou no GitHub.
@@ -40,4 +46,4 @@ Use os Secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWOR
 Ícone azul original do Uai Cortes integrado em `mipmap-*/ic_launcher.png`, além do arquivo mestre `design/icone-uai-cortes.png`.
 
 ## Versionamento
-VersionName `0.1.0`, versionCode `1`; primeiro arquivo de APK `UaiCortes-v0.1.0.apk`.
+VersionName `0.1.1`, versionCode `2`; primeiro arquivo de APK `UaiCortes-v0.1.1.apk`.

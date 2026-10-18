@@ -1,20 +1,18 @@
-# Validação da versão 0.1.0
+# Validação do Uai Cortes 0.1.1
 
-## Verificações realizadas ao gerar o fonte
-- Estrutura de projeto Android com `settings.gradle.kts`, `app/build.gradle.kts`, Manifest e recursos: verificada.
-- `compileSdk=36`, `targetSdk=36`, `versionCode=1`, `versionName=0.1.0`: verificados.
-- Ícone gerado e incluído em cinco resoluções mipmap: verificado.
-- Arquivo de workflow para produzir `UaiCortes-v0.1.0.apk` diretamente na Release: verificado estaticamente.
-- Parser Kotlin usado localmente para detectar erros de sintaxe. Dependências Android ausentes nesse ambiente; não valida tipos/APIs.
-- Projeto final ZIP e integridade dos arquivos: verificados após empacotamento.
+## Fonte do erro
+Workflow **Gerar APK Uai Cortes #1**, `SDK Android` (18/10/2026):
+`Warning: Failed to find package 'tools'`; `sdkmanager` encerrou com código 1.
+Falha aconteceu antes do passo Gradle. Não há evidência de erro Kotlin nesses logs.
 
-## Pendências obrigatórias antes de distribuir APK
-1. Executar GitHub Actions ou Android Studio com API 36 para confirmar build, Lint e testes JUnit.
-2. Validar assinatura de Release (Secrets opcionais no build, obrigatórios para manter o mesmo certificado em atualizações).
-3. Testar exportações reais com duas fontes, PiP imagem/vídeo, áudio em paralelo e codificadores H.264/AAC.
-4. Testar prévia PiP em telefones reais; pode haver sincronização aproximada.
-5. Implementar transições fade/dissolvência: Media3 não fornece crossfade de composições diretamente.
-6. Melhorar controle de áudio por segmento com corte fino e UI para selecionar exatamente o trecho.
-7. Validar retomada de exportação ao sair do app, casos de pouco armazenamento, alta temperatura e arquivos não suportados.
+## Correções
+- `android-actions/setup-android@v4` com `packages: 'platform-tools'`, excluindo `tools` legado.
+- `sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'`, com checagem dos binários essenciais.
+- `compileSdk=36`, `targetSdk=36`, `versionName=0.1.1`, `versionCode=2`.
+- Nome APK, release tag, About, README e release notes sincronizados.
 
-**Estado:** código-fonte alpha fornecido; APK compilado não foi gerado neste ambiente.
+## Validação local
+- Sintaxe estrutural do YAML, correspondência de versões, integridade do ZIP e imagens: verificar no pacote.
+- Sem SDK/Gradle completo neste ambiente: não é possível declarar que `assembleRelease` compilou.
+- No próximo run, executar `testDebugUnitTest`, `lintDebug`, `assembleRelease`, verificação `apksigner` e a publicação em Release Assets.
+- Posteriormente testar PiP, áudio e exportação em dispositivos reais, incluindo restrições de mídia e Android 8 (minSdk=26).

@@ -21,12 +21,21 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: SDK Android
-        uses: android-actions/setup-android@v3
-      - name: Instalar Android API 36
+      # A partir de setembro de 2026, Google removeu o pacote legado 'tools'.
+      # O @v3 o instala por padrao e falha antes da compilacao.
+      - name: SDK Android (sem pacote legado tools)
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
+      - name: Instalar e verificar Android API 36
+        shell: bash
         run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+          set -euo pipefail
+          sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'
+          test -f "$ANDROID_HOME/platforms/android-36/android.jar"
+          test -x "$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          test -x "$ANDROID_HOME/build-tools/36.0.0/aapt"
+          echo 'Android API 36 e Build Tools 36.0.0 verificados.'
       - name: Gradle 8.11.1
         uses: gradle/actions/setup-gradle@v4
         with:
@@ -58,9 +67,9 @@ jobs:
           mkdir -p dist
           APK="$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' | head -1)"
           test -n "$APK"
-          cp "$APK" dist/UaiCortes-v0.1.0.apk
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose dist/UaiCortes-v0.1.0.apk
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging dist/UaiCortes-v0.1.0.apk | grep -E 'package:|sdkVersion:|targetSdkVersion:'
+          cp "$APK" dist/UaiCortes-v0.1.1.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose dist/UaiCortes-v0.1.1.apk
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging dist/UaiCortes-v0.1.1.apk | grep -E 'package:|sdkVersion:|targetSdkVersion:'
           test "$(find dist -type f | wc -l)" -eq 1
       # Não utilizar actions/upload-artifact: o GitHub empacota os artifacts em ZIP.
       # Na ação manual e nas tags, disponibilizar o APK diretamente em Release Assets.
@@ -71,9 +80,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          TAG="v0.1.0"
+          TAG="v0.1.1"
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" dist/UaiCortes-v0.1.0.apk --clobber
+            gh release upload "$TAG" dist/UaiCortes-v0.1.1.apk --clobber
           else
-            gh release create "$TAG" dist/UaiCortes-v0.1.0.apk --title "Uai Cortes v0.1.0" --notes-file RELEASE_NOTES.md --prerelease
+            gh release create "$TAG" dist/UaiCortes-v0.1.1.apk --title "Uai Cortes v0.1.1" --notes-file RELEASE_NOTES.md --prerelease
           fi
