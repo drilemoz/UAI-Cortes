@@ -11,7 +11,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.audio.BaseAudioProcessor
-import androidx.media3.effect.OverlaySettings
+import androidx.media3.common.OverlaySettings
 import androidx.media3.effect.Presentation
 import androidx.media3.effect.StaticOverlaySettings
 import androidx.media3.common.util.Size
@@ -24,7 +24,7 @@ import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.ProgressHolder
 import androidx.media3.transformer.Transformer
-import androidx.media3.transformer.VideoCompositorSettings
+import androidx.media3.common.VideoCompositorSettings
 import android.net.Uri
 import java.io.File
 import java.nio.ByteBuffer

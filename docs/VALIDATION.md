@@ -1,18 +1,20 @@
-# Validação do Uai Cortes 0.1.1
+# Validação do Uai Cortes 0.1.2
 
-## Fonte do erro
-Workflow **Gerar APK Uai Cortes #1**, `SDK Android` (18/10/2026):
-`Warning: Failed to find package 'tools'`; `sdkmanager` encerrou com código 1.
-Falha aconteceu antes do passo Gradle. Não há evidência de erro Kotlin nesses logs.
+## Evidência de falha, GitHub Actions #2, 18/10/2026
+- O Android SDK API 36 e Build Tools 36.0.0 foram instalados e verificados.
+- Os quatro Secrets estavam disponíveis e a keystore foi decodificada para assinatura persistente.
+- O Gradle 8.11.1 iniciou normalmente e a tarefa `:app:compileDebugKotlin` falhou.
+- Erros `Unresolved reference 'OverlaySettings'` e `Unresolved reference 'VideoCompositorSettings'` em `ExportEngine.kt`, acompanhados por dois `overrides nothing` e um `Argument type mismatch` (7 diagnósticos no total).
+- O build não chegou a `:app:assembleRelease` e não gerou APK.
 
-## Correções
-- `android-actions/setup-android@v4` com `packages: 'platform-tools'`, excluindo `tools` legado.
-- `sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0'`, com checagem dos binários essenciais.
-- `compileSdk=36`, `targetSdk=36`, `versionName=0.1.1`, `versionCode=2`.
-- Nome APK, release tag, About, README e release notes sincronizados.
+## Correção aplicada
+- Imports substituídos pelos tipos documentados `androidx.media3.common.OverlaySettings` e `androidx.media3.common.VideoCompositorSettings`.
+- `StaticOverlaySettings` continua em `androidx.media3.effect`, conforme referência Media3.
+- Sincronizados Gradle, Sobre, README, workflow e notas para `0.1.2`/versionCode `3`.
+- Referências oficiais: https://developer.android.com/reference/androidx/media3/common/OverlaySettings e https://developer.android.com/reference/androidx/media3/common/VideoCompositorSettings
 
-## Validação local
-- Sintaxe estrutural do YAML, correspondência de versões, integridade do ZIP e imagens: verificar no pacote.
-- Sem SDK/Gradle completo neste ambiente: não é possível declarar que `assembleRelease` compilou.
-- No próximo run, executar `testDebugUnitTest`, `lintDebug`, `assembleRelease`, verificação `apksigner` e a publicação em Release Assets.
-- Posteriormente testar PiP, áudio e exportação em dispositivos reais, incluindo restrições de mídia e Android 8 (minSdk=26).
+## Validações de fonte
+- Executar `python3 tools/validate_source.py` para checar imports, versões, arquivos e workflow.
+- Validar sintaxe do YAML e integridade/CRC do ZIP.
+- **Não houve validação do APK Android completo neste ambiente.** Repetir `:app:testDebugUnitTest :app:lintDebug :app:assembleRelease` no Actions e confirmar a verificação `apksigner`.
+- PiP, volume e exportação continuam dependentes de testes reais de funcionamento em aparelhos com hardware e codecs distintos.
