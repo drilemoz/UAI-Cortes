@@ -10,10 +10,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*25',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.24"',gradle)
-assert 'Versão 0.1.24 (25)' in ui
-for label in ["VERSION: '0.1.24'", "VERSION_CODE: '25'", 'TAG="v$VERSION"',
+assert re.search(r'versionCode\s*=\s*26',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.25"',gradle)
+assert 'Versão 0.1.25 (26)' in ui
+for label in ["VERSION: '0.1.25'", "VERSION_CODE: '26'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -137,3 +137,17 @@ assert 'currentFinish()' in ui and 'AudioTimelineEdit.pixelsToMs(' in ui
 assert all(x in gesture for x in ['fun move(', 'fun left(', 'fun right(', 'fun pixelsToMs('])
 assert (root/'app/src/test/java/br/com/uaicortes/AudioTimelineEditTest.kt').exists()
 print('OK: v0.1.24 / versionCode 25, timeline de áudio arrastável, seleção e alças visuais com limites')
+
+# v0.1.25: coordenadas relativas da legenda na prévia, editor visual e busca fina.
+precision=(root/'app/src/main/java/br/com/uaicortes/TimelinePrecision.kt').read_text()
+assert 'SubtitleOverlayOnFrame(cue, editable = false)' in ui
+assert 'SubtitlePositionPreview(p,selected)' in ui
+assert 'SubtitlePlacement.anchorPixels(' in ui
+assert 'SubtitlePlacement.drag(' in ui
+assert 'TimelinePrecision.step(' in ui and 'seekProjectPosition(player,p.clips,dest)' in ui
+assert 'Modifier.offset(x=((cue.x-.5f)*240).dp' not in ui
+assert 'onDragEnd' in ui and 'latestCommit(draftX,draftY)' in ui
+assert 'setOverlayFrameAnchor(0f, -1f)' in fx
+assert 'fun sourceAt(' in precision and 'fun anchorPixels(' in precision
+assert (root/'app/src/test/java/br/com/uaicortes/TimelinePrecisionTest.kt').exists()
+print('OK: v0.1.25 / versionCode 26, precisão da timeline e prévia de legendas proporcional')

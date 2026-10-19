@@ -38,6 +38,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
@@ -490,9 +493,9 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.24 (25)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.25 (26)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
-        Spacer(Modifier.height(14.dp));Text("Novidades: mover faixas de áudio na timeline e ajustar o trecho por alças visuais.",
+        Spacer(Modifier.height(14.dp));Text("Novidades: precisão de 0,1 s na timeline e posicionamento visual de legendas.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -599,14 +602,7 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                     }
                 }
                 p.subtitles.firstOrNull { currentMs >= it.startMs && currentMs < it.endMs }?.let { cue ->
-                    Box(Modifier.fillMaxSize().padding(horizontal=12.dp, vertical=8.dp),
-                        contentAlignment = Alignment.Center) {
-                        Text(cue.text, color=Color(cue.color), fontSize=cue.sizeSp.sp,
-                            fontWeight=FontWeight.SemiBold, textAlign=TextAlign.Center,
-                            modifier=Modifier.offset(x=((cue.x-.5f)*240).dp,y=((cue.y-.5f)*340).dp)
-                                .background(Color.Black.copy(alpha=.64f),RoundedCornerShape(3.dp))
-                                .padding(horizontal=7.dp, vertical=2.dp))
-                    }
+                    SubtitleOverlayOnFrame(cue, editable = false)
                 }
             }
         }
@@ -627,6 +623,23 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 seekProjectPosition(player, p.clips, ms)
                 onPosition(ms)
             }, modifier = Modifier.weight(1f))
+        }
+        // Passos temporais explícitos evitam tentar acertar um quadro em uma barra curta.
+        Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),
+            verticalAlignment=Alignment.CenterVertically,
+            horizontalArrangement=Arrangement.spacedBy(5.dp)) {
+            Text("Ajuste fino",fontSize=11.sp,modifier=Modifier.weight(1f))
+            listOf(-1000L to "−1s", -100L to "−0,1s",
+                100L to "+0,1s", 1000L to "+1s").forEach { (delta,label) ->
+                OutlinedButton(onClick={
+                    val dest=TimelinePrecision.step(currentMs,delta,p.durationMs)
+                    seekProjectPosition(player,p.clips,dest)
+                    onPosition(dest)
+                },contentPadding=PaddingValues(horizontal=7.dp,vertical=2.dp),
+                    modifier=Modifier.height(32.dp),enabled=p.durationMs>0) {
+                    Text(label,fontSize=11.sp)
+                }
+            }
         }
         if(p.durationMs>0) Slider(value=currentMs.toFloat().coerceIn(0f,p.durationMs.toFloat()),
             onValueChange={global ->
@@ -2388,6 +2401,95 @@ private fun TransitionScreen(p:VideoProject,back:()->Unit,update:(VideoProject)-
     }
 }
 
+/** A mesma coordenada x/y usada pelo exportador Media3: centro na horizontal,
+ * base do texto na vertical. Nunca usar deslocamento fixo em dp para a legenda. */
+@Composable
+private fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
+    onPositionCommit: (Float,Float)->Unit = { _,_ -> }) {
+    var frameSize by remember { mutableStateOf(IntSize.Zero) }
+    var textSize by remember { mutableStateOf(IntSize.Zero) }
+    var draftX by remember(cue.id) { mutableFloatStateOf(cue.x) }
+    var draftY by remember(cue.id) { mutableFloatStateOf(cue.y) }
+    var dragging by remember(cue.id) { mutableStateOf(false) }
+    val latestCommit by rememberUpdatedState(onPositionCommit)
+    LaunchedEffect(cue.id,cue.x,cue.y) {
+        if (!dragging) { draftX=cue.x; draftY=cue.y }
+    }
+    Box(Modifier.fillMaxSize().onSizeChanged { frameSize=it }) {
+        if (cue.text.isNotBlank()) {
+            val location=SubtitlePlacement.anchorPixels(frameSize.width,frameSize.height,
+                textSize.width,textSize.height,draftX,draftY)
+            Text(cue.text,color=Color(cue.color),fontSize=cue.sizeSp.sp,
+                fontWeight=FontWeight.SemiBold,textAlign=TextAlign.Center,
+                modifier=Modifier.offset { IntOffset(location.first,location.second) }
+                    .widthIn(max=280.dp)
+                    .onSizeChanged { textSize=it }
+                    .then(if (editable) Modifier.pointerInput(cue.id,frameSize) {
+                        detectDragGestures(
+                            onDragStart={dragging=true},
+                            onDragEnd={
+                                dragging=false
+                                latestCommit(draftX,draftY)
+                            },
+                            onDragCancel={
+                                dragging=false
+                                draftX=cue.x;draftY=cue.y
+                            },
+                            onDrag={change,delta->
+                                change.consume()
+                                val next=SubtitlePlacement.drag(draftX,draftY,delta.x,delta.y,
+                                    frameSize.width,frameSize.height)
+                                draftX=next.first;draftY=next.second
+                            })
+                    } else Modifier)
+                    .background(Color.Black.copy(alpha=.64f),RoundedCornerShape(3.dp))
+                    .padding(horizontal=7.dp,vertical=2.dp))
+        }
+    }
+}
+
+/** Amostra local do quadro em que a legenda começa. Falhas de codecs/permissão
+ * são apresentadas sem impedir a edição de posição. Nenhum dado sai do aparelho. */
+@Composable
+private fun SubtitlePositionPreview(p:VideoProject,cue:SubtitleCue,
+    onPositionCommit:(Float,Float)->Unit) {
+    val context=LocalContext.current
+    val source=remember(p.clips,cue.startMs) {
+        TimelinePrecision.sourceAt(p.clips.map { it.uri to it.durationMs },cue.startMs)
+    }
+    val clip=p.clips.getOrNull(source?.first ?: -1)
+    val aspect=remember(clip?.uri) { clip?.let { mediaAspect(context,it.uri,false) } ?: 16f/9f }
+    val bitmap by produceState<ImageBitmap?>(null,clip?.uri,clip?.startMs,source?.second) {
+        value=withContext(Dispatchers.IO) {
+            if (clip==null || source==null) null else runCatching {
+                val r=MediaMetadataRetriever()
+                try {
+                    r.setDataSource(context,Uri.parse(clip.uri))
+                    val atUs=(clip.startMs+source.second)*1000L
+                    val frame=if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.O_MR1) {
+                        r.getScaledFrameAtTime(atUs,MediaMetadataRetriever.OPTION_CLOSEST_SYNC,
+                            480,(480f/aspect).toInt().coerceIn(120,960))
+                    } else r.getFrameAtTime(atUs,MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                    frame?.asImageBitmap()
+                } finally { r.release() }
+            }.getOrNull()
+        }
+    }
+    BoxWithConstraints(Modifier.fillMaxWidth().height(230.dp)
+        .clip(RoundedCornerShape(12.dp)).background(Color(0xFF101014)),
+        contentAlignment=Alignment.Center) {
+        val w=minOf(maxWidth,maxHeight*aspect)
+        Box(Modifier.width(w).height(w/aspect)) {
+            if(bitmap!=null) Image(bitmap!!,contentDescription="Quadro do vídeo",
+                contentScale=ContentScale.FillBounds,modifier=Modifier.fillMaxSize())
+            else Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) {
+                Text("Quadro indisponível",color=Color.LightGray,fontSize=12.sp)
+            }
+            SubtitleOverlayOnFrame(cue,editable=true,onPositionCommit=onPositionCommit)
+        }
+    }
+}
+
 @Composable
 private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit) {
     val context=LocalContext.current
@@ -2445,6 +2547,13 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
             }
         }
         if(selected!=null) {
+            Text("Arraste a legenda sobre o vídeo para posicioná-la. O ajuste é salvo ao soltar.",
+                style=MaterialTheme.typography.bodySmall)
+            SubtitlePositionPreview(p,selected) { x,y ->
+                update(p.copy(subtitles=p.subtitles.map {
+                    if(it.id==selected.id) it.copy(x=x,y=y) else it
+                }))
+            }
             OutlinedTextField(value=selected.text,onValueChange={v->
                 update(p.copy(subtitles=p.subtitles.map{if(it.id==selected.id) it.copy(text=v.take(500)) else it}))
             },label={Text("Texto")},minLines=2,modifier=Modifier.fillMaxWidth())
@@ -2478,6 +2587,20 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
             Slider(value=selected.y,valueRange=.1f.. .9f,onValueChange={v->
                 update(p.copy(subtitles=p.subtitles.map{if(it.id==selected.id)it.copy(y=v) else it}))
             })
+            Text("Ajuste fino da posição (1% do quadro)",fontSize=12.sp)
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly) {
+                listOf(Triple("←",-.01f,0f),Triple("→",.01f,0f),
+                    Triple("↑",0f,-.01f),Triple("↓",0f,.01f)).forEach { (label,dx,dy) ->
+                    OutlinedButton(onClick={
+                        val next=SubtitlePlacement.nudge(selected.x,selected.y,dx,dy)
+                        update(p.copy(subtitles=p.subtitles.map {
+                            if(it.id==selected.id)it.copy(x=next.first,y=next.second) else it
+                        }))
+                    },contentPadding=PaddingValues(horizontal=13.dp,vertical=6.dp)) {
+                        Text(label)
+                    }
+                }
+            }
             Text("Posição da legenda")
             Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                 listOf("Cima" to .15f,"Centro" to .5f,"Baixo" to .85f).forEach { (name,y) ->

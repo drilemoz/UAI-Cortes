@@ -81,3 +81,11 @@ Os recursos novos da versão 0.1.11 ainda **não foram validados por compilaçã
 | Toque na faixa para editar o áudio selecionado | Código | Teste Android pendente |
 | Alças esquerda, central, direita para entrada, posição e saída | Código com lógica isolada e testes | Teste Android pendente |
 | Manter mínimo de 250 ms e limites de fonte/projeto | Lógica pura Kotlin | Unitários em CI pendentes |
+
+## v0.1.25: legenda visual e posição temporal
+| Recurso | Implementação | Validação |
+|---|---|---|
+| Posição de legenda relativa à área de vídeo sem dp fixos | Código, âncora Media3 equivalente | Fidelidade com exportação pendente |
+| Arrastar legenda sobre quadro de referência | Código, grava ao soltar | Teste Android pendente |
+| Ajuste de posição X/Y por 1% | Código e teste puro | Teste de UI pendente |
+| Navegar no projeto em passos ±0,1 s/±1 s | Código e teste puro | Teste Android pendente |

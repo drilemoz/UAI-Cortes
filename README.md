@@ -1,10 +1,10 @@
-# Uai Cortes 0.1.24
+# Uai Cortes 0.1.25
 
 Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
 
 ## Versões e ferramentas
 - `minSdk = 26`, `compileSdk = 36`, `targetSdk = 36`.
-- `versionName = 0.1.24`, `versionCode = 25`.
+- `versionName = 0.1.25`, `versionCode = 26`.
 - Kotlin 2.1.21, AGP 8.10.1, Gradle 8.11.1, JDK 17.
 - Media3 1.10.1, ExoPlayer e Transformer para composição H.264/AAC.
 - O editor não exige conta nem internet. A biblioteca PiP solicita acesso às fotos/vídeos do Android, integral ou parcial conforme consentimento; o seletor de documentos continua como alternativa.
@@ -44,7 +44,7 @@ Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
 - Mini tutorial de 5 passos fica abaixo dos botões de edição de corte.
 - Build e teste físico continuam pendentes; Media3 pode limitar decodificadores simultâneos no aparelho.
 
-## Novidades acumuladas até 0.1.24
+## Novidades acumuladas até 0.1.25
 - Até **4 PiPs por projeto**, com vídeos ou imagens independentes, seleção de camada e opção de adicionar, substituir ou remover.
 - Posição, escala 5–90%, duração, volume e silêncio independentes. Áudio desligado em um PiP não silencia os outros.
 - Quatro botões quadrados e compactos Posição/Tamanho/Duração/Mídia **na mesma linha**. Cada botão abre um painel **ModalBottomSheet** deslizando da borda inferior, por cima dos controles e ações inferiores, sem alterar a altura ou a posição da prévia. Fechamento por gesto de arrastar, toque fora ou botão; altura máxima de 64% da tela, com conteúdo rolável.
@@ -59,14 +59,14 @@ Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
 1. Envie os arquivos da pasta extraída para a **raiz** do repositório GitHub.
 2. Abra **Actions > Gerar APK Uai Cortes > Run workflow** ou envie alterações para `main`.
 3. O workflow valida código, roda testes, Android Lint e `assembleRelease` com API 36.
-4. Ao concluir, o **GitHub Releases > v0.1.24 > Assets** oferece diretamente cinco arquivos `.apk` individuais, sem um Artifact adicional e sem ZIP de distribuição:
-   - `UaiCortes-v0.1.24-arm32.apk` (`armeabi-v7a`)
-   - `UaiCortes-v0.1.24-arm64.apk` (`arm64-v8a`)
-   - `UaiCortes-v0.1.24-x86.apk` (`x86`)
-   - `UaiCortes-v0.1.24-x86_64.apk` (`x86_64`)
-   - `UaiCortes-v0.1.24-universal.apk` (qualquer arquitetura suportada)
+4. Ao concluir, o **GitHub Releases > v0.1.25 > Assets** oferece diretamente cinco arquivos `.apk` individuais, sem um Artifact adicional e sem ZIP de distribuição:
+   - `UaiCortes-v0.1.25-arm32.apk` (`armeabi-v7a`)
+   - `UaiCortes-v0.1.25-arm64.apk` (`arm64-v8a`)
+   - `UaiCortes-v0.1.25-x86.apk` (`x86`)
+   - `UaiCortes-v0.1.25-x86_64.apk` (`x86_64`)
+   - `UaiCortes-v0.1.25-universal.apk` (qualquer arquitetura suportada)
 5. Somente o APK **Release** é publicado. O gatilho por tags `v*` foi removido para impedir segundo build disparado pela tag criada no Release. O GitHub Actions mostra links diretos no resumo.
-6. O mesmo `versionCode=25` é usado em todas as variantes; o APK universal não exige conhecer a arquitetura. Apenas um deve ser instalado por vez. O app atual usa majoritariamente código gerenciado e Media3, portanto tamanhos de APK por ABI podem ser muito próximos. **Não presumir que uma variante é menor antes de medir**.
+6. O mesmo `versionCode=26` é usado em todas as variantes; o APK universal não exige conhecer a arquitetura. Apenas um deve ser instalado por vez. O app atual usa majoritariamente código gerenciado e Media3, portanto tamanhos de APK por ABI podem ser muito próximos. **Não presumir que uma variante é menor antes de medir**.
 7. O script `tools/package_apks.py` valida os cinco resultados do Gradle por `output-metadata.json`, assinatura, pacote, `versionCode` e SDK; falha se faltar alguma ABI ou houver duplicata. Não escolhe o primeiro APK encontrado.
 
 ### Assinatura
@@ -123,3 +123,11 @@ A tela Transições agora anima uma prévia baseada em quadros reais da junção
 - Ajustes gestuais são uma prévia local até o usuário tocar **Salvar corte** na tela Áudio; **Cancelar** abandona essas mudanças. Campos numéricos continuam disponíveis para ajustes finos e trechos muito curtos.
 - Os gestos usam os limites da mídia de origem e do projeto (mínimo de 250 ms); não alteram os arquivos de mídia. Prévia e exportação continuam usando `AudioTrack.sourceStartMs`, `durationMs` e `startMs`.
 - **Pendente:** execução GitHub Actions (`testDebugUnitTest`, `lintDebug`, `assembleRelease`) e teste físico de gestos, reprodução e MP4.
+
+
+## v0.1.25 · Posição proporcional das legendas e ajuste fino do cursor
+- A prévia do editor agora posiciona legendas proporcionalmente às dimensões **reais do quadro**, usando âncora inferior central como a exportação Media3. O antigo deslocamento fixo em dp foi eliminado.
+- Tela Legendas: miniatura do quadro no início da legenda com texto arrastável. A posição é salva **ao soltar**; sliders e setas de 1% completam o ajuste. A miniatura pode estar indisponível se a mídia não for legível.
+- Editor principal: passos de ±0,1 segundo e ±1 segundo na timeline para acertar o cursor em períodos curtos; tempos extremos são limitados ao projeto.
+- Lógica pura `TimelinePrecision` e `SubtitlePlacement`, com testes de limites e coordenadas. Arquivo original, JSON/schema e comportamento da exportação permanecem intactos.
+- Pendente: compilação Android, teste de arrasto em diferentes proporções de vídeo e comparação visual com MP4 real.

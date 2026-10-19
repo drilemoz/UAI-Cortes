@@ -83,3 +83,9 @@ Correção v0.1.22: o workflow 19 compilou Kotlin Debug/Release, executou testes
 - Executar `python3 tools/validate_source.py` e testes `AudioTimelineEditTest` no CI; verificar que metadados e 5 APKs são 0.1.24 / versionCode 25.
 - Testar em aparelho: arrastar faixa no editor e soltar (persistência após reabrir), tocar faixa para editar, arrastar alça esquerda/centro/direita e cancelar/salvar, trechos de 250ms, bordas do projeto, áudio sem metadados de duração e exportar comparando com prévia.
 - Sem build Gradle Android local nem teste físico nesta preparação.
+
+## v0.1.25 (versionCode 26)
+- Validação local: executar `python3 tools/validate_source.py` e verificar `TimelinePrecisionTest` (posição de cursor, limites de borda, clipagem de coordenadas e seleção de quadro por instante).
+- Pendente no GitHub Actions: `testDebugUnitTest`, `lintDebug`, `assembleRelease` e verificação dos cinco APKs 0.1.25/versionCode 26.
+- Pendente no Android físico: editor com vídeos 16:9/9:16, posicionar legenda por arrasto na imagem, reabrir projeto, comparar com MP4 exportado, testar vídeo com quadros indisponíveis e legendas compridas.
+- Estática/Kotlin não substituem compilação Android nem comprovam fidelidade final das coordenadas.
