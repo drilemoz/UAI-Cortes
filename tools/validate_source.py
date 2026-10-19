@@ -10,11 +10,21 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*16',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.15"',gradle)
-assert 'Versão 0.1.15 (16)' in ui
-for label in ['VERSION: \'0.1.15\'','UaiCortes-v0.1.15.apk','TAG="v0.1.15"',"versionCode='16'",'actions/upload-artifact@v4','gh release upload']:
+assert re.search(r'versionCode\s*=\s*17',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.16"',gradle)
+assert 'Versão 0.1.16 (17)' in ui
+for label in ["VERSION: '0.1.16'", "VERSION_CODE: '17'", 'TAG="v$VERSION"',
+              'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
+assert 'actions/upload-artifact@v4' not in workflow
+assert 'tags: [' not in workflow
+assert 'assembleDebug' not in workflow
+assert all(v in gradle for v in ['isUniversalApk = true',
+                                 '"armeabi-v7a", "arm64-v8a", "x86", "x86_64"',
+                                 'isEnable = true'])
+package_script=(root/'tools/package_apks.py').read_text()
+assert 'output-metadata.json' in package_script and 'apksigner' in package_script
+assert 'len(dist_apks) != 5' in package_script
 assert 'platforms;android-36' in workflow and 'android-actions/setup-android@v4' in workflow
 assert 'abortOnError = false' not in gradle
 assert 'setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)' in ui
@@ -41,13 +51,13 @@ assert 'EditableSeekTime(' in ui and 'TimeDigitsField(' in ui
 assert 'OverlayTiming.nextStart(' in ui and 'pendingSequential' in ui and 'pendingOverlap' in ui
 assert 'OverlayPlacement.collisions(' in ui and 'overlapWith' in ui
 assert 'dragHandle = null' in ui
-print('OK: 0.1.15 / versionCode 16, PiP sequencial, confirmação de colisão, bottom sheet compacto e CI')
+print('OK: 0.1.16 / versionCode 17, PiP sequencial, confirmação de colisão, bottom sheet compacto e CI')
 
 assert 'private fun TrimScreen(' in ui and 'TrimThumbnails(' in ui and 'RangeSlider(' not in ui
 assert 'TimeDigitsField(' in ui and 'NumericTimeMask' in ui and 'trimLogic' not in ui
 assert 'Marcar início' in ui and 'Marcar fim' in ui and 'Aplicar corte' in ui
 assert 'NumericTime.format(' in ui and 'TimeDigitsField("Começa em"' in ui
-print('OK: 0.1.15 / versionCode 16, editor de cortes com prévia, horários com máscara numérica, PiP preservado')
+print('OK: 0.1.16 / versionCode 17, editor de cortes com prévia, horários com máscara numérica, PiP preservado')
 
 assert 'TimeDigitsField("Tempo", cursorMs, total, autoApply = true' in ui
 assert 'TrimQuickAction(Icons.Default.ContentCut' in ui
@@ -55,7 +65,7 @@ assert 'TrimQuickAction(Icons.Default.Undo' in ui
 assert 'TrimQuickAction(Icons.Default.Delete' in ui
 assert 'undoClips' in ui and 'rememberUndo()' in ui
 assert 'Para marcar fim, avance o vídeo' in ui
-print('OK: v0.1.15 sem barra sobre miniaturas, tempo automático, ações compactas e desfazer de clipes')
+print('OK: v0.1.16 sem barra sobre miniaturas, tempo automático, ações compactas e desfazer de clipes')
 
 assert 'repeatMode = Player.REPEAT_MODE_ONE' in ui
 assert 'repeatMode = Player.REPEAT_MODE_ALL' in ui
@@ -80,7 +90,7 @@ for token in ['ClipSheetAction(', 'TimelineTimedRow(', 'private fun SubtitleScre
 assert 'TimedSubtitleOverlay' in fx and 'ClipFadeEffect' in fx
 assert 'EditFeatures.parseSrt' in ui and 'setRemoveVideo(true)' in extract
 assert 'project.audioTracks.forEach' in source and 'TimedSubtitleOverlay(project.subtitles' in source
-print('OK: v0.1.15 funcionalidades estruturais, schema 4, SRT, fades e extração M4A')
+print('OK: v0.1.16 funcionalidades estruturais, schema 4, SRT, fades e extração M4A')
 
 # Regressões detectadas no build GitHub Actions 15 (não valida tipos Kotlin).
 assert '@kotlin.OptIn(ExperimentalMaterial3Api::class)\n@Composable\nprivate fun PipScreen' in ui
@@ -88,3 +98,11 @@ assert '@kotlin.OptIn(ExperimentalMaterial3Api::class)\n@Composable\nprivate fun
 assert 'val timelineWidth = maxWidth' in ui and 'Modifier.width(timelineWidth*fraction)' in ui
 assert 'Modifier.width(maxWidth*fraction)' not in ui
 print('OK: regressões build 15 — opt-in Material3 e largura da timeline corrigidos')
+
+# Build 16: todas as chamadas Media3 instáveis da prévia ficam isoladas
+# em um helper AndroidX @OptIn. Isso evita o lint nas lambdas AndroidView.
+assert '@OptIn(UnstableApi::class)\nprivate fun previewPlayer(' in ui
+assert ui.count('resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT') == 1
+assert ui.count('setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)') == 1
+assert 'previewPlayer(it, transparentShutter = true)' in ui
+print('OK: build 16 Lint Media3 isolado e 5 saídas ABI/universal Release sem APK duplicado')

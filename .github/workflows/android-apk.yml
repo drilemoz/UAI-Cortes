@@ -4,19 +4,19 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    tags: ["v*"]
 
+# A criação de tags pelo gh release NÃO aciona um segundo workflow.
 permissions:
   contents: write
 
 jobs:
   android:
-    name: Compilar, testar e entregar APK
+    name: Testar e publicar 5 APKs Release
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      VERSION: '0.1.15'
-      APK_NAME: UaiCortes-v0.1.15.apk
+      VERSION: '0.1.16'
+      VERSION_CODE: '17'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,7 +25,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: SDK Android API 36 (sem pacote legado tools)
+      - name: SDK Android API 36
         uses: android-actions/setup-android@v4
         with:
           packages: 'platform-tools'
@@ -56,69 +56,63 @@ jobs:
             echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/uai-cortes-release.p12" >> "$GITHUB_ENV"
             echo 'Assinatura persistente ativada.'
           else
-            echo 'AVISO: sem os quatro Secrets. A assinatura DEBUG pode impedir atualizações.'
+            echo 'AVISO: sem os quatro Secrets, assinatura DEBUG provisória. Atualização poderá falhar.'
           fi
       - name: Validar código-fonte e política de publicação
         run: python3 tools/validate_source.py
-      - name: Testes, Lint e build Release
+      - name: Testes, Lint e compilar Release
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleRelease
-      - name: Preparar e validar APK
+      - name: Preparar e verificar cada APK
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p dist
-          APK="$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print -quit)"
-          test -n "$APK" && test -s "$APK"
-          cp "$APK" "dist/$APK_NAME"
-          test -s "dist/$APK_NAME"
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "dist/$APK_NAME"
-          BADGING="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "dist/$APK_NAME")"
-          printf '%s\n' "$BADGING" | grep -F "package: name='br.com.uaicortes' versionCode='16' versionName='0.1.15'"
-          printf '%s\n' "$BADGING" | grep -F "targetSdkVersion:'36'"
-          sha256sum "dist/$APK_NAME" | tee dist/SHA256SUMS.txt
-          echo "APK pronto: $APK_NAME"
-      # Sempre arquivar o APK, inclusive em push na main.
-      # A interface GitHub Actions baixa artifacts em ZIP por decisão do GitHub.
-      - name: Disponibilizar APK em Actions Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: UaiCortes-v0.1.15-apk
-          path: dist/UaiCortes-v0.1.15.apk
-          if-no-files-found: error
-          retention-days: 30
-          compression-level: 0
-      # Publicar também o .apk SOLTO em Releases, inclusive em push na main.
-      # Não usar if: seletivo que pule o passo em builds concluídos.
-      - name: Publicar APK diretamente em GitHub Releases
+          python3 tools/package_apks.py
+          test "$(find dist -maxdepth 1 -type f -name '*.apk' | wc -l)" -eq 5
+      # Um único destino de distribuição: GitHub Releases, sem Actions Artifacts duplicados.
+      - name: Publicar cinco APKs diretos em GitHub Releases
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="v0.1.15"
+          TAG="v$VERSION"
+          mapfile -t APKS < <(find dist -maxdepth 1 -type f -name "UaiCortes-v$VERSION-*.apk" | sort)
+          test "${#APKS[@]}" -eq 5
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "dist/$APK_NAME" --clobber
+            gh release upload "$TAG" "${APKS[@]}" --clobber
           else
-            gh release create "$TAG" "dist/$APK_NAME" \
+            gh release create "$TAG" "${APKS[@]}" \
               --target "$GITHUB_SHA" \
-              --title "Uai Cortes v0.1.15" \
+              --title "Uai Cortes v$VERSION" \
               --notes-file RELEASE_NOTES.md \
               --prerelease
           fi
-          gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fx "$APK_NAME"
-          echo "APK publicado no GitHub Releases: $TAG / $APK_NAME"
-      - name: Resumo e localização dos downloads
+          for name in arm32 arm64 x86 x86_64 universal; do
+            gh release view "$TAG" --json assets --jq '.assets[].name' \
+              | grep -Fx "UaiCortes-v$VERSION-$name.apk"
+          done
+      - name: Resumo com links diretos dos APKs
         shell: bash
         run: |
           set -euo pipefail
           {
-            echo '## APK disponível ✅'
+            echo '## Uai Cortes: 5 APKs por arquitetura'
             echo
-            echo "- **Release (APK direto):** [Baixar $APK_NAME](https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/$APK_NAME)"
-            echo "- **Actions > execução > Artifacts:** UaiCortes-v0.1.15-apk (o GitHub compacta ao baixar)"
-            echo "- **SHA-256:** $(awk '{print $1}' dist/SHA256SUMS.txt)"
+            echo '| Variante | APK direto |'
+            echo '|---|---|'
+            for name in arm32 arm64 x86 x86_64 universal; do
+              apk="UaiCortes-v$VERSION-$name.apk"
+              echo "| $name | [Baixar $apk](https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/$apk) |"
+            done
+            echo
+            echo 'O APK universal é a escolha simples para a maioria dos aparelhos.'
+            echo 'Os APKs por ABI são alternativas: instale apenas um APK por vez.'
+            echo '### SHA-256'
+            echo '```'
+            cat dist/SHA256SUMS.txt
+            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

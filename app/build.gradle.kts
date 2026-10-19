@@ -11,8 +11,8 @@ android {
         applicationId = "br.com.uaicortes"
         minSdk = 26
         targetSdk = 36
-        versionCode = 16
-        versionName = "0.1.15"
+        versionCode = 17
+        versionName = "0.1.16"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     signingConfigs {
@@ -31,6 +31,17 @@ android {
             isMinifyEnabled = false
             signingConfig = if (System.getenv("ANDROID_KEYSTORE_FILE").isNullOrBlank())
                 signingConfigs.getByName("debug") else signingConfigs.getByName("ciRelease")
+        }
+    }
+    // Um build Release, cinco APKs diretos para GitHub Releases.
+    // Todos usam versionCode 17 para permitir trocar de arquitetura/universal
+    // sem criar versões artificiais. Não publicamos multi-APK na Play Store.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            isUniversalApk = true
         }
     }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }

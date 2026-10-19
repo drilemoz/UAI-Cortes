@@ -1,10 +1,20 @@
-# Uai Cortes v0.1.15 · versionCode 16
+# Uai Cortes v0.1.16 · versionCode 17
 
-## Correção do build 15 (v0.1.14)
+## Correção do build 16
+- Resolve uso de API `UnstableApi` do Media3 dentro das lambdas `AndroidView` que fazia `:app:lintDebug` falhar. Configurações de vídeo centralizadas em função com `@androidx.annotation.OptIn`.
+- Mantém editor, quatro PiPs, legendas, cortes, áudio, fades e efeitos já implementados.
 
-- Corrigidos os erros de compilação Kotlin nas telas Editor e PiP ao usar `ModalBottomSheet` e `rememberModalBottomSheetState`, com adesão explícita à API experimental do Material 3.
-- Corrigido o acesso à largura de `BoxWithConstraints` em `TimelineRow` para calcular a largura dos clipes.
-- Mantidos: menu de clipes, legendas manuais e importação SRT, transições fade preto/branco, extração de áudio M4A/AAC, quatro PiPs e demais ferramentas.
-- APK previsto: `UaiCortes-v0.1.15.apk`.
+## Um Release com cinco APKs para baixar
+- `UaiCortes-v0.1.16-arm32.apk` (ARM 32-bit, `armeabi-v7a`)
+- `UaiCortes-v0.1.16-arm64.apk` (ARM 64-bit, `arm64-v8a`)
+- `UaiCortes-v0.1.16-x86.apk` (Intel x86 32-bit)
+- `UaiCortes-v0.1.16-x86_64.apk` (Intel x86 64-bit)
+- `UaiCortes-v0.1.16-universal.apk` (universal, indicado quando não souber a ABI)
 
-**Pendente:** nova compilação no GitHub Actions, testes físicos de prévia/exportação. Dissolvência, MP3 e WAV continuam indisponíveis.
+O CI publica **somente os cinco APKs Release** como arquivos diretos em GitHub Releases, não repete o pacote no Actions Artifacts e não reexecuta automaticamente por causa de tag criada pelo Release.
+Todas as variantes usam o mesmo versionCode e a mesma assinatura do workflow. Utilize apenas uma por instalação.
+
+## Limitações e validação
+- Android Lint e compilação completa ainda precisam ser confirmados no próximo GitHub Actions.
+- As variantes por ABI podem ser semelhantes em tamanho quando o aplicativo não embarca bibliotecas nativas específicas.
+- Fades, exportação de múltiplos PiPs, SRT e extração AAC ainda precisam de validação em aparelhos reais. Dissolvência, MP3 e WAV não estão disponíveis.

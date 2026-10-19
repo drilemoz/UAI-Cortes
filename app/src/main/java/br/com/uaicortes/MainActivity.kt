@@ -474,7 +474,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.15 (16)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.16 (17)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: prévia em repetição, seletor de velocidade no corte e editor e mini tutorial de corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -550,8 +550,6 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 AndroidView(factory = { ctx -> previewPlayer(ctx).apply {
                     this.player = player
                     useController = false
-                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                    setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
                 } }, update = { it.player = player }, modifier = Modifier.fillMaxSize())
                 // Fade preview uses the same boundary IDs and durations as the exporter.
                 val index = p.clips.indexOfFirst { clip ->
@@ -910,10 +908,8 @@ private fun PipLayer(pip: Overlay, timeMs: Long, playing: Boolean,
                 if (bitmap != null) Image(bitmap.asImageBitmap(), "Imagem sobreposta",
                     Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
             } else {
-                AndroidView(factory = { previewPlayer(it).apply {
+                AndroidView(factory = { previewPlayer(it, transparentShutter = true).apply {
                     player = pipPlayer; useController = false
-                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                    setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
                 } }, modifier = Modifier.fillMaxSize(), update = { it.player = pipPlayer })
             }
         }
@@ -1169,8 +1165,6 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
                 AndroidView(factory = { ctx -> previewPlayer(ctx).apply {
                     this.player = player
                     useController = false
-                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                    setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
                 } }, modifier = Modifier.width(videoWidth).height(videoWidth / videoAspect),
                     update = { it.player = player })
             }
@@ -1527,7 +1521,6 @@ private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) ->
                         AndroidView(factory = { previewPlayer(it).apply {
                             this.player = player
                             useController = false
-                            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                         } }, update = { it.player = player }, modifier = Modifier.fillMaxSize())
                         p.overlays.forEach { layer ->
                             val active = previewTime >= layer.startAtMs &&
@@ -2117,7 +2110,19 @@ private fun seekProjectPosition(player: ExoPlayer, clips: List<Clip>, position: 
     }
 }
 
-/** TextureView permite compor PiP e linhas-guia por cima do vídeo em Compose. */
-private fun previewPlayer(context: android.content.Context): PlayerView =
-    android.view.LayoutInflater.from(context)
-        .inflate(R.layout.player_preview_texture, null, false) as PlayerView
+/**
+ * Centraliza as chamadas Media3 @UnstableApi fora das lambdas AndroidView do Compose.
+ * Android Lint não considera o opt-in do composable externo suficiente em certas lambdas.
+ * A prévia permanece em TextureView para compor PiPs e guias por cima do vídeo.
+ */
+@OptIn(UnstableApi::class)
+private fun previewPlayer(
+    context: android.content.Context,
+    transparentShutter: Boolean = false,
+): PlayerView =
+    (android.view.LayoutInflater.from(context)
+        .inflate(R.layout.player_preview_texture, null, false) as PlayerView).apply {
+        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+        setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+        if (transparentShutter) setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+    }
