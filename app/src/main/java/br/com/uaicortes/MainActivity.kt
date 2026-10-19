@@ -50,6 +50,8 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.geometry.Offset
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import androidx.annotation.OptIn
@@ -463,9 +465,9 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.12 (13)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.13 (14)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
-        Spacer(Modifier.height(14.dp));Text("Novidades: Cortar e unir simplificado, miniaturas tocáveis, horário instantâneo e desfazer completo.",
+        Spacer(Modifier.height(14.dp));Text("Novidades: prévia em repetição, seletor de velocidade no corte e editor e mini tutorial de corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -477,7 +479,9 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     onUpdate:(VideoProject)->Unit,onAddVideo:()->Unit,onPiP:()->Unit,onAudio:()->Unit,
     onSelectOverlay:(String)->Unit) {
     val context=LocalContext.current
-    val player=remember { ExoPlayer.Builder(context).build() }
+    val player=remember { ExoPlayer.Builder(context).build().apply { repeatMode = Player.REPEAT_MODE_ALL } }
+    var playbackSpeed by remember(p.id) { mutableFloatStateOf(1f) }
+    LaunchedEffect(player, playbackSpeed) { player.setPlaybackParameters(PlaybackParameters(playbackSpeed)) }
     DisposableEffect(player) { onDispose { player.release() } }
     LaunchedEffect(p.clips) {
         player.setMediaItems(p.clips.map { clip ->
@@ -523,7 +527,7 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                     if (currentMs >= pip.startAtMs && currentMs < pip.startAtMs + pip.durationMs) {
                         key(pip.id) {
                             PipLayer(pip, currentMs - pip.startAtMs, player.isPlaying,
-                                editable = false) { }
+                                speed = playbackSpeed, editable = false) { }
                         }
                     }
                 }
@@ -537,6 +541,7 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                     modifier=Modifier.size(35.dp))
             }
             IconButton(onClick={player.seekTo(player.currentPosition+5000)}) { Icon(Icons.Default.SkipNext,"Avançar cinco segundos") }
+            PlaybackSpeedButton(playbackSpeed, onSelect = { playbackSpeed = it })
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically) {
@@ -632,7 +637,7 @@ private fun OverlayTimeline(overlays: List<Overlay>, total: Long, onClick: (Stri
 @OptIn(UnstableApi::class)
 @Composable
 private fun PipLayer(pip: Overlay, timeMs: Long, playing: Boolean,
-                     editable: Boolean = true, onUpdate: (Overlay) -> Unit) {
+                     speed: Float = 1f, editable: Boolean = true, onUpdate: (Overlay) -> Unit) {
     val context = LocalContext.current
     val sourceAspect = remember(pip.uri, pip.isImage) { mediaAspect(context, pip.uri, pip.isImage) }
     val pipPlayer = remember(pip.uri) { if (!pip.isImage) ExoPlayer.Builder(context).build() else null }
@@ -640,8 +645,9 @@ private fun PipLayer(pip: Overlay, timeMs: Long, playing: Boolean,
     LaunchedEffect(pip.uri) {
         pipPlayer?.apply { setMediaItem(MediaItem.fromUri(pip.uri)); prepare() }
     }
-    LaunchedEffect(playing, timeMs, pip.volume, pip.muted) {
+    LaunchedEffect(playing, timeMs, pip.volume, pip.muted, speed) {
         pipPlayer?.apply {
+            setPlaybackParameters(PlaybackParameters(speed))
             volume = if (pip.muted) 0f else pip.volume
             if (kotlin.math.abs(currentPosition - timeMs) > 400L) seekTo(timeMs.coerceAtLeast(0L))
             if (playing) play() else pause()
@@ -798,6 +804,35 @@ private fun TimeDigitsField(label: String, timeMs: Long, totalMs: Long,
     }
 }
 
+/** Velocidade somente da prévia; não modifica cortes ou velocidade do MP4 exportado. */
+@Composable
+private fun PlaybackSpeedButton(speed: Float, onSelect: (Float) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        OutlinedButton(onClick = { expanded = true },
+            modifier = Modifier.height(38.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+            shape = RoundedCornerShape(11.dp)) {
+            Icon(Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(17.dp))
+            Spacer(Modifier.width(3.dp))
+            Text(PreviewPlayback.label(speed), fontSize = 12.sp, maxLines = 1)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            Text("Velocidade da prévia", modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                style = MaterialTheme.typography.labelMedium)
+            PreviewPlayback.SPEEDS.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(PreviewPlayback.label(option)) },
+                    leadingIcon = if (option == speed) {
+                        { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    } else null,
+                    onClick = { onSelect(option); expanded = false }
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun TrimQuickAction(icon: ImageVector, label: String, enabled: Boolean,
     modifier: Modifier = Modifier, onClick: () -> Unit) {
@@ -867,7 +902,9 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
             return@Column
         }
         val total = clip.sourceDurationMs.coerceAtLeast(1L)
-        val player = remember(clip.id) { ExoPlayer.Builder(context).build() }
+        val player = remember(clip.id) { ExoPlayer.Builder(context).build().apply { repeatMode = Player.REPEAT_MODE_ONE } }
+        var playbackSpeed by remember(clip.id) { mutableFloatStateOf(1f) }
+        LaunchedEffect(player, playbackSpeed) { player.setPlaybackParameters(PlaybackParameters(playbackSpeed)) }
         DisposableEffect(player) { onDispose { player.release() } }
         var cursorMs by remember(clip.id) { mutableLongStateOf(clip.startMs) }
         var playing by remember(clip.id) { mutableStateOf(false) }
@@ -890,8 +927,7 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
                 playing = player.isPlaying
                 if (player.isPlaying) {
                     cursorMs = TrimLogic.clampCursor(player.currentPosition, total)
-                    if (cursorMs >= total) player.pause()
-                }
+                                    }
                 delay(90L)
             }
         }
@@ -963,6 +999,7 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
                 IconButton(onClick = { player.pause(); seek(cursorMs + 1000L) }) {
                     Icon(Icons.Default.KeyboardDoubleArrowRight, "Avançar 1 segundo")
                 }
+                PlaybackSpeedButton(playbackSpeed, onSelect = { playbackSpeed = it })
             }
             Text("Duração do vídeo: ${formatPipMs(total)} · toque no tempo ou nas miniaturas para navegar.",
                 style = MaterialTheme.typography.labelSmall,
@@ -1066,9 +1103,28 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
                     }
                 }
             }
-            Text("Cortes não alteram os arquivos originais.",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Surface(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .58f),
+                shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Info, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(7.dp))
+                        Text("Mini tutorial · Cortar e unir", fontWeight = FontWeight.SemiBold,
+                            style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Text("1. Toque nas miniaturas, arraste a barra ou digite Tempo para escolher o ponto.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Text("2. Marcar início/fim define o trecho; Aplicar corte confirma. O original não muda.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Text("3. Dividir separa o clipe no cursor; Antes/Depois reorganizam; Excluir remove.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Text("4. Desfazer volta a última edição. O vídeo repete até pausar.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Text("5. No botão de velocidade escolha de 0,25× a 2×. Afeta só a prévia, não o vídeo salvo.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+            }
             Spacer(Modifier.height(8.dp))
         }
     }

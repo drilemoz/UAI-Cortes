@@ -34,3 +34,9 @@ Os recursos novos da versão 0.1.11 ainda **não foram validados por compilaçã
 - Marcar fim apresenta aviso claro se o cursor não satisfaz início + 250ms.
 - Ações Dividir, Desfazer, Antes, Depois, Excluir na mesma linha; desfazer da última operação de clipes nesta sessão.
 - **Estado:** implementado no código; aguarda compilação Android e verificação física.
+
+## Atualização v0.1.13 (versionCode 14)
+- Loop infinito nas prévias Cortar e unir (clipe) e editor principal (playlist), até o usuário pausar.
+- Seletor de velocidade de prévia em ambas as telas (0,25× a 2×). Velocidade não faz parte da exportação.
+- Tutorial rápido logo abaixo dos controles de corte.
+- **Pendente:** Gradle, Lint, teste visual, loop de playlist e sincronismo de PiPs em aparelho real.

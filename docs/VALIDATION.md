@@ -1,4 +1,4 @@
-# Uai Cortes 0.1.11 | Validação
+# Uai Cortes 0.1.13 | Validação
 
 ## Funcionalidade implementada no código
 - Persistência de até quatro PiPs no campo `overlays`, `schemaVersion=3`, IDs estáveis; projetos com `pip` legado migrados em leitura.
@@ -39,3 +39,9 @@
 - Entrada de cursor busca automaticamente no ExoPlayer durante digitação válida, sem botão aplicar.
 - Ações de clipes numa linha, com snapshot de desfazer para aplicar, dividir, reordenar e excluir.
 - Kotlin PSI e testes isolados verificam sintaxe e cálculos de horários; **não equivalem a Gradle Android, lint ou teste no telefone**.
+
+## Inclusões v0.1.13
+- Editor principal repete a playlist até pausar, tela Cortar e unir repete o clipe.
+- Velocidades de prévia padronizadas com rótulos pt-BR; renderização do PiP no editor recebe a mesma velocidade.
+- Mini tutorial abaixo da linha de ações da tela de corte, dentro da área rolável.
+- **Ainda pendente:** compilação Gradle Android, teste de loop em fim de playlist, seleção de velocidade em dispositivo, áudio e sincronismo com vários PiPs.

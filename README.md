@@ -1,10 +1,10 @@
-# Uai Cortes 0.1.12
+# Uai Cortes 0.1.13
 
 Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
 
 ## Versões e ferramentas
 - `minSdk = 26`, `compileSdk = 36`, `targetSdk = 36`.
-- `versionName = 0.1.12`, `versionCode = 13`.
+- `versionName = 0.1.13`, `versionCode = 14`.
 - Kotlin 2.1.21, AGP 8.10.1, Gradle 8.11.1, JDK 17.
 - Media3 1.10.1, ExoPlayer e Transformer para composição H.264/AAC.
 - O editor não exige conta nem internet. A biblioteca PiP solicita acesso às fotos/vídeos do Android, integral ou parcial conforme consentimento; o seletor de documentos continua como alternativa.
@@ -14,14 +14,14 @@ Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
 - Configurações, Geral, Tela e Sobre são **telas**, não pop-ups.
 - Ícone azul integrado a `mipmap-*`; original também em `design/icone-uai-cortes.png`.
 
-## Ajustes adicionais nesta versão
+## Ajustes herdados da versão 0.1.10
 - Quatro ferramentas na mesma linha, painel inferior sem alça, com margens compactas.
 - Toque nos horários (prévia/editor, começo e fim de cada PiP) para informar **mm:ss**, **mm:ss.d** ou **hh:mm:ss**; valores validados dentro do vídeo.
 - Novo PiP inicia após o término mais tardio dos PiPs anteriores; se o vídeo acaba, pergunta antes de permitir coincidência temporal.
 - Aviso de conflito espacial-temporal: reorganizar, manter sobreposição com confirmação ou cancelar. Aprovação é persistida por PAR de PiPs, não aplicada indiscriminadamente.
 - O tempo final do vídeo principal não é editado pelo campo de busca; esse campo move somente o cursor. Para aumentar a duração, edite/adicionar vídeos no projeto.
 
-## Novidades na 0.1.12: corte mais direto e controles compactos
+## Histórico v0.1.12: corte mais direto e controles compactos
 - Miniaturas imediatamente abaixo do vídeo, **sem RangeSlider sobre as imagens**. Cada miniatura é tocável para saltar ao ponto aproximado; uma única barra separada permite ajuste fino.
 - Removido o campo separado “Ir para”. O campo **Tempo** fica ao lado da reprodução e, a cada valor válido digitado com a máscara `mm:ss.d`, o cursor já salta, sem botão de aplicar.
 - Entradas compactas de início/fim também aceitam digitação direta; somente o botão **Aplicar corte** modifica o projeto.
@@ -36,7 +36,15 @@ Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
 - Aplicar corte grava a edição no projeto sem modificar o arquivo de mídia; Desfazer reverte a última aplicação de corte no clipe enquanto a tela permanecer aberta. Divisão, reordenação e exclusão preservadas.
 - Miniaturas em baixa resolução e fora da thread principal para reduzir impacto de memória/fluidez. Prévia, edição temporal e exportação no aparelho ainda dependem de testes de CI e uso real.
 
-## Novidades acumuladas até 0.1.12
+## Novidades da 0.1.13: reprodução contínua e velocidade da prévia
+- Em Cortar e unir, ExoPlayer repete o clipe automaticamente até o usuário pausar (REPEAT_MODE_ONE).
+- Na tela principal de edição, a reprodução percorre todos os clipes e reinicia automaticamente (REPEAT_MODE_ALL).
+- Botão compacto para velocidade de prévia: 0,25×, 0,5×, 0,75×, 1×, 1,25×, 1,5× e 2×. Não altera a velocidade nem a duração dos arquivos exportados.
+- Áudio e vídeo PiP acompanham a velocidade da prévia principal no editor, mantendo ajuste separado do volume.
+- Mini tutorial de 5 passos fica abaixo dos botões de edição de corte.
+- Build e teste físico continuam pendentes; Media3 pode limitar decodificadores simultâneos no aparelho.
+
+## Novidades acumuladas até 0.1.13
 - Até **4 PiPs por projeto**, com vídeos ou imagens independentes, seleção de camada e opção de adicionar, substituir ou remover.
 - Posição, escala 5–90%, duração, volume e silêncio independentes. Áudio desligado em um PiP não silencia os outros.
 - Quatro botões quadrados e compactos Posição/Tamanho/Duração/Mídia **na mesma linha**. Cada botão abre um painel **ModalBottomSheet** deslizando da borda inferior, por cima dos controles e ações inferiores, sem alterar a altura ou a posição da prévia. Fechamento por gesto de arrastar, toque fora ou botão; altura máxima de 64% da tela, com conteúdo rolável.
@@ -51,7 +59,7 @@ Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
 1. Envie os arquivos da pasta extraída para a **raiz** do repositório GitHub.
 2. Abra **Actions > Gerar APK Uai Cortes > Run workflow** ou envie alterações para `main`.
 3. O workflow valida código, roda testes, Android Lint e `assembleRelease` com API 36.
-4. Ao concluir, o APK estará em **Releases > v0.1.12 > Assets**, com o nome **`UaiCortes-v0.1.12.apk`** (arquivo direto). Também aparece em Actions Artifacts, onde o GitHub compacta automaticamente o download.
+4. Ao concluir, o APK estará em **Releases > v0.1.13 > Assets**, com o nome **`UaiCortes-v0.1.13.apk`** (arquivo direto). Também aparece em Actions Artifacts, onde o GitHub compacta automaticamente o download.
 
 ### Assinatura
 Secrets exigidos para assinatura estável: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` e `KEY_PASSWORD`. Não inclua keystore, senhas ou arquivo TXT de Secrets no repositório. Sem Secrets, o script aceita assinatura debug provisória e pode não atualizar versões anteriores.
@@ -60,7 +68,7 @@ Secrets exigidos para assinatura estável: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD
 - Validação estática executada. Testes Kotlin/JUnit, build Android e inspeção em aparelho ainda não foram executados neste ambiente.
 - Testes unitários de posicionamento/intervalos adicionados ao projeto para rodar no CI; ainda sem compilação Android local.
 - Ainda **não** foi realizado build Android Gradle nesta sessão nem teste em aparelho físico.
-- A execução #3 (código 0.1.2) passou em Kotlin/assembleRelease, mas falhou no Lint; a 0.1.3 resolveu opt-in e a 0.1.4 adicionou upload obrigatório em Actions/Releases. O build 7 (0.1.6) falhou especificamente em `MediaBrowser.kt:165` por falta de opt-in Material 3; a compilação da 0.1.12 ainda não foi confirmada.
+- A execução #3 (código 0.1.2) passou em Kotlin/assembleRelease, mas falhou no Lint; a 0.1.3 resolveu opt-in e a 0.1.4 adicionou upload obrigatório em Actions/Releases. O build 7 (0.1.6) falhou especificamente em `MediaBrowser.kt:165` por falta de opt-in Material 3; a compilação da 0.1.13 ainda não foi confirmada.
 - A prévia de até quatro ExoPlayers de PiP pode apresentar limitação de decodificadores/defasagem em aparelhos reais. A exportação e transparência de imagens PNG também exigem testes.
 - Fade/dissolvência e corte preciso de áudio arbitrário continuam pendentes. A versão atual oferece **corte direto** entre clipes.
 - Arquivos escolhidos no seletor do sistema usam URI persistente. Itens escolhidos pela biblioteca MediaStore dependem da permissão de leitura ativa e da existência do arquivo original; retirar a permissão pode tornar o PiP indisponível.
