@@ -10,10 +10,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*26',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.25"',gradle)
-assert 'Versão 0.1.25 (26)' in ui
-for label in ["VERSION: '0.1.25'", "VERSION_CODE: '26'", 'TAG="v$VERSION"',
+assert re.search(r'versionCode\s*=\s*28',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.27"',gradle)
+assert 'Versão 0.1.27 (28)' in ui
+for label in ["VERSION: '0.1.27'", "VERSION_CODE: '28'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -151,3 +151,24 @@ assert 'setOverlayFrameAnchor(0f, -1f)' in fx
 assert 'fun sourceAt(' in precision and 'fun anchorPixels(' in precision
 assert (root/'app/src/test/java/br/com/uaicortes/TimelinePrecisionTest.kt').exists()
 print('OK: v0.1.25 / versionCode 26, precisão da timeline e prévia de legendas proporcional')
+
+# v0.1.26: seleção de legenda por ID e arrasto independente de início/centro/fim.
+subtitle=(root/'app/src/main/java/br/com/uaicortes/SubtitleTimelineEdit.kt').read_text()
+assert 'SubtitleOverviewTimeline(p.subtitles,p.durationMs,onSelectSubtitle,' in ui
+assert 'SubtitleTimelineEditor(p.subtitles,p.durationMs,selectedId,' in ui
+assert 'selectedSubtitleId = id; navTo("subtitles")' in ui
+assert all(x in ui for x in ['SubtitleTimelineEdit.move(', 'SubtitleTimelineEdit.trimLeft(', 'SubtitleTimelineEdit.trimRight(', 'onFinish=::commitDraft'])
+assert all(x in subtitle for x in ['fun move(', 'fun trimLeft(', 'fun trimRight(', 'MIN_DURATION_MS = 100L'])
+assert (root/'app/src/test/java/br/com/uaicortes/SubtitleTimelineEditTest.kt').exists()
+print('OK: v0.1.26 / versionCode 27, seleção e arrasto temporal de legendas')
+
+# v0.1.27: estilo visual persistente, prévia e exportação alinhadas.
+styles=(root/'app/src/main/java/br/com/uaicortes/SubtitleStyles.kt').read_text()
+assert 'val backgroundColor: Int = SubtitleStyles.DEFAULT_BACKGROUND' in model
+assert '.put("backgroundColor", backgroundColor).put("bold", bold)' in model
+assert 'j.optBoolean("bold", true)' in model
+assert 'Color(cue.backgroundColor)' in ui and 'if(cue.bold) FontWeight.Bold' in ui
+assert 'SubtitleStyles.presets.forEach' in ui and 'SubtitleStyles.applyToAll(' in ui
+assert 'BackgroundColorSpan(active.backgroundColor)' in fx and 'StyleSpan(Typeface.BOLD)' in fx
+assert (root/'app/src/test/java/br/com/uaicortes/SubtitleStylesTest.kt').exists()
+print('OK: v0.1.27 / versionCode 28, estilos das legendas com prévia/exportação e compatibilidade legado')

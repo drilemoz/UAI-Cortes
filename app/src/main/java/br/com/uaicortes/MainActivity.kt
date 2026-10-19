@@ -100,6 +100,7 @@ fun UaiApp() {
     var projects by remember { mutableStateOf(store.load()) }
     var selectedClip by remember { mutableStateOf("") }
     var selectedAudioTrackId by remember { mutableStateOf<String?>(null) }
+    var selectedSubtitleId by remember { mutableStateOf<String?>(null) }
     var positionMs by remember { mutableLongStateOf(0L) }
     var pendingPicker by remember { mutableStateOf("") }
     var mediaOrigin by remember { mutableStateOf("editor") }
@@ -266,6 +267,7 @@ fun UaiApp() {
                     },
                     onAudio = { audioPicker.launch(arrayOf("audio/*")) },
                     onSelectAudio = { id -> selectedAudioTrackId = id; navTo("audio") },
+                    onSelectSubtitle = { id -> selectedSubtitleId = id; navTo("subtitles") },
                     onSelectOverlay = { selectedOverlayId = it },
                     onTransition = { index -> selectedBoundary = index; screen = "transition" },
                     onSaveHome = { write(p); screen = "home" }) }
@@ -299,7 +301,7 @@ fun UaiApp() {
                     insertOverlay(chosen.uri, chosen.isImage, videoMs)
                 }, openDocuments = { overlayPicker.launch(arrayOf("image/*", "video/*")) })
                 "transition" -> project?.let { TransitionScreen(it, ::back, { write(it) }, selectedBoundary) }
-                "subtitles" -> project?.let { SubtitleScreen(it, ::back, { write(it) }) }
+                "subtitles" -> project?.let { SubtitleScreen(it, ::back, { write(it) }, selectedSubtitleId) }
                 "export" -> project?.let { ExportScreen(it, store.quality(), ::back) }
             }
         }
@@ -493,9 +495,9 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.25 (26)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.27 (28)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
-        Spacer(Modifier.height(14.dp));Text("Novidades: precisão de 0,1 s na timeline e posicionamento visual de legendas.",
+        Spacer(Modifier.height(14.dp));Text("Novidades: estilos, fundos e negrito para legendas com prévia e exportação.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -507,7 +509,7 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     onSelected:(String)->Unit,onPosition:(Long)->Unit,onBack:()->Unit,onEdit:(String)->Unit,
     onUpdate:(VideoProject)->Unit,onAddVideo:()->Unit,onPiP:()->Unit,onAudio:()->Unit,
     onSelectOverlay:(String)->Unit,onTransition:(Int)->Unit,onSaveHome:()->Unit,
-    onSelectAudio:(String)->Unit) {
+    onSelectAudio:(String)->Unit,onSelectSubtitle:(String)->Unit) {
     val context=LocalContext.current
     val player=remember { ExoPlayer.Builder(context).build().apply { repeatMode = Player.REPEAT_MODE_ALL } }
     var playbackSpeed by remember(p.id) { mutableFloatStateOf(1f) }
@@ -663,9 +665,8 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 }))
                 feedback = "Posição da faixa atualizada."
             }, onLegacyClick = { onEdit("audio") })
-        TimelineTimedRow("Legenda",Color(0xFFC38A38),
-            p.subtitles.map { Triple(it.text,it.startMs,it.endMs-it.startMs) },
-            p.durationMs,onClick={onEdit("subtitles")})
+        SubtitleOverviewTimeline(p.subtitles,p.durationMs,onSelectSubtitle,
+            onOpen={onEdit("subtitles")})
         Spacer(Modifier.height(5.dp));HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
         Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(10.dp), horizontalArrangement=Arrangement.SpaceEvenly) {
             listOf(Triple("Cortar",Icons.Default.ContentCut,"trim"),Triple("Unir",Icons.Default.Add,"add"),
@@ -960,6 +961,129 @@ private fun AudioTrimGestureTimeline(draft: AudioTimelineDraft, projectMs: Long,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
         Text(formatPipMs(draft.timelineEndMs),fontSize=11.sp,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** Pista compacta no editor. Cada bloco abre a legenda correta, mesmo quando
+ * as legendas foram importadas fora da ordem cronológica.
+ */
+@Composable
+private fun SubtitleOverviewTimeline(cues:List<SubtitleCue>,totalMs:Long,
+    onSelect:(String)->Unit,onOpen:()->Unit) {
+    val gold=Color(0xFFC38A38)
+    Row(Modifier.fillMaxWidth().height(34.dp).padding(horizontal=12.dp,vertical=2.dp),
+        verticalAlignment=Alignment.CenterVertically) {
+        Box(Modifier.width(60.dp).fillMaxHeight().background(gold,RoundedCornerShape(3.dp))
+            .clickable { onOpen() },contentAlignment=Alignment.Center) {
+            Text("Legenda",color=Color.White,fontSize=11.sp)
+        }
+        Spacer(Modifier.width(6.dp))
+        BoxWithConstraints(Modifier.weight(1f).fillMaxHeight()
+            .background(gold.copy(alpha=.14f),RoundedCornerShape(3.dp))) {
+            val width=maxWidth
+            cues.sortedBy { it.startMs }.forEach { cue ->
+                key(cue.id) {
+                    val start=(cue.startMs.toFloat()/totalMs.coerceAtLeast(1L)).coerceIn(0f,1f)
+                    val span=((cue.endMs-cue.startMs).toFloat()/totalMs.coerceAtLeast(1L))
+                        .coerceIn(0f,1f-start)
+                    val drawn=(width*span).coerceAtLeast(8.dp).coerceAtMost(width)
+                    val left=(width*start).coerceAtMost(width-drawn)
+                    Box(Modifier.offset(x=left).width(drawn).fillMaxHeight()
+                        .background(gold.copy(alpha=.65f),RoundedCornerShape(2.dp))
+                        .clickable { onSelect(cue.id) }
+                        .semantics { contentDescription="Editar legenda: ${cue.text.take(50)}" },
+                        contentAlignment=Alignment.Center) {
+                        Text(cue.text,maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=9.sp,
+                            color=Color.White)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Uma pista por legenda para não ocultar controles quando os tempos se sobrepõem.
+ * Os valores são rascunho enquanto o gesto ocorre; somente onFinish grava.
+ */
+@Composable
+private fun SubtitleTimelineEditor(cues:List<SubtitleCue>,totalMs:Long,selectedId:String,
+    onSelect:(String)->Unit,onCommit:(String,Long,Long)->Unit) {
+    val gold=Color(0xFFC38A38)
+    val total=totalMs.coerceAtLeast(1L)
+    if(cues.isEmpty()) {
+        Text("Nenhuma legenda adicionada.",fontSize=12.sp)
+        return
+    }
+    cues.sortedWith(compareBy<SubtitleCue> { it.startMs }.thenBy { it.id })
+        .forEachIndexed { index,cue ->
+        key(cue.id) {
+            var draftStart by remember(cue.id,cue.startMs,cue.endMs) { mutableLongStateOf(cue.startMs) }
+            var draftEnd by remember(cue.id,cue.startMs,cue.endMs) { mutableLongStateOf(cue.endMs) }
+            var changed by remember(cue.id,cue.startMs,cue.endMs) { mutableStateOf(false) }
+            fun updateDraft(next:Pair<Long,Long>) {
+                draftStart=next.first
+                draftEnd=next.second
+                changed=(draftStart!=cue.startMs || draftEnd!=cue.endMs)
+            }
+            fun commitDraft() {
+                if(changed && (draftStart!=cue.startMs || draftEnd!=cue.endMs)) {
+                    onCommit(cue.id,draftStart,draftEnd)
+                }
+                changed=false
+            }
+            Row(Modifier.fillMaxWidth().height(44.dp).padding(vertical=3.dp),
+                verticalAlignment=Alignment.CenterVertically) {
+                Box(Modifier.width(60.dp).fillMaxHeight()
+                    .background(if(cue.id==selectedId)MaterialTheme.colorScheme.primary else gold,
+                        RoundedCornerShape(4.dp))
+                    .clickable { onSelect(cue.id) },contentAlignment=Alignment.Center) {
+                    Text("Leg. ${index+1}",fontSize=11.sp,color=Color.White)
+                }
+                Spacer(Modifier.width(6.dp))
+                BoxWithConstraints(Modifier.weight(1f).fillMaxHeight()
+                    .background(gold.copy(alpha=.12f),RoundedCornerShape(4.dp))) {
+                    val width=maxWidth
+                    val widthPx=with(LocalDensity.current) { width.toPx() }
+                    val start=(draftStart.toFloat()/total).coerceIn(0f,1f)
+                    val fraction=((draftEnd-draftStart).toFloat()/total).coerceIn(0f,1f-start)
+                    val drawWidth=(width*fraction).coerceAtLeast(54.dp).coerceAtMost(width)
+                    val x=(width*start).coerceAtMost(width-drawWidth)
+                    Row(Modifier.offset(x=x).width(drawWidth).fillMaxHeight()
+                        .background(if(cue.id==selectedId)gold else gold.copy(alpha=.68f),
+                            RoundedCornerShape(4.dp)),verticalAlignment=Alignment.CenterVertically) {
+                        AudioDragSurface(Modifier.width(18.dp).fillMaxHeight()
+                            .background(Color.Black.copy(alpha=.22f)),total,widthPx,
+                            onStep={ delta -> updateDraft(SubtitleTimelineEdit.trimLeft(
+                                draftStart,draftEnd,delta,total)) },onFinish=::commitDraft,
+                            onTap={onSelect(cue.id)}) {
+                            Text("|",color=Color.White,modifier=Modifier.align(Alignment.Center))
+                        }
+                        AudioDragSurface(Modifier.weight(1f).fillMaxHeight(),total,widthPx,
+                            onStep={ delta -> updateDraft(SubtitleTimelineEdit.move(
+                                draftStart,draftEnd,delta,total)) },onFinish=::commitDraft,
+                            onTap={onSelect(cue.id)}) {
+                            Text(cue.text,maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=10.sp,
+                                color=Color.White,modifier=Modifier.align(Alignment.Center)
+                                    .padding(horizontal=2.dp))
+                        }
+                        AudioDragSurface(Modifier.width(18.dp).fillMaxHeight()
+                            .background(Color.Black.copy(alpha=.22f)),total,widthPx,
+                            onStep={ delta -> updateDraft(SubtitleTimelineEdit.trimRight(
+                                draftStart,draftEnd,delta,total)) },onFinish=::commitDraft,
+                            onTap={onSelect(cue.id)}) {
+                            Text("|",color=Color.White,modifier=Modifier.align(Alignment.Center))
+                        }
+                    }
+                }
+            }
+            if(cue.id==selectedId) {
+                Row(Modifier.fillMaxWidth().padding(start=66.dp),
+                    horizontalArrangement=Arrangement.SpaceBetween) {
+                    Text("Início ${formatPipMs(draftStart)}",fontSize=10.sp)
+                    Text("Fim ${formatPipMs(draftEnd)}",fontSize=10.sp)
+                }
+            }
+        }
     }
 }
 
@@ -2420,7 +2544,7 @@ private fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
             val location=SubtitlePlacement.anchorPixels(frameSize.width,frameSize.height,
                 textSize.width,textSize.height,draftX,draftY)
             Text(cue.text,color=Color(cue.color),fontSize=cue.sizeSp.sp,
-                fontWeight=FontWeight.SemiBold,textAlign=TextAlign.Center,
+                fontWeight=if(cue.bold) FontWeight.Bold else FontWeight.Normal,textAlign=TextAlign.Center,
                 modifier=Modifier.offset { IntOffset(location.first,location.second) }
                     .widthIn(max=280.dp)
                     .onSizeChanged { textSize=it }
@@ -2442,7 +2566,7 @@ private fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
                                 draftX=next.first;draftY=next.second
                             })
                     } else Modifier)
-                    .background(Color.Black.copy(alpha=.64f),RoundedCornerShape(3.dp))
+                    .background(Color(cue.backgroundColor),RoundedCornerShape(3.dp))
                     .padding(horizontal=7.dp,vertical=2.dp))
         }
     }
@@ -2491,9 +2615,13 @@ private fun SubtitlePositionPreview(p:VideoProject,cue:SubtitleCue,
 }
 
 @Composable
-private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit) {
+private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit,
+    initialSelectedId: String? = null) {
     val context=LocalContext.current
-    var selectedId by remember(p.id) { mutableStateOf(p.subtitles.firstOrNull()?.id.orEmpty()) }
+    var selectedId by remember(p.id,initialSelectedId) {
+        mutableStateOf(initialSelectedId?.takeIf { id -> p.subtitles.any { it.id==id } }
+            ?: p.subtitles.firstOrNull()?.id.orEmpty())
+    }
     var status by remember { mutableStateOf("") }
     val importer=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if(uri!=null) {
@@ -2536,7 +2664,16 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
             OutlinedButton(onClick={importer.launch(arrayOf("text/*","application/x-subrip","*/*"))},
                 modifier=Modifier.weight(1f)) {Icon(Icons.Default.FileOpen,null);Text(" Importar SRT")}
         }
-        p.subtitles.forEachIndexed { index,cue ->
+        Text("Timeline das legendas: arraste o centro para mover, as alças para cortar. Solte para salvar.",
+            fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        SubtitleTimelineEditor(p.subtitles,p.durationMs,selectedId,
+            onSelect = { selectedId = it },
+            onCommit = { id,start,end ->
+                update(p.copy(subtitles = p.subtitles.map { cue ->
+                    if(cue.id==id) cue.copy(startMs=start,endMs=end) else cue
+                }))
+            })
+        p.subtitles.sortedBy { it.startMs }.forEachIndexed { index,cue ->
             Surface(onClick={selectedId=cue.id},shape=RoundedCornerShape(5.dp),
                 color=if(selectedId==cue.id)MaterialTheme.colorScheme.primaryContainer
                 else MaterialTheme.colorScheme.surfaceVariant) {
@@ -2565,6 +2702,20 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
                 valid={it>selected.startMs && it<=p.durationMs},onCommit={v->
                     update(p.copy(subtitles=p.subtitles.map{if(it.id==selected.id)it.copy(endMs=v) else it}))
                 })
+            // Os estilos são salvos por legenda e reproduzidos também na exportação Media3.
+            Text("Estilos rápidos",fontWeight=FontWeight.SemiBold)
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement=Arrangement.spacedBy(7.dp)) {
+                SubtitleStyles.presets.forEach { preset ->
+                    val isSelected=selected.color==preset.foreground &&
+                        selected.backgroundColor==preset.background && selected.bold==preset.bold
+                    FilterChip(selected=isSelected,onClick={
+                        update(p.copy(subtitles=p.subtitles.map { cue ->
+                            if(cue.id==selected.id) SubtitleStyles.applyToCue(cue,preset) else cue
+                        }))
+                    },label={Text(preset.name,maxLines=1)})
+                }
+            }
             Text("Tamanho: ${selected.sizeSp} sp")
             Slider(value=selected.sizeSp.toFloat(),valueRange=12f..48f,onValueChange={v->
                 update(p.copy(subtitles=p.subtitles.map{
@@ -2579,6 +2730,41 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
                     },label={Text(when(shade){-1->"Branco";android.graphics.Color.YELLOW->"Amarelo";else->"Ciano"})})
                 }
             }
+            Text("Fundo do texto")
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement=Arrangement.spacedBy(7.dp)) {
+                listOf("Sem fundo" to SubtitleStyles.NO_BACKGROUND,
+                    "Suave" to SubtitleStyles.DEFAULT_BACKGROUND,
+                    "Escuro" to SubtitleStyles.DARK_BACKGROUND,
+                    "Claro" to SubtitleStyles.LIGHT_BACKGROUND).forEach { (label,background) ->
+                    FilterChip(selected=selected.backgroundColor==background,onClick={
+                        update(p.copy(subtitles=p.subtitles.map { cue ->
+                            if(cue.id==selected.id) cue.copy(backgroundColor=background) else cue
+                        }))
+                    },label={Text(label)})
+                }
+            }
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                Text("Texto em negrito",modifier=Modifier.weight(1f))
+                Switch(checked=selected.bold,onCheckedChange={value ->
+                    update(p.copy(subtitles=p.subtitles.map { cue ->
+                        if(cue.id==selected.id) cue.copy(bold=value) else cue
+                    }))
+                })
+            }
+            var confirmStyleAll by remember(p.id,selected.id) { mutableStateOf(false) }
+            OutlinedButton(onClick={confirmStyleAll=true},enabled=p.subtitles.size>1) {
+                Icon(Icons.Default.ContentCopy,null)
+                Text(" Copiar aparência para todas as legendas")
+            }
+            if(confirmStyleAll) AlertDialog(onDismissRequest={confirmStyleAll=false},
+                title={Text("Aplicar estilo a todas?")},
+                text={Text("A cor, o fundo, o tamanho e o negrito serão aplicados a todas as legendas. Os textos, horários e posições serão mantidos.")},
+                confirmButton={TextButton(onClick={
+                    update(p.copy(subtitles=SubtitleStyles.applyToAll(p.subtitles,selected)))
+                    confirmStyleAll=false
+                }) {Text("Aplicar")}},
+                dismissButton={TextButton(onClick={confirmStyleAll=false}) {Text("Cancelar")}})
             Text("Posição horizontal: ${(selected.x*100).toInt()}%")
             Slider(value=selected.x,valueRange=.1f.. .9f,onValueChange={v->
                 update(p.copy(subtitles=p.subtitles.map{if(it.id==selected.id)it.copy(x=v) else it}))

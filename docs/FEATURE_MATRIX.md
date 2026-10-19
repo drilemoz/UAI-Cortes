@@ -89,3 +89,19 @@ Os recursos novos da versão 0.1.11 ainda **não foram validados por compilaçã
 | Arrastar legenda sobre quadro de referência | Código, grava ao soltar | Teste Android pendente |
 | Ajuste de posição X/Y por 1% | Código e teste puro | Teste de UI pendente |
 | Navegar no projeto em passos ±0,1 s/±1 s | Código e teste puro | Teste Android pendente |
+
+## v0.1.26: edição temporal das legendas
+| Recurso | Implementação | Validação |
+|---|---|---|
+| Seleção de legenda por ID na timeline do editor | Código | UI Android pendente |
+| Arrastar início, centro e fim em pistas individuais | Código e lógica Kotlin testável | UI Android pendente |
+| Persistência de início/fim ao soltar | Código, compatível com JSON v4 | Persistência em aparelho pendente |
+| Proteger limites e trechos SRT curtos | Lógica pura Kotlin | Testes JUnit em CI pendentes |
+
+## v0.1.27: personalização visual de legendas
+| Recurso | Implementação | Validação |
+|---|---|---|
+| Cinco estilos rápidos e aparência individual | Código Compose + JSON | UI Android pendente |
+| Fundo transparente/escuro/claro e negrito | Prévia Compose e Media3 TextOverlay | Renderização MP4 pendente |
+| Copiar estilo para todas com confirmação | Código + lógica isolada | Teste Android pendente |
+| Projetos antigos sem campos de estilo | Defaults e testes JUnit | CI e reabertura no aparelho pendentes |

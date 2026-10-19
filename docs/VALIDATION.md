@@ -89,3 +89,14 @@ Correção v0.1.22: o workflow 19 compilou Kotlin Debug/Release, executou testes
 - Pendente no GitHub Actions: `testDebugUnitTest`, `lintDebug`, `assembleRelease` e verificação dos cinco APKs 0.1.25/versionCode 26.
 - Pendente no Android físico: editor com vídeos 16:9/9:16, posicionar legenda por arrasto na imagem, reabrir projeto, comparar com MP4 exportado, testar vídeo com quadros indisponíveis e legendas compridas.
 - Estática/Kotlin não substituem compilação Android nem comprovam fidelidade final das coordenadas.
+
+## v0.1.26 (versionCode 27)
+- Testar `SubtitleTimelineEditTest` com limites, arrasto e duração de legendas SRT curtas; manter validação estrutural de workflow/versões e PSI Kotlin.
+- No Android: tocar em legenda específica na timeline principal; arrastar início/centro/fim na tela Legendas; confirmar que valores são gravados apenas ao soltar e sobrevivem à reabertura; verificar múltiplas legendas sobrepostas, sem espaço ou com tempo <100 ms.
+- Pendente: Gradle `testDebugUnitTest`, `lintDebug`, `assembleRelease` e publicação dos cinco APKs versão 0.1.26 / versionCode 27.
+
+## v0.1.27 (versionCode 28)
+- Rodar `tools/validate_source.py` e testes JUnit `SubtitleStylesTest`/`ProjectStoreTest` no GitHub Actions. Conferir cinco APKs e metadados de publicação da versão 0.1.27.
+- Confirmar no Android: cinco estilos, fundo transparente/claro/escuro, negrito, textos longos, vídeos 16:9 e 9:16, tema claro/AMOLED, cor/texto visíveis e resultado no MP4.
+- Abrir projeto antigo sem `backgroundColor`/`bold`, verificar aspecto clássico; salvar/reabrir projeto editado; copiar estilo para todas, cancelar confirmação e confirmar preservação de horários, posição e texto.
+- Análise sintática/estrutural local não equivale a build Gradle Android nem prova resultado final do compositor Media3.

@@ -1,6 +1,8 @@
 package br.com.uaicortes
 
 import android.graphics.Color
+import android.graphics.Typeface
+import android.text.style.StyleSpan
 import android.text.SpannableString
 import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
@@ -48,7 +50,9 @@ class TimedSubtitleOverlay(
         val text = SpannableString(active.text)
         if (text.isNotEmpty()) {
             text.setSpan(ForegroundColorSpan(active.color), 0, text.length, 0)
-            text.setSpan(BackgroundColorSpan(Color.argb(170, 0, 0, 0)), 0, text.length, 0)
+            if (Color.alpha(active.backgroundColor) > 0)
+                text.setSpan(BackgroundColorSpan(active.backgroundColor), 0, text.length, 0)
+            if (active.bold) text.setSpan(StyleSpan(Typeface.BOLD), 0, text.length, 0)
             text.setSpan(RelativeSizeSpan(active.sizeSp / 22f), 0, text.length, 0)
         }
         return text
