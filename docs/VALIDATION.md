@@ -1,7 +1,7 @@
-# Uai Cortes 0.1.10 | Validação
+# Uai Cortes 0.1.11 | Validação
 
 ## Funcionalidade implementada no código
-- Persistência de até quatro PiPs no campo `overlays`, `schemaVersion=2`, IDs estáveis; projetos com `pip` legado migrados em leitura.
+- Persistência de até quatro PiPs no campo `overlays`, `schemaVersion=3`, IDs estáveis; projetos com `pip` legado migrados em leitura.
 - Quatro botões quadrados na mesma linha, Bottom Sheet ancorado embaixo, sobreposição dos controles sem deslocamento da prévia, nove atalhos, barra/entrada percentual, duração e mídia.
 - Adição e substituição via MediaStore/SAF, controles independentes de volume e de silêncio.
 - Layout anticolisão usa aspecto da mídia e do quadro, horário de início/fim e prioridade do PiP editado. Rejeita layouts impossíveis com Toast.
@@ -21,9 +21,14 @@
 - A disponibilidade de 4 decodificadores simultâneos depende do hardware. Não afirmar compatibilidade antes de medir.
 - Confirmar permissões de galerias (parcial e total) e URI SAF persistente após reiniciar.
 
-## Inclusões 0.1.10 (11)
+## Inclusões 0.1.11 (11)
 - Entrada numérica `TimeInput` com minutos, segundos, décimos e limites; testes para valores inválidos e overflow.
 - `OverlayTiming.nextStart` baseado no último término, sem adiantar para dentro do PiP anterior; aviso quando o vídeo acaba.
 - Colisão detectada por pares de PiPs e persistência `overlapWith` mediante confirmação explícita.
 - Sem alça do ModalBottomSheet e margens compactas.
 - Compilação Android em CI e teste físico permanecem necessários.
+
+## Inclusões v0.1.11
+- Testes unitários `NumericTimeTest` para máscara `mm:ss.d`, conversão e limites de corte.
+- Editor de corte com preview ExoPlayer, seleção por dois marcadores e cursor; corte aplicado apenas por confirmação.
+- **Ainda não validado:** compilação Android, resultado visual dos marcadores, preview e sincronismo em dispositivo físico.

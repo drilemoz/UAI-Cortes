@@ -18,9 +18,13 @@
 | Progresso e cancelamento | Implementado | Pendente |
 | Exportação em serviço de primeiro plano | Não | Pendente |
 
-Os recursos novos da versão 0.1.10 ainda **não foram validados por compilação Gradle ou testes físicos**. A execução #3 comprovou compilação Kotlin na versão 0.1.2, que não abrange estas alterações. Manter classificação **alpha de desenvolvimento**.
+Os recursos novos da versão 0.1.11 ainda **não foram validados por compilação Gradle ou testes físicos**. A execução #3 comprovou compilação Kotlin na versão 0.1.2, que não abrange estas alterações. Manter classificação **alpha de desenvolvimento**.
 
-| Painel PiP compacto, sem alça superior | Implementado no código 0.1.10 | Pendente Android |
-| Horários editáveis (busca, início/fim) | Implementado no código 0.1.10 | Pendente Android |
-| Sequência de PiPs + confirmação ao faltar tempo | Implementado no código 0.1.10 | Pendente Android |
-| Confirmação de sobreposição com persistência por par | Implementado no código 0.1.10 | Pendente Android |
+| Painel PiP compacto, sem alça superior | Implementado no código 0.1.11 | Pendente Android |
+| Horários editáveis (busca, início/fim) | Implementado no código 0.1.11 | Pendente Android |
+| Sequência de PiPs + confirmação ao faltar tempo | Implementado no código 0.1.11 | Pendente Android |
+| Confirmação de sobreposição com persistência por par | Implementado no código 0.1.11 | Pendente Android |
+
+| Cortar e unir: prévia local, miniaturas, RangeSlider e cursor | Implementado no código 0.1.11 | Pendente Android |
+| Marcar início/fim e Aplicar corte, desfazer da última aplicação | Implementado no código 0.1.11 | Pendente Android |
+| Máscara de horário numérico compartilhada com PiP | Testes Kotlin/JVM locais | Pendente UI Android |

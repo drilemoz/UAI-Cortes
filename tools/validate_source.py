@@ -10,10 +10,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*11',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.10"',gradle)
-assert 'Versão 0.1.10 (11)' in ui
-for label in ['VERSION: \'0.1.10\'','UaiCortes-v0.1.10.apk','TAG="v0.1.10"',"versionCode='11'",'actions/upload-artifact@v4','gh release upload']:
+assert re.search(r'versionCode\s*=\s*12',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.11"',gradle)
+assert 'Versão 0.1.11 (12)' in ui
+for label in ['VERSION: \'0.1.11\'','UaiCortes-v0.1.11.apk','TAG="v0.1.11"',"versionCode='12'",'actions/upload-artifact@v4','gh release upload']:
     assert label in workflow, label
 assert 'platforms;android-36' in workflow and 'android-actions/setup-android@v4' in workflow
 assert 'abortOnError = false' not in gradle
@@ -37,8 +37,14 @@ assert 'setVideoCompositorSettings(PipCompositor(project.overlays.take(4)))' in 
 assert 'sequences += mainSequence' in source and 'pip.muted' in source
 assert 'import androidx.media3.common.VideoCompositorSettings' in source
 assert 'import androidx.media3.common.OverlaySettings' in source
-assert 'EditableSeekTime(' in ui and 'TimeInput.parseMs(' in ui
+assert 'EditableSeekTime(' in ui and 'TimeDigitsField(' in ui
 assert 'OverlayTiming.nextStart(' in ui and 'pendingSequential' in ui and 'pendingOverlap' in ui
 assert 'OverlayPlacement.collisions(' in ui and 'overlapWith' in ui
 assert 'dragHandle = null' in ui
-print('OK: 0.1.10 / versionCode 11, editor de horários, PiP sequencial, confirmação de colisão, bottom sheet compacto e CI')
+print('OK: 0.1.11 / versionCode 12, PiP sequencial, confirmação de colisão, bottom sheet compacto e CI')
+
+assert 'private fun TrimScreen(' in ui and 'TrimThumbnails(' in ui and 'RangeSlider(' in ui
+assert 'TimeDigitsField(' in ui and 'NumericTimeMask' in ui and 'trimLogic' not in ui
+assert 'Marcar início' in ui and 'Marcar fim' in ui and 'Aplicar corte' in ui
+assert 'NumericTime.format(' in ui and 'TimeDigitsField("Começa em"' in ui
+print('OK: 0.1.11 / versionCode 12, editor de cortes com prévia, horários com máscara numérica, PiP preservado')

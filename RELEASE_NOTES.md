@@ -1,14 +1,10 @@
-# Uai Cortes v0.1.10
+# Uai Cortes v0.1.11 · versionCode 12
 
-- Interface compacta sem alça no painel inferior.
-- Horários editáveis por toque, com validação de limites.
-- Inserção sequencial de PiPs e confirmação antes de ocupar o mesmo período quando o vídeo acabou.
-- Aviso de sobreposição espacial e escolha de reposicionar, manter (persistindo por par) ou cancelar.
+- Cortar e unir reformulado: prévia reproduzível do clipe, cursor controlável, +/- 1 segundo, seis miniaturas e seleção em linha do tempo única com marcadores.
+- Marcar início, marcar fim, ajustar valores, aplicar corte de forma explícita e desfazer a última aplicação no clipe durante a sessão da tela.
+- Máscara numérica de décimos `mm:ss.d`: os separadores surgem sem digitação; `00001` = `00:00.1`, `00074` = `00:07.4`. Também nos horários do PiP e de navegação.
+- Dividir, mover e excluir clipes preservados. Nada altera os arquivos originais.
+- Mantidos quatro PiPs, sequenciamento, gerenciamento de conflitos e a janela inferior de ferramentas.
+- APK esperado em Releases: `UaiCortes-v0.1.11.apk`.
 
-- Quatro atalhos quadrados de Posição, Tamanho, Duração e Mídia agora ficam **na mesma linha**.
-- Os ajustes sobem em um painel Material 3 (Bottom Sheet) a partir do rodapé, cobrindo os botões sem mover a prévia. Feche arrastando para baixo, tocando fora ou em Concluído.
-- Altura controlada com rolagem interna; tema claro/escuro/AMOLED e ícones preservados.
-- Até quatro PiPs, reposicionamento automático, controle de áudio individual, biblioteca Imagens/Vídeos e compatibilidade de projetos antigos mantidos.
-- `versionCode 11`, APK de Release `UaiCortes-v0.1.10.apk`.
-
-**Pendente:** compilar no GitHub Actions e validar visualmente no Android, incluindo teclado, rolagem e prévia/exportação de múltiplos PiPs.
+**Validação:** testes e integridade do ZIP a conferir; compilação Gradle/Android e teste físico ainda pendentes.

@@ -3,6 +3,8 @@ package br.com.uaicortes
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
+import android.media.MediaMetadataRetriever
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -16,6 +18,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -27,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -35,6 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.geometry.Offset
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.common.MediaItem
@@ -43,6 +52,8 @@ import androidx.media3.ui.PlayerView
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.text.DateFormat
 import java.util.Date
 import java.util.UUID
@@ -449,9 +460,9 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.10 (11)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.11 (12)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
-        Spacer(Modifier.height(14.dp));Text("Novidades: biblioteca por tipo de mídia, PiP com ajustes em janelas e controle independente de som.",
+        Spacer(Modifier.height(14.dp));Text("Novidades: Cortar e unir com prévia, horários automáticos e marcações; PiPs independentes.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -706,55 +717,316 @@ private fun PipLayer(pip: Overlay, timeMs: Long, playing: Boolean,
     }
 }
 
+/** Entrada numérica com máscara visual. O valor editado guarda só dígitos.
+ * Assim apagar não fica preso no ':' ou no '.', e a digitação é sempre do fim. */
+private object NumericTimeMask : VisualTransformation {
+    override fun filter(text: AnnotatedString): TransformedText {
+        val output = NumericTime.format(text.text)
+        val length = text.length
+        val mapping = object : OffsetMapping {
+            override fun originalToTransformed(offset: Int): Int =
+                if (offset <= 0 && length == 0) 0 else output.length
+            override fun transformedToOriginal(offset: Int): Int = length
+        }
+        return TransformedText(AnnotatedString(output), mapping)
+    }
+}
+
+@Composable
+private fun TimeDigitsField(label: String, timeMs: Long, totalMs: Long,
+    valid: (Long) -> Boolean = { it in 0L..totalMs },
+    onCommit: (Long) -> Unit, modifier: Modifier = Modifier) {
+    var digits by remember { mutableStateOf(NumericTime.fromMs(timeMs)) }
+    var editing by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    LaunchedEffect(timeMs) { if (!editing) digits = NumericTime.fromMs(timeMs) }
+    val parsed = NumericTime.toMs(digits)
+    val allowed = parsed != null && valid(parsed)
+    Row(modifier, verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        OutlinedTextField(
+            value = digits,
+            onValueChange = { digits = NumericTime.sanitize(it); editing = true },
+            visualTransformation = NumericTimeMask,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.weight(1f).onFocusChanged { state ->
+                if (state.isFocused && !editing) { digits = ""; editing = true }
+            },
+            label = { Text(label) }, singleLine = true, isError = !allowed,
+            supportingText = if (!allowed) { { Text("Fora do intervalo") } } else null
+        )
+        IconButton(onClick = { digits = ""; editing = true }) {
+            Icon(Icons.Default.Backspace, "Limpar $label")
+        }
+        IconButton(onClick = {
+            if (allowed) {
+                onCommit(parsed!!)
+                editing = false
+                focusManager.clearFocus()
+            }
+        }, enabled = allowed) {
+            Icon(Icons.Default.Check, "Aplicar $label")
+        }
+    }
+}
+
+/** Frames pequenos gerados em IO somente quando muda o clipe; evita decodificar a cada recomposição. */
+@Composable
+private fun TrimThumbnails(uri: String, durationMs: Long, onSeek: (Long) -> Unit) {
+    val context = LocalContext.current
+    val thumbs by produceState<List<ImageBitmap>>(initialValue = emptyList(), uri, durationMs) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                val retriever = MediaMetadataRetriever()
+                try {
+                    retriever.setDataSource(context, Uri.parse(uri))
+                    (0 until 6).mapNotNull { step ->
+                        val microseconds = (durationMs.coerceAtLeast(1L) * step / 6L) * 1000L
+                        val frame = if (Build.VERSION.SDK_INT >= 27) {
+                            retriever.getScaledFrameAtTime(microseconds,
+                                MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 144, 88)
+                        } else retriever.getFrameAtTime(microseconds,
+                            MediaMetadataRetriever.OPTION_CLOSEST_SYNC)?.let { original ->
+                            val scaled = android.graphics.Bitmap.createScaledBitmap(original, 144, 88, true)
+                            if (scaled !== original) original.recycle()
+                            scaled
+                        }
+                        frame?.asImageBitmap()
+                    }
+                } finally { retriever.release() }
+            }.getOrDefault(emptyList())
+        }
+    }
+    Row(Modifier.fillMaxWidth().height(60.dp).clip(RoundedCornerShape(9.dp))
+        .background(MaterialTheme.colorScheme.surfaceVariant)) {
+        repeat(6) { index ->
+            Box(Modifier.weight(1f).fillMaxHeight().clickable {
+                onSeek(durationMs.coerceAtLeast(0L) * index / 6L)
+            }) {
+                thumbs.getOrNull(index)?.let { bitmap ->
+                    Image(bitmap, "Quadro ${index + 1}", Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop)
+                }
+            }
+        }
+    }
+}
+
+@OptIn(UnstableApi::class)
 @Composable
 private fun TrimScreen(p:VideoProject,selectedId:String,globalMs:Long,back:()->Unit,
                        update:(VideoProject)->Unit,selected:(String)->Unit) {
-    val clip=p.clips.firstOrNull{it.id==selectedId} ?: p.clips.firstOrNull()
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal=18.dp)) {
-        Heading("Cortar e unir",back)
-        if(clip==null){Text("Adicione um vídeo para editar.");return@Column}
-        Text("Selecione um clipe",fontWeight=FontWeight.SemiBold)
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            p.clips.forEachIndexed { i,c ->
-                OutlinedButton(onClick={selected(c.id)},border=BorderStroke(if(c.id==clip.id) 2.dp else 1.dp,
-                    if(c.id==clip.id)Blue else MaterialTheme.colorScheme.outlineVariant)) {Text("${i+1} · ${c.title.take(14)}",maxLines=1)}
+    val context = LocalContext.current
+    val clip = p.clips.firstOrNull { it.id == selectedId } ?: p.clips.firstOrNull()
+    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+        Heading("Cortar e unir", back)
+        if (clip == null) {
+            Text("Adicione um vídeo para editar.", modifier = Modifier.padding(16.dp))
+            return@Column
+        }
+        val total = clip.sourceDurationMs.coerceAtLeast(1L)
+        val player = remember(clip.id) { ExoPlayer.Builder(context).build() }
+        DisposableEffect(player) { onDispose { player.release() } }
+        var cursorMs by remember(clip.id) { mutableLongStateOf(clip.startMs) }
+        var playing by remember(clip.id) { mutableStateOf(false) }
+        var begin by remember(clip.id) { mutableLongStateOf(clip.startMs) }
+        var finish by remember(clip.id) { mutableLongStateOf(clip.endMs) }
+        var lastApplied by remember(clip.id) { mutableStateOf<Pair<Long, Long>?>(null) }
+        LaunchedEffect(clip.id, clip.uri) {
+            player.setMediaItem(MediaItem.fromUri(clip.uri))
+            player.prepare()
+            player.seekTo(cursorMs)
+        }
+        LaunchedEffect(player) {
+            while (true) {
+                playing = player.isPlaying
+                if (player.isPlaying) {
+                    cursorMs = TrimLogic.clampCursor(player.currentPosition, total)
+                    if (cursorMs >= total) player.pause()
+                }
+                delay(90L)
             }
         }
-        Spacer(Modifier.height(20.dp));Text("Início: ${formatMs(clip.startMs)}")
-        Slider(value=clip.startMs.toFloat(),onValueChange={value->
-            update(p.copy(clips=p.clips.map {if(it.id==clip.id) it.copy(startMs=value.toLong().coerceAtMost(it.endMs-250L)) else it}))
-        },valueRange=0f..(clip.endMs-250L).coerceAtLeast(1L).toFloat())
-        Text("Fim: ${formatMs(clip.endMs)}")
-        Slider(value=clip.endMs.toFloat(),onValueChange={value->
-            update(p.copy(clips=p.clips.map {if(it.id==clip.id) it.copy(endMs=value.toLong().coerceAtLeast(it.startMs+250L)) else it}))
-        },valueRange=(clip.startMs+250L).coerceAtMost(clip.sourceDurationMs).toFloat()..clip.sourceDurationMs.toFloat())
-        Text("Trecho mantido: ${formatMs(clip.durationMs)}",color=MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(20.dp))
-        val idx=p.clips.indexOfFirst{it.id==clip.id}
-        val startAt=p.clips.take(idx.coerceAtLeast(0)).sumOf{it.durationMs}
-        val splitMs=clip.startMs+(globalMs-startAt).coerceIn(0,clip.durationMs)
-        BlueButton("Dividir no cursor (${formatMs(globalMs)})",{
-            if(splitMs>clip.startMs+250 && splitMs<clip.endMs-250) {
-                val updated=p.clips.toMutableList()
-                updated[idx]=clip.copy(endMs=splitMs)
-                updated.add(idx+1,clip.copy(id=UUID.randomUUID().toString(),startMs=splitMs))
-                update(p.copy(clips=updated))
-            }
-        },Modifier.fillMaxWidth(),enabled=splitMs>clip.startMs+250 && splitMs<clip.endMs-250)
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-            OutlinedButton(onClick={
-                if(idx>0){val list=p.clips.toMutableList();val tmp=list[idx-1];list[idx-1]=list[idx];list[idx]=tmp;update(p.copy(clips=list))}
-            },enabled=idx>0) {Icon(Icons.Default.ArrowBack,null);Text("Mover")}
-            OutlinedButton(onClick={
-                if(idx<p.clips.lastIndex){val list=p.clips.toMutableList();val tmp=list[idx+1];list[idx+1]=list[idx];list[idx]=tmp;update(p.copy(clips=list))}
-            },enabled=idx<p.clips.lastIndex) {Text("Mover");Icon(Icons.Default.ArrowForward,null)}
-            OutlinedButton(onClick={
-                update(p.copy(clips=p.clips.filterNot{it.id==clip.id}));selected(p.clips.firstOrNull{it.id!=clip.id}?.id?:"")
-            },enabled=p.clips.size>1) {Icon(Icons.Default.Delete,null)}
+        fun seek(ms: Long) {
+            cursorMs = TrimLogic.clampCursor(ms, total)
+            player.seekTo(cursorMs)
         }
-        Spacer(Modifier.height(14.dp));Text("Os arquivos originais não são modificados.",
-            style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        val validRange = TrimLogic.valid(begin, finish, total)
+        val dirty = begin != clip.startMs || finish != clip.endMs
+        val idx = p.clips.indexOfFirst { it.id == clip.id }
+        val canSplit = !dirty && TrimLogic.canSplit(clip.startMs, clip.endMs, cursorMs)
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Text("Selecione um clipe", fontWeight = FontWeight.SemiBold)
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                p.clips.forEachIndexed { i, c ->
+                    OutlinedButton(onClick = { player.pause(); selected(c.id) },
+                        border = BorderStroke(if (c.id == clip.id) 2.dp else 1.dp,
+                            if (c.id == clip.id) Blue else MaterialTheme.colorScheme.outlineVariant),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
+                        Text("${i + 1} · ${c.title.take(21)}", maxLines = 1)
+                    }
+                }
+            }
+            BoxWithConstraints(Modifier.fillMaxWidth().height(215.dp)
+                .clip(RoundedCornerShape(14.dp)).background(Color(0xFF111114)),
+                contentAlignment = Alignment.Center) {
+                val videoAspect = remember(clip.uri) { mediaAspect(context, clip.uri, false) }
+                val videoWidth = minOf(maxWidth, maxHeight * videoAspect)
+                AndroidView(factory = { ctx -> previewPlayer(ctx).apply {
+                    this.player = player
+                    useController = false
+                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+                } }, modifier = Modifier.width(videoWidth).height(videoWidth / videoAspect),
+                    update = { it.player = player })
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Cursor: ${formatPipMs(cursorMs)} / ${formatPipMs(total)}",
+                    style = MaterialTheme.typography.bodySmall)
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    IconButton(onClick = { player.pause(); seek(cursorMs - 1000L) }) {
+                        Icon(Icons.Default.KeyboardDoubleArrowLeft, "Recuar um segundo")
+                    }
+                    IconButton(onClick = { if (player.isPlaying) player.pause() else player.play() }) {
+                        Icon(if (playing) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
+                            "Reproduzir ou pausar", Modifier.size(30.dp))
+                    }
+                    IconButton(onClick = { player.pause(); seek(cursorMs + 1000L) }) {
+                        Icon(Icons.Default.KeyboardDoubleArrowRight, "Avançar um segundo")
+                    }
+                }
+            }
+            TimeDigitsField("Ir para", cursorMs, total, onCommit = { player.pause(); seek(it) },
+                modifier = Modifier.fillMaxWidth())
+            Text("Linha do tempo · arraste os marcadores para selecionar o trecho",
+                fontWeight = FontWeight.Medium, style = MaterialTheme.typography.bodySmall)
+            Box(Modifier.fillMaxWidth()) {
+                TrimThumbnails(clip.uri, total, ::seek)
+                RangeSlider(value = begin.toFloat()..finish.toFloat(),
+                    onValueChange = { range ->
+                        val start = range.start.toLong()
+                        val end = range.endInclusive.toLong()
+                        if (TrimLogic.valid(start, end, total)) {
+                            begin = start
+                            finish = end
+                        }
+                    }, valueRange = 0f..total.toFloat(),
+                    modifier = Modifier.fillMaxWidth().height(60.dp))
+            }
+            Slider(value = cursorMs.toFloat().coerceIn(0f, total.toFloat()),
+                onValueChange = { player.pause(); seek(it.toLong()) },
+                valueRange = 0f..total.toFloat(), modifier = Modifier.fillMaxWidth().height(37.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    TimeDigitsField("Início", begin, total,
+                        valid = { TrimLogic.valid(it, finish, total) },
+                        onCommit = { begin = it })
+                    OutlinedButton(onClick = {
+                        if (TrimLogic.valid(cursorMs, finish, total)) begin = cursorMs
+                    }, modifier = Modifier.fillMaxWidth(),
+                        enabled = TrimLogic.valid(cursorMs, finish, total),
+                        contentPadding = PaddingValues(horizontal = 4.dp)) {
+                        Icon(Icons.Default.Flag, null, Modifier.size(17.dp))
+                        Text(" Marcar início", maxLines = 1, fontSize = 12.sp)
+                    }
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    TimeDigitsField("Fim", finish, total,
+                        valid = { TrimLogic.valid(begin, it, total) },
+                        onCommit = { finish = it })
+                    OutlinedButton(onClick = {
+                        if (TrimLogic.valid(begin, cursorMs, total)) finish = cursorMs
+                    }, modifier = Modifier.fillMaxWidth(),
+                        enabled = TrimLogic.valid(begin, cursorMs, total),
+                        contentPadding = PaddingValues(horizontal = 4.dp)) {
+                        Icon(Icons.Default.Flag, null, Modifier.size(17.dp))
+                        Text(" Marcar fim", maxLines = 1, fontSize = 12.sp)
+                    }
+                }
+            }
+            Text("Trecho selecionado: ${if (validRange) formatPipMs(finish - begin) else "inválido"}",
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Button(onClick = {
+                lastApplied = clip.startMs to clip.endMs
+                update(p.copy(clips = p.clips.map { if (it.id == clip.id)
+                    it.copy(startMs = begin, endMs = finish) else it }))
+            }, modifier = Modifier.fillMaxWidth().height(48.dp), enabled = validRange && dirty,
+                shape = RoundedCornerShape(14.dp)) {
+                Icon(Icons.Default.Check, null)
+                Text(" Aplicar corte")
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                OutlinedButton(onClick = {
+                    if (canSplit) {
+                        val updated = p.clips.toMutableList()
+                        updated[idx] = clip.copy(endMs = cursorMs)
+                        updated.add(idx + 1, clip.copy(id = UUID.randomUUID().toString(), startMs = cursorMs))
+                        update(p.copy(clips = updated))
+                    }
+                }, enabled = canSplit, modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 3.dp)) {
+                    Icon(Icons.Default.ContentCut, null, Modifier.size(17.dp))
+                    Text(" Dividir", fontSize = 12.sp)
+                }
+                OutlinedButton(onClick = {
+                    lastApplied?.let { (a, b) ->
+                        begin = a; finish = b
+                        update(p.copy(clips = p.clips.map { if (it.id == clip.id)
+                            it.copy(startMs = a, endMs = b) else it }))
+                        lastApplied = null
+                    }
+                }, enabled = lastApplied != null, modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 3.dp)) {
+                    Icon(Icons.Default.Undo, null, Modifier.size(17.dp))
+                    Text(" Desfazer", fontSize = 12.sp)
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                OutlinedButton(onClick = {
+                    if (idx > 0) {
+                        val list = p.clips.toMutableList()
+                        val previous = list[idx - 1]
+                        list[idx - 1] = list[idx]; list[idx] = previous
+                        update(p.copy(clips = list))
+                    }
+                }, enabled = idx > 0, modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 4.dp)) {
+                    Icon(Icons.Default.ArrowBack, null, Modifier.size(16.dp))
+                    Text(" Mover", fontSize = 12.sp)
+                }
+                OutlinedButton(onClick = {
+                    if (idx < p.clips.lastIndex) {
+                        val list = p.clips.toMutableList()
+                        val next = list[idx + 1]
+                        list[idx + 1] = list[idx]; list[idx] = next
+                        update(p.copy(clips = list))
+                    }
+                }, enabled = idx < p.clips.lastIndex, modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 4.dp)) {
+                    Text("Mover ", fontSize = 12.sp)
+                    Icon(Icons.Default.ArrowForward, null, Modifier.size(16.dp))
+                }
+                OutlinedButton(onClick = {
+                    val other = p.clips.firstOrNull { it.id != clip.id }
+                    if (other != null) {
+                        update(p.copy(clips = p.clips.filterNot { it.id == clip.id }))
+                        selected(other.id)
+                    }
+                }, enabled = p.clips.size > 1, contentPadding = PaddingValues(horizontal = 8.dp)) {
+                    Icon(Icons.Default.Delete, "Excluir clipe")
+                }
+            }
+            if (dirty) Text("Corte ainda não aplicado. Toque em Aplicar corte para salvar.",
+                color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+            Text("Os arquivos originais não são modificados.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(6.dp))
+        }
     }
 }
 
@@ -815,16 +1087,6 @@ private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) ->
     var expanded by remember(p.id) { mutableStateOf<String?>(null) }
     var manual by remember(pip?.id) {
         mutableStateOf(pip?.let { (it.scale * 100f).toInt().toString() } ?: "30")
-    }
-    var startDraft by remember(pip?.id) { mutableStateOf(formatPipMs(pip?.startAtMs ?: 0L)) }
-    var endDraft by remember(pip?.id) {
-        mutableStateOf(formatPipMs((pip?.startAtMs ?: 0L) + (pip?.durationMs ?: 0L)))
-    }
-    var editingStart by remember(pip?.id) { mutableStateOf(false) }
-    var editingEnd by remember(pip?.id) { mutableStateOf(false) }
-    LaunchedEffect(pip?.startAtMs, pip?.durationMs) {
-        if (!editingStart) startDraft = formatPipMs(pip?.startAtMs ?: 0L)
-        if (!editingEnd) endDraft = formatPipMs((pip?.startAtMs ?: 0L) + (pip?.durationMs ?: 0L))
     }
     DisposableEffect(player) { onDispose { player.release() } }
     LaunchedEffect(p.clips) {
@@ -1123,54 +1385,27 @@ private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) ->
                                     "duration" -> {
                                         if (pip != null) {
                                             val end = (pip.startAtMs + pip.durationMs).coerceAtMost(total)
-                                            Text("Toque nos números para digitar (mm:ss ou mm:ss.d).",
+                                            Text("Digite somente números; a máscara preenche mm:ss.d automaticamente.",
                                                 style = MaterialTheme.typography.bodySmall)
-                                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                                                val parsedStart = TimeInput.parseMs(startDraft)
-                                                val minLength = minOf(500L, end.coerceAtLeast(1L))
-                                                val validStart = parsedStart != null &&
-                                                    parsedStart in 0L..(end - minLength).coerceAtLeast(0L)
-                                                OutlinedTextField(value = startDraft, onValueChange = {
-                                                    if (it.length <= 12) { startDraft = it; editingStart = true }
-                                                }, modifier = Modifier.weight(1f), label = { Text("Começa em") },
-                                                    singleLine = true, isError = !validStart,
-                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text))
-                                                IconButton(onClick = {
-                                                    parsedStart?.let { typed ->
-                                                        editingStart = false
-                                                        onChange(pip.copy(startAtMs = typed, durationMs = end - typed))
-                                                    }
-                                                }, enabled = validStart) { Icon(Icons.Default.Check, "Aplicar horário inicial") }
-                                            }
+                                            val minLength = minOf(500L, end.coerceAtLeast(1L))
+                                            TimeDigitsField("Começa em", pip.startAtMs, total,
+                                                valid = { it in 0L..(end - minLength).coerceAtLeast(0L) },
+                                                onCommit = { typed -> onChange(pip.copy(
+                                                    startAtMs = typed, durationMs = end - typed)) })
                                             Slider(value = pip.startAtMs.coerceIn(0L, end).toFloat(),
                                                 onValueChange = { value ->
-                                                    editingStart = false
                                                     val (newStart, newDuration) = OverlayEditorLogic.startChanged(
                                                         value.toLong(), pip.startAtMs, pip.durationMs, total)
                                                     onChange(pip.copy(startAtMs = newStart, durationMs = newDuration))
                                                 }, valueRange = 0f..end.coerceAtLeast(1L).toFloat())
                                             val minEnd = (pip.startAtMs + 500L).coerceAtMost(total)
-                                            val parsedEnd = TimeInput.parseMs(endDraft)
-                                            val validEnd = parsedEnd != null && parsedEnd in minEnd..total
-                                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                                                OutlinedTextField(value = endDraft, onValueChange = {
-                                                    if (it.length <= 12) { endDraft = it; editingEnd = true }
-                                                }, modifier = Modifier.weight(1f), label = { Text("Termina em") },
-                                                    singleLine = true, isError = !validEnd,
-                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text))
-                                                IconButton(onClick = {
-                                                    parsedEnd?.let { typed ->
-                                                        editingEnd = false
-                                                        onChange(pip.copy(durationMs = typed - pip.startAtMs))
-                                                    }
-                                                }, enabled = validEnd) { Icon(Icons.Default.Check, "Aplicar horário final") }
-                                            }
+                                            TimeDigitsField("Termina em", end, total,
+                                                valid = { it in minEnd..total },
+                                                onCommit = { typed -> onChange(pip.copy(
+                                                    durationMs = typed - pip.startAtMs)) })
                                             if (minEnd < total) {
                                                 Slider(value = end.coerceIn(minEnd, total).toFloat(),
                                                     onValueChange = { value ->
-                                                        editingEnd = false
                                                         onChange(pip.copy(durationMs = OverlayEditorLogic.endChanged(
                                                             value.toLong(), pip.startAtMs, total)))
                                                     }, valueRange = minEnd.toFloat()..total.toFloat())
@@ -1210,11 +1445,8 @@ private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) ->
 private fun EditableSeekTime(currentMs: Long, totalMs: Long, onSeek: (Long) -> Unit,
                              modifier: Modifier = Modifier) {
     var editing by remember { mutableStateOf(false) }
-    var draft by remember { mutableStateOf("") }
-    val parsed = TimeInput.parseMs(draft)
     if (!editing) {
         TextButton(onClick = {
-            draft = formatPipMs(currentMs)
             editing = true
         }, modifier = modifier, contentPadding = PaddingValues(horizontal = 3.dp)) {
             Text("${displayEditableTime(currentMs)} / ${displayEditableTime(totalMs)}",
@@ -1224,16 +1456,9 @@ private fun EditableSeekTime(currentMs: Long, totalMs: Long, onSeek: (Long) -> U
     } else {
         Row(modifier, verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            OutlinedTextField(value = draft, onValueChange = { if (it.length <= 12) draft = it },
-                singleLine = true, modifier = Modifier.weight(1f),
-                label = { Text("Ir para (mm:ss)") },
-                isError = parsed == null || parsed !in 0L..totalMs,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text))
-            IconButton(onClick = {
-                parsed?.takeIf { it in 0L..totalMs }?.let { onSeek(it); editing = false }
-            }, enabled = parsed != null && parsed in 0L..totalMs) {
-                Icon(Icons.Default.Check, "Ir ao horário")
-            }
+            TimeDigitsField("Ir para", currentMs, totalMs,
+                onCommit = { onSeek(it); editing = false },
+                modifier = Modifier.weight(1f))
             IconButton(onClick = { editing = false }) {
                 Icon(Icons.Default.Close, "Cancelar edição")
             }
