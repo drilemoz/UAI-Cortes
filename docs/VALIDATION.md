@@ -1,4 +1,4 @@
-# Uai Cortes 0.1.18 | Validação
+# Uai Cortes 0.1.19 | Validação
 
 ## Funcionalidade implementada no código
 - Persistência de até quatro PiPs no campo `overlays`, `schemaVersion=4`, IDs estáveis; projetos com `pip` legado migrados em leitura.
@@ -60,10 +60,10 @@
 - `TimelineRow` registra `val timelineWidth = maxWidth` antes do `Row` aninhado.
 - Testes locais estruturais e sintáticos apenas, sem Gradle Android. Nova execução `:app:testDebugUnitTest :app:lintDebug :app:assembleRelease` exigida no CI.
 
-## Build 16 / implementação v0.1.18 (versionCode 19)
+## Build 16 / implementação v0.1.19 (versionCode 20)
 - Falha confirmada no build 16: task `:app:lintDebug`, 3 erros Media3 `UnsafeOptInUsageError` em `MainActivity.kt`, first failure line 1530. Kotlin e etapas anteriores concluídos, mas o release **não** foi publicado.
 - Corrigida a origem das APIs instáveis: helper `previewPlayer` anotado com `androidx.annotation.OptIn` fora das lambdas `AndroidView`.
-- `app/build.gradle.kts`: saídas para arm32/arm64/x86/x86_64/universal com mesmo versionCode 19.
+- `app/build.gradle.kts`: saídas para arm32/arm64/x86/x86_64/universal com mesmo versionCode 20.
 - `tools/package_apks.py`: usa `output-metadata.json` e aborta se faltarem ABIs, houver duplicatas, falhar `apksigner verify` ou houver divergência de pacote/versão/SDK.
 - Removidos do workflow `push.tags: v*` e `actions/upload-artifact` para evitar duas compilações/duas publicações do mesmo APK. A Release é o único destino.
 - **Testes locais:** validador estrutural e sintaxe Kotlin (parser PSI) quando disponíveis; sem Gradle/SDK Android local.
