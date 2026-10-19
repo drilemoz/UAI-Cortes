@@ -28,3 +28,9 @@ Os recursos novos da versão 0.1.11 ainda **não foram validados por compilaçã
 | Cortar e unir: prévia local, miniaturas, RangeSlider e cursor | Implementado no código 0.1.11 | Pendente Android |
 | Marcar início/fim e Aplicar corte, desfazer da última aplicação | Implementado no código 0.1.11 | Pendente Android |
 | Máscara de horário numérico compartilhada com PiP | Testes Kotlin/JVM locais | Pendente UI Android |
+
+## Atualização de interface v0.1.12 (versionCode 13)
+- Editor Cortar e unir simplificado com miniaturas clicáveis sob a prévia, barra de cursor independente e campo Tempo com busca automática por dígitos.
+- Marcar fim apresenta aviso claro se o cursor não satisfaz início + 250ms.
+- Ações Dividir, Desfazer, Antes, Depois, Excluir na mesma linha; desfazer da última operação de clipes nesta sessão.
+- **Estado:** implementado no código; aguarda compilação Android e verificação física.

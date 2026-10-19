@@ -13,10 +13,17 @@ class NumericTimeTest {
         assertEquals(7400L, NumericTime.toMs("00074"))
         assertEquals("00074", NumericTime.fromMs(7499L))
         assertNull(NumericTime.toMs(""))
+        assertEquals(100L, NumericTime.toMs("1")) // cursor avança ao primeiro dígito
+        assertEquals(1500L, NumericTime.toMs("00015"))
+        assertEquals("00:01.5", NumericTime.format("00015"))
     }
     @Test fun `validacao de trecho e ponto de divisao`() {
         assertTrue(TrimLogic.valid(1000, 3000, 7500))
         assertFalse(TrimLogic.valid(3000, 1000, 7500))
+        // Era a causa do botão Marcar fim desabilitado silenciosamente.
+        assertFalse(TrimLogic.valid(1500, 1500, 7400))
+        assertFalse(TrimLogic.valid(1500, 1749, 7400))
+        assertTrue(TrimLogic.valid(1500, 1750, 7400))
         assertFalse(TrimLogic.valid(0, 8000, 7500))
         assertTrue(TrimLogic.canSplit(1000, 3000, 2000))
         assertFalse(TrimLogic.canSplit(1000, 3000, 1250))

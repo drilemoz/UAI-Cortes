@@ -1,10 +1,10 @@
-# Uai Cortes v0.1.11 · versionCode 12
+# Uai Cortes v0.1.12 · versionCode 13
 
-- Cortar e unir reformulado: prévia reproduzível do clipe, cursor controlável, +/- 1 segundo, seis miniaturas e seleção em linha do tempo única com marcadores.
-- Marcar início, marcar fim, ajustar valores, aplicar corte de forma explícita e desfazer a última aplicação no clipe durante a sessão da tela.
-- Máscara numérica de décimos `mm:ss.d`: os separadores surgem sem digitação; `00001` = `00:00.1`, `00074` = `00:07.4`. Também nos horários do PiP e de navegação.
-- Dividir, mover e excluir clipes preservados. Nada altera os arquivos originais.
-- Mantidos quatro PiPs, sequenciamento, gerenciamento de conflitos e a janela inferior de ferramentas.
-- APK esperado em Releases: `UaiCortes-v0.1.11.apk`.
+- Editor Cortar e unir mais limpo: miniaturas tocáveis diretamente abaixo do vídeo e cursor em controle separado, sem barras sobrepostas às imagens.
+- Campo Tempo com máscara numérica `mm:ss.d` que busca automaticamente o ponto do vídeo enquanto se digita, sem confirmar o campo “Ir para”.
+- Marcar fim mostra explicação se ainda não existir um intervalo válido após o início, em vez de ficar desabilitado sem motivo aparente.
+- Botões de dividir, desfazer, ordenar antes/depois e excluir compactados em uma única linha; desfazer da última alteração aplicada na sessão.
+- Início e fim editáveis, prévia, Aplicar corte, quatro PiPs e exportação preservados.
+- APK previsto em GitHub Releases: `UaiCortes-v0.1.12.apk`.
 
-**Validação:** testes e integridade do ZIP a conferir; compilação Gradle/Android e teste físico ainda pendentes.
+**Validação:** validações estruturais e unitárias isoladas locais; compilação Android completa e teste no aparelho pendentes.

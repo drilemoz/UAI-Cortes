@@ -32,3 +32,10 @@
 - Testes unitários `NumericTimeTest` para máscara `mm:ss.d`, conversão e limites de corte.
 - Editor de corte com preview ExoPlayer, seleção por dois marcadores e cursor; corte aplicado apenas por confirmação.
 - **Ainda não validado:** compilação Android, resultado visual dos marcadores, preview e sincronismo em dispositivo físico.
+
+## Inclusões v0.1.12
+- Identificada causa de Marcar fim desabilitado: cursor coincide com início ou duração selecionada fica abaixo de 250 ms. Botão agora é clicável e mostra motivo.
+- Miniaturas separadas da barra de cursor, com ação de toque; removido o RangeSlider que interceptava/encobria imagens.
+- Entrada de cursor busca automaticamente no ExoPlayer durante digitação válida, sem botão aplicar.
+- Ações de clipes numa linha, com snapshot de desfazer para aplicar, dividir, reordenar e excluir.
+- Kotlin PSI e testes isolados verificam sintaxe e cálculos de horários; **não equivalem a Gradle Android, lint ou teste no telefone**.

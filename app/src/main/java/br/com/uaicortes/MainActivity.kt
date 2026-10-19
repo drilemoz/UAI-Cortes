@@ -18,12 +18,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -460,9 +463,9 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.11 (12)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.12 (13)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
-        Spacer(Modifier.height(14.dp));Text("Novidades: Cortar e unir com prévia, horários automáticos e marcações; PiPs independentes.",
+        Spacer(Modifier.height(14.dp));Text("Novidades: Cortar e unir simplificado, miniaturas tocáveis, horário instantâneo e desfazer completo.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -732,10 +735,14 @@ private object NumericTimeMask : VisualTransformation {
     }
 }
 
+/** Campo numérico compartilhado, com a opção de aplicar cada valor válido imediatamente.
+ * Na prévia, não exige botão de confirmar; o player é reposicionado a cada digitação.
+ * No PiP, mantém os botões de confirmar/limpar existentes. */
 @Composable
 private fun TimeDigitsField(label: String, timeMs: Long, totalMs: Long,
     valid: (Long) -> Boolean = { it in 0L..totalMs },
-    onCommit: (Long) -> Unit, modifier: Modifier = Modifier) {
+    onCommit: (Long) -> Unit, modifier: Modifier = Modifier,
+    autoApply: Boolean = false) {
     var digits by remember { mutableStateOf(NumericTime.fromMs(timeMs)) }
     var editing by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
@@ -743,29 +750,64 @@ private fun TimeDigitsField(label: String, timeMs: Long, totalMs: Long,
     val parsed = NumericTime.toMs(digits)
     val allowed = parsed != null && valid(parsed)
     Row(modifier, verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         OutlinedTextField(
             value = digits,
-            onValueChange = { digits = NumericTime.sanitize(it); editing = true },
-            visualTransformation = NumericTimeMask,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.weight(1f).onFocusChanged { state ->
-                if (state.isFocused && !editing) { digits = ""; editing = true }
+            onValueChange = { typed ->
+                digits = NumericTime.sanitize(typed)
+                editing = true
+                if (autoApply) {
+                    NumericTime.toMs(digits)?.takeIf(valid)?.let(onCommit)
+                }
             },
-            label = { Text(label) }, singleLine = true, isError = !allowed,
-            supportingText = if (!allowed) { { Text("Fora do intervalo") } } else null
-        )
-        IconButton(onClick = { digits = ""; editing = true }) {
-            Icon(Icons.Default.Backspace, "Limpar $label")
-        }
-        IconButton(onClick = {
-            if (allowed) {
-                onCommit(parsed!!)
+            visualTransformation = NumericTimeMask,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = {
                 editing = false
                 focusManager.clearFocus()
+            }),
+            modifier = Modifier.weight(1f).onFocusChanged { state ->
+                if (state.isFocused && !editing) {
+                    digits = "" // uma nova digitação começa do zero, sem precisar apagar separadores
+                    editing = true
+                } else if (!state.isFocused && editing) {
+                    editing = false
+                    // Os dados digitados inválidos não substituem o último valor válido.
+                    digits = NumericTime.fromMs(timeMs)
+                }
+            },
+            label = { Text(label) }, singleLine = true, isError = digits.isNotBlank() && !allowed,
+            supportingText = if (digits.isNotBlank() && !allowed && !autoApply) {
+                { Text("Fora do intervalo") }
+            } else null
+        )
+        if (!autoApply) {
+            IconButton(onClick = { digits = ""; editing = true }) {
+                Icon(Icons.Default.Backspace, "Limpar $label")
             }
-        }, enabled = allowed) {
-            Icon(Icons.Default.Check, "Aplicar $label")
+            IconButton(onClick = {
+                if (allowed) {
+                    onCommit(parsed!!)
+                    editing = false
+                    focusManager.clearFocus()
+                }
+            }, enabled = allowed) {
+                Icon(Icons.Default.Check, "Aplicar $label")
+            }
+        }
+    }
+}
+
+@Composable
+private fun TrimQuickAction(icon: ImageVector, label: String, enabled: Boolean,
+    modifier: Modifier = Modifier, onClick: () -> Unit) {
+    OutlinedButton(onClick = onClick, enabled = enabled,
+        modifier = modifier.height(58.dp), shape = RoundedCornerShape(12.dp),
+        contentPadding = PaddingValues(1.dp)) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center) {
+            Icon(icon, contentDescription = label, modifier = Modifier.size(18.dp))
+            Text(label, fontSize = 10.sp, maxLines = 1, softWrap = false)
         }
     }
 }
@@ -801,7 +843,7 @@ private fun TrimThumbnails(uri: String, durationMs: Long, onSeek: (Long) -> Unit
         .background(MaterialTheme.colorScheme.surfaceVariant)) {
         repeat(6) { index ->
             Box(Modifier.weight(1f).fillMaxHeight().clickable {
-                onSeek(durationMs.coerceAtLeast(0L) * index / 6L)
+                onSeek(durationMs.coerceAtLeast(0L) * (index * 2L + 1L) / 12L)
             }) {
                 thumbs.getOrNull(index)?.let { bitmap ->
                     Image(bitmap, "Quadro ${index + 1}", Modifier.fillMaxSize(),
@@ -814,8 +856,8 @@ private fun TrimThumbnails(uri: String, durationMs: Long, onSeek: (Long) -> Unit
 
 @OptIn(UnstableApi::class)
 @Composable
-private fun TrimScreen(p:VideoProject,selectedId:String,globalMs:Long,back:()->Unit,
-                       update:(VideoProject)->Unit,selected:(String)->Unit) {
+private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back: () -> Unit,
+                       update: (VideoProject) -> Unit, selected: (String) -> Unit) {
     val context = LocalContext.current
     val clip = p.clips.firstOrNull { it.id == selectedId } ?: p.clips.firstOrNull()
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
@@ -831,7 +873,13 @@ private fun TrimScreen(p:VideoProject,selectedId:String,globalMs:Long,back:()->U
         var playing by remember(clip.id) { mutableStateOf(false) }
         var begin by remember(clip.id) { mutableLongStateOf(clip.startMs) }
         var finish by remember(clip.id) { mutableLongStateOf(clip.endMs) }
-        var lastApplied by remember(clip.id) { mutableStateOf<Pair<Long, Long>?>(null) }
+        // Um nível de desfazer cobre aplicar, dividir, reordenar e excluir.
+        var undoClips by remember(p.id) { mutableStateOf<List<Clip>?>(null) }
+        var undoSelected by remember(p.id) { mutableStateOf("") }
+        LaunchedEffect(clip.id, clip.startMs, clip.endMs) {
+            begin = clip.startMs
+            finish = clip.endMs
+        }
         LaunchedEffect(clip.id, clip.uri) {
             player.setMediaItem(MediaItem.fromUri(clip.uri))
             player.prepare()
@@ -851,13 +899,26 @@ private fun TrimScreen(p:VideoProject,selectedId:String,globalMs:Long,back:()->U
             cursorMs = TrimLogic.clampCursor(ms, total)
             player.seekTo(cursorMs)
         }
+        fun notifyUser(message: String) {
+            android.widget.Toast.makeText(context, message,
+                android.widget.Toast.LENGTH_SHORT).show()
+        }
+        fun rememberUndo() {
+            undoClips = p.clips.toList()
+            undoSelected = clip.id
+        }
         val validRange = TrimLogic.valid(begin, finish, total)
         val dirty = begin != clip.startMs || finish != clip.endMs
         val idx = p.clips.indexOfFirst { it.id == clip.id }
         val canSplit = !dirty && TrimLogic.canSplit(clip.startMs, clip.endMs, cursorMs)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-            Text("Selecione um clipe", fontWeight = FontWeight.SemiBold)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Clipe ${idx + 1} de ${p.clips.size}", fontWeight = FontWeight.SemiBold)
+                Text("Toque no clipe para selecionar", style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 p.clips.forEachIndexed { i, c ->
@@ -869,6 +930,7 @@ private fun TrimScreen(p:VideoProject,selectedId:String,globalMs:Long,back:()->U
                     }
                 }
             }
+            // Prévia e miniaturas são blocos independentes: nenhum RangeSlider cobre as fotos.
             BoxWithConstraints(Modifier.fillMaxWidth().height(215.dp)
                 .clip(RoundedCornerShape(14.dp)).background(Color(0xFF111114)),
                 contentAlignment = Alignment.Center) {
@@ -882,150 +944,132 @@ private fun TrimScreen(p:VideoProject,selectedId:String,globalMs:Long,back:()->U
                 } }, modifier = Modifier.width(videoWidth).height(videoWidth / videoAspect),
                     update = { it.player = player })
             }
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Cursor: ${formatPipMs(cursorMs)} / ${formatPipMs(total)}",
-                    style = MaterialTheme.typography.bodySmall)
-                Row(verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    IconButton(onClick = { player.pause(); seek(cursorMs - 1000L) }) {
-                        Icon(Icons.Default.KeyboardDoubleArrowLeft, "Recuar um segundo")
-                    }
-                    IconButton(onClick = { if (player.isPlaying) player.pause() else player.play() }) {
-                        Icon(if (playing) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
-                            "Reproduzir ou pausar", Modifier.size(30.dp))
-                    }
-                    IconButton(onClick = { player.pause(); seek(cursorMs + 1000L) }) {
-                        Icon(Icons.Default.KeyboardDoubleArrowRight, "Avançar um segundo")
-                    }
-                }
-            }
-            TimeDigitsField("Ir para", cursorMs, total, onCommit = { player.pause(); seek(it) },
-                modifier = Modifier.fillMaxWidth())
-            Text("Linha do tempo · arraste os marcadores para selecionar o trecho",
-                fontWeight = FontWeight.Medium, style = MaterialTheme.typography.bodySmall)
-            Box(Modifier.fillMaxWidth()) {
-                TrimThumbnails(clip.uri, total, ::seek)
-                RangeSlider(value = begin.toFloat()..finish.toFloat(),
-                    onValueChange = { range ->
-                        val start = range.start.toLong()
-                        val end = range.endInclusive.toLong()
-                        if (TrimLogic.valid(start, end, total)) {
-                            begin = start
-                            finish = end
-                        }
-                    }, valueRange = 0f..total.toFloat(),
-                    modifier = Modifier.fillMaxWidth().height(60.dp))
-            }
+            TrimThumbnails(clip.uri, total) { time -> player.pause(); seek(time) }
+            // Uma única barra para navegar; início e fim são definidos nos campos abaixo.
             Slider(value = cursorMs.toFloat().coerceIn(0f, total.toFloat()),
                 onValueChange = { player.pause(); seek(it.toLong()) },
-                valueRange = 0f..total.toFloat(), modifier = Modifier.fillMaxWidth().height(37.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    TimeDigitsField("Início", begin, total,
-                        valid = { TrimLogic.valid(it, finish, total) },
-                        onCommit = { begin = it })
-                    OutlinedButton(onClick = {
-                        if (TrimLogic.valid(cursorMs, finish, total)) begin = cursorMs
-                    }, modifier = Modifier.fillMaxWidth(),
-                        enabled = TrimLogic.valid(cursorMs, finish, total),
-                        contentPadding = PaddingValues(horizontal = 4.dp)) {
-                        Icon(Icons.Default.Flag, null, Modifier.size(17.dp))
-                        Text(" Marcar início", maxLines = 1, fontSize = 12.sp)
-                    }
+                valueRange = 0f..total.toFloat(), modifier = Modifier.fillMaxWidth().height(30.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+                TimeDigitsField("Tempo", cursorMs, total, autoApply = true,
+                    onCommit = { player.pause(); seek(it) }, modifier = Modifier.weight(1f))
+                IconButton(onClick = { player.pause(); seek(cursorMs - 1000L) }) {
+                    Icon(Icons.Default.KeyboardDoubleArrowLeft, "Recuar 1 segundo")
                 }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    TimeDigitsField("Fim", finish, total,
-                        valid = { TrimLogic.valid(begin, it, total) },
-                        onCommit = { finish = it })
-                    OutlinedButton(onClick = {
-                        if (TrimLogic.valid(begin, cursorMs, total)) finish = cursorMs
-                    }, modifier = Modifier.fillMaxWidth(),
-                        enabled = TrimLogic.valid(begin, cursorMs, total),
-                        contentPadding = PaddingValues(horizontal = 4.dp)) {
-                        Icon(Icons.Default.Flag, null, Modifier.size(17.dp))
-                        Text(" Marcar fim", maxLines = 1, fontSize = 12.sp)
-                    }
+                IconButton(onClick = { if (player.isPlaying) player.pause() else player.play() }) {
+                    Icon(if (playing) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
+                        "Reproduzir ou pausar", Modifier.size(30.dp))
+                }
+                IconButton(onClick = { player.pause(); seek(cursorMs + 1000L) }) {
+                    Icon(Icons.Default.KeyboardDoubleArrowRight, "Avançar 1 segundo")
                 }
             }
-            Text("Trecho selecionado: ${if (validRange) formatPipMs(finish - begin) else "inválido"}",
+            Text("Duração do vídeo: ${formatPipMs(total)} · toque no tempo ou nas miniaturas para navegar.",
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TimeDigitsField("Início", begin, total,
+                    valid = { TrimLogic.valid(it, finish, total) },
+                    onCommit = { begin = it }, autoApply = true,
+                    modifier = Modifier.weight(1f))
+                TimeDigitsField("Fim", finish, total,
+                    valid = { TrimLogic.valid(begin, it, total) },
+                    onCommit = { finish = it }, autoApply = true,
+                    modifier = Modifier.weight(1f))
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = {
+                    if (TrimLogic.valid(cursorMs, finish, total)) begin = cursorMs
+                    else notifyUser("Para marcar início, escolha um ponto antes do fim do trecho.")
+                }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(4.dp)) {
+                    Icon(Icons.Default.Flag, null, Modifier.size(17.dp))
+                    Text(" Marcar início", fontSize = 12.sp, maxLines = 1)
+                }
+                OutlinedButton(onClick = {
+                    if (TrimLogic.valid(begin, cursorMs, total)) finish = cursorMs
+                    else notifyUser("Para marcar fim, avance o vídeo após o início (mínimo 0,25 s).")
+                }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(4.dp)) {
+                    Icon(Icons.Default.Flag, null, Modifier.size(17.dp))
+                    Text(" Marcar fim", fontSize = 12.sp, maxLines = 1)
+                }
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Trecho: ${if (validRange) formatPipMs(finish - begin) else "inválido"}",
+                    style = MaterialTheme.typography.bodyMedium)
+                if (dirty) Text("Não aplicado", color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.labelSmall)
+            }
             Button(onClick = {
-                lastApplied = clip.startMs to clip.endMs
+                rememberUndo()
                 update(p.copy(clips = p.clips.map { if (it.id == clip.id)
                     it.copy(startMs = begin, endMs = finish) else it }))
-            }, modifier = Modifier.fillMaxWidth().height(48.dp), enabled = validRange && dirty,
+            }, modifier = Modifier.fillMaxWidth().height(46.dp), enabled = validRange && dirty,
                 shape = RoundedCornerShape(14.dp)) {
                 Icon(Icons.Default.Check, null)
                 Text(" Aplicar corte")
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                OutlinedButton(onClick = {
-                    if (canSplit) {
-                        val updated = p.clips.toMutableList()
-                        updated[idx] = clip.copy(endMs = cursorMs)
-                        updated.add(idx + 1, clip.copy(id = UUID.randomUUID().toString(), startMs = cursorMs))
-                        update(p.copy(clips = updated))
+            Text("Dividir cria dois trechos; as setas mudam a ordem; a lixeira exclui um clipe.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // Cinco ações em uma só linha, com ícones e rótulos curtos.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                TrimQuickAction(Icons.Default.ContentCut, "Dividir", true, Modifier.weight(1f)) {
+                    when {
+                        dirty -> notifyUser("Aplique ou desfaça o corte antes de dividir.")
+                        !canSplit -> notifyUser("Coloque o cursor dentro do trecho, afastado das extremidades.")
+                        else -> {
+                            rememberUndo()
+                            val updated = p.clips.toMutableList()
+                            updated[idx] = clip.copy(endMs = cursorMs)
+                            updated.add(idx + 1, clip.copy(
+                                id = UUID.randomUUID().toString(), startMs = cursorMs))
+                            update(p.copy(clips = updated))
+                        }
                     }
-                }, enabled = canSplit, modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = 3.dp)) {
-                    Icon(Icons.Default.ContentCut, null, Modifier.size(17.dp))
-                    Text(" Dividir", fontSize = 12.sp)
                 }
-                OutlinedButton(onClick = {
-                    lastApplied?.let { (a, b) ->
-                        begin = a; finish = b
-                        update(p.copy(clips = p.clips.map { if (it.id == clip.id)
-                            it.copy(startMs = a, endMs = b) else it }))
-                        lastApplied = null
+                TrimQuickAction(Icons.Default.Undo, "Desfazer", undoClips != null,
+                    Modifier.weight(1f)) {
+                    undoClips?.let { snapshot ->
+                        begin = snapshot.firstOrNull { it.id == undoSelected }?.startMs ?: begin
+                        finish = snapshot.firstOrNull { it.id == undoSelected }?.endMs ?: finish
+                        update(p.copy(clips = snapshot))
+                        selected(undoSelected)
+                        undoClips = null
                     }
-                }, enabled = lastApplied != null, modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = 3.dp)) {
-                    Icon(Icons.Default.Undo, null, Modifier.size(17.dp))
-                    Text(" Desfazer", fontSize = 12.sp)
                 }
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                OutlinedButton(onClick = {
-                    if (idx > 0) {
-                        val list = p.clips.toMutableList()
-                        val previous = list[idx - 1]
-                        list[idx - 1] = list[idx]; list[idx] = previous
-                        update(p.copy(clips = list))
-                    }
-                }, enabled = idx > 0, modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = 4.dp)) {
-                    Icon(Icons.Default.ArrowBack, null, Modifier.size(16.dp))
-                    Text(" Mover", fontSize = 12.sp)
+                TrimQuickAction(Icons.Default.ArrowBack, "Antes", idx > 0,
+                    Modifier.weight(1f)) {
+                    rememberUndo()
+                    val list = p.clips.toMutableList()
+                    val before = list[idx - 1]
+                    list[idx - 1] = list[idx]
+                    list[idx] = before
+                    update(p.copy(clips = list))
                 }
-                OutlinedButton(onClick = {
-                    if (idx < p.clips.lastIndex) {
-                        val list = p.clips.toMutableList()
-                        val next = list[idx + 1]
-                        list[idx + 1] = list[idx]; list[idx] = next
-                        update(p.copy(clips = list))
-                    }
-                }, enabled = idx < p.clips.lastIndex, modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = 4.dp)) {
-                    Text("Mover ", fontSize = 12.sp)
-                    Icon(Icons.Default.ArrowForward, null, Modifier.size(16.dp))
+                TrimQuickAction(Icons.Default.ArrowForward, "Depois", idx < p.clips.lastIndex,
+                    Modifier.weight(1f)) {
+                    rememberUndo()
+                    val list = p.clips.toMutableList()
+                    val after = list[idx + 1]
+                    list[idx + 1] = list[idx]
+                    list[idx] = after
+                    update(p.copy(clips = list))
                 }
-                OutlinedButton(onClick = {
+                TrimQuickAction(Icons.Default.Delete, "Excluir", p.clips.size > 1,
+                    Modifier.weight(1f)) {
                     val other = p.clips.firstOrNull { it.id != clip.id }
                     if (other != null) {
+                        rememberUndo()
                         update(p.copy(clips = p.clips.filterNot { it.id == clip.id }))
                         selected(other.id)
                     }
-                }, enabled = p.clips.size > 1, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                    Icon(Icons.Default.Delete, "Excluir clipe")
                 }
             }
-            if (dirty) Text("Corte ainda não aplicado. Toque em Aplicar corte para salvar.",
-                color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
-            Text("Os arquivos originais não são modificados.",
-                style = MaterialTheme.typography.bodySmall,
+            Text("Cortes não alteram os arquivos originais.",
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
         }
     }
 }
