@@ -63,16 +63,17 @@ data class Music(val uri: String, val title: String, val volume: Float = 0.35f) 
 data class SubtitleCue(
     val id: String = UUID.randomUUID().toString(),
     val text: String, val startMs: Long, val endMs: Long,
-    val color: Int = -1, val sizeSp: Int = 22, val y: Float = .85f
+    val color: Int = -1, val sizeSp: Int = 22, val y: Float = .85f, val x: Float = .5f
 ) {
     fun json() = JSONObject().put("id", id).put("text", text)
         .put("startMs", startMs).put("endMs", endMs).put("color", color)
-        .put("sizeSp", sizeSp).put("y", y.toDouble())
+        .put("sizeSp", sizeSp).put("y", y.toDouble()).put("x", x.toDouble())
     companion object {
         fun read(j: JSONObject) = SubtitleCue(j.optString("id").ifBlank { UUID.randomUUID().toString() },
             j.optString("text"), j.optLong("startMs"), j.optLong("endMs"),
             j.optInt("color", -1), j.optInt("sizeSp", 22).coerceIn(12, 48),
-            j.optDouble("y", .85).toFloat().coerceIn(.1f, .95f))
+            j.optDouble("y", .85).toFloat().coerceIn(.1f, .95f),
+            j.optDouble("x", .5).toFloat().coerceIn(.1f, .9f))
     }
 }
 

@@ -1,4 +1,11 @@
-## 0.1.16 (versionCode 17) — 19/10/2026
+Implementação incremental: indicadores de transição clicáveis na timeline, seleção por cartões e botão salvar e voltar à Home. Prévia real de transições ainda pendente.
+
+## 0.1.18 (versionCode 19) — 19/10/2026
+- Extração de vídeo externo via SAF e recorte por início/fim.
+- Posição X/Y de legendas persistida no projeto e aplicada à exportação.
+- Implementação parcial: prévia de transições, indicadores na timeline e menu de ações ainda pendentes.
+
+## 0.1.18 (versionCode 19) — 19/10/2026
 - Correção do Lint do build 16: configuração instável do `PlayerView` isolada em função com opt-in AndroidX explícito; removidas chamadas Media3 instáveis de lambdas Compose.
 - Configuração de build ABI splits `armeabi-v7a`, `arm64-v8a`, `x86`, `x86_64` e universal, sem criar variantes Debug para distribuição.
 - Correção de distribuição duplicada: o workflow não escuta mais tags criadas na publicação nem publica o mesmo APK como Actions Artifact. Uma Release com cinco APKs nomeados.

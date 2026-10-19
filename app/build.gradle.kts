@@ -11,8 +11,8 @@ android {
         applicationId = "br.com.uaicortes"
         minSdk = 26
         targetSdk = 36
-        versionCode = 17
-        versionName = "0.1.16"
+        versionCode = 19
+        versionName = "0.1.18"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     signingConfigs {
@@ -34,7 +34,7 @@ android {
         }
     }
     // Um build Release, cinco APKs diretos para GitHub Releases.
-    // Todos usam versionCode 17 para permitir trocar de arquitetura/universal
+    // Todos usam versionCode 19 para permitir trocar de arquitetura/universal
     // sem criar versões artificiais. Não publicamos multi-APK na Play Store.
     splits {
         abi {

@@ -56,7 +56,7 @@ class TimedSubtitleOverlay(
     override fun getOverlaySettings(presentationTimeUs: Long): OverlaySettings {
         val active = cue(presentationTimeUs)
         return StaticOverlaySettings.Builder()
-            .setBackgroundFrameAnchor(0f, 1f - (active?.y ?: .85f) * 2f)
+            .setBackgroundFrameAnchor(((active?.x ?: .5f)-.5f)*2f, 1f - (active?.y ?: .85f) * 2f)
             .setOverlayFrameAnchor(0f, -1f)
             .setAlphaScale(if (active == null) 0f else 1f)
             .build()

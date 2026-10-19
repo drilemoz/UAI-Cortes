@@ -185,6 +185,7 @@ fun UaiApp() {
         if (saveOverlays(current, requested, added.id)) selectedOverlayId = added.id
         screen = "pip"
     }
+    var selectedBoundary by remember { mutableIntStateOf(0) }
     val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) {
             val clips = uris.map { uri ->
@@ -251,7 +252,9 @@ fun UaiApp() {
                         screen = "pip"
                     },
                     onAudio = { audioPicker.launch(arrayOf("audio/*")) },
-                    onSelectOverlay = { selectedOverlayId = it }) }
+                    onSelectOverlay = { selectedOverlayId = it },
+                    onTransition = { index -> selectedBoundary = index; screen = "transition" },
+                    onSaveHome = { write(p); screen = "home" }) }
                 "trim" -> project?.let { TrimScreen(it, selectedClip, positionMs, ::back, { write(it) }, { selectedClip = it }) }
                 "audio" -> project?.let { AudioScreen(it, ::back, { write(it) }, { audioPicker.launch(arrayOf("audio/*")) }) }
                 "pip" -> project?.let { current -> PipScreen(current, selectedOverlayId,
@@ -279,7 +282,7 @@ fun UaiApp() {
                         chosen.durationMs.takeIf { it > 0 } ?: mediaDuration(context, chosen.uri)
                     insertOverlay(chosen.uri, chosen.isImage, videoMs)
                 }, openDocuments = { overlayPicker.launch(arrayOf("image/*", "video/*")) })
-                "transition" -> project?.let { TransitionScreen(it, ::back, { write(it) }) }
+                "transition" -> project?.let { TransitionScreen(it, ::back, { write(it) }, selectedBoundary) }
                 "subtitles" -> project?.let { SubtitleScreen(it, ::back, { write(it) }) }
                 "export" -> project?.let { ExportScreen(it, store.quality(), ::back) }
             }
@@ -474,7 +477,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.16 (17)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.18 (19)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: prévia em repetição, seletor de velocidade no corte e editor e mini tutorial de corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -487,7 +490,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
 private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     onSelected:(String)->Unit,onPosition:(Long)->Unit,onBack:()->Unit,onEdit:(String)->Unit,
     onUpdate:(VideoProject)->Unit,onAddVideo:()->Unit,onPiP:()->Unit,onAudio:()->Unit,
-    onSelectOverlay:(String)->Unit) {
+    onSelectOverlay:(String)->Unit,onTransition:(Int)->Unit,onSaveHome:()->Unit) {
     val context=LocalContext.current
     val player=remember { ExoPlayer.Builder(context).build().apply { repeatMode = Player.REPEAT_MODE_ALL } }
     var playbackSpeed by remember(p.id) { mutableFloatStateOf(1f) }
@@ -583,11 +586,11 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 }
                 p.subtitles.firstOrNull { currentMs >= it.startMs && currentMs < it.endMs }?.let { cue ->
                     Box(Modifier.fillMaxSize().padding(horizontal=12.dp, vertical=8.dp),
-                        contentAlignment = when { cue.y < .33f -> Alignment.TopCenter
-                            cue.y < .66f -> Alignment.Center else -> Alignment.BottomCenter }) {
+                        contentAlignment = Alignment.Center) {
                         Text(cue.text, color=Color(cue.color), fontSize=cue.sizeSp.sp,
                             fontWeight=FontWeight.SemiBold, textAlign=TextAlign.Center,
-                            modifier=Modifier.background(Color.Black.copy(alpha=.64f),RoundedCornerShape(3.dp))
+                            modifier=Modifier.offset(x=((cue.x-.5f)*240).dp,y=((cue.y-.5f)*340).dp)
+                                .background(Color.Black.copy(alpha=.64f),RoundedCornerShape(3.dp))
                                 .padding(horizontal=7.dp, vertical=2.dp))
                     }
                 }
@@ -620,7 +623,11 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 }
             },valueRange=0f..p.durationMs.toFloat(),modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp))
         TimelineRow("Vídeo",Blue,p.clips.map{ it.title to it.durationMs },p.durationMs,currentMs,selectedId,
-            onClip={ id -> onSelected(p.clips[id].id); clipMenuId = p.clips[id].id })
+            onClip={ id -> onSelected(p.clips[id].id); clipMenuId = p.clips[id].id },
+            onBoundary=onTransition)
+        Row(Modifier.fillMaxWidth().padding(horizontal=12.dp),horizontalArrangement=Arrangement.End) {
+            TextButton(onClick=onSaveHome) { Icon(Icons.Default.Save,null); Spacer(Modifier.width(4.dp)); Text("Salvar e voltar à Home") }
+        }
         OverlayTimeline(p.overlays, p.durationMs, onClick = { id -> onSelectOverlay(id); onEdit("pip") })
         TimelineTimedRow("Áudio",Green,
             (p.music?.let { listOf(Triple(it.title, 0L, p.durationMs)) } ?: emptyList()) +
@@ -749,7 +756,7 @@ private fun RowScope.ClipSheetAction(label: String, icon: ImageVector,
 
 @Composable
 private fun TimelineRow(label:String,color:Color, segments:List<Pair<String,Long>>,total:Long,position:Long,
-    selectedId:String,onClip:(Int)->Unit) {
+    selectedId:String,onClip:(Int)->Unit,onBoundary:((Int)->Unit)?=null) {
     Row(Modifier.fillMaxWidth().height(34.dp).padding(horizontal=12.dp,vertical=2.dp),
         verticalAlignment=Alignment.CenterVertically) {
         Box(Modifier.width(60.dp).fillMaxHeight().clip(RoundedCornerShape(3.dp)).background(color),
@@ -767,6 +774,19 @@ private fun TimelineRow(label:String,color:Color, segments:List<Pair<String,Long
                         contentAlignment=Alignment.Center) {
                         Text(title,maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=10.sp,
                             modifier=Modifier.padding(horizontal=2.dp))
+                    }
+                }
+            }
+            if (onBoundary != null && segments.size > 1) {
+                var elapsed = 0L
+                segments.dropLast(1).forEachIndexed { index, segment ->
+                    elapsed += segment.second
+                    val offset = timelineWidth * (elapsed.toFloat() / total.coerceAtLeast(1L))
+                    Box(Modifier.offset(x = offset - 11.dp).width(22.dp).fillMaxHeight()
+                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(5.dp))
+                        .clickable { onBoundary(index) }, contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.AutoAwesomeMotion, "Editar transição ${index+1}",
+                            tint=MaterialTheme.colorScheme.onPrimary,modifier=Modifier.size(15.dp))
                     }
                 }
             }
@@ -1324,13 +1344,29 @@ private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit
     val context = LocalContext.current
     val engine = remember { AudioExtractionEngine(context) }
     var sourceIndex by remember(p.id) { mutableIntStateOf(-1) } // -1 = all clips
+    var message by remember { mutableStateOf("") }
+    var externalClip by remember { mutableStateOf<Clip?>(null) }
+    var trimStart by remember { mutableFloatStateOf(0f) }
+    var trimEnd by remember { mutableFloatStateOf(1f) }
+    val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            val duration = mediaDuration(context, uri)
+            if (duration > 0) {
+                externalClip = Clip(uri=uri.toString(),title=mediaName(context,uri),sourceDurationMs=duration)
+                trimStart=0f; trimEnd=1f
+            } else message = "Não foi possível ler a duração do vídeo externo."
+        }
+    }
     var outputExtension by remember { mutableStateOf("m4a") }
     var addAfterExtract by remember { mutableStateOf(false) }
     var exporting by remember { mutableStateOf(false) }
-    var message by remember { mutableStateOf("") }
     val saveAudio = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("audio/mp4")) { destination ->
         if (destination != null) {
-            val chosen = if (sourceIndex == -1) p.clips else listOfNotNull(p.clips.getOrNull(sourceIndex))
+            val chosen = if (externalClip != null) listOf(externalClip!!.copy(
+                startMs=(externalClip!!.sourceDurationMs*trimStart).toLong(),
+                endMs=(externalClip!!.sourceDurationMs*trimEnd).toLong()))
+                else if (sourceIndex == -1) p.clips else listOfNotNull(p.clips.getOrNull(sourceIndex))
             exporting = true
             runCatching {
                 engine.start(chosen, destination, onSuccess = {
@@ -1386,16 +1422,27 @@ private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit
         var expanded by remember { mutableStateOf(false) }
         Box {
             OutlinedButton(onClick={expanded=true},enabled=!exporting) {
-                Text(if(sourceIndex==-1)"Projeto inteiro" else "Clipe ${sourceIndex+1}")
+                Text(if(externalClip!=null)"Vídeo externo" else if(sourceIndex==-1)"Projeto inteiro" else "Clipe ${sourceIndex+1}")
                 Icon(Icons.Default.ArrowDropDown,null)
             }
             DropdownMenu(expanded=expanded,onDismissRequest={expanded=false}) {
-                DropdownMenuItem(text={Text("Projeto inteiro")},onClick={sourceIndex=-1;expanded=false})
+                DropdownMenuItem(text={Text("Projeto inteiro")},onClick={sourceIndex=-1;externalClip=null;expanded=false})
                 p.clips.forEachIndexed { i,clip ->
                     DropdownMenuItem(text={Text("${i+1} · ${clip.title}",maxLines=1)},
-                        onClick={sourceIndex=i;expanded=false})
+                        onClick={sourceIndex=i;externalClip=null;expanded=false})
                 }
             }
+        }
+        OutlinedButton(onClick={videoPicker.launch(arrayOf("video/*"))},enabled=!exporting) {
+            Icon(Icons.Default.FileOpen,null); Text(" Importar vídeo externo")
+        }
+        externalClip?.let { clip ->
+            Text("Origem externa: ${clip.title}",maxLines=2)
+            Text("Início: ${formatPipMs((clip.sourceDurationMs*trimStart).toLong())}")
+            Slider(value=trimStart,valueRange=0f..1f,onValueChange={trimStart=it.coerceAtMost(trimEnd-.001f)})
+            Text("Fim: ${formatPipMs((clip.sourceDurationMs*trimEnd).toLong())}")
+            Slider(value=trimEnd,valueRange=0f..1f,onValueChange={trimEnd=it.coerceAtLeast(trimStart+.001f)})
+            TextButton(onClick={externalClip=null}) { Text("Voltar à origem do projeto") }
         }
         Text("Formato de áudio",fontWeight=FontWeight.Medium)
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -1838,8 +1885,8 @@ private fun formatPipMs(ms: Long): String {
 }
 
 @Composable
-private fun TransitionScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit) {
-    var boundary by remember(p.id) { mutableIntStateOf(0) }
+private fun TransitionScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit,initialBoundary:Int=0) {
+    var boundary by remember(p.id,initialBoundary) { mutableIntStateOf(initialBoundary.coerceIn(0,(p.clips.size-2).coerceAtLeast(0))) }
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
         .padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Heading("Transições",back)
@@ -1853,17 +1900,31 @@ private fun TransitionScreen(p:VideoProject,back:()->Unit,update:(VideoProject)-
             val current=EditFeatures.boundary(p,boundary)
             val kind=current?.kind ?: "Corte direto"
             Text("Efeito",fontWeight=FontWeight.Bold)
-            listOf("Corte direto","Fade preto","Fade branco").forEach { value ->
-                Surface(onClick={
-                    val a=p.clips[boundary];val b=p.clips[boundary+1]
-                    update(p.copy(transitions=p.transitions.filterNot{
-                        it.fromId==a.id && it.toId==b.id
-                    }+ClipTransition(a.id,b.id,value,current?.durationMs?:500)))
-                },shape=RoundedCornerShape(7.dp),border=BorderStroke(1.dp,
-                    if(kind==value)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)) {
-                    Row(Modifier.fillMaxWidth().padding(13.dp),verticalAlignment=Alignment.CenterVertically) {
-                        Icon(if(kind==value)Icons.Default.CheckCircle else Icons.Default.FiberManualRecord,null)
-                        Spacer(Modifier.width(10.dp));Text(value)
+            Text("Toque em um efeito para aplicá-lo à junção selecionada.",style=MaterialTheme.typography.bodySmall)
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                listOf("Corte direto","Fade preto","Fade branco").forEach { value ->
+                    val selected=kind==value
+                    Surface(onClick={
+                        val a=p.clips[boundary];val b=p.clips[boundary+1]
+                        update(p.copy(transitions=p.transitions.filterNot{
+                            it.fromId==a.id && it.toId==b.id
+                        }+ClipTransition(a.id,b.id,value,current?.durationMs?:500)))
+                    },modifier=Modifier.weight(1f),shape=RoundedCornerShape(9.dp),
+                        color=if(selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                        border=BorderStroke(if(selected)2.dp else 1.dp,
+                            if(selected)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)) {
+                        Column(Modifier.padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally,
+                            verticalArrangement=Arrangement.spacedBy(6.dp)) {
+                            Box(Modifier.fillMaxWidth().height(55.dp).background(Color(0xFF292929),RoundedCornerShape(5.dp)),
+                                contentAlignment=Alignment.Center) {
+                                when(value) {
+                                    "Corte direto" -> Text("A | B",color=Color.White)
+                                    "Fade preto" -> Text("A ▪ B",color=Color.White)
+                                    else -> Text("A □ B",color=Color.White)
+                                }
+                            }
+                            Text(value,fontSize=11.sp,maxLines=2,textAlign=TextAlign.Center)
+                        }
                     }
                 }
             }
@@ -1968,6 +2029,14 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
                     },label={Text(when(shade){-1->"Branco";android.graphics.Color.YELLOW->"Amarelo";else->"Ciano"})})
                 }
             }
+            Text("Posição horizontal: ${(selected.x*100).toInt()}%")
+            Slider(value=selected.x,valueRange=.1f.. .9f,onValueChange={v->
+                update(p.copy(subtitles=p.subtitles.map{if(it.id==selected.id)it.copy(x=v) else it}))
+            })
+            Text("Posição vertical: ${(selected.y*100).toInt()}%")
+            Slider(value=selected.y,valueRange=.1f.. .9f,onValueChange={v->
+                update(p.copy(subtitles=p.subtitles.map{if(it.id==selected.id)it.copy(y=v) else it}))
+            })
             Text("Posição da legenda")
             Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                 listOf("Cima" to .15f,"Centro" to .5f,"Baixo" to .85f).forEach { (name,y) ->

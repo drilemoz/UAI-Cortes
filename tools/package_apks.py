@@ -12,7 +12,7 @@ import re
 import shutil
 import subprocess
 
-VERSION = '0.1.16'
+VERSION = '0.1.17'
 VERSION_CODE = 17
 APP_ID = 'br.com.uaicortes'
 TARGET_SDK = '36'
