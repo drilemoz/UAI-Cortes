@@ -1,4 +1,6 @@
-## 0.1.19 (versionCode 20) — 19/10/2026
+Correção v0.1.20: o workflow 19 compilou Kotlin Debug/Release, executou testes e lint com sucesso, mas falhou no empacotamento porque tools/package_apks.py ainda esperava 0.1.17/versionCode 17. Constantes sincronizadas para 0.1.20/versionCode 21. Compilação e publicação da nova versão pendentes.
+
+## 0.1.20 (versionCode 21) — 19/10/2026
 - Corrigida compilação Kotlin do build 18: chamada de `TimelineRow` para a faixa PiP vazia agora passa explicitamente `onClip`.
 - Nenhuma alteração na lógica de exportação ou transições.
 
