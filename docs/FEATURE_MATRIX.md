@@ -56,7 +56,7 @@ Os recursos novos da versão 0.1.11 ainda **não foram validados por compilaçã
 ## v0.1.15 (versionCode 16)
 - Correção técnica de compilação: opt-in Material3 nas telas Editor/PiP e captura de largura da timeline. Funcionalidades da v0.1.14 preservadas.
 
-## v0.1.20 (versionCode 21)
+## v0.1.21 (versionCode 22)
 | Recurso | Código-fonte | Validação no Android |
 |---|---|---|
 | Lint Media3: helper com opt-in AndroidX | Implementado | CI pendente |

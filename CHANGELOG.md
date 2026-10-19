@@ -1,6 +1,13 @@
-Correção v0.1.20: o workflow 19 compilou Kotlin Debug/Release, executou testes e lint com sucesso, mas falhou no empacotamento porque tools/package_apks.py ainda esperava 0.1.17/versionCode 17. Constantes sincronizadas para 0.1.20/versionCode 21. Compilação e publicação da nova versão pendentes.
+## v0.1.21 (versionCode 22) — 19/10/2026
 
-## 0.1.20 (versionCode 21) — 19/10/2026
+- Prévia animada de transições usando quadros reais extraídos dos clipes adjacentes, com Fade preto, Fade branco e Corte direto.
+- Extração de quadros em IO, sem decodificação contínua ou áudio. A prévia não substitui reprodução/renderização integral.
+- Mantidas as cinco variantes de APK e a exportação Media3 existente.
+- Build Android e testes em aparelho pendentes.
+
+Correção v0.1.21: o workflow 19 compilou Kotlin Debug/Release, executou testes e lint com sucesso, mas falhou no empacotamento porque tools/package_apks.py ainda esperava 0.1.17/versionCode 17. Constantes sincronizadas para 0.1.21/versionCode 22. Compilação e publicação da nova versão pendentes.
+
+## 0.1.21 (versionCode 22) — 19/10/2026
 - Corrigida compilação Kotlin do build 18: chamada de `TimelineRow` para a faixa PiP vazia agora passa explicitamente `onClip`.
 - Nenhuma alteração na lógica de exportação ou transições.
 

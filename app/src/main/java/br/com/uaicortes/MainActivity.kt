@@ -477,7 +477,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.20 (21)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.21 (22)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: prévia em repetição, seletor de velocidade no corte e editor e mini tutorial de corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -1884,6 +1884,57 @@ private fun formatPipMs(ms: Long): String {
     return "%02d:%02d.%d".format(minutes, seconds, tenths)
 }
 
+/** Prévia ilustrada com quadros reais da junção, sem renderização ou áudio. */
+@Composable
+private fun TransitionFramePreview(a: Clip, b: Clip, kind: String, durationMs: Long) {
+    val context = LocalContext.current
+    val frames by produceState<Pair<ImageBitmap?, ImageBitmap?>>(null to null, a.uri, b.uri, a.endMs, b.startMs) {
+        value = withContext(Dispatchers.IO) {
+            fun frame(clip: Clip, atMs: Long): ImageBitmap? = runCatching {
+                val retriever = MediaMetadataRetriever()
+                try {
+                    retriever.setDataSource(context, Uri.parse(clip.uri))
+                    val timeUs = atMs.coerceAtLeast(0L) * 1000L
+                    val bitmap = if (Build.VERSION.SDK_INT >= 27) {
+                        retriever.getScaledFrameAtTime(timeUs,
+                            MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 320, 180)
+                    } else {
+                        retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                    }
+                    bitmap?.asImageBitmap()
+                } finally { retriever.release() }
+            }.getOrNull()
+            frame(a, (a.endMs - 100L).coerceAtLeast(a.startMs)) to frame(b, b.startMs)
+        }
+    }
+    var progress by remember(a.id, b.id, kind, durationMs) { mutableFloatStateOf(0f) }
+    LaunchedEffect(a.id, b.id, kind, durationMs) {
+        while (true) {
+            val total = (durationMs.coerceIn(250L, 1000L) * 2L).coerceAtLeast(500L)
+            val steps = (total / 40L).toInt().coerceAtLeast(1)
+            for (step in 0..steps) {
+                progress = step.toFloat() / steps
+                delay(40L)
+            }
+            delay(450L)
+        }
+    }
+    val showFirst = progress < .5f
+    val fade = if (kind == "Corte direto") 0f else
+        if (showFirst) progress * 2f else (1f - progress) * 2f
+    val fadeColor = if (kind == "Fade branco") Color.White else Color.Black
+    Box(Modifier.fillMaxWidth().height(175.dp).clip(RoundedCornerShape(12.dp))
+        .background(Color(0xFF222222)), contentAlignment = Alignment.Center) {
+        val bitmap = if (showFirst) frames.first else frames.second
+        if (bitmap != null) Image(bitmap, "Quadro da transição", Modifier.fillMaxSize(),
+            contentScale = ContentScale.Fit)
+        else Text(if (showFirst) "Clipe A" else "Clipe B", color = Color.White)
+        if (fade > 0f) Box(Modifier.fillMaxSize().background(fadeColor.copy(alpha = fade.coerceIn(0f, 1f))))
+    }
+    Text("Prévia animada com quadros dos dois clipes (sem áudio). A exportação usa o efeito Media3.",
+        style = MaterialTheme.typography.bodySmall)
+}
+
 @Composable
 private fun TransitionScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit,initialBoundary:Int=0) {
     var boundary by remember(p.id,initialBoundary) { mutableIntStateOf(initialBoundary.coerceIn(0,(p.clips.size-2).coerceAtLeast(0))) }
@@ -1899,6 +1950,7 @@ private fun TransitionScreen(p:VideoProject,back:()->Unit,update:(VideoProject)-
             }
             val current=EditFeatures.boundary(p,boundary)
             val kind=current?.kind ?: "Corte direto"
+            TransitionFramePreview(p.clips[boundary], p.clips[boundary+1], kind, current?.durationMs ?: 500L)
             Text("Efeito",fontWeight=FontWeight.Bold)
             Text("Toque em um efeito para aplicá-lo à junção selecionada.",style=MaterialTheme.typography.bodySmall)
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {

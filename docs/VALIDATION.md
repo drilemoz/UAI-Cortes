@@ -1,6 +1,6 @@
-Correção v0.1.20: o workflow 19 compilou Kotlin Debug/Release, executou testes e lint com sucesso, mas falhou no empacotamento porque tools/package_apks.py ainda esperava 0.1.17/versionCode 17. Constantes sincronizadas para 0.1.20/versionCode 21. Compilação e publicação da nova versão pendentes.
+Correção v0.1.21: o workflow 19 compilou Kotlin Debug/Release, executou testes e lint com sucesso, mas falhou no empacotamento porque tools/package_apks.py ainda esperava 0.1.17/versionCode 17. Constantes sincronizadas para 0.1.21/versionCode 22. Compilação e publicação da nova versão pendentes.
 
-# Uai Cortes 0.1.20 | Validação
+# Uai Cortes 0.1.21 | Validação
 
 ## Funcionalidade implementada no código
 - Persistência de até quatro PiPs no campo `overlays`, `schemaVersion=4`, IDs estáveis; projetos com `pip` legado migrados em leitura.
@@ -62,10 +62,10 @@ Correção v0.1.20: o workflow 19 compilou Kotlin Debug/Release, executou testes
 - `TimelineRow` registra `val timelineWidth = maxWidth` antes do `Row` aninhado.
 - Testes locais estruturais e sintáticos apenas, sem Gradle Android. Nova execução `:app:testDebugUnitTest :app:lintDebug :app:assembleRelease` exigida no CI.
 
-## Build 16 / implementação v0.1.20 (versionCode 21)
+## Build 16 / implementação v0.1.21 (versionCode 22)
 - Falha confirmada no build 16: task `:app:lintDebug`, 3 erros Media3 `UnsafeOptInUsageError` em `MainActivity.kt`, first failure line 1530. Kotlin e etapas anteriores concluídos, mas o release **não** foi publicado.
 - Corrigida a origem das APIs instáveis: helper `previewPlayer` anotado com `androidx.annotation.OptIn` fora das lambdas `AndroidView`.
-- `app/build.gradle.kts`: saídas para arm32/arm64/x86/x86_64/universal com mesmo versionCode 21.
+- `app/build.gradle.kts`: saídas para arm32/arm64/x86/x86_64/universal com mesmo versionCode 22.
 - `tools/package_apks.py`: usa `output-metadata.json` e aborta se faltarem ABIs, houver duplicatas, falhar `apksigner verify` ou houver divergência de pacote/versão/SDK.
 - Removidos do workflow `push.tags: v*` e `actions/upload-artifact` para evitar duas compilações/duas publicações do mesmo APK. A Release é o único destino.
 - **Testes locais:** validador estrutural e sintaxe Kotlin (parser PSI) quando disponíveis; sem Gradle/SDK Android local.
