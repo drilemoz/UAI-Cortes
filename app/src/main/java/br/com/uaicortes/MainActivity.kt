@@ -34,6 +34,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -44,6 +45,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.ImageBitmap
@@ -207,7 +209,13 @@ fun UaiApp() {
     val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-            project?.let { write(it.copy(music = Music(uri.toString(), mediaName(context, uri)))) }
+            project?.let { current ->
+                val track = AudioTrack(uri.toString(), mediaName(context, uri),
+                    startMs = positionMs.coerceIn(0L, current.durationMs),
+                    durationMs = mediaDuration(context, uri).coerceAtMost(
+                        (current.durationMs - positionMs).coerceAtLeast(1L)))
+                write(current.copy(audioTracks = current.audioTracks + track))
+            }
             screen = "audio"
         }
     }
@@ -217,7 +225,7 @@ fun UaiApp() {
         "media" -> mediaOrigin
         "projects", "settings" -> "home"
         "general", "appearance", "about" -> "settings"
-        "pip", "audio", "trim", "transition", "export" -> "editor"
+        "pip", "audio", "trim", "transition", "subtitles", "export" -> "editor"
         else -> previous
     } }
     BackHandler(screen != "home") { back() }
@@ -272,6 +280,7 @@ fun UaiApp() {
                     insertOverlay(chosen.uri, chosen.isImage, videoMs)
                 }, openDocuments = { overlayPicker.launch(arrayOf("image/*", "video/*")) })
                 "transition" -> project?.let { TransitionScreen(it, ::back, { write(it) }) }
+                "subtitles" -> project?.let { SubtitleScreen(it, ::back, { write(it) }) }
                 "export" -> project?.let { ExportScreen(it, store.quality(), ::back) }
             }
         }
@@ -465,7 +474,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.13 (14)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.14 (15)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: prévia em repetição, seletor de velocidade no corte e editor e mini tutorial de corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -481,9 +490,18 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     val context=LocalContext.current
     val player=remember { ExoPlayer.Builder(context).build().apply { repeatMode = Player.REPEAT_MODE_ALL } }
     var playbackSpeed by remember(p.id) { mutableFloatStateOf(1f) }
+    var clipMenuId by remember(p.id) { mutableStateOf<String?>(null) }
+    var deletionRequested by remember(p.id) { mutableStateOf<String?>(null) }
+    var feedback by remember(p.id) { mutableStateOf("") }
+    LaunchedEffect(player, p.clips.map { it.id to it.volume }) {
+        while (true) {
+            player.volume = p.clips.getOrNull(player.currentMediaItemIndex)?.volume?.coerceIn(0f,1f) ?: 1f
+            delay(120)
+        }
+    }
     LaunchedEffect(player, playbackSpeed) { player.setPlaybackParameters(PlaybackParameters(playbackSpeed)) }
     DisposableEffect(player) { onDispose { player.release() } }
-    LaunchedEffect(p.clips) {
+    LaunchedEffect(p.clips.map { Triple(it.uri, it.startMs, it.endMs) }) {
         player.setMediaItems(p.clips.map { clip ->
             MediaItem.Builder().setUri(clip.uri).setClippingConfiguration(
                 MediaItem.ClippingConfiguration.Builder().setStartPositionMs(clip.startMs)
@@ -509,6 +527,17 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             }
             BlueButton("Exportar",{ onEdit("export") },Modifier.width(102.dp),enabled=p.clips.isNotEmpty())
         }
+        // Separate audio players track the editor playhead without modifying source media.
+        p.music?.let { music ->
+            TrackAudioPreview(music.uri, 0L, p.durationMs, music.volume, currentMs,
+                player.isPlaying, playbackSpeed, true)
+        }
+        p.audioTracks.forEach { audio ->
+            key(audio.id) {
+                TrackAudioPreview(audio.uri, audio.startMs, audio.durationMs, audio.volume,
+                    currentMs, player.isPlaying, playbackSpeed, false)
+            }
+        }
         BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)
             .background(Color(0xFF101014)).padding(10.dp), contentAlignment = Alignment.Center) {
             val actualAspect = remember(p.clips) {
@@ -523,12 +552,44 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                     resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                     setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
                 } }, update = { it.player = player }, modifier = Modifier.fillMaxSize())
+                // Fade preview uses the same boundary IDs and durations as the exporter.
+                val index = p.clips.indexOfFirst { clip ->
+                    val first = p.clips.takeWhile { it.id != clip.id }.sumOf { it.durationMs }
+                    currentMs in first until (first + clip.durationMs)
+                }.coerceAtLeast(0)
+                p.clips.getOrNull(index)?.let { clip ->
+                    val before = p.clips.take(index).sumOf { it.durationMs }
+                    val incoming = EditFeatures.boundary(p, index - 1)
+                    val outgoing = EditFeatures.boundary(p, index)
+                    val inMs = EditFeatures.transitionMs(incoming,
+                        p.clips.getOrElse(index-1) { clip }.durationMs, clip.durationMs)
+                    val outMs = EditFeatures.transitionMs(outgoing, clip.durationMs,
+                        p.clips.getOrElse(index+1) { clip }.durationMs)
+                    val local = (currentMs - before).coerceIn(0L,clip.durationMs)
+                    val alpha = 1f - EditFeatures.fadeFraction(local,clip.durationMs,inMs,outMs)
+                    if (alpha > .001f) {
+                        val isWhite = if (inMs > 0 && local < inMs)
+                            incoming?.kind == "Fade branco" else outgoing?.kind == "Fade branco"
+                        Box(Modifier.fillMaxSize().background((if(isWhite) Color.White else Color.Black)
+                            .copy(alpha=alpha)))
+                    }
+                }
                 p.overlays.forEach { pip ->
                     if (currentMs >= pip.startAtMs && currentMs < pip.startAtMs + pip.durationMs) {
                         key(pip.id) {
                             PipLayer(pip, currentMs - pip.startAtMs, player.isPlaying,
                                 speed = playbackSpeed, editable = false) { }
                         }
+                    }
+                }
+                p.subtitles.firstOrNull { currentMs >= it.startMs && currentMs < it.endMs }?.let { cue ->
+                    Box(Modifier.fillMaxSize().padding(horizontal=12.dp, vertical=8.dp),
+                        contentAlignment = when { cue.y < .33f -> Alignment.TopCenter
+                            cue.y < .66f -> Alignment.Center else -> Alignment.BottomCenter }) {
+                        Text(cue.text, color=Color(cue.color), fontSize=cue.sizeSp.sp,
+                            fontWeight=FontWeight.SemiBold, textAlign=TextAlign.Center,
+                            modifier=Modifier.background(Color.Black.copy(alpha=.64f),RoundedCornerShape(3.dp))
+                                .padding(horizontal=7.dp, vertical=2.dp))
                     }
                 }
             }
@@ -560,14 +621,21 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 }
             },valueRange=0f..p.durationMs.toFloat(),modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp))
         TimelineRow("Vídeo",Blue,p.clips.map{ it.title to it.durationMs },p.durationMs,currentMs,selectedId,
-            onClip={ id -> onSelected(p.clips[id].id);player.seekTo(id,0L) })
+            onClip={ id -> onSelected(p.clips[id].id); clipMenuId = p.clips[id].id })
         OverlayTimeline(p.overlays, p.durationMs, onClick = { id -> onSelectOverlay(id); onEdit("pip") })
-        TimelineRow("Áudio",Green,p.music?.let{listOf(it.title to p.durationMs)} ?: emptyList(),p.durationMs,currentMs,"",onClip={onEdit("audio")})
+        TimelineTimedRow("Áudio",Green,
+            (p.music?.let { listOf(Triple(it.title, 0L, p.durationMs)) } ?: emptyList()) +
+                p.audioTracks.map { Triple(it.title,it.startMs,it.durationMs) },
+            p.durationMs,onClick={onEdit("audio")})
+        TimelineTimedRow("Legenda",Color(0xFFC38A38),
+            p.subtitles.map { Triple(it.text,it.startMs,it.endMs-it.startMs) },
+            p.durationMs,onClick={onEdit("subtitles")})
         Spacer(Modifier.height(5.dp));HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
         Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(10.dp), horizontalArrangement=Arrangement.SpaceEvenly) {
             listOf(Triple("Cortar",Icons.Default.ContentCut,"trim"),Triple("Unir",Icons.Default.Add,"add"),
                 Triple("PiP",Icons.Default.Layers,"pip"),Triple("Áudio",Icons.Default.MusicNote,"audio"),
-                Triple("Transição",Icons.Default.AutoAwesomeMotion,"transition")).forEach { (name,icon,key) ->
+                Triple("Transição",Icons.Default.AutoAwesomeMotion,"transition"),
+                Triple("Legendas",Icons.Default.ClosedCaption,"subtitles")).forEach { (name,icon,key) ->
                 Column(Modifier.weight(1f).clickable {
                     when(key) {"add"->onAddVideo();"pip"->onPiP();
                         "audio"->onEdit("audio");else->onEdit(key)}
@@ -580,24 +648,149 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 }
             }
         }
+        if (feedback.isNotBlank()) Text(feedback, modifier=Modifier.padding(horizontal=12.dp,vertical=3.dp),
+            color=MaterialTheme.colorScheme.primary, style=MaterialTheme.typography.bodySmall)
+    }
+    val active = p.clips.firstOrNull { it.id == clipMenuId }
+    if (active != null) {
+        ModalBottomSheet(onDismissRequest={clipMenuId=null}, dragHandle=null,
+            sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true)) {
+            Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),
+                verticalArrangement=Arrangement.spacedBy(9.dp)) {
+                Row(verticalAlignment=Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Editar clipe",fontWeight=FontWeight.Bold,fontSize=19.sp)
+                        Text(active.title, maxLines=1,overflow=TextOverflow.Ellipsis,
+                            style=MaterialTheme.typography.bodySmall)
+                    }
+                    IconButton(onClick={clipMenuId=null}) {Icon(Icons.Default.Close,"Fechar")}
+                }
+                val idx=p.clips.indexOfFirst { it.id == active.id }
+                fun commit(clips: List<Clip>, note: String) {
+                    onUpdate(EditFeatures.repositionAfterDelete(p,clips))
+                    feedback=note
+                    clipMenuId=null
+                }
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                    ClipSheetAction("Cortar",Icons.Default.ContentCut) {clipMenuId=null;onEdit("trim")}
+                    ClipSheetAction("Duplicar",Icons.Default.ContentCopy) {
+                        val list=p.clips.toMutableList();list.add(idx+1,active.copy(id=UUID.randomUUID().toString()))
+                        commit(list,"Clipe duplicado")
+                    }
+                    ClipSheetAction("Antes",Icons.Default.ArrowBack,idx>0) {
+                        val list=p.clips.toMutableList(); java.util.Collections.swap(list,idx,idx-1)
+                        commit(list,"Clipe movido")
+                    }
+                    ClipSheetAction("Depois",Icons.Default.ArrowForward,idx<p.clips.lastIndex) {
+                        val list=p.clips.toMutableList();java.util.Collections.swap(list,idx,idx+1)
+                        commit(list,"Clipe movido")
+                    }
+                    ClipSheetAction("Excluir",Icons.Default.Delete) {
+                        deletionRequested = active.id
+                    }
+                }
+                Text("Volume apenas deste clipe: ${(active.volume*100).toInt()}%")
+                Slider(value=active.volume.coerceIn(0f,1f), onValueChange={ v ->
+                    onUpdate(p.copy(clips=p.clips.map { if(it.id==active.id) it.copy(volume=v) else it }))
+                })
+                Text("Excluir ou duplicar não altera o arquivo original.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+    deletionRequested?.let { id ->
+        AlertDialog(onDismissRequest={deletionRequested=null},
+            title={Text("Remover este clipe?")},
+            text={Text("O trecho sairá da linha do tempo, sem apagar o arquivo original do aparelho.")},
+            confirmButton={TextButton(onClick={
+                onUpdate(EditFeatures.repositionAfterDelete(p,p.clips.filterNot{it.id==id}))
+                clipMenuId=null;deletionRequested=null;feedback="Clipe excluído do projeto"
+            }) { Text("Excluir") }},
+            dismissButton={TextButton(onClick={deletionRequested=null}) {Text("Cancelar")}})
+    }
+}
+
+@Composable
+private fun TrackAudioPreview(uri: String, startMs: Long, durationMs: Long,
+    volume: Float, projectMs: Long, playing: Boolean, speed: Float, loop: Boolean) {
+    val context=LocalContext.current
+    val player=remember(uri) { ExoPlayer.Builder(context).build() }
+    DisposableEffect(player) { onDispose {player.release()} }
+    LaunchedEffect(player,uri,loop) {
+        player.repeatMode=if(loop)Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+        player.setMediaItem(MediaItem.fromUri(uri));player.prepare()
+    }
+    LaunchedEffect(player,volume,speed) {
+        player.volume=volume.coerceIn(0f,1f)
+        player.setPlaybackParameters(PlaybackParameters(speed))
+    }
+    LaunchedEffect(player,projectMs,playing,startMs,durationMs) {
+        val within=projectMs>=startMs && projectMs<startMs+durationMs
+        if(!within || !playing) player.pause() else {
+            val wanted=(projectMs-startMs).coerceAtLeast(0L)
+            if(kotlin.math.abs(player.currentPosition-wanted)>600L) player.seekTo(wanted)
+            player.play()
+        }
+    }
+}
+
+@Composable
+private fun RowScope.ClipSheetAction(label: String, icon: ImageVector,
+    enabled: Boolean = true, click: () -> Unit) {
+    OutlinedButton(onClick=click,enabled=enabled,modifier=Modifier.weight(1f),
+        contentPadding=PaddingValues(horizontal=2.dp,vertical=8.dp),
+        shape=RoundedCornerShape(7.dp)) {
+        Column(horizontalAlignment=Alignment.CenterHorizontally) {
+            Icon(icon,label,modifier=Modifier.size(18.dp))
+            Text(label,fontSize=10.sp,maxLines=1)
+        }
     }
 }
 
 @Composable
 private fun TimelineRow(label:String,color:Color, segments:List<Pair<String,Long>>,total:Long,position:Long,
     selectedId:String,onClip:(Int)->Unit) {
-    Row(Modifier.fillMaxWidth().height(40.dp).padding(horizontal=16.dp,vertical=3.dp),verticalAlignment=Alignment.CenterVertically) {
-        Box(Modifier.width(58.dp).fillMaxHeight().clip(RoundedCornerShape(9.dp)).background(color),
-            contentAlignment=Alignment.Center){Text(label,color=Color.White,fontSize=12.sp)}
+    Row(Modifier.fillMaxWidth().height(34.dp).padding(horizontal=12.dp,vertical=2.dp),
+        verticalAlignment=Alignment.CenterVertically) {
+        Box(Modifier.width(60.dp).fillMaxHeight().clip(RoundedCornerShape(3.dp)).background(color),
+            contentAlignment=Alignment.Center) { Text(label,color=Color.White,fontSize=11.sp) }
         Spacer(Modifier.width(6.dp))
-        Row(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(8.dp))
-            .background(color.copy(alpha=0.16f)).horizontalScroll(rememberScrollState())) {
-            segments.forEachIndexed { index, (title,duration) ->
-                Box(Modifier.width(((duration.toFloat()/total.coerceAtLeast(1))*260f).coerceAtLeast(42f).dp)
-                    .fillMaxHeight().padding(end=2.dp).clip(RoundedCornerShape(6.dp))
-                    .background(color.copy(alpha=0.22f)).clickable {onClip(index)},contentAlignment=Alignment.Center) {
-                    Text(title,maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=11.sp,
-                        color=MaterialTheme.colorScheme.onSurface,modifier=Modifier.padding(horizontal=4.dp))
+        BoxWithConstraints(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(3.dp))
+            .background(color.copy(alpha=.14f))) {
+            Row(Modifier.fillMaxSize()) {
+                segments.forEachIndexed { index,(title,duration) ->
+                    val fraction = (duration.toFloat()/total.coerceAtLeast(1L)).coerceIn(0f,1f)
+                    Box(Modifier.width(maxWidth*fraction).fillMaxHeight().padding(end=1.dp)
+                        .background(color.copy(alpha=.36f)).clickable { onClip(index) },
+                        contentAlignment=Alignment.Center) {
+                        Text(title,maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=10.sp,
+                            modifier=Modifier.padding(horizontal=2.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Todas as faixas usam 12dp de margem, rótulo de 60dp e separação de 6dp. */
+@Composable
+private fun TimelineTimedRow(label: String, color: Color,
+    entries: List<Triple<String,Long,Long>>, total: Long, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().height(34.dp).padding(horizontal=12.dp,vertical=2.dp),
+        verticalAlignment=Alignment.CenterVertically) {
+        Box(Modifier.width(60.dp).fillMaxHeight().background(color,RoundedCornerShape(3.dp)),
+            contentAlignment=Alignment.Center) {Text(label,color=Color.White,fontSize=11.sp)}
+        Spacer(Modifier.width(6.dp))
+        BoxWithConstraints(Modifier.weight(1f).fillMaxHeight()
+            .background(color.copy(alpha=.14f),RoundedCornerShape(3.dp))) {
+            entries.forEach { (name,start,length) ->
+                val x=(start.toFloat()/total.coerceAtLeast(1L)).coerceIn(0f,1f)
+                val width=(length.toFloat()/total.coerceAtLeast(1L)).coerceIn(0f,1f-x)
+                Box(Modifier.offset(x=maxWidth*x).width(maxWidth*width).fillMaxHeight()
+                    .background(color.copy(alpha=.48f),RoundedCornerShape(2.dp))
+                    .clickable(onClick=onClick),contentAlignment=Alignment.Center) {
+                    Text(name,maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=10.sp)
                 }
             }
         }
@@ -606,27 +799,25 @@ private fun TimelineRow(label:String,color:Color, segments:List<Pair<String,Long
 
 @Composable
 private fun OverlayTimeline(overlays: List<Overlay>, total: Long, onClick: (String) -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
-        verticalArrangement = Arrangement.spacedBy(3.dp)) {
+    Column(verticalArrangement=Arrangement.spacedBy(2.dp)) {
         if (overlays.isEmpty()) {
-            TimelineRow("PiP", Purple, emptyList(), total, 0L, "") { }
-        } else overlays.forEachIndexed { index, layer ->
-            Row(Modifier.fillMaxWidth().height(29.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.width(58.dp).fillMaxHeight().clip(RoundedCornerShape(7.dp))
-                    .background(Purple), contentAlignment = Alignment.Center) {
-                    Text("PiP ${index + 1}", color = Color.White, fontSize = 11.sp)
+            TimelineRow("PiP",Purple, emptyList(),total,0L,"") { }
+        } else overlays.forEachIndexed { index,layer ->
+            Row(Modifier.fillMaxWidth().height(34.dp).padding(horizontal=12.dp,vertical=2.dp),
+                verticalAlignment=Alignment.CenterVertically) {
+                Box(Modifier.width(60.dp).fillMaxHeight().clip(RoundedCornerShape(3.dp))
+                    .background(Purple),contentAlignment=Alignment.Center) {
+                    Text("PiP ${index+1}",color=Color.White,fontSize=11.sp)
                 }
                 Spacer(Modifier.width(6.dp))
-                BoxWithConstraints(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(6.dp))
-                    .background(Purple.copy(alpha = .14f))) {
-                    val start = (layer.startAtMs.toFloat() / total.coerceAtLeast(1)).coerceIn(0f, 1f)
-                    val len = (layer.durationMs.toFloat() / total.coerceAtLeast(1)).coerceIn(0f, 1f - start)
-                    Box(Modifier.offset(x = maxWidth * start).width(maxWidth * len)
-                        .fillMaxHeight().clip(RoundedCornerShape(5.dp))
-                        .background(Purple.copy(alpha = .45f)).clickable { onClick(layer.id) },
-                        contentAlignment = Alignment.Center) {
-                        Text(if (layer.isImage) "Imagem" else "Vídeo", fontSize = 10.sp,
-                            color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
+                BoxWithConstraints(Modifier.weight(1f).fillMaxHeight()
+                    .background(Purple.copy(alpha=.14f))) {
+                    val start = (layer.startAtMs.toFloat()/total.coerceAtLeast(1L)).coerceIn(0f,1f)
+                    val length = (layer.durationMs.toFloat()/total.coerceAtLeast(1L)).coerceIn(0f,1f-start)
+                    Box(Modifier.offset(x=maxWidth*start).width(maxWidth*length)
+                        .fillMaxHeight().background(Purple.copy(alpha=.45f))
+                        .clickable {onClick(layer.id)},contentAlignment=Alignment.Center) {
+                        Text(if(layer.isImage)"Imagem" else "Vídeo",fontSize=10.sp,maxLines=1)
                     }
                 }
             }
@@ -1130,44 +1321,117 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
     }
 }
 
+@OptIn(UnstableApi::class)
 @Composable
 private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit,chooseMusic:()->Unit) {
-    val original=p.clips.firstOrNull()?.volume ?: 1f
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp)) {
+    val context = LocalContext.current
+    val engine = remember { AudioExtractionEngine(context) }
+    var sourceIndex by remember(p.id) { mutableIntStateOf(-1) } // -1 = all clips
+    var outputExtension by remember { mutableStateOf("m4a") }
+    var addAfterExtract by remember { mutableStateOf(false) }
+    var exporting by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf("") }
+    val saveAudio = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("audio/mp4")) { destination ->
+        if (destination != null) {
+            val chosen = if (sourceIndex == -1) p.clips else listOfNotNull(p.clips.getOrNull(sourceIndex))
+            exporting = true
+            runCatching {
+                engine.start(chosen, destination, onSuccess = {
+                    exporting = false
+                    message = "Áudio extraído e salvo no local escolhido."
+                    if (addAfterExtract) {
+                        runCatching { context.contentResolver.takePersistableUriPermission(destination,
+                            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }
+                        val track = AudioTrack(destination.toString(),"Áudio extraído",
+                            startMs=0, durationMs=chosen.sumOf { it.durationMs })
+                        update(p.copy(audioTracks=p.audioTracks+track))
+                        message += " Adicionado à linha do tempo."
+                    }
+                },onError={error->exporting=false; message="Falha: $error"})
+            }.onFailure { exporting=false; message="Falha: ${it.message}" }
+        }
+    }
+    DisposableEffect(engine) { onDispose { engine.cancel() } }
+    Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
+        .padding(horizontal=16.dp)) {
         Heading("Áudio",back)
-        Spacer(Modifier.height(15.dp))
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
-            Text("Som do vídeo",fontSize=19.sp,fontWeight=FontWeight.Medium)
-            Text("${(original*100).toInt()}%",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Volumes do projeto",fontWeight=FontWeight.Bold)
+        p.clips.forEachIndexed { index,clip ->
+            Text("Clipe ${index+1}: ${clip.title} · ${(clip.volume*100).toInt()}%",
+                maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=12.sp)
+            Slider(value=clip.volume.coerceIn(0f,1f),onValueChange={volume->
+                update(p.copy(clips=p.clips.map { if(it.id==clip.id) it.copy(volume=volume) else it }))
+            })
         }
-        Slider(value=original.coerceIn(0f,1f),onValueChange={v->update(p.copy(clips=p.clips.map{it.copy(volume=v)}))})
-        Spacer(Modifier.height(16.dp))
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
-            Text("Música adicionada",fontSize=19.sp,fontWeight=FontWeight.Medium)
-            Text("${((p.music?.volume?:0f)*100).toInt()}%",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        p.music?.let { music ->
+            Text("Música antiga: ${music.title} · ${(music.volume*100).toInt()}%")
+            Slider(value=music.volume.coerceIn(0f,1f),onValueChange={update(p.copy(music=music.copy(volume=it)))})
+            TextButton(onClick={update(p.copy(music=null))}) { Icon(Icons.Default.Delete,null);Text("Remover música") }
         }
-        Slider(value=p.music?.volume?:0f,onValueChange={v->p.music?.let {update(p.copy(music=it.copy(volume=v))) }},enabled=p.music!=null)
-        if(p.music!=null) {
-            Text("Arquivo: ${p.music.title}",style=MaterialTheme.typography.bodySmall)
-            TextButton(onClick={update(p.copy(music=null))}){Icon(Icons.Default.Delete,null);Text(" Remover música")}
+        p.audioTracks.forEach { track ->
+            Text(track.title,maxLines=1,overflow=TextOverflow.Ellipsis)
+            Row(verticalAlignment=Alignment.CenterVertically) {
+                Slider(value=track.volume.coerceIn(0f,1f),modifier=Modifier.weight(1f),onValueChange={v->
+                    update(p.copy(audioTracks=p.audioTracks.map { if(it.id==track.id) it.copy(volume=v) else it }))
+                })
+                IconButton(onClick={update(p.copy(audioTracks=p.audioTracks.filterNot{it.id==track.id}))}) {
+                    Icon(Icons.Default.Delete,"Remover faixa")
+                }
+            }
         }
-        Spacer(Modifier.height(12.dp))
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(onClick={update(p.copy(clips=p.clips.map{it.copy(volume=if(original==0f)1f else 0f)}))},
-                modifier=Modifier.weight(1f)) {Icon(Icons.Default.VolumeOff,null);Text(if(original==0f)" Ativar" else " Silenciar")}
+        OutlinedButton(onClick=chooseMusic,modifier=Modifier.fillMaxWidth()) {
+            Icon(Icons.Default.LibraryMusic,null);Text(" Adicionar áudio à timeline")
+        }
+        HorizontalDivider(Modifier.padding(vertical=12.dp))
+        Text("Extrair áudio de vídeo",fontWeight=FontWeight.Bold,fontSize=19.sp)
+        Text("Escolha o vídeo de origem e salve o áudio separado. A extração não altera o vídeo original.",
+            style=MaterialTheme.typography.bodySmall)
+        var expanded by remember { mutableStateOf(false) }
+        Box {
+            OutlinedButton(onClick={expanded=true},enabled=!exporting) {
+                Text(if(sourceIndex==-1)"Projeto inteiro" else "Clipe ${sourceIndex+1}")
+                Icon(Icons.Default.ArrowDropDown,null)
+            }
+            DropdownMenu(expanded=expanded,onDismissRequest={expanded=false}) {
+                DropdownMenuItem(text={Text("Projeto inteiro")},onClick={sourceIndex=-1;expanded=false})
+                p.clips.forEachIndexed { i,clip ->
+                    DropdownMenuItem(text={Text("${i+1} · ${clip.title}",maxLines=1)},
+                        onClick={sourceIndex=i;expanded=false})
+                }
+            }
+        }
+        Text("Formato de áudio",fontWeight=FontWeight.Medium)
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            listOf("m4a","mp4").forEach { format ->
+                FilterChip(selected=outputExtension==format,onClick={outputExtension=format},
+                    label={Text(format.uppercase())})
+            }
+        }
+        Text("Ambos usam áudio AAC em contêiner MP4. MP3 e WAV exigem codificadores adicionais.",
+            style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
             OutlinedButton(onClick={
-                // Por clipe, em vez de cortar segmentos de áudio separadamente nesta primeira versão.
-                update(p.copy(clips=p.clips.mapIndexed {index,c-> if(index==0)c.copy(volume=0f) else c}))
-            },modifier=Modifier.weight(1f)) {Icon(Icons.Default.ContentCut,null);Text(" 1º clipe")}
+                addAfterExtract=false
+                saveAudio.launch("UaiCortes_audio.$outputExtension")
+            },modifier=Modifier.weight(1f),enabled=!exporting && p.clips.isNotEmpty()) {
+                Icon(Icons.Default.Save,null);Text(" Salvar",fontSize=12.sp)
+            }
+            Button(onClick={
+                addAfterExtract=true
+                saveAudio.launch("UaiCortes_audio.$outputExtension")
+            },modifier=Modifier.weight(1f),enabled=!exporting && p.clips.isNotEmpty()) {
+                Icon(Icons.Default.PlaylistAdd,null);Text(" Salvar e usar",fontSize=12.sp)
+            }
         }
-        Spacer(Modifier.height(20.dp));BlueButton("+ Adicionar música / áudio",chooseMusic,Modifier.fillMaxWidth())
-        Spacer(Modifier.height(14.dp));Text("O volume do PiP em vídeo é ajustado na tela Sobreposição.",
-            color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
+        if(exporting) {
+            LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
+            Text("Extraindo áudio... mantenha esta tela aberta.",fontSize=12.sp)
+        }
+        if(message.isNotBlank()) Text(message,color=MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.height(30.dp))
     }
 }
 
-@OptIn(UnstableApi::class)
-@kotlin.OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -> Unit,
                       back: () -> Unit, onChange: (Overlay) -> Unit,
@@ -1578,18 +1842,151 @@ private fun formatPipMs(ms: Long): String {
 
 @Composable
 private fun TransitionScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit) {
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal=18.dp)) {
+    var boundary by remember(p.id) { mutableIntStateOf(0) }
+    Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
+        .padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Heading("Transições",back)
-        Spacer(Modifier.height(14.dp))
-        Text("Entre os clipes",fontWeight=FontWeight.Bold,fontSize=18.sp)
-        Spacer(Modifier.height(12.dp))
-        ItemCard(Icons.Default.ContentCut,"Corte direto","Disponível nesta versão") {
-            update(p.copy(transition="Corte direto"))
+        if (p.clips.size < 2) Text("Adicione pelo menos dois clipes para criar uma transição.")
+        else {
+            Text("Escolha entre quais clipes aplicar",fontWeight=FontWeight.Medium)
+            p.clips.zipWithNext().forEachIndexed { index,(a,b) ->
+                FilterChip(selected=boundary==index,onClick={boundary=index},
+                    label={Text("${index+1} → ${index+2}: ${a.title.take(11)} / ${b.title.take(11)}")})
+            }
+            val current=EditFeatures.boundary(p,boundary)
+            val kind=current?.kind ?: "Corte direto"
+            Text("Efeito",fontWeight=FontWeight.Bold)
+            listOf("Corte direto","Fade preto","Fade branco").forEach { value ->
+                Surface(onClick={
+                    val a=p.clips[boundary];val b=p.clips[boundary+1]
+                    update(p.copy(transitions=p.transitions.filterNot{
+                        it.fromId==a.id && it.toId==b.id
+                    }+ClipTransition(a.id,b.id,value,current?.durationMs?:500)))
+                },shape=RoundedCornerShape(7.dp),border=BorderStroke(1.dp,
+                    if(kind==value)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)) {
+                    Row(Modifier.fillMaxWidth().padding(13.dp),verticalAlignment=Alignment.CenterVertically) {
+                        Icon(if(kind==value)Icons.Default.CheckCircle else Icons.Default.FiberManualRecord,null)
+                        Spacer(Modifier.width(10.dp));Text(value)
+                    }
+                }
+            }
+            if(kind!="Corte direto") {
+                Text("Duração do fade: ${current?.durationMs?:500} ms")
+                Slider(value=(current?.durationMs?:500).toFloat(),valueRange=250f..1000f,steps=2,
+                    onValueChange={value->
+                        val a=p.clips[boundary];val b=p.clips[boundary+1]
+                        update(p.copy(transitions=p.transitions.filterNot{
+                            it.fromId==a.id && it.toId==b.id
+                        }+ClipTransition(a.id,b.id,kind,value.toLong())))
+                    })
+            }
+            Text("Fade preto/branco: o vídeo escurece ou clareia no fim do clipe e volta ao normal no começo do seguinte. A duração total não muda.",
+                style=MaterialTheme.typography.bodySmall)
+            Text("Dissolvência real entre duas imagens ainda não é suportada nesta composição Media3; não será aplicada como se estivesse pronta.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
+    }
+}
+
+@Composable
+private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit) {
+    val context=LocalContext.current
+    var selectedId by remember(p.id) { mutableStateOf(p.subtitles.firstOrNull()?.id.orEmpty()) }
+    var status by remember { mutableStateOf("") }
+    val importer=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if(uri!=null) {
+            val loaded=runCatching {
+                context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { reader ->
+                    val content=StringBuilder()
+                    val chunk=CharArray(4096)
+                    while(content.length<250_000) {
+                        val received=reader.read(chunk,0,minOf(chunk.size,250_000-content.length))
+                        if(received<=0) break
+                        content.append(chunk,0,received)
+                    }
+                    content.toString()
+                }.orEmpty()
+            }
+            loaded.onSuccess { content ->
+                val cues=EditFeatures.parseSrt(content).filter{it.startMs<p.durationMs}
+                    .map{it.copy(endMs=it.endMs.coerceAtMost(p.durationMs))}
+                if(cues.isNotEmpty()) {
+                    update(p.copy(subtitles=p.subtitles+cues))
+                    selectedId=cues.first().id
+                    status="${cues.size} legendas importadas"
+                } else status="Nenhuma legenda SRT válida no arquivo"
+            }.onFailure {status="Não foi possível ler o arquivo: ${it.message}"}
+        }
+    }
+    val selected=p.subtitles.firstOrNull{it.id==selectedId}
+    Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
+        .padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+        Heading("Legendas",back)
+        Text("Crie legendas manuais ou importe um arquivo .srt. Os textos serão exibidos na prévia e incorporados ao MP4.",
+            style=MaterialTheme.typography.bodySmall)
+        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            Button(onClick={
+                val start=0L
+                val cue=SubtitleCue(text="Nova legenda",startMs=start,
+                    endMs=minOf(3000L,p.durationMs).coerceAtLeast(1L))
+                update(p.copy(subtitles=p.subtitles+cue));selectedId=cue.id
+            },modifier=Modifier.weight(1f)) {Icon(Icons.Default.Add,null);Text(" Nova")}
+            OutlinedButton(onClick={importer.launch(arrayOf("text/*","application/x-subrip","*/*"))},
+                modifier=Modifier.weight(1f)) {Icon(Icons.Default.FileOpen,null);Text(" Importar SRT")}
+        }
+        p.subtitles.forEachIndexed { index,cue ->
+            Surface(onClick={selectedId=cue.id},shape=RoundedCornerShape(5.dp),
+                color=if(selectedId==cue.id)MaterialTheme.colorScheme.primaryContainer
+                else MaterialTheme.colorScheme.surfaceVariant) {
+                Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically) {
+                    Text("${index+1} · ${cue.text.take(45)}",modifier=Modifier.weight(1f),maxLines=1)
+                    Text("${formatPipMs(cue.startMs)}",fontSize=11.sp)
+                }
+            }
+        }
+        if(selected!=null) {
+            OutlinedTextField(value=selected.text,onValueChange={v->
+                update(p.copy(subtitles=p.subtitles.map{if(it.id==selected.id) it.copy(text=v.take(500)) else it}))
+            },label={Text("Texto")},minLines=2,modifier=Modifier.fillMaxWidth())
+            TimeDigitsField("Início",selected.startMs,p.durationMs,
+                valid={it<selected.endMs},onCommit={v->
+                    update(p.copy(subtitles=p.subtitles.map{if(it.id==selected.id)it.copy(startMs=v) else it}))
+                })
+            TimeDigitsField("Fim",selected.endMs,p.durationMs,
+                valid={it>selected.startMs && it<=p.durationMs},onCommit={v->
+                    update(p.copy(subtitles=p.subtitles.map{if(it.id==selected.id)it.copy(endMs=v) else it}))
+                })
+            Text("Tamanho: ${selected.sizeSp} sp")
+            Slider(value=selected.sizeSp.toFloat(),valueRange=12f..48f,onValueChange={v->
+                update(p.copy(subtitles=p.subtitles.map{
+                    if(it.id==selected.id)it.copy(sizeSp=v.toInt()) else it}))
+            })
+            Text("Cor")
+            Row(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
+                listOf(-1,android.graphics.Color.YELLOW,android.graphics.Color.CYAN).forEach { shade ->
+                    FilterChip(selected=selected.color==shade,onClick={
+                        update(p.copy(subtitles=p.subtitles.map{
+                            if(it.id==selected.id)it.copy(color=shade) else it}))
+                    },label={Text(when(shade){-1->"Branco";android.graphics.Color.YELLOW->"Amarelo";else->"Ciano"})})
+                }
+            }
+            Text("Posição da legenda")
+            Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                listOf("Cima" to .15f,"Centro" to .5f,"Baixo" to .85f).forEach { (name,y) ->
+                    FilterChip(selected=kotlin.math.abs(selected.y-y)<.02f,onClick={
+                        update(p.copy(subtitles=p.subtitles.map{
+                            if(it.id==selected.id)it.copy(y=y) else it}))
+                    },label={Text(name)})
+                }
+            }
+            OutlinedButton(onClick={
+                update(p.copy(subtitles=p.subtitles.filterNot{it.id==selected.id}))
+                selectedId=""
+            }) {Icon(Icons.Default.Delete,null);Text(" Excluir legenda")}
+        }
+        if(status.isNotBlank()) Text(status,color=MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(20.dp))
-        Text("Fade e dissolvência ainda não estão disponíveis na exportação desta versão. " +
-            "A opção Corte direto preserva o resultado entre todos os vídeos.",
-            color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

@@ -13,6 +13,7 @@ import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.audio.BaseAudioProcessor
 import androidx.media3.common.OverlaySettings
 import androidx.media3.effect.Presentation
+import androidx.media3.effect.OverlayEffect
 import androidx.media3.effect.StaticOverlaySettings
 import androidx.media3.common.util.Size
 import androidx.media3.common.util.UnstableApi
@@ -107,12 +108,25 @@ class ExportEngine(private val context: Context) {
         require(project.clips.isNotEmpty()) { "Projeto sem vídeos" }
         require(project.overlays.size <= OverlayPlacement.MAX_PIPS) { "O limite é de 4 PiPs" }
         cancel()
-        val mainItems = project.clips.map { clip ->
+        var globalStartMs = 0L
+        val mainItems = project.clips.mapIndexed { index, clip ->
             val item = MediaItem.Builder().setUri(clip.uri).setClippingConfiguration(
                 MediaItem.ClippingConfiguration.Builder().setStartPositionMs(clip.startMs)
                     .setEndPositionMs(clip.endMs).build()).build()
+            val previous = EditFeatures.boundary(project, index - 1)
+            val next = EditFeatures.boundary(project, index)
+            val fadeIn = EditFeatures.transitionMs(previous,
+                project.clips.getOrElse(index - 1) { clip }.durationMs, clip.durationMs)
+            val fadeOut = EditFeatures.transitionMs(next, clip.durationMs,
+                project.clips.getOrElse(index + 1) { clip }.durationMs)
+            val videoEffects = mutableListOf<androidx.media3.common.Effect>()
+            if (fadeIn > 0 || fadeOut > 0) videoEffects += ClipFadeEffect(clip.durationMs,
+                fadeIn, fadeOut, previous?.kind == "Fade branco", next?.kind == "Fade branco")
+            if (project.subtitles.isNotEmpty()) videoEffects += OverlayEffect(
+                listOf(TimedSubtitleOverlay(project.subtitles, globalStartMs)))
+            globalStartMs += clip.durationMs
             EditedMediaItem.Builder(item).setDurationUs(clip.durationMs * 1000L)
-                .setEffects(Effects(listOf(GainProcessor(clip.volume)), emptyList())).build()
+                .setEffects(Effects(listOf(GainProcessor(clip.volume)), videoEffects)).build()
         }
         val mainSequence = EditedMediaItemSequence.withAudioAndVideoFrom(mainItems)
         val sequences = mutableListOf<EditedMediaItemSequence>()
@@ -142,6 +156,23 @@ class ExportEngine(private val context: Context) {
                 .setDurationUs(pip.durationMs * 1000L)
                 .setEffects(Effects(listOf(GainProcessor(pip.volume)), emptyList())).build())
             sequences += audioTrack.build()
+        }
+        project.audioTracks.forEach { audio ->
+            val start = audio.startMs.coerceIn(0L, project.durationMs)
+            val length = audio.durationMs.takeIf { it > 0 } ?: mediaDuration(context, Uri.parse(audio.uri))
+            val playable = minOf(length, project.durationMs - start)
+            if (playable > 0) {
+                val track = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_AUDIO))
+                if (start > 0) track.addGap(start * 1000L)
+                track.addItem(EditedMediaItem.Builder(MediaItem.Builder().setUri(audio.uri)
+                    .setClippingConfiguration(MediaItem.ClippingConfiguration.Builder()
+                        .setEndPositionMs(playable).build()).build())
+                    .setDurationUs(playable * 1000L)
+                    .setEffects(Effects(listOf(GainProcessor(audio.volume)), emptyList())).build())
+                val trailing = project.durationMs - start - playable
+                if (trailing > 0) track.addGap(trailing * 1000L)
+                sequences += track.build()
+            }
         }
         project.music?.let { music ->
             val track = EditedMediaItem.Builder(MediaItem.fromUri(music.uri))

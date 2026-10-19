@@ -1,7 +1,7 @@
-# Uai Cortes 0.1.13 | Validação
+# Uai Cortes 0.1.14 | Validação
 
 ## Funcionalidade implementada no código
-- Persistência de até quatro PiPs no campo `overlays`, `schemaVersion=3`, IDs estáveis; projetos com `pip` legado migrados em leitura.
+- Persistência de até quatro PiPs no campo `overlays`, `schemaVersion=4`, IDs estáveis; projetos com `pip` legado migrados em leitura.
 - Quatro botões quadrados na mesma linha, Bottom Sheet ancorado embaixo, sobreposição dos controles sem deslocamento da prévia, nove atalhos, barra/entrada percentual, duração e mídia.
 - Adição e substituição via MediaStore/SAF, controles independentes de volume e de silêncio.
 - Layout anticolisão usa aspecto da mídia e do quadro, horário de início/fim e prioridade do PiP editado. Rejeita layouts impossíveis com Toast.
@@ -45,3 +45,10 @@
 - Velocidades de prévia padronizadas com rótulos pt-BR; renderização do PiP no editor recebe a mesma velocidade.
 - Mini tutorial abaixo da linha de ações da tela de corte, dentro da área rolável.
 - **Ainda pendente:** compilação Gradle Android, teste de loop em fim de playlist, seleção de velocidade em dispositivo, áudio e sincronismo com vários PiPs.
+
+## Inclusões v0.1.14
+- Modelo JSON schema 4: `subtitles`, `transitions`, `audioTracks` opcionais na leitura. Mantidos `music`, `overlays` e migração `pip`.
+- Extrator de áudio usa Media3 Transformer com `setRemoveVideo(true)` e grava arquivo AAC MP4 no URI SAF escolhido. M4A e MP4 são extensões sobre o mesmo contêiner; MP3 e WAV não estão incluídos.
+- Fades RGB preto/branco por clipe via efeito temporal; sem crossfade. Legendas com `TextOverlay` por faixa temporal.
+- Validações isoladas do parser SRT, cálculo de fade, limites de transição e PSI de Kotlin; não comprovam renderização final nem compatibilidade com codificadores do aparelho.
+- Testar em CI: compileSdk36, `:app:testDebugUnitTest`, lint, assembleRelease, renderização legenda/fade, áudio AAC e permissões de escrita SAF, mais mixagem e volume dos PiPs.

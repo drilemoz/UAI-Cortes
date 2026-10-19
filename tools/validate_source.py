@@ -10,10 +10,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*14',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.13"',gradle)
-assert 'Versão 0.1.13 (14)' in ui
-for label in ['VERSION: \'0.1.13\'','UaiCortes-v0.1.13.apk','TAG="v0.1.13"',"versionCode='14'",'actions/upload-artifact@v4','gh release upload']:
+assert re.search(r'versionCode\s*=\s*15',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.14"',gradle)
+assert 'Versão 0.1.14 (15)' in ui
+for label in ['VERSION: \'0.1.14\'','UaiCortes-v0.1.14.apk','TAG="v0.1.14"',"versionCode='15'",'actions/upload-artifact@v4','gh release upload']:
     assert label in workflow, label
 assert 'platforms;android-36' in workflow and 'android-actions/setup-android@v4' in workflow
 assert 'abortOnError = false' not in gradle
@@ -41,13 +41,13 @@ assert 'EditableSeekTime(' in ui and 'TimeDigitsField(' in ui
 assert 'OverlayTiming.nextStart(' in ui and 'pendingSequential' in ui and 'pendingOverlap' in ui
 assert 'OverlayPlacement.collisions(' in ui and 'overlapWith' in ui
 assert 'dragHandle = null' in ui
-print('OK: 0.1.13 / versionCode 14, PiP sequencial, confirmação de colisão, bottom sheet compacto e CI')
+print('OK: 0.1.14 / versionCode 15, PiP sequencial, confirmação de colisão, bottom sheet compacto e CI')
 
 assert 'private fun TrimScreen(' in ui and 'TrimThumbnails(' in ui and 'RangeSlider(' not in ui
 assert 'TimeDigitsField(' in ui and 'NumericTimeMask' in ui and 'trimLogic' not in ui
 assert 'Marcar início' in ui and 'Marcar fim' in ui and 'Aplicar corte' in ui
 assert 'NumericTime.format(' in ui and 'TimeDigitsField("Começa em"' in ui
-print('OK: 0.1.13 / versionCode 14, editor de cortes com prévia, horários com máscara numérica, PiP preservado')
+print('OK: 0.1.14 / versionCode 15, editor de cortes com prévia, horários com máscara numérica, PiP preservado')
 
 assert 'TimeDigitsField("Tempo", cursorMs, total, autoApply = true' in ui
 assert 'TrimQuickAction(Icons.Default.ContentCut' in ui
@@ -55,7 +55,7 @@ assert 'TrimQuickAction(Icons.Default.Undo' in ui
 assert 'TrimQuickAction(Icons.Default.Delete' in ui
 assert 'undoClips' in ui and 'rememberUndo()' in ui
 assert 'Para marcar fim, avance o vídeo' in ui
-print('OK: v0.1.13 sem barra sobre miniaturas, tempo automático, ações compactas e desfazer de clipes')
+print('OK: v0.1.14 sem barra sobre miniaturas, tempo automático, ações compactas e desfazer de clipes')
 
 assert 'repeatMode = Player.REPEAT_MODE_ONE' in ui
 assert 'repeatMode = Player.REPEAT_MODE_ALL' in ui
@@ -65,3 +65,19 @@ assert 'PreviewPlayback.SPEEDS' in ui
 assert 'setPlaybackParameters(PlaybackParameters(playbackSpeed))' in ui
 assert 'if (cursorMs >= total) player.pause()' not in ui
 print('OK: loop automático corte/editor, velocidades de prévia e mini tutorial após as ações')
+
+# Recursos novos e compatibilidade de metadados, sem alegar build Android.
+fx=(root/'app/src/main/java/br/com/uaicortes/VideoEffects.kt').read_text()
+features=(root/'app/src/main/java/br/com/uaicortes/EditFeatures.kt').read_text()
+extract=(root/'app/src/main/java/br/com/uaicortes/AudioExtractionEngine.kt').read_text()
+assert '.put("schemaVersion", 4)' in model
+for token in ['subtitles: List<SubtitleCue>','transitions: List<ClipTransition>','audioTracks: List<AudioTrack>']:
+    assert token in model, token
+for token in ['ClipSheetAction(', 'TimelineTimedRow(', 'private fun SubtitleScreen(',
+              'private fun TransitionScreen(', 'AudioExtractionEngine(context)',
+              'player.volume = p.clips', 'Remover este clipe?', 'TrackAudioPreview(']:
+    assert token in ui, token
+assert 'TimedSubtitleOverlay' in fx and 'ClipFadeEffect' in fx
+assert 'EditFeatures.parseSrt' in ui and 'setRemoveVideo(true)' in extract
+assert 'project.audioTracks.forEach' in source and 'TimedSubtitleOverlay(project.subtitles' in source
+print('OK: v0.1.14 funcionalidades estruturais, schema 4, SRT, fades e extração M4A')

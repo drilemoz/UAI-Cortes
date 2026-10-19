@@ -59,19 +59,69 @@ data class Music(val uri: String, val title: String, val volume: Float = 0.35f) 
     companion object { fun read(j: JSONObject) = Music(j.getString("uri"), j.optString("title"), j.optDouble("volume", 0.35).toFloat()) }
 }
 
+/** Texto com tempo absoluto na linha do tempo (sem reconhecimento de voz ou serviços externos). */
+data class SubtitleCue(
+    val id: String = UUID.randomUUID().toString(),
+    val text: String, val startMs: Long, val endMs: Long,
+    val color: Int = -1, val sizeSp: Int = 22, val y: Float = .85f
+) {
+    fun json() = JSONObject().put("id", id).put("text", text)
+        .put("startMs", startMs).put("endMs", endMs).put("color", color)
+        .put("sizeSp", sizeSp).put("y", y.toDouble())
+    companion object {
+        fun read(j: JSONObject) = SubtitleCue(j.optString("id").ifBlank { UUID.randomUUID().toString() },
+            j.optString("text"), j.optLong("startMs"), j.optLong("endMs"),
+            j.optInt("color", -1), j.optInt("sizeSp", 22).coerceIn(12, 48),
+            j.optDouble("y", .85).toFloat().coerceIn(.1f, .95f))
+    }
+}
+
+/** Identifica a fronteira entre dois clipes por IDs (não por índices mutáveis). */
+data class ClipTransition(
+    val fromId: String, val toId: String,
+    val kind: String = "Corte direto", val durationMs: Long = 500L
+) {
+    fun json() = JSONObject().put("fromId", fromId).put("toId", toId)
+        .put("kind", kind).put("durationMs", durationMs)
+    companion object { fun read(j: JSONObject) = ClipTransition(
+        j.optString("fromId"), j.optString("toId"), j.optString("kind", "Corte direto"),
+        j.optLong("durationMs", 500L).coerceIn(100L, 1500L)) }
+}
+
+/** Uma faixa importada ou extraída. O início e a duração são relativos ao projeto. */
+data class AudioTrack(
+    val uri: String, val title: String, val startMs: Long = 0L,
+    val durationMs: Long = 0L, val volume: Float = .35f,
+    val id: String = UUID.randomUUID().toString()
+) {
+    fun json() = JSONObject().put("uri", uri).put("title", title)
+        .put("startMs", startMs).put("durationMs", durationMs)
+        .put("volume", volume.toDouble()).put("id", id)
+    companion object { fun read(j: JSONObject) = AudioTrack(j.getString("uri"),
+        j.optString("title"), j.optLong("startMs"), j.optLong("durationMs"),
+        j.optDouble("volume", .35).toFloat().coerceIn(0f,1f),
+        j.optString("id").ifBlank { UUID.randomUUID().toString() }) }
+}
+
 data class VideoProject(
     val id: String = UUID.randomUUID().toString(), val title: String = "Meu vídeo",
     val updated: Long = System.currentTimeMillis(),
     val clips: List<Clip> = emptyList(), val overlays: List<Overlay> = emptyList(),
-    val music: Music? = null, val transition: String = "Corte direto"
+    val music: Music? = null, val transition: String = "Corte direto",
+    val subtitles: List<SubtitleCue> = emptyList(),
+    val transitions: List<ClipTransition> = emptyList(),
+    val audioTracks: List<AudioTrack> = emptyList()
 ) {
     val durationMs get() = clips.sumOf { it.durationMs }
     val pip: Overlay? get() = overlays.firstOrNull() // acesso legado somente leitura
     fun json(): JSONObject = JSONObject().put("id", id).put("title", title).put("updated", updated)
         .put("clips", JSONArray().also { a -> clips.forEach { a.put(it.json()) } })
-        .put("schemaVersion", 3)
+        .put("schemaVersion", 4)
         .put("overlays", JSONArray().also { a -> overlays.take(4).forEach { a.put(it.json()) } })
         .put("music", music?.json()).put("transition", transition)
+        .put("subtitles", JSONArray().also { a -> subtitles.forEach { a.put(it.json()) } })
+        .put("transitions", JSONArray().also { a -> transitions.forEach { a.put(it.json()) } })
+        .put("audioTracks", JSONArray().also { a -> audioTracks.forEach { a.put(it.json()) } })
     companion object {
         fun read(j: JSONObject): VideoProject {
             val a = j.optJSONArray("clips") ?: JSONArray()
@@ -83,7 +133,16 @@ data class VideoProject(
                     }.take(4)
                 } ?: listOfNotNull(j.optJSONObject("pip")?.let(Overlay::read))),
                 j.optJSONObject("music")?.let(Music::read),
-                j.optString("transition", "Corte direto"))
+                j.optString("transition", "Corte direto"),
+                j.optJSONArray("subtitles")?.let { arr ->
+                    (0 until arr.length()).mapNotNull { i -> runCatching { SubtitleCue.read(arr.getJSONObject(i)) }.getOrNull() }
+                } ?: emptyList(),
+                j.optJSONArray("transitions")?.let { arr ->
+                    (0 until arr.length()).mapNotNull { i -> runCatching { ClipTransition.read(arr.getJSONObject(i)) }.getOrNull() }
+                } ?: emptyList(),
+                j.optJSONArray("audioTracks")?.let { arr ->
+                    (0 until arr.length()).mapNotNull { i -> runCatching { AudioTrack.read(arr.getJSONObject(i)) }.getOrNull() }
+                } ?: emptyList())
         }
     }
 }

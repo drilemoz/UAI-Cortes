@@ -13,7 +13,8 @@
 | Silenciar primeiro clipe | Implementado | Pendente |
 | Corte preciso de áudio por trecho arbitrário | Não | Pendente |
 | Transição corte direto | Implementado | Pendente |
-| Transição fade ou dissolvência | Não | Pendente |
+| Fade preto/branco por clipe | Implementado no código, aguardando teste real | Pendente |
+| Dissolvência real | Não disponível | Pendente |
 | Exportação MP4 720p/1080p e MediaStore | Implementado no motor | Pendente |
 | Progresso e cancelamento | Implementado | Pendente |
 | Exportação em serviço de primeiro plano | Não | Pendente |
@@ -40,3 +41,13 @@ Os recursos novos da versão 0.1.11 ainda **não foram validados por compilaçã
 - Seletor de velocidade de prévia em ambas as telas (0,25× a 2×). Velocidade não faz parte da exportação.
 - Tutorial rápido logo abaixo dos controles de corte.
 - **Pendente:** Gradle, Lint, teste visual, loop de playlist e sincronismo de PiPs em aparelho real.
+
+## Novidades v0.1.14 (versionCode 15)
+| Recurso | Código-fonte | Validação em APK |
+|---|---|---|
+| Alinhamento e retângulos nas faixas | Implementado | Pendente |
+| Menu rápido de clipe, excluir, duplicar e volume individual | Implementado | Pendente |
+| Legendas manuais e importação SRT | Implementado | Pendente |
+| Fade preto/branco por par | Implementado (sem crossfade) | Pendente |
+| Extrair áudio M4A/MP4 AAC | Implementado | Pendente |
+| WAV/MP3 e dissolvência | Não implementados | Não aplicável |

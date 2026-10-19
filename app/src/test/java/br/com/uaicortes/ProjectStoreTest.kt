@@ -54,7 +54,7 @@ class ProjectStoreTest {
         val a = Overlay("content://first", true, 1200L)
         val b = Overlay("content://second", true, 1200L, overlapWith = listOf(a.id))
         val stored = VideoProject(overlays = listOf(a,b)).json()
-        assertEquals(3, stored.getInt("schemaVersion"))
+        assertEquals(4, stored.getInt("schemaVersion"))
         val restored = VideoProject.read(stored)
         assertEquals(listOf(a.id), restored.overlays[1].overlapWith)
         assertTrue(restored.overlays[0].overlapWith.isEmpty())

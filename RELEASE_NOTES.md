@@ -1,14 +1,11 @@
-# Uai Cortes v0.1.13 · versionCode 14
+# Uai Cortes v0.1.14 · versionCode 15
 
-- Cortar e unir: prévia em loop até pausar, seletor de velocidade de 0,25× a 2× e mini tutorial abaixo dos controles.
-- Editor principal: reprodução contínua de todos os clipes e botão de velocidade da prévia; PiPs acompanham essa velocidade.
-- Velocidade de prévia não modifica o MP4 final. Compilação Android e testes físicos pendentes.
+- Timeline alinhada e retangular para vídeo, até quatro PiPs, áudio e legendas.
+- Menu de edição individual por clipe: Cortar, Duplicar, Mover, Excluir com confirmação e Volume individual.
+- Legendas manuais e importação SRT, com prévia e efeitos de exportação.
+- Transições por par de clipes: corte direto, fade preto, fade branco. Dissolvência não disponível.
+- Extração de áudio AAC em M4A/MP4 via SAF: salvar e opcionalmente adicionar à timeline.
+- Projeto migrado para schema 4, preservando projetos anteriores.
+- APK previsto: UaiCortes-v0.1.14.apk.
 
-- Preservado da 0.1.12: editor Cortar e unir mais limpo: miniaturas tocáveis diretamente abaixo do vídeo e cursor em controle separado, sem barras sobrepostas às imagens.
-- Campo Tempo com máscara numérica `mm:ss.d` que busca automaticamente o ponto do vídeo enquanto se digita, sem confirmar o campo “Ir para”.
-- Marcar fim mostra explicação se ainda não existir um intervalo válido após o início, em vez de ficar desabilitado sem motivo aparente.
-- Botões de dividir, desfazer, ordenar antes/depois e excluir compactados em uma única linha; desfazer da última alteração aplicada na sessão.
-- Início e fim editáveis, prévia, Aplicar corte, quatro PiPs e exportação preservados.
-- APK previsto em GitHub Releases: `UaiCortes-v0.1.13.apk`.
-
-**Validação:** validações estruturais e unitárias isoladas locais; compilação Android completa e teste no aparelho pendentes.
+**Pendente:** compilação completa e validação de prévia/exportação real no Android. MP3/WAV indisponíveis.
