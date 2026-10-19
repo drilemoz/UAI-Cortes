@@ -211,11 +211,18 @@ fun UaiApp() {
         if (uri != null) {
             runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
             project?.let { current ->
-                val track = AudioTrack(uri.toString(), mediaName(context, uri),
-                    startMs = positionMs.coerceIn(0L, current.durationMs),
-                    durationMs = mediaDuration(context, uri).coerceAtMost(
-                        (current.durationMs - positionMs).coerceAtLeast(1L)))
-                write(current.copy(audioTracks = current.audioTracks + track))
+                val lastStart = (current.durationMs - AudioTrackTiming.MIN_TRIM_MS).coerceAtLeast(0L)
+                val start = positionMs.coerceIn(0L, lastStart)
+                val sourceDuration = mediaDuration(context, uri)
+                val length = minOf(sourceDuration, current.durationMs - start)
+                if (length >= AudioTrackTiming.MIN_TRIM_MS) {
+                    val track = AudioTrack(uri.toString(), mediaName(context, uri),
+                        startMs = start, durationMs = length)
+                    write(current.copy(audioTracks = current.audioTracks + track))
+                } else {
+                    android.widget.Toast.makeText(context, "Sem espaço para inserir áudio no projeto",
+                        android.widget.Toast.LENGTH_LONG).show()
+                }
             }
             screen = "audio"
         }
@@ -477,9 +484,9 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.21 (22)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.23 (24)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
-        Spacer(Modifier.height(14.dp));Text("Novidades: prévia em repetição, seletor de velocidade no corte e editor e mini tutorial de corte.",
+        Spacer(Modifier.height(14.dp));Text("Novidades: edição de faixas de áudio com início, fim, posição na timeline e pré-escuta.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -539,7 +546,7 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         p.audioTracks.forEach { audio ->
             key(audio.id) {
                 TrackAudioPreview(audio.uri, audio.startMs, audio.durationMs, audio.volume,
-                    currentMs, player.isPlaying, playbackSpeed, false)
+                    currentMs, player.isPlaying, playbackSpeed, false, audio.sourceStartMs)
             }
         }
         BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)
@@ -719,7 +726,8 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
 
 @Composable
 private fun TrackAudioPreview(uri: String, startMs: Long, durationMs: Long,
-    volume: Float, projectMs: Long, playing: Boolean, speed: Float, loop: Boolean) {
+    volume: Float, projectMs: Long, playing: Boolean, speed: Float, loop: Boolean,
+    sourceStartMs: Long = 0L) {
     val context=LocalContext.current
     val player=remember(uri) { ExoPlayer.Builder(context).build() }
     DisposableEffect(player) { onDispose {player.release()} }
@@ -731,10 +739,10 @@ private fun TrackAudioPreview(uri: String, startMs: Long, durationMs: Long,
         player.volume=volume.coerceIn(0f,1f)
         player.setPlaybackParameters(PlaybackParameters(speed))
     }
-    LaunchedEffect(player,projectMs,playing,startMs,durationMs) {
+    LaunchedEffect(player,projectMs,playing,startMs,durationMs,sourceStartMs) {
         val within=projectMs>=startMs && projectMs<startMs+durationMs
         if(!within || !playing) player.pause() else {
-            val wanted=(projectMs-startMs).coerceAtLeast(0L)
+            val wanted=sourceStartMs+(projectMs-startMs).coerceAtLeast(0L)
             if(kotlin.math.abs(player.currentPosition-wanted)>600L) player.seekTo(wanted)
             player.play()
         }
@@ -1358,6 +1366,69 @@ private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit
             } else message = "Não foi possível ler a duração do vídeo externo."
         }
     }
+    // Pré-escuta da origem selecionada, sem alterar a linha do tempo.
+    val previewPlayer = remember(context) { ExoPlayer.Builder(context).build() }
+    var previewPlaying by remember { mutableStateOf(false) }
+    val previewClip = externalClip ?: p.clips.getOrNull(sourceIndex)
+    val previewStartMs = if (externalClip != null) (externalClip!!.sourceDurationMs * trimStart).toLong()
+        else previewClip?.startMs ?: 0L
+    val previewEndMs = if (externalClip != null) (externalClip!!.sourceDurationMs * trimEnd).toLong()
+        else previewClip?.endMs ?: 0L
+    LaunchedEffect(previewClip?.uri, previewStartMs, previewEndMs) {
+        previewPlayer.pause()
+        previewPlaying = false
+        previewClip?.let { clip ->
+            previewPlayer.setMediaItem(MediaItem.fromUri(Uri.parse(clip.uri)))
+            previewPlayer.prepare()
+            previewPlayer.seekTo(previewStartMs)
+        } ?: previewPlayer.clearMediaItems()
+    }
+    LaunchedEffect(previewPlaying, previewEndMs) {
+        while (previewPlaying) {
+            if (previewEndMs > previewStartMs && previewPlayer.currentPosition >= previewEndMs) {
+                previewPlayer.pause()
+                previewPlayer.seekTo(previewStartMs)
+                previewPlaying = false
+            }
+            delay(100)
+        }
+    }
+    DisposableEffect(previewPlayer) { onDispose { previewPlayer.release() } }
+    // A edição de uma faixa só é aplicada quando o usuário confirma Salvar corte.
+    var editingAudioId by remember(p.id) { mutableStateOf<String?>(null) }
+    val editingAudio = p.audioTracks.firstOrNull { it.id == editingAudioId }
+    val sourceAudioLength = remember(editingAudio?.uri) {
+        editingAudio?.let { mediaDuration(context, Uri.parse(it.uri)) } ?: 0L
+    }
+    var editTimelineStart by remember(p.id) { mutableLongStateOf(0L) }
+    var editSourceStart by remember(p.id) { mutableLongStateOf(0L) }
+    var editSourceEnd by remember(p.id) { mutableLongStateOf(0L) }
+    val editDuration = editSourceEnd - editSourceStart
+    val editValid = editingAudio != null && AudioTrackTiming.valid(
+        editSourceStart, editSourceEnd, sourceAudioLength, editTimelineStart, p.durationMs)
+    // Player separado evita interromper a prévia de extração de vídeo.
+    val trackPlayer = remember(context) { ExoPlayer.Builder(context).build() }
+    var trackPlaying by remember { mutableStateOf(false) }
+    LaunchedEffect(editingAudioId, editingAudio?.uri, editSourceStart, editSourceEnd) {
+        trackPlayer.pause()
+        trackPlaying = false
+        if (editingAudio != null && editValid) {
+            trackPlayer.setMediaItem(MediaItem.fromUri(Uri.parse(editingAudio.uri)))
+            trackPlayer.prepare()
+            trackPlayer.seekTo(editSourceStart)
+        } else trackPlayer.clearMediaItems()
+    }
+    LaunchedEffect(trackPlaying, editSourceStart, editSourceEnd) {
+        while (trackPlaying) {
+            if (trackPlayer.currentPosition >= editSourceEnd) {
+                trackPlayer.pause()
+                trackPlayer.seekTo(editSourceStart)
+                trackPlaying = false
+            }
+            delay(100)
+        }
+    }
+    DisposableEffect(trackPlayer) { onDispose { trackPlayer.release() } }
     var outputExtension by remember { mutableStateOf("m4a") }
     var addAfterExtract by remember { mutableStateOf(false) }
     var exporting by remember { mutableStateOf(false) }
@@ -1407,10 +1478,107 @@ private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit
                 Slider(value=track.volume.coerceIn(0f,1f),modifier=Modifier.weight(1f),onValueChange={v->
                     update(p.copy(audioTracks=p.audioTracks.map { if(it.id==track.id) it.copy(volume=v) else it }))
                 })
-                IconButton(onClick={update(p.copy(audioTracks=p.audioTracks.filterNot{it.id==track.id}))}) {
-                    Icon(Icons.Default.Delete,"Remover faixa")
-                }
+                IconButton(onClick={
+                    val sourceDuration = mediaDuration(context, Uri.parse(track.uri))
+                    val range = AudioTrackTiming.initialRange(track.sourceStartMs, track.durationMs,
+                        sourceDuration, track.startMs, p.durationMs)
+                    if (range == null) {
+                        message = "O arquivo é curto demais ou não há espaço para editar a faixa."
+                    } else {
+                        editingAudioId = track.id
+                        editTimelineStart = track.startMs.coerceIn(0L,
+                            (p.durationMs - (range.last - range.first)).coerceAtLeast(0L))
+                        editSourceStart = range.first
+                        editSourceEnd = range.last
+                        previewPlayer.pause()
+                        previewPlaying = false
+                    }
+                }) { Icon(Icons.Default.ContentCut,"Editar corte da faixa") }
+                IconButton(onClick={
+                    if (editingAudioId == track.id) editingAudioId = null
+                    update(p.copy(audioTracks=p.audioTracks.filterNot{it.id==track.id}))
+                }) { Icon(Icons.Default.Delete,"Remover faixa") }
             }
+        }
+        editingAudio?.let { track ->
+            HorizontalDivider(Modifier.padding(vertical=8.dp))
+            Text("Editar trecho · ${track.title}",fontWeight=FontWeight.Bold,fontSize=17.sp)
+            Text("Recorte a fonte e escolha quando ela entra no vídeo. O arquivo original fica intacto.",
+                style=MaterialTheme.typography.bodySmall)
+            if (sourceAudioLength >= AudioTrackTiming.MIN_TRIM_MS &&
+                p.durationMs >= AudioTrackTiming.MIN_TRIM_MS) {
+                Text("Início no arquivo: ${formatPipMs(editSourceStart)}")
+                Slider(value=editSourceStart.toFloat(),
+                    valueRange=0f..(editSourceEnd-AudioTrackTiming.MIN_TRIM_MS).coerceAtLeast(0L).toFloat(),
+                    onValueChange={ editSourceStart=it.toLong().coerceIn(0L,
+                        (editSourceEnd-AudioTrackTiming.MIN_TRIM_MS).coerceAtLeast(0L)) })
+                TimeDigitsField("Entrada",editSourceStart,sourceAudioLength,
+                    valid={ it>=0L && it<=editSourceEnd-AudioTrackTiming.MIN_TRIM_MS },
+                    onCommit={ editSourceStart=it })
+                val maxSourceEnd = minOf(sourceAudioLength,
+                    editSourceStart+(p.durationMs-editTimelineStart))
+                Text("Fim no arquivo: ${formatPipMs(editSourceEnd)}")
+                Slider(value=editSourceEnd.toFloat().coerceIn(
+                        (editSourceStart+AudioTrackTiming.MIN_TRIM_MS).toFloat(),
+                        maxOf(maxSourceEnd,editSourceStart+AudioTrackTiming.MIN_TRIM_MS).toFloat()),
+                    valueRange=(editSourceStart+AudioTrackTiming.MIN_TRIM_MS).toFloat()..
+                        maxOf(maxSourceEnd,editSourceStart+AudioTrackTiming.MIN_TRIM_MS).toFloat(),
+                    onValueChange={ editSourceEnd=it.toLong().coerceAtLeast(
+                        editSourceStart+AudioTrackTiming.MIN_TRIM_MS) })
+                TimeDigitsField("Saída",editSourceEnd,sourceAudioLength,
+                    valid={ it>=editSourceStart+AudioTrackTiming.MIN_TRIM_MS && it<=maxSourceEnd },
+                    onCommit={ editSourceEnd=it })
+                Text("Começa no projeto: ${formatPipMs(editTimelineStart)}")
+                val latestStart=(p.durationMs-editDuration).coerceAtLeast(0L)
+                Slider(value=editTimelineStart.coerceIn(0L,latestStart).toFloat(),
+                    valueRange=0f..latestStart.toFloat(),
+                    onValueChange={ editTimelineStart=it.toLong().coerceIn(0L,latestStart) })
+                TimeDigitsField("Na timeline",editTimelineStart,p.durationMs,
+                    valid={ it>=0L && it<=latestStart },onCommit={editTimelineStart=it})
+                Text("Trecho selecionado: ${formatPipMs(editDuration.coerceAtLeast(0L))}",
+                    style=MaterialTheme.typography.bodySmall)
+                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick={
+                        if (trackPlaying) {
+                            trackPlayer.pause()
+                            trackPlaying=false
+                        } else if (editValid) {
+                            if (trackPlayer.currentPosition < editSourceStart ||
+                                trackPlayer.currentPosition >= editSourceEnd)
+                                trackPlayer.seekTo(editSourceStart)
+                            trackPlayer.play()
+                            trackPlaying=true
+                        }
+                    },enabled=editValid) {
+                        Icon(if(trackPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,null)
+                        Text(if(trackPlaying) " Pausar" else " Ouvir corte")
+                    }
+                    TextButton(onClick={
+                        trackPlayer.pause()
+                        trackPlayer.seekTo(editSourceStart)
+                        trackPlaying=false
+                    }) { Text("Reiniciar") }
+                }
+                if (!editValid) Text("Trecho inválido ou ultrapassa o fim do vídeo.",
+                    color=MaterialTheme.colorScheme.error)
+                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick={ editingAudioId=null },modifier=Modifier.weight(1f)) {
+                        Text("Cancelar")
+                    }
+                    Button(onClick={
+                        update(p.copy(audioTracks=p.audioTracks.map { saved ->
+                            if (saved.id==track.id) saved.copy(startMs=editTimelineStart,
+                                sourceStartMs=editSourceStart,durationMs=editDuration) else saved
+                        }))
+                        editingAudioId=null
+                        message="Corte da faixa salvo no projeto."
+                    },enabled=editValid,modifier=Modifier.weight(1f)) { Text("Salvar corte") }
+                }
+            } else {
+                Text("Faixa curta demais para editar neste vídeo.")
+                TextButton(onClick={editingAudioId=null}) { Text("Fechar") }
+            }
+            HorizontalDivider(Modifier.padding(vertical=8.dp))
         }
         OutlinedButton(onClick=chooseMusic,modifier=Modifier.fillMaxWidth()) {
             Icon(Icons.Default.LibraryMusic,null);Text(" Adicionar áudio à timeline")
@@ -1443,6 +1611,35 @@ private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit
             Text("Fim: ${formatPipMs((clip.sourceDurationMs*trimEnd).toLong())}")
             Slider(value=trimEnd,valueRange=0f..1f,onValueChange={trimEnd=it.coerceAtLeast(trimStart+.001f)})
             TextButton(onClick={externalClip=null}) { Text("Voltar à origem do projeto") }
+        }
+        if (previewClip != null) {
+            Text("Pré-escuta do trecho",fontWeight=FontWeight.Medium)
+            Text("${formatPipMs(previewStartMs)} até ${formatPipMs(previewEndMs)}",
+                style=MaterialTheme.typography.bodySmall)
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
+                OutlinedButton(onClick={
+                    if (previewPlaying) {
+                        previewPlayer.pause()
+                        previewPlaying=false
+                    } else {
+                        if (previewPlayer.currentPosition < previewStartMs ||
+                            previewPlayer.currentPosition >= previewEndMs) previewPlayer.seekTo(previewStartMs)
+                        previewPlayer.play()
+                        previewPlaying=true
+                    }
+                },enabled=!exporting && previewEndMs>previewStartMs) {
+                    Icon(if(previewPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,null)
+                    Text(if(previewPlaying) " Pausar" else " Ouvir trecho")
+                }
+                TextButton(onClick={previewPlayer.pause();previewPlayer.seekTo(previewStartMs);previewPlaying=false}) {
+                    Text("Reiniciar")
+                }
+            }
+            Text("A pré-escuta reproduz o áudio do vídeo de origem; não modifica o arquivo.",
+                style=MaterialTheme.typography.bodySmall)
+        } else if (sourceIndex == -1) {
+            Text("Para ouvir antes de extrair, escolha um clipe ou importe um vídeo externo.",
+                style=MaterialTheme.typography.bodySmall)
         }
         Text("Formato de áudio",fontWeight=FontWeight.Medium)
         Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {

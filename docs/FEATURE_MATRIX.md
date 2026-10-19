@@ -11,7 +11,7 @@
 | Até 4 PiPs, Bottom Sheet inferior com 4 botões na mesma linha, posicionamento anticolisão e áudio individual | Implementado em código, sem build Android confirmado | Pendente |
 | Controle de volume e música | Implementado no modelo e processo de composição | Pendente |
 | Silenciar primeiro clipe | Implementado | Pendente |
-| Corte preciso de áudio por trecho arbitrário | Não | Pendente |
+| Corte de faixas adicionais por entrada/saída e posição no projeto | Implementado na v0.1.23, requer teste Android | Pendente |
 | Transição corte direto | Implementado | Pendente |
 | Fade preto/branco por clipe | Implementado no código, aguardando teste real | Pendente |
 | Dissolvência real | Não disponível | Pendente |
@@ -56,10 +56,19 @@ Os recursos novos da versão 0.1.11 ainda **não foram validados por compilaçã
 ## v0.1.15 (versionCode 16)
 - Correção técnica de compilação: opt-in Material3 nas telas Editor/PiP e captura de largura da timeline. Funcionalidades da v0.1.14 preservadas.
 
-## v0.1.21 (versionCode 22)
+## v0.1.22 (versionCode 23)
 | Recurso | Código-fonte | Validação no Android |
 |---|---|---|
 | Lint Media3: helper com opt-in AndroidX | Implementado | CI pendente |
 | APK ARM32, ARM64, x86, x86_64, universal | Gradle/CI configurados | CI pendente |
 | Publicar somente APKs Release em GitHub Releases | Workflow configurado | CI pendente |
 | Sem novo build em tag v* e sem duplicata em Actions Artifacts | Workflow configurado | Conferir ao publicar |
+
+## v0.1.23: faixas adicionais de áudio
+
+| Recurso | Código | Validação Android |
+|---|---|---|
+| Entrada/saída em arquivo AAC/MP4 e áudio importado, com posição na timeline | Implementado | Pendente |
+| Pré-escuta específica do trecho e cancelar/salvar edição | Implementado | Pendente |
+| Persistência de `sourceStartMs` e compatibilidade com JSON antigo | Implementado e testes de unidade | Pendente |
+| Aplicar deslocamento de origem na exportação e prévia do editor | Implementado | Pendente |

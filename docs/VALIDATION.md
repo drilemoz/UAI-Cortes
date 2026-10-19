@@ -1,6 +1,9 @@
-Correção v0.1.21: o workflow 19 compilou Kotlin Debug/Release, executou testes e lint com sucesso, mas falhou no empacotamento porque tools/package_apks.py ainda esperava 0.1.17/versionCode 17. Constantes sincronizadas para 0.1.21/versionCode 22. Compilação e publicação da nova versão pendentes.
+## v0.1.22
+Pré-escuta adicionada com ExoPlayer e limitação de trecho. Requer compilação CI e teste em aparelho.
 
-# Uai Cortes 0.1.21 | Validação
+Correção v0.1.22: o workflow 19 compilou Kotlin Debug/Release, executou testes e lint com sucesso, mas falhou no empacotamento porque tools/package_apks.py ainda esperava 0.1.17/versionCode 17. Constantes sincronizadas para 0.1.22/versionCode 23. Compilação e publicação da nova versão pendentes.
+
+# Uai Cortes 0.1.22 | Validação
 
 ## Funcionalidade implementada no código
 - Persistência de até quatro PiPs no campo `overlays`, `schemaVersion=4`, IDs estáveis; projetos com `pip` legado migrados em leitura.
@@ -62,11 +65,16 @@ Correção v0.1.21: o workflow 19 compilou Kotlin Debug/Release, executou testes
 - `TimelineRow` registra `val timelineWidth = maxWidth` antes do `Row` aninhado.
 - Testes locais estruturais e sintáticos apenas, sem Gradle Android. Nova execução `:app:testDebugUnitTest :app:lintDebug :app:assembleRelease` exigida no CI.
 
-## Build 16 / implementação v0.1.21 (versionCode 22)
+## Build 16 / implementação v0.1.22 (versionCode 23)
 - Falha confirmada no build 16: task `:app:lintDebug`, 3 erros Media3 `UnsafeOptInUsageError` em `MainActivity.kt`, first failure line 1530. Kotlin e etapas anteriores concluídos, mas o release **não** foi publicado.
 - Corrigida a origem das APIs instáveis: helper `previewPlayer` anotado com `androidx.annotation.OptIn` fora das lambdas `AndroidView`.
-- `app/build.gradle.kts`: saídas para arm32/arm64/x86/x86_64/universal com mesmo versionCode 22.
+- `app/build.gradle.kts`: saídas para arm32/arm64/x86/x86_64/universal com mesmo versionCode 23.
 - `tools/package_apks.py`: usa `output-metadata.json` e aborta se faltarem ABIs, houver duplicatas, falhar `apksigner verify` ou houver divergência de pacote/versão/SDK.
 - Removidos do workflow `push.tags: v*` e `actions/upload-artifact` para evitar duas compilações/duas publicações do mesmo APK. A Release é o único destino.
 - **Testes locais:** validador estrutural e sintaxe Kotlin (parser PSI) quando disponíveis; sem Gradle/SDK Android local.
 - **Próximos testes em CI:** `testDebugUnitTest`, `lintDebug`, `assembleRelease`, verificação 5/5 APKs e assets de Release. Depois testar instalação e reprodução no ARM32, ARM64, x86, x86_64 e universal, sem presumir que haverá todos os aparelhos físicos.
+
+## Validação v0.1.23 (versionCode 24)
+- Validar `tools/validate_source.py` e executar testes de `AudioTrackTimingTest` para limites de origem e projeto.
+- Novo teste `ProjectStoreTest.audioTrackSourceOffsetRoundTripAndLegacy` para persistência e migração JSON.
+- Ainda pendente: Gradle/Media3 Android, testes com arquivo M4A/MP4 e reprodução real, especialmente ao deslocar uma faixa e exportar MP4.

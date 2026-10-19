@@ -159,14 +159,17 @@ class ExportEngine(private val context: Context) {
         }
         project.audioTracks.forEach { audio ->
             val start = audio.startMs.coerceIn(0L, project.durationMs)
-            val length = audio.durationMs.takeIf { it > 0 } ?: mediaDuration(context, Uri.parse(audio.uri))
-            val playable = minOf(length, project.durationMs - start)
+            val sourceDuration = mediaDuration(context, Uri.parse(audio.uri))
+            val sourceStart = audio.sourceStartMs.coerceIn(0L, sourceDuration)
+            val length = audio.durationMs.takeIf { it > 0 } ?: (sourceDuration - sourceStart)
+            val playable = minOf(length, sourceDuration - sourceStart, project.durationMs - start)
             if (playable > 0) {
                 val track = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_AUDIO))
                 if (start > 0) track.addGap(start * 1000L)
                 track.addItem(EditedMediaItem.Builder(MediaItem.Builder().setUri(audio.uri)
                     .setClippingConfiguration(MediaItem.ClippingConfiguration.Builder()
-                        .setEndPositionMs(playable).build()).build())
+                        .setStartPositionMs(sourceStart)
+                        .setEndPositionMs(sourceStart + playable).build()).build())
                     .setDurationUs(playable * 1000L)
                     .setEffects(Effects(listOf(GainProcessor(audio.volume)), emptyList())).build())
                 val trailing = project.durationMs - start - playable

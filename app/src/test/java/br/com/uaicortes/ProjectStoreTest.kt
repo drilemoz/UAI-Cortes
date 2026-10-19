@@ -61,4 +61,15 @@ class ProjectStoreTest {
         val legacy = a.json().apply { remove("overlapWith") }
         assertTrue(Overlay.read(legacy).overlapWith.isEmpty())
     }
+    @Test fun audioTrackSourceOffsetRoundTripAndLegacy() {
+        val audio = AudioTrack("content://example/audio", "Trilha", startMs=2300,
+            durationMs=1100, sourceStartMs=900)
+        val restored = VideoProject(audioTracks=listOf(audio)).json().let(VideoProject::read)
+        assertEquals(900L, restored.audioTracks.single().sourceStartMs)
+        assertEquals(2300L, restored.audioTracks.single().startMs)
+        assertEquals(1100L, restored.audioTracks.single().durationMs)
+        val legacy = audio.json().apply { remove("sourceStartMs") }
+        assertEquals(0L, AudioTrack.read(legacy).sourceStartMs)
+    }
+
 }

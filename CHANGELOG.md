@@ -1,13 +1,26 @@
-## v0.1.21 (versionCode 22) — 19/10/2026
+## v0.1.23 (versionCode 24) · 19/10/2026
+
+- Faixas adicionais com entrada e saída no áudio de origem, posição na timeline, controles numéricos/deslizantes e pré-escuta separada.
+- Exportação Media3 e prévia do editor respeitam `sourceStartMs`; projetos antigos permanecem compatíveis com origem em 0 ms.
+- Limites de corte conservadores (mínimo de 250 ms) e testes de lógica/serialização adicionados.
+- ZIP/validação estrutural: a compilação Android e teste físico desta versão continuam pendentes.
+
+## v0.1.22 (versionCode 23) — 19/10/2026
+
+- Pré-escuta de áudio para clipes individuais e vídeos externos, com reprodução, pausa, reinício e limite de recorte.
+- Reprodução temporária isolada da timeline e liberação do player ao sair da tela.
+- Pré-escuta de projeto inteiro ainda não implementada. Build Android e testes em aparelho pendentes.
+
+## v0.1.22 (versionCode 23) — 19/10/2026
 
 - Prévia animada de transições usando quadros reais extraídos dos clipes adjacentes, com Fade preto, Fade branco e Corte direto.
 - Extração de quadros em IO, sem decodificação contínua ou áudio. A prévia não substitui reprodução/renderização integral.
 - Mantidas as cinco variantes de APK e a exportação Media3 existente.
 - Build Android e testes em aparelho pendentes.
 
-Correção v0.1.21: o workflow 19 compilou Kotlin Debug/Release, executou testes e lint com sucesso, mas falhou no empacotamento porque tools/package_apks.py ainda esperava 0.1.17/versionCode 17. Constantes sincronizadas para 0.1.21/versionCode 22. Compilação e publicação da nova versão pendentes.
+Correção v0.1.22: o workflow 19 compilou Kotlin Debug/Release, executou testes e lint com sucesso, mas falhou no empacotamento porque tools/package_apks.py ainda esperava 0.1.17/versionCode 17. Constantes sincronizadas para 0.1.22/versionCode 23. Compilação e publicação da nova versão pendentes.
 
-## 0.1.21 (versionCode 22) — 19/10/2026
+## 0.1.22 (versionCode 23) — 19/10/2026
 - Corrigida compilação Kotlin do build 18: chamada de `TimelineRow` para a faixa PiP vazia agora passa explicitamente `onClip`.
 - Nenhuma alteração na lógica de exportação ou transições.
 

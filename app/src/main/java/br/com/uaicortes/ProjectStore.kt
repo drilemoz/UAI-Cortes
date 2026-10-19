@@ -89,19 +89,24 @@ data class ClipTransition(
         j.optLong("durationMs", 500L).coerceIn(100L, 1500L)) }
 }
 
-/** Uma faixa importada ou extraída. O início e a duração são relativos ao projeto. */
+/** Faixa de áudio: startMs é posição no projeto; sourceStartMs é a entrada no arquivo de origem.
+ * durationMs determina quantos milissegundos da fonte entram na composição.
+ * Projetos anteriores não tinham sourceStartMs e continuam iniciando no zero da fonte. */
 data class AudioTrack(
     val uri: String, val title: String, val startMs: Long = 0L,
     val durationMs: Long = 0L, val volume: Float = .35f,
-    val id: String = UUID.randomUUID().toString()
+    val id: String = UUID.randomUUID().toString(),
+    val sourceStartMs: Long = 0L
 ) {
     fun json() = JSONObject().put("uri", uri).put("title", title)
         .put("startMs", startMs).put("durationMs", durationMs)
         .put("volume", volume.toDouble()).put("id", id)
+        .put("sourceStartMs", sourceStartMs)
     companion object { fun read(j: JSONObject) = AudioTrack(j.getString("uri"),
         j.optString("title"), j.optLong("startMs"), j.optLong("durationMs"),
         j.optDouble("volume", .35).toFloat().coerceIn(0f,1f),
-        j.optString("id").ifBlank { UUID.randomUUID().toString() }) }
+        j.optString("id").ifBlank { UUID.randomUUID().toString() },
+        j.optLong("sourceStartMs", 0L).coerceAtLeast(0L)) }
 }
 
 data class VideoProject(
