@@ -1,3 +1,10 @@
+## 0.1.15 (versionCode 16) — 19/10/2026
+
+- Corrigido build 15: `ModalBottomSheet` e `rememberModalBottomSheetState` exigem `@kotlin.OptIn(ExperimentalMaterial3Api::class)` nos componentes da edição principal e PiP.
+- Captura explícita de `maxWidth` no `BoxWithConstraints` de `TimelineRow` para evitar erro Kotlin causado pelo `Row` aninhado.
+- Metadados, CI e documentação sincronizados. Nenhuma funcionalidade de edição removida.
+- Compilação Android completa permanece pendente.
+
 ## 0.1.14 (versionCode 15) — 19/10/2026
 - Alinhamento unificado das faixas da timeline (rótulo de 60 dp, margem de 12 dp); blocos retangulares.
 - Toque em clipe abre Bottom Sheet compacto: cortar, duplicar, mover, excluir com confirmação e volume individual; prévia passa a seguir volume individual.

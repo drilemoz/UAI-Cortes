@@ -1,11 +1,10 @@
-# Uai Cortes v0.1.14 · versionCode 15
+# Uai Cortes v0.1.15 · versionCode 16
 
-- Timeline alinhada e retangular para vídeo, até quatro PiPs, áudio e legendas.
-- Menu de edição individual por clipe: Cortar, Duplicar, Mover, Excluir com confirmação e Volume individual.
-- Legendas manuais e importação SRT, com prévia e efeitos de exportação.
-- Transições por par de clipes: corte direto, fade preto, fade branco. Dissolvência não disponível.
-- Extração de áudio AAC em M4A/MP4 via SAF: salvar e opcionalmente adicionar à timeline.
-- Projeto migrado para schema 4, preservando projetos anteriores.
-- APK previsto: UaiCortes-v0.1.14.apk.
+## Correção do build 15 (v0.1.14)
 
-**Pendente:** compilação completa e validação de prévia/exportação real no Android. MP3/WAV indisponíveis.
+- Corrigidos os erros de compilação Kotlin nas telas Editor e PiP ao usar `ModalBottomSheet` e `rememberModalBottomSheetState`, com adesão explícita à API experimental do Material 3.
+- Corrigido o acesso à largura de `BoxWithConstraints` em `TimelineRow` para calcular a largura dos clipes.
+- Mantidos: menu de clipes, legendas manuais e importação SRT, transições fade preto/branco, extração de áudio M4A/AAC, quatro PiPs e demais ferramentas.
+- APK previsto: `UaiCortes-v0.1.15.apk`.
+
+**Pendente:** nova compilação no GitHub Actions, testes físicos de prévia/exportação. Dissolvência, MP3 e WAV continuam indisponíveis.

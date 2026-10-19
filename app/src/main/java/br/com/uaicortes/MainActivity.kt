@@ -474,7 +474,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.14 (15)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.15 (16)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: prévia em repetição, seletor de velocidade no corte e editor e mini tutorial de corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -482,6 +482,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
 }
 
 @OptIn(UnstableApi::class)
+@kotlin.OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     onSelected:(String)->Unit,onPosition:(Long)->Unit,onBack:()->Unit,onEdit:(String)->Unit,
@@ -758,10 +759,12 @@ private fun TimelineRow(label:String,color:Color, segments:List<Pair<String,Long
         Spacer(Modifier.width(6.dp))
         BoxWithConstraints(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(3.dp))
             .background(color.copy(alpha=.14f))) {
+            // Captura a largura no escopo de BoxWithConstraints: o Row interno muda o receptor.
+            val timelineWidth = maxWidth
             Row(Modifier.fillMaxSize()) {
                 segments.forEachIndexed { index,(title,duration) ->
                     val fraction = (duration.toFloat()/total.coerceAtLeast(1L)).coerceIn(0f,1f)
-                    Box(Modifier.width(maxWidth*fraction).fillMaxHeight().padding(end=1.dp)
+                    Box(Modifier.width(timelineWidth*fraction).fillMaxHeight().padding(end=1.dp)
                         .background(color.copy(alpha=.36f)).clickable { onClip(index) },
                         contentAlignment=Alignment.Center) {
                         Text(title,maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=10.sp,
@@ -1432,6 +1435,7 @@ private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit
     }
 }
 
+@kotlin.OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -> Unit,
                       back: () -> Unit, onChange: (Overlay) -> Unit,

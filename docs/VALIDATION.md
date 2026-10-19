@@ -1,4 +1,4 @@
-# Uai Cortes 0.1.14 | Validação
+# Uai Cortes 0.1.15 | Validação
 
 ## Funcionalidade implementada no código
 - Persistência de até quatro PiPs no campo `overlays`, `schemaVersion=4`, IDs estáveis; projetos com `pip` legado migrados em leitura.
@@ -46,9 +46,16 @@
 - Mini tutorial abaixo da linha de ações da tela de corte, dentro da área rolável.
 - **Ainda pendente:** compilação Gradle Android, teste de loop em fim de playlist, seleção de velocidade em dispositivo, áudio e sincronismo com vários PiPs.
 
-## Inclusões v0.1.14
+## Inclusões v0.1.15
 - Modelo JSON schema 4: `subtitles`, `transitions`, `audioTracks` opcionais na leitura. Mantidos `music`, `overlays` e migração `pip`.
 - Extrator de áudio usa Media3 Transformer com `setRemoveVideo(true)` e grava arquivo AAC MP4 no URI SAF escolhido. M4A e MP4 são extensões sobre o mesmo contêiner; MP3 e WAV não estão incluídos.
 - Fades RGB preto/branco por clipe via efeito temporal; sem crossfade. Legendas com `TextOverlay` por faixa temporal.
 - Validações isoladas do parser SRT, cálculo de fade, limites de transição e PSI de Kotlin; não comprovam renderização final nem compatibilidade com codificadores do aparelho.
 - Testar em CI: compileSdk36, `:app:testDebugUnitTest`, lint, assembleRelease, renderização legenda/fade, áudio AAC e permissões de escrita SAF, mais mixagem e volume dos PiPs.
+
+## Build 15 / reparos v0.1.15
+
+- Logs reais do GitHub Actions build 15, Debug e Release: `MainActivity.kt:656–657`, `1636–1640` exigiam opt-in de Material3; `MainActivity.kt:764` acessava `maxWidth` no receptor interno incorreto.
+- `EditorScreen` e `PipScreen` anotados com `@kotlin.OptIn(ExperimentalMaterial3Api::class)` para manter separado o opt-in `androidx.annotation.OptIn` do Media3.
+- `TimelineRow` registra `val timelineWidth = maxWidth` antes do `Row` aninhado.
+- Testes locais estruturais e sintáticos apenas, sem Gradle Android. Nova execução `:app:testDebugUnitTest :app:lintDebug :app:assembleRelease` exigida no CI.
