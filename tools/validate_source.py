@@ -10,10 +10,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*24',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.23"',gradle)
-assert 'Versão 0.1.23 (24)' in ui
-for label in ["VERSION: '0.1.23'", "VERSION_CODE: '24'", 'TAG="v$VERSION"',
+assert re.search(r'versionCode\s*=\s*25',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.24"',gradle)
+assert 'Versão 0.1.24 (25)' in ui
+for label in ["VERSION: '0.1.24'", "VERSION_CODE: '25'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -51,13 +51,13 @@ assert 'EditableSeekTime(' in ui and 'TimeDigitsField(' in ui
 assert 'OverlayTiming.nextStart(' in ui and 'pendingSequential' in ui and 'pendingOverlap' in ui
 assert 'OverlayPlacement.collisions(' in ui and 'overlapWith' in ui
 assert 'dragHandle = null' in ui
-print('OK: 0.1.23 / versionCode 24, PiP sequencial, confirmação de colisão, bottom sheet compacto e CI')
+print('OK: 0.1.24 / versionCode 25, PiP sequencial, confirmação de colisão, bottom sheet compacto e CI')
 
 assert 'private fun TrimScreen(' in ui and 'TrimThumbnails(' in ui and 'RangeSlider(' not in ui
 assert 'TimeDigitsField(' in ui and 'NumericTimeMask' in ui and 'trimLogic' not in ui
 assert 'Marcar início' in ui and 'Marcar fim' in ui and 'Aplicar corte' in ui
 assert 'NumericTime.format(' in ui and 'TimeDigitsField("Começa em"' in ui
-print('OK: 0.1.23 / versionCode 24, editor de cortes com prévia, horários com máscara numérica, PiP preservado')
+print('OK: 0.1.24 / versionCode 25, editor de cortes com prévia, horários com máscara numérica, PiP preservado')
 
 assert 'TimeDigitsField("Tempo", cursorMs, total, autoApply = true' in ui
 assert 'TrimQuickAction(Icons.Default.ContentCut' in ui
@@ -65,7 +65,7 @@ assert 'TrimQuickAction(Icons.Default.Undo' in ui
 assert 'TrimQuickAction(Icons.Default.Delete' in ui
 assert 'undoClips' in ui and 'rememberUndo()' in ui
 assert 'Para marcar fim, avance o vídeo' in ui
-print('OK: v0.1.23 sem barra sobre miniaturas, tempo automático, ações compactas e desfazer de clipes')
+print('OK: v0.1.24 sem barra sobre miniaturas, tempo automático, ações compactas e desfazer de clipes')
 
 assert 'repeatMode = Player.REPEAT_MODE_ONE' in ui
 assert 'repeatMode = Player.REPEAT_MODE_ALL' in ui
@@ -90,7 +90,7 @@ for token in ['ClipSheetAction(', 'TimelineTimedRow(', 'private fun SubtitleScre
 assert 'TimedSubtitleOverlay' in fx and 'ClipFadeEffect' in fx
 assert 'EditFeatures.parseSrt' in ui and 'setRemoveVideo(true)' in extract
 assert 'project.audioTracks.forEach' in source and 'TimedSubtitleOverlay(project.subtitles' in source
-print('OK: v0.1.23 funcionalidades estruturais, schema 4, SRT, fades e extração M4A')
+print('OK: v0.1.24 funcionalidades estruturais, schema 4, SRT, fades e extração M4A')
 
 # Regressões detectadas no build GitHub Actions 15 (não valida tipos Kotlin).
 assert '@kotlin.OptIn(ExperimentalMaterial3Api::class)\n@Composable\nprivate fun PipScreen' in ui
@@ -122,4 +122,18 @@ assert 'audio.sourceStartMs' in ui and 'sourceStartMs+(projectMs-startMs)' in ui
 assert '.setStartPositionMs(sourceStart)' in source
 assert '.setEndPositionMs(sourceStart + playable)' in source
 assert 'MIN_TRIM_MS = 250L' in logic and 'fun initialRange(' in logic
-print('OK: v0.1.23 recorte de áudio, persistência legado, prévia e exportação com deslocamento de origem')
+print('OK: v0.1.24 recorte de áudio, persistência legado, prévia e exportação com deslocamento de origem')
+
+# v0.1.24: arrasto da faixa na timeline principal e alças de recorte.
+gesture=(root/'app/src/main/java/br/com/uaicortes/AudioTimelineEdit.kt').read_text()
+assert 'private fun InteractiveAudioTimeline(' in ui
+assert 'private fun AudioTrimGestureTimeline(' in ui
+assert 'onSelectAudio = { id ->' in ui
+assert 'onMoveTrack = { trackId, start ->' in ui
+assert 'AudioTimelineEdit.move(' in ui
+assert 'AudioTimelineEdit.left(' in ui
+assert 'AudioTimelineEdit.right(' in ui
+assert 'currentFinish()' in ui and 'AudioTimelineEdit.pixelsToMs(' in ui
+assert all(x in gesture for x in ['fun move(', 'fun left(', 'fun right(', 'fun pixelsToMs('])
+assert (root/'app/src/test/java/br/com/uaicortes/AudioTimelineEditTest.kt').exists()
+print('OK: v0.1.24 / versionCode 25, timeline de áudio arrastável, seleção e alças visuais com limites')

@@ -78,3 +78,8 @@ Correção v0.1.22: o workflow 19 compilou Kotlin Debug/Release, executou testes
 - Validar `tools/validate_source.py` e executar testes de `AudioTrackTimingTest` para limites de origem e projeto.
 - Novo teste `ProjectStoreTest.audioTrackSourceOffsetRoundTripAndLegacy` para persistência e migração JSON.
 - Ainda pendente: Gradle/Media3 Android, testes com arquivo M4A/MP4 e reprodução real, especialmente ao deslocar uma faixa e exportar MP4.
+
+## v0.1.24 (versionCode 25)
+- Executar `python3 tools/validate_source.py` e testes `AudioTimelineEditTest` no CI; verificar que metadados e 5 APKs são 0.1.24 / versionCode 25.
+- Testar em aparelho: arrastar faixa no editor e soltar (persistência após reabrir), tocar faixa para editar, arrastar alça esquerda/centro/direita e cancelar/salvar, trechos de 250ms, bordas do projeto, áudio sem metadados de duração e exportar comparando com prévia.
+- Sem build Gradle Android local nem teste físico nesta preparação.

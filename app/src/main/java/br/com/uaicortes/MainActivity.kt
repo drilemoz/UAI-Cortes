@@ -13,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -50,6 +51,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalDensity
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -94,6 +96,7 @@ fun UaiApp() {
     var project by remember { mutableStateOf<VideoProject?>(null) }
     var projects by remember { mutableStateOf(store.load()) }
     var selectedClip by remember { mutableStateOf("") }
+    var selectedAudioTrackId by remember { mutableStateOf<String?>(null) }
     var positionMs by remember { mutableLongStateOf(0L) }
     var pendingPicker by remember { mutableStateOf("") }
     var mediaOrigin by remember { mutableStateOf("editor") }
@@ -259,11 +262,14 @@ fun UaiApp() {
                         screen = "pip"
                     },
                     onAudio = { audioPicker.launch(arrayOf("audio/*")) },
+                    onSelectAudio = { id -> selectedAudioTrackId = id; navTo("audio") },
                     onSelectOverlay = { selectedOverlayId = it },
                     onTransition = { index -> selectedBoundary = index; screen = "transition" },
                     onSaveHome = { write(p); screen = "home" }) }
                 "trim" -> project?.let { TrimScreen(it, selectedClip, positionMs, ::back, { write(it) }, { selectedClip = it }) }
-                "audio" -> project?.let { AudioScreen(it, ::back, { write(it) }, { audioPicker.launch(arrayOf("audio/*")) }) }
+                "audio" -> project?.let { AudioScreen(it, ::back, { write(it) },
+                    { audioPicker.launch(arrayOf("audio/*")) }, selectedAudioTrackId,
+                    onSelectionConsumed = { selectedAudioTrackId = null }) }
                 "pip" -> project?.let { current -> PipScreen(current, selectedOverlayId,
                     onSelect = { selectedOverlayId = it }, back = ::back,
                     onChange = { changed ->
@@ -484,9 +490,9 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.23 (24)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.24 (25)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
-        Spacer(Modifier.height(14.dp));Text("Novidades: edição de faixas de áudio com início, fim, posição na timeline e pré-escuta.",
+        Spacer(Modifier.height(14.dp));Text("Novidades: mover faixas de áudio na timeline e ajustar o trecho por alças visuais.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -497,7 +503,8 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
 private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     onSelected:(String)->Unit,onPosition:(Long)->Unit,onBack:()->Unit,onEdit:(String)->Unit,
     onUpdate:(VideoProject)->Unit,onAddVideo:()->Unit,onPiP:()->Unit,onAudio:()->Unit,
-    onSelectOverlay:(String)->Unit,onTransition:(Int)->Unit,onSaveHome:()->Unit) {
+    onSelectOverlay:(String)->Unit,onTransition:(Int)->Unit,onSaveHome:()->Unit,
+    onSelectAudio:(String)->Unit) {
     val context=LocalContext.current
     val player=remember { ExoPlayer.Builder(context).build().apply { repeatMode = Player.REPEAT_MODE_ALL } }
     var playbackSpeed by remember(p.id) { mutableFloatStateOf(1f) }
@@ -636,10 +643,13 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             TextButton(onClick=onSaveHome) { Icon(Icons.Default.Save,null); Spacer(Modifier.width(4.dp)); Text("Salvar e voltar à Home") }
         }
         OverlayTimeline(p.overlays, p.durationMs, onClick = { id -> onSelectOverlay(id); onEdit("pip") })
-        TimelineTimedRow("Áudio",Green,
-            (p.music?.let { listOf(Triple(it.title, 0L, p.durationMs)) } ?: emptyList()) +
-                p.audioTracks.map { Triple(it.title,it.startMs,it.durationMs) },
-            p.durationMs,onClick={onEdit("audio")})
+        InteractiveAudioTimeline(p, onSelectTrack = onSelectAudio,
+            onMoveTrack = { trackId, start ->
+                onUpdate(p.copy(audioTracks = p.audioTracks.map { audio ->
+                    if (audio.id == trackId) audio.copy(startMs = start) else audio
+                }))
+                feedback = "Posição da faixa atualizada."
+            }, onLegacyClick = { onEdit("audio") })
         TimelineTimedRow("Legenda",Color(0xFFC38A38),
             p.subtitles.map { Triple(it.text,it.startMs,it.endMs-it.startMs) },
             p.durationMs,onClick={onEdit("subtitles")})
@@ -799,6 +809,144 @@ private fun TimelineRow(label:String,color:Color, segments:List<Pair<String,Long
                 }
             }
         }
+    }
+}
+
+/** Superfície gestual de timeline. Acumular pixels antes da conversão impede
+ * perda de deslocamentos pequenos durante gestos lentos.
+ */
+@Composable
+private fun AudioDragSurface(
+    modifier: Modifier, totalMs: Long, widthPx: Float,
+    onStep: (Long) -> Unit, onFinish: () -> Unit = {},
+    onTap: (() -> Unit)? = null,
+    content: @Composable BoxScope.() -> Unit = {}
+) {
+    val currentStep by rememberUpdatedState(onStep)
+    val currentFinish by rememberUpdatedState(onFinish)
+    val currentTap by rememberUpdatedState(onTap)
+    val clickModifier = if (onTap != null) Modifier.clickable { currentTap?.invoke() } else Modifier
+    Box(modifier.then(clickModifier).pointerInput(totalMs, widthPx) {
+        var accumulatedPx = 0f
+        var appliedMs = 0L
+        detectDragGestures(
+            onDragStart = { accumulatedPx = 0f; appliedMs = 0L },
+            onDragEnd = { currentFinish() },
+            onDragCancel = {},
+            onDrag = { change, amount ->
+                change.consume()
+                accumulatedPx += amount.x
+                val newMs = AudioTimelineEdit.pixelsToMs(accumulatedPx, widthPx, totalMs)
+                val delta = newMs - appliedMs
+                if (delta != 0L) { currentStep(delta); appliedMs = newMs }
+            })
+    }, content = content)
+}
+
+/** Na tela principal é possível arrastar cada faixa para outro momento.
+ * O movimento é persistido apenas quando o gesto termina, evitando gravação em cada pixel.
+ * Toque curto abre o editor detalhado da faixa.
+ */
+@Composable
+private fun InteractiveAudioTimeline(p: VideoProject,
+    onSelectTrack: (String) -> Unit, onMoveTrack: (String, Long) -> Unit,
+    onLegacyClick: () -> Unit) {
+    val totalMs = p.durationMs.coerceAtLeast(1L)
+    Row(Modifier.fillMaxWidth().height(38.dp).padding(horizontal=12.dp, vertical=2.dp),
+        verticalAlignment=Alignment.CenterVertically) {
+        Box(Modifier.width(60.dp).fillMaxHeight().background(Green, RoundedCornerShape(3.dp)),
+            contentAlignment=Alignment.Center) { Text("Áudio", color=Color.White, fontSize=11.sp) }
+        Spacer(Modifier.width(6.dp))
+        BoxWithConstraints(Modifier.weight(1f).fillMaxHeight()
+            .clip(RoundedCornerShape(3.dp)).background(Green.copy(alpha=.14f))) {
+            val timelineWidth = maxWidth
+            val timelineWidthPx = with(LocalDensity.current) { timelineWidth.toPx() }
+            p.music?.let { music ->
+                Box(Modifier.fillMaxSize().background(Green.copy(alpha=.16f))
+                    .clickable(onClick=onLegacyClick), contentAlignment=Alignment.CenterStart) {
+                    Text(music.title, modifier=Modifier.padding(start=3.dp),
+                        fontSize=9.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+                }
+            }
+            p.audioTracks.forEach { audio ->
+                key(audio.id) {
+                    var candidateStart by remember(audio.id, audio.startMs) { mutableLongStateOf(audio.startMs) }
+                    var changed by remember(audio.id, audio.startMs) { mutableStateOf(false) }
+                    val range = AudioTimelineDraft(candidateStart, audio.sourceStartMs,
+                        audio.sourceStartMs + audio.durationMs)
+                    val startFraction = (candidateStart.toFloat()/totalMs).coerceIn(0f,1f)
+                    val endFraction = (audio.durationMs.toFloat()/totalMs).coerceIn(0f,1f-startFraction)
+                    val drawnWidth = (timelineWidth*endFraction).coerceAtLeast(22.dp).coerceAtMost(timelineWidth)
+                    val drawnX = (timelineWidth*startFraction).coerceAtMost(timelineWidth-drawnWidth)
+                    AudioDragSurface(
+                        modifier=Modifier.offset(x=drawnX).width(drawnWidth).fillMaxHeight()
+                            .background(Green.copy(alpha=.72f),RoundedCornerShape(3.dp))
+                            .semantics { contentDescription = "${audio.title}: arrastar para mover; tocar para editar" },
+                        totalMs=totalMs, widthPx=timelineWidthPx,
+                        onStep={ delta ->
+                            candidateStart = AudioTimelineEdit.move(
+                                range.copy(timelineStartMs=candidateStart), delta, totalMs).timelineStartMs
+                            changed = changed || candidateStart != audio.startMs
+                        },
+                        onFinish={
+                            if (changed && candidateStart != audio.startMs) onMoveTrack(audio.id, candidateStart)
+                            changed = false
+                        },
+                        onTap={onSelectTrack(audio.id)}) {
+                        Text(audio.title, maxLines=1, overflow=TextOverflow.Ellipsis,
+                            fontSize=10.sp,color=Color.White,modifier=Modifier.align(Alignment.Center).padding(horizontal=4.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Ferramenta visual de três gestos independentes: início, deslocamento, fim.
+ * Os campos numéricos permanecem disponíveis para recortes menores que as alças.
+ */
+@Composable
+private fun AudioTrimGestureTimeline(draft: AudioTimelineDraft, projectMs: Long, sourceMs: Long,
+    onMove: (Long) -> Unit, onLeftTrim: (Long) -> Unit, onRightTrim: (Long) -> Unit) {
+    val total = projectMs.coerceAtLeast(1L)
+    BoxWithConstraints(Modifier.fillMaxWidth().height(74.dp).padding(vertical=12.dp)
+        .background(Green.copy(alpha=.12f),RoundedCornerShape(6.dp))) {
+        val timelineWidth = maxWidth
+        val timelineWidthPx = with(LocalDensity.current) { timelineWidth.toPx() }
+        val start = (draft.timelineStartMs.toFloat()/total).coerceIn(0f,1f)
+        val length = (draft.durationMs.toFloat()/total).coerceIn(0f,1f-start)
+        val w = (timelineWidth*length).coerceAtLeast(42.dp).coerceAtMost(timelineWidth)
+        val x = (timelineWidth*start).coerceAtMost(timelineWidth-w)
+        val edge = 15.dp
+        Box(Modifier.offset(x=x).width(w).fillMaxHeight()
+            .background(Green.copy(alpha=.46f),RoundedCornerShape(5.dp)))
+        AudioDragSurface(Modifier.offset(x=x+edge).width((w-edge*2).coerceAtLeast(0.dp))
+            .fillMaxHeight().semantics { contentDescription = "Arrastar trecho de áudio" },
+            totalMs=total,widthPx=timelineWidthPx,onStep=onMove) {
+            Icon(Icons.Default.OpenWith,null,tint=Color.White,
+                modifier=Modifier.size(17.dp).align(Alignment.Center))
+        }
+        AudioDragSurface(Modifier.offset(x=x).width(edge).fillMaxHeight()
+            .background(Green,RoundedCornerShape(topStart=5.dp,bottomStart=5.dp))
+            .semantics { contentDescription = "Ajustar entrada do áudio" },
+            totalMs=total,widthPx=timelineWidthPx,onStep=onLeftTrim) {
+            Box(Modifier.align(Alignment.Center).width(2.dp).height(22.dp).background(Color.White))
+        }
+        AudioDragSurface(Modifier.offset(x=x+w-edge).width(edge).fillMaxHeight()
+            .background(Green,RoundedCornerShape(topEnd=5.dp,bottomEnd=5.dp))
+            .semantics { contentDescription = "Ajustar saída do áudio" },
+            totalMs=total,widthPx=timelineWidthPx,
+            onStep={ if (sourceMs >= AudioTrackTiming.MIN_TRIM_MS) onRightTrim(it) }) {
+            Box(Modifier.align(Alignment.Center).width(2.dp).height(22.dp).background(Color.White))
+        }
+    }
+    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+        Text(formatPipMs(draft.timelineStartMs),fontSize=11.sp,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Duração ${formatPipMs(draft.durationMs.coerceAtLeast(0L))}",fontSize=11.sp,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(formatPipMs(draft.timelineEndMs),fontSize=11.sp,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -1348,7 +1496,9 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
 
 @OptIn(UnstableApi::class)
 @Composable
-private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit,chooseMusic:()->Unit) {
+private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit,
+                        chooseMusic:()->Unit, requestedTrackId:String? = null,
+                        onSelectionConsumed:()->Unit = {}) {
     val context = LocalContext.current
     val engine = remember { AudioExtractionEngine(context) }
     var sourceIndex by remember(p.id) { mutableIntStateOf(-1) } // -1 = all clips
@@ -1404,6 +1554,25 @@ private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit
     var editSourceStart by remember(p.id) { mutableLongStateOf(0L) }
     var editSourceEnd by remember(p.id) { mutableLongStateOf(0L) }
     val editDuration = editSourceEnd - editSourceStart
+    // A seleção feita na timeline do editor abre diretamente esta faixa para edição.
+    LaunchedEffect(requestedTrackId, p.id) {
+        val track = p.audioTracks.firstOrNull { it.id == requestedTrackId }
+        if (track != null) {
+            val duration = mediaDuration(context, Uri.parse(track.uri))
+            val range = AudioTrackTiming.initialRange(track.sourceStartMs, track.durationMs,
+                duration, track.startMs, p.durationMs)
+            if (range != null) {
+                editingAudioId = track.id
+                editSourceStart = range.first
+                editSourceEnd = range.last
+                editTimelineStart = track.startMs.coerceIn(0L,
+                    (p.durationMs - (range.last-range.first)).coerceAtLeast(0L))
+                previewPlayer.pause()
+                previewPlaying = false
+            } else message = "Não foi possível abrir esta faixa para corte."
+        }
+        if (requestedTrackId != null) onSelectionConsumed()
+    }
     val editValid = editingAudio != null && AudioTrackTiming.valid(
         editSourceStart, editSourceEnd, sourceAudioLength, editTimelineStart, p.durationMs)
     // Player separado evita interromper a prévia de extração de vídeo.
@@ -1505,6 +1674,29 @@ private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit
             Text("Editar trecho · ${track.title}",fontWeight=FontWeight.Bold,fontSize=17.sp)
             Text("Recorte a fonte e escolha quando ela entra no vídeo. O arquivo original fica intacto.",
                 style=MaterialTheme.typography.bodySmall)
+            Text("Arraste o centro para mover; as alças laterais ajustam o começo e o fim.",
+                style=MaterialTheme.typography.bodySmall)
+            AudioTrimGestureTimeline(
+                AudioTimelineDraft(editTimelineStart, editSourceStart, editSourceEnd),
+                p.durationMs, sourceAudioLength,
+                onMove = { delta ->
+                    val moved = AudioTimelineEdit.move(
+                        AudioTimelineDraft(editTimelineStart, editSourceStart, editSourceEnd),
+                        delta, p.durationMs)
+                    editTimelineStart = moved.timelineStartMs
+                },
+                onLeftTrim = { delta ->
+                    val changed = AudioTimelineEdit.left(
+                        AudioTimelineDraft(editTimelineStart, editSourceStart, editSourceEnd), delta)
+                    editTimelineStart = changed.timelineStartMs
+                    editSourceStart = changed.sourceStartMs
+                },
+                onRightTrim = { delta ->
+                    val changed = AudioTimelineEdit.right(
+                        AudioTimelineDraft(editTimelineStart, editSourceStart, editSourceEnd),
+                        delta, sourceAudioLength, p.durationMs)
+                    editSourceEnd = changed.sourceEndMs
+                })
             if (sourceAudioLength >= AudioTrackTiming.MIN_TRIM_MS &&
                 p.durationMs >= AudioTrackTiming.MIN_TRIM_MS) {
                 Text("Início no arquivo: ${formatPipMs(editSourceStart)}")

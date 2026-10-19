@@ -1,3 +1,11 @@
+## v0.1.24 (versionCode 25) · 19/10/2026
+- Timeline principal de áudio agora permite arrastar horizontalmente as faixas extras para alterar o início no projeto, persistindo só ao concluir o gesto.
+- Toque em uma faixa seleciona e abre o editor de áudio diretamente nela.
+- Editor de áudio com alças de recorte visual: esquerda (ajusta origem e tempo de entrada), centro (move), direita (ajusta fim do arquivo). Prévia dos valores até Salvar corte, preservando Cancelar.
+- Lógica `AudioTimelineEdit` com testes Kotlin de limites do arquivo/projeto, duração mínima e conversão pixels/tempo.
+- Compatibilidade JSON preservada; áudio legado e exportação não foram modificados nesta versão.
+- Verificações locais não substituem Gradle/Android e testes em aparelho.
+
 ## v0.1.23 (versionCode 24) · 19/10/2026
 
 - Faixas adicionais com entrada e saída no áudio de origem, posição na timeline, controles numéricos/deslizantes e pré-escuta separada.

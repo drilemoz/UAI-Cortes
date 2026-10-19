@@ -72,3 +72,12 @@ Os recursos novos da versão 0.1.11 ainda **não foram validados por compilaçã
 | Pré-escuta específica do trecho e cancelar/salvar edição | Implementado | Pendente |
 | Persistência de `sourceStartMs` e compatibilidade com JSON antigo | Implementado e testes de unidade | Pendente |
 | Aplicar deslocamento de origem na exportação e prévia do editor | Implementado | Pendente |
+
+## v0.1.24: interação visual no áudio
+
+| Recurso | Implementação | Validação |
+|---|---|---|
+| Arrasto de faixa extra diretamente no editor (ao soltar salva posição) | Código | Teste Android pendente |
+| Toque na faixa para editar o áudio selecionado | Código | Teste Android pendente |
+| Alças esquerda, central, direita para entrada, posição e saída | Código com lógica isolada e testes | Teste Android pendente |
+| Manter mínimo de 250 ms e limites de fonte/projeto | Lógica pura Kotlin | Unitários em CI pendentes |
