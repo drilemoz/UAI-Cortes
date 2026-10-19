@@ -1,3 +1,9 @@
+## v0.1.30 (versionCode 31) · 19/10/2026
+- Corrigido erro real de compilação do workflow 26: `Unresolved reference 'PathJoin'` em `MainActivity.kt:53/2594`. Import e chamada substituídos por `androidx.compose.ui.graphics.StrokeJoin` / `StrokeJoin.Round`.
+- Mantidos os efeitos de contorno existentes e todas as funcionalidades da v0.1.29, sem alterar o esquema do projeto.
+- Gradle, workflow, script dos cinco APKs, Sobre, verificações estruturais e documentação sincronizados com v0.1.30/versionCode 31.
+- Validações locais não substituem `:app:testDebugUnitTest`, `:app:lintDebug` e `:app:assembleRelease`, ainda pendentes em CI.
+
 ## v0.1.29 (versionCode 30) · 19/10/2026
 - Editor de legendas: sombra de deslocamento diagonal ajustável de 0–6 dp, com opção preta/branca. 0 desativa a sombra.
 - Espaçamento adicional entre linhas de 100–160% e alinhamento de parágrafos à esquerda, centralizado ou à direita, preservando projetos antigos.

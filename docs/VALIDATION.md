@@ -114,3 +114,10 @@ Correção v0.1.22: o workflow 19 compilou Kotlin Debug/Release, executou testes
 - Reabrir projeto antigo sem campos novos; copiar aparência de uma legenda a outra e verificar preservação de texto/horário/posição.
 - Pendente: `:app:testDebugUnitTest`, `:app:lintDebug`, `:app:assembleRelease`, cinco APKs e comparação quadro a quadro de prévia versus MP4 em 16:9 e 9:16.
 - Não considerar equivalência de rendering provada apenas por análise de sintaxe ou testes JVM de lógica.
+
+## v0.1.30 (versionCode 31) · correção do workflow 26
+- O workflow 26 da v0.1.29 falhou com `Unresolved reference 'PathJoin'` no import e no traço da prévia (MainActivity.kt). A execução atingiu o compilador Kotlin de Debug e Release; não houve APK final.
+- Substituir o import inválido por `androidx.compose.ui.graphics.StrokeJoin` e usar `StrokeJoin.Round` em `Stroke(...)`.
+- Rodar `python3 tools/validate_source.py`, conferir que não existe `PathJoin` em `MainActivity.kt`, validar `tools/package_apks.py`, metadados Gradle/workflow e testar a integridade do ZIP.
+- **Pendente em CI**: `gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleRelease`, empacotamento e publicação dos cinco APKs da v0.1.30.
+- **Pendente no Android real**: checagem de contornos e alinhamento das legendas na prévia e no MP4 final. A correção resolve a referência de tipo indicada no log, não comprova ausência de outros erros.

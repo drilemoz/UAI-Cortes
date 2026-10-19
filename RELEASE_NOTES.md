@@ -1,3 +1,9 @@
+## v0.1.30 (versionCode 31) · 19/10/2026
+- Correção do build 26: `PathJoin` (símbolo inexistente no Compose usado pelo projeto) substituído por `StrokeJoin.Round` no contorno das legendas, mantendo a mesma intenção visual.
+- Preservados os controles de estilo, sombra, entrelinhas e alinhamento da v0.1.29.
+- Cinco variantes Release (arm32, arm64, x86, x86_64 e universal) permanecem configuradas para GitHub Releases.
+- Compilação Kotlin, lint, empacotamento e publicação da v0.1.30 ainda dependem de nova execução do workflow.
+
 ## v0.1.29 (versionCode 30) · 19/10/2026
 - Novos controles de sombra deslocada (0–6 dp, preta/branca), espaçamento entre linhas (100–160%) e alinhamento à esquerda, centro ou direita.
 - Legendas antigas mantêm sombra desligada, espaçamento padrão e alinhamento centralizado.

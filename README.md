@@ -1,10 +1,10 @@
-# Uai Cortes 0.1.29
+# Uai Cortes 0.1.30
 
 Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
 
 ## Versões e ferramentas
 - `minSdk = 26`, `compileSdk = 36`, `targetSdk = 36`.
-- `versionName = 0.1.29`, `versionCode = 30`.
+- `versionName = 0.1.30`, `versionCode = 31`.
 - Kotlin 2.1.21, AGP 8.10.1, Gradle 8.11.1, JDK 17.
 - Media3 1.10.1, ExoPlayer e Transformer para composição H.264/AAC.
 - O editor não exige conta nem internet. A biblioteca PiP solicita acesso às fotos/vídeos do Android, integral ou parcial conforme consentimento; o seletor de documentos continua como alternativa.
@@ -44,7 +44,7 @@ Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
 - Mini tutorial de 5 passos fica abaixo dos botões de edição de corte.
 - Build e teste físico continuam pendentes; Media3 pode limitar decodificadores simultâneos no aparelho.
 
-## Novidades acumuladas até 0.1.29
+## Novidades acumuladas até 0.1.30
 - Até **4 PiPs por projeto**, com vídeos ou imagens independentes, seleção de camada e opção de adicionar, substituir ou remover.
 - Posição, escala 5–90%, duração, volume e silêncio independentes. Áudio desligado em um PiP não silencia os outros.
 - Quatro botões quadrados e compactos Posição/Tamanho/Duração/Mídia **na mesma linha**. Cada botão abre um painel **ModalBottomSheet** deslizando da borda inferior, por cima dos controles e ações inferiores, sem alterar a altura ou a posição da prévia. Fechamento por gesto de arrastar, toque fora ou botão; altura máxima de 64% da tela, com conteúdo rolável.
@@ -54,6 +54,11 @@ Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
 - Projeto JSON com `schemaVersion=4`, campo `overlays[]`, IDs persistentes e **migração de `pip` legado** sem descartar projetos antigos.
 - `ExportEngine`: compõe as até quatro sequências visuais e trilhas de áudio independentes. **Compatibilidade real com 4 decodificadores, sincronismo e transparência depende de build e teste em aparelho**.
 - Biblioteca de mídia MediaStore por tipo/pasta, alternativa SAF, e demais funcionalidades da 0.1.7 preservadas.
+
+## v0.1.30 · Correção de compilação do contorno das legendas
+- Corrigido `MainActivity.kt` para utilizar `StrokeJoin.Round`, enum disponível no Jetpack Compose, no lugar de `PathJoin.Round`, que causou `Unresolved reference` nas compilações Debug e Release do workflow 26.
+- A geometria e a espessura do contorno continuam as mesmas. A mudança não altera JSON, presets, áudio, timeline, compatibilidade ou efeitos já configurados.
+- Compilação da v0.1.30, lint e publicação dos cinco APKs devem ser confirmados pelo GitHub Actions.
 
 ## v0.1.29 · Sombras, entrelinhas e alinhamento das legendas
 - Controle individual de sombra diagonal sem desfoque, com deslocamento de 0–6 dp (0 desativa) e cor preta ou branca.
@@ -87,14 +92,14 @@ Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
 1. Envie os arquivos da pasta extraída para a **raiz** do repositório GitHub.
 2. Abra **Actions > Gerar APK Uai Cortes > Run workflow** ou envie alterações para `main`.
 3. O workflow valida código, roda testes, Android Lint e `assembleRelease` com API 36.
-4. Ao concluir, o **GitHub Releases > v0.1.29 > Assets** oferece diretamente cinco arquivos `.apk` individuais, sem um Artifact adicional e sem ZIP de distribuição:
-   - `UaiCortes-v0.1.29-arm32.apk` (`armeabi-v7a`)
-   - `UaiCortes-v0.1.29-arm64.apk` (`arm64-v8a`)
-   - `UaiCortes-v0.1.29-x86.apk` (`x86`)
-   - `UaiCortes-v0.1.29-x86_64.apk` (`x86_64`)
-   - `UaiCortes-v0.1.29-universal.apk` (qualquer arquitetura suportada)
+4. Ao concluir, o **GitHub Releases > v0.1.30 > Assets** oferece diretamente cinco arquivos `.apk` individuais, sem um Artifact adicional e sem ZIP de distribuição:
+   - `UaiCortes-v0.1.30-arm32.apk` (`armeabi-v7a`)
+   - `UaiCortes-v0.1.30-arm64.apk` (`arm64-v8a`)
+   - `UaiCortes-v0.1.30-x86.apk` (`x86`)
+   - `UaiCortes-v0.1.30-x86_64.apk` (`x86_64`)
+   - `UaiCortes-v0.1.30-universal.apk` (qualquer arquitetura suportada)
 5. Somente o APK **Release** é publicado. O gatilho por tags `v*` foi removido para impedir segundo build disparado pela tag criada no Release. O GitHub Actions mostra links diretos no resumo.
-6. O mesmo `versionCode=30` é usado em todas as variantes; o APK universal não exige conhecer a arquitetura. Apenas um deve ser instalado por vez. O app atual usa majoritariamente código gerenciado e Media3, portanto tamanhos de APK por ABI podem ser muito próximos. **Não presumir que uma variante é menor antes de medir**.
+6. O mesmo `versionCode=31` é usado em todas as variantes; o APK universal não exige conhecer a arquitetura. Apenas um deve ser instalado por vez. O app atual usa majoritariamente código gerenciado e Media3, portanto tamanhos de APK por ABI podem ser muito próximos. **Não presumir que uma variante é menor antes de medir**.
 7. O script `tools/package_apks.py` valida os cinco resultados do Gradle por `output-metadata.json`, assinatura, pacote, `versionCode` e SDK; falha se faltar alguma ABI ou houver duplicata. Não escolhe o primeiro APK encontrado.
 
 ### Assinatura

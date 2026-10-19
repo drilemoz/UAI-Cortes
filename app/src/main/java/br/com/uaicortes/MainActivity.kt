@@ -50,7 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.PathJoin
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
@@ -500,7 +500,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.29 (30)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.30 (31)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: estilos, fundos e negrito para legendas com prévia e exportação.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -2591,7 +2591,7 @@ private fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
                     Text(cue.text,color=Color(cue.outlineColor),fontSize=cue.sizeSp.sp,
                         fontFamily=family,fontWeight=textWeight,textAlign=alignment,
                         style=TextStyle(lineHeight=textLineHeight,
-                            drawStyle=Stroke(width=outlineWidthPx*2f,join=PathJoin.Round)))
+                            drawStyle=Stroke(width=outlineWidthPx*2f,join=StrokeJoin.Round)))
                 }
                 Text(cue.text,color=Color(cue.color),fontSize=cue.sizeSp.sp,
                     fontFamily=family,fontWeight=textWeight,textAlign=alignment,

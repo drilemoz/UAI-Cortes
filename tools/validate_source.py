@@ -10,10 +10,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*30',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.29"',gradle)
-assert 'Versão 0.1.29 (30)' in ui
-for label in ["VERSION: '0.1.29'", "VERSION_CODE: '30'", 'TAG="v$VERSION"',
+assert re.search(r'versionCode\s*=\s*31',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.30"',gradle)
+assert 'Versão 0.1.30 (31)' in ui
+for label in ["VERSION: '0.1.30'", "VERSION_CODE: '31'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -197,7 +197,7 @@ assert 'SubtitleStyles.normalizeLineSpacing(j.optInt(' in model
 assert all(x in ui for x in [
     'Sombra: ${selected.shadowOffsetDp}', 'Espaçamento entre linhas:',
     'SubtitleStyles.alignments.forEach', 'Shadow(', 'lineHeight=textLineHeight',
-    'textAlign=alignment', 'Versão 0.1.29 (30)'
+    'textAlign=alignment', 'Versão 0.1.30 (31)'
 ])
 assert all(x in fx for x in ['class SubtitleShadowSpan(', 'class SubtitleLineSpacingSpan(',
     'AlignmentSpan.Standard(layoutAlign)', 'SubtitleStyles.ALIGN_LEFT -> left.toFloat()',
@@ -206,6 +206,12 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.29'" in package_script and 'VERSION_CODE = 30' in package_script
-assert 'versionCode 30' in gradle and 'isUniversalApk = true' in gradle
-print('OK: v0.1.29 / versionCode 30, sombra, espaçamento, alinhamento, JSON legado, APKs')
+assert "VERSION = '0.1.30'" in package_script and 'VERSION_CODE = 31' in package_script
+assert 'versionCode 31' in gradle and 'isUniversalApk = true' in gradle
+print('OK: v0.1.30 / versionCode 31, sombra, espaçamento, alinhamento, JSON legado, APKs')
+
+# build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
+assert 'import androidx.compose.ui.graphics.StrokeJoin' in ui
+assert 'join=StrokeJoin.Round' in ui
+assert 'PathJoin' not in ui
+print('OK: build 26 — tipo StrokeJoin.Round existente no Compose, sem PathJoin')
