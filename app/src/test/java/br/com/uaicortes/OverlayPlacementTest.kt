@@ -45,4 +45,17 @@ class OverlayPlacementTest {
     @Test fun rejectsMoreThanFour() {
         assertNull(OverlayPlacement.arrange((1..5).map { item("$it") }))
     }
+    @Test fun collidingPipsNeedSpecificApproval() {
+        val first = item("a"); val second = item("b")
+        val pair = OverlayPlacement.pair("a", "b")
+        assertEquals(setOf(pair), OverlayPlacement.collisions(listOf(first, second)))
+        val arranged = OverlayPlacement.arrange(listOf(first, second), "b")!!
+        assertNotEquals(arranged.getValue("a"), arranged.getValue("b"))
+        val approved = OverlayPlacement.arrange(listOf(first, second), "b", setOf(pair))!!
+        assertEquals(approved.getValue("a"), approved.getValue("b"))
+        val third = item("c")
+        val three = OverlayPlacement.arrange(listOf(first, second, third), "b", setOf(pair))!!
+        val at = three.getValue("c"); val bt = three.getValue("b")
+        assertFalse(OverlayPlacement.intersects(third, second, at.first, at.second, bt.first, bt.second))
+    }
 }

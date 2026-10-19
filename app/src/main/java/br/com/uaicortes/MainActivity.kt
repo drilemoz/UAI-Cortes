@@ -53,6 +53,12 @@ private val Green = Color(0xFF16866E)
 private val Ink = Color(0xFF151515)
 private val LightBg = Color(0xFFF7F8FA)
 
+private data class OverlapConfirmation(
+    val project: VideoProject, val requested: List<Overlay>,
+    val preferredId: String, val conflicts: Set<Pair<String, String>>
+)
+private data class SequentialConfirmation(val uri: Uri, val isImage: Boolean, val mediaMs: Long)
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,6 +82,8 @@ fun UaiApp() {
     var selectedOverlayId by remember { mutableStateOf("") }
     var mediaAction by remember { mutableStateOf("add") }
     var previous by remember { mutableStateOf("home") }
+    var pendingOverlap by remember { mutableStateOf<OverlapConfirmation?>(null) }
+    var pendingSequential by remember { mutableStateOf<SequentialConfirmation?>(null) }
     val dark = when (theme) {
         "Claro" -> false
         "Escuro", "AMOLED" -> true
@@ -90,27 +98,46 @@ fun UaiApp() {
             selectedOverlayId = project!!.overlays.firstOrNull()?.id.orEmpty()
         previous = screen; screen = s
     }
-    fun saveOverlays(current: VideoProject, requested: List<Overlay>, preferredId: String?): Boolean {
-        val canvasAspect = current.clips.firstOrNull()?.let { mediaAspect(context, it.uri, false) } ?: 16f/9f
-        val slots = requested.map { pip ->
-            val aspect = mediaAspect(context, pip.uri, pip.isImage)
-            val (w, h) = OverlayEditorLogic.dimensions(pip.scale, aspect, canvasAspect)
-            PlacementItem(pip.id, pip.startAtMs, pip.durationMs, pip.x, pip.y, w, h)
+    fun saveOverlays(current: VideoProject, requested: List<Overlay>, preferredId: String?,
+                     decision: String = "ask"): Boolean {
+        val canvasAspect = current.clips.firstOrNull()?.let { mediaAspect(context, it.uri, false) } ?: 16f / 9f
+        val slots = requested.map { layer ->
+            val aspect = mediaAspect(context, layer.uri, layer.isImage)
+            val (w, h) = OverlayEditorLogic.dimensions(layer.scale, aspect, canvasAspect)
+            PlacementItem(layer.id, layer.startAtMs, layer.durationMs, layer.x, layer.y, w, h)
         }
-        val resolved = OverlayPlacement.arrange(slots, preferredId)
+        val allowed = requested.flatMap { layer ->
+            layer.overlapWith.filter { partner -> requested.any { it.id == partner } }
+                .map { OverlayPlacement.pair(layer.id, it) }
+        }.toSet()
+        val newConflicts = OverlayPlacement.collisions(slots) - allowed
+        if (newConflicts.isNotEmpty() && decision == "ask") {
+            pendingOverlap = OverlapConfirmation(current, requested, preferredId.orEmpty(), newConflicts)
+            return false
+        }
+        val approvedPairs = if (decision == "keep") allowed + newConflicts else allowed
+        val updated = requested.map { layer ->
+            if (decision == "keep" && layer.id == preferredId) {
+                val linked = newConflicts.mapNotNull { (a, b) ->
+                    when (layer.id) { a -> b; b -> a; else -> null }
+                }
+                layer.copy(overlapWith = (layer.overlapWith + linked).distinct())
+            } else layer
+        }
+        val resolved = OverlayPlacement.arrange(slots, preferredId, approvedPairs)
         if (resolved == null) {
             android.widget.Toast.makeText(context,
-                "Sem espaço para todos os PiPs. Reduza o tamanho ou ajuste a duração.",
+                "Não há espaço para distribuir esses PiPs. Reduza o tamanho ou ajuste a duração.",
                 android.widget.Toast.LENGTH_LONG).show()
             return false
         }
-        write(current.copy(overlays = requested.map { pip ->
-            val (x, y) = resolved.getValue(pip.id)
-            pip.copy(x = x, y = y)
+        write(current.copy(overlays = updated.map { layer ->
+            val (x, y) = resolved.getValue(layer.id)
+            layer.copy(x = x, y = y)
         }))
         return true
     }
-    fun insertOverlay(uri: Uri, isImage: Boolean, mediaMs: Long) {
+    fun insertOverlay(uri: Uri, isImage: Boolean, mediaMs: Long, allowTimeOverlap: Boolean = false) {
         val current = project ?: return
         val replacing = mediaAction == "replace"
         if (!replacing && current.overlays.size >= OverlayPlacement.MAX_PIPS) {
@@ -118,7 +145,16 @@ fun UaiApp() {
             screen = "pip"; return
         }
         val previousPip = if (replacing) current.overlays.firstOrNull { it.id == selectedOverlayId } else null
-        val start = (previousPip?.startAtMs ?: positionMs).coerceIn(0L, (current.durationMs - 1).coerceAtLeast(0))
+        val sequential = if (current.overlays.isEmpty()) positionMs.coerceIn(0L, (current.durationMs - 1).coerceAtLeast(0L))
+            else OverlayTiming.nextStart(current.overlays, current.durationMs)
+        if (previousPip == null && sequential == null && !allowTimeOverlap) {
+            pendingSequential = SequentialConfirmation(uri, isImage, mediaMs)
+            screen = "pip"
+            return
+        }
+        val start = (previousPip?.startAtMs ?: sequential ?:
+            OverlayTiming.suggestedOverlapStart(current.overlays, current.durationMs))
+            .coerceIn(0L, (current.durationMs - 1).coerceAtLeast(0L))
         val remaining = (current.durationMs - start).coerceAtLeast(1L)
         val duration = (if (isImage) (previousPip?.durationMs ?: 5000L) else mediaMs)
             .coerceIn(1L, remaining)
@@ -222,6 +258,38 @@ fun UaiApp() {
                 "transition" -> project?.let { TransitionScreen(it, ::back, { write(it) }) }
                 "export" -> project?.let { ExportScreen(it, store.quality(), ::back) }
             }
+        }
+        pendingSequential?.let { pending ->
+            AlertDialog(onDismissRequest = { pendingSequential = null },
+                icon = { Icon(Icons.Default.Schedule, null) },
+                title = { Text("O PiP anterior já chega ao final") },
+                text = { Text("Não há tempo disponível depois do último PiP. Quer adicionar o novo no mesmo intervalo do anterior? A posição será conferida para evitar que cubra outro PiP.") },
+                confirmButton = { TextButton(onClick = {
+                    pendingSequential = null
+                    insertOverlay(pending.uri, pending.isImage, pending.mediaMs, allowTimeOverlap = true)
+                }) { Text("Adicionar no mesmo período") } },
+                dismissButton = { TextButton(onClick = { pendingSequential = null }) { Text("Cancelar") } })
+        }
+        pendingOverlap?.let { pending ->
+            AlertDialog(onDismissRequest = { pendingOverlap = null },
+                icon = { Icon(Icons.Default.Layers, null) },
+                title = { Text("PiPs sobrepostos") },
+                text = { Text("Os PiPs ocupam a mesma região durante parte do vídeo. Você pode reorganizá-los automaticamente ou confirmar que deseja manter um PiP sobre o outro.") },
+                confirmButton = { Column {
+                    TextButton(onClick = {
+                        pendingOverlap = null
+                        if (saveOverlays(pending.project, pending.requested, pending.preferredId, "keep")) {
+                            selectedOverlayId = pending.preferredId
+                        }
+                    }) { Text("Manter sobreposição") }
+                    TextButton(onClick = {
+                        pendingOverlap = null
+                        if (saveOverlays(pending.project, pending.requested, pending.preferredId, "rearrange")) {
+                            selectedOverlayId = pending.preferredId
+                        }
+                    }) { Text("Reposicionar automaticamente") }
+                } },
+                dismissButton = { TextButton(onClick = { pendingOverlap = null }) { Text("Cancelar") } })
         }
     }
 }
@@ -381,7 +449,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.9 (10)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.10 (11)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: biblioteca por tipo de mídia, PiP com ajustes em janelas e controle independente de som.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -456,9 +524,13 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             }
             IconButton(onClick={player.seekTo(player.currentPosition+5000)}) { Icon(Icons.Default.SkipNext,"Avançar cinco segundos") }
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal=16.dp), horizontalArrangement=Arrangement.SpaceBetween) {
-            Text(formatMs(currentMs),style=MaterialTheme.typography.bodySmall)
-            Text(formatMs(p.durationMs),style=MaterialTheme.typography.bodySmall)
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Text("Vídeo:", style = MaterialTheme.typography.bodySmall)
+            EditableSeekTime(currentMs, p.durationMs, onSeek = { ms ->
+                seekProjectPosition(player, p.clips, ms)
+                onPosition(ms)
+            }, modifier = Modifier.weight(1f))
         }
         if(p.durationMs>0) Slider(value=currentMs.toFloat().coerceIn(0f,p.durationMs.toFloat()),
             onValueChange={global ->
@@ -744,6 +816,16 @@ private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) ->
     var manual by remember(pip?.id) {
         mutableStateOf(pip?.let { (it.scale * 100f).toInt().toString() } ?: "30")
     }
+    var startDraft by remember(pip?.id) { mutableStateOf(formatPipMs(pip?.startAtMs ?: 0L)) }
+    var endDraft by remember(pip?.id) {
+        mutableStateOf(formatPipMs((pip?.startAtMs ?: 0L) + (pip?.durationMs ?: 0L)))
+    }
+    var editingStart by remember(pip?.id) { mutableStateOf(false) }
+    var editingEnd by remember(pip?.id) { mutableStateOf(false) }
+    LaunchedEffect(pip?.startAtMs, pip?.durationMs) {
+        if (!editingStart) startDraft = formatPipMs(pip?.startAtMs ?: 0L)
+        if (!editingEnd) endDraft = formatPipMs((pip?.startAtMs ?: 0L) + (pip?.durationMs ?: 0L))
+    }
     DisposableEffect(player) { onDispose { player.release() } }
     LaunchedEffect(p.clips) {
         if (p.clips.isNotEmpty()) {
@@ -775,7 +857,7 @@ private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) ->
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
         Heading("Editar sobreposições", back)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
-            .padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            .padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("PiPs · ${p.overlays.size} de 4", fontWeight = FontWeight.SemiBold)
@@ -790,13 +872,14 @@ private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) ->
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     p.overlays.forEachIndexed { index, item ->
                         val selected = pip?.id == item.id
                         OutlinedButton(onClick = { onSelect(item.id) },
                             border = BorderStroke(if (selected) 2.dp else 1.dp,
                                 if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
-                            shape = RoundedCornerShape(14.dp)) {
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) {
                             Icon(if (item.isImage) Icons.Default.Image else Icons.Default.Videocam,
                                 null, Modifier.size(18.dp))
                             Text(" PiP ${index + 1}")
@@ -831,13 +914,18 @@ private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) ->
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically) {
-                    Text("Vídeo: ${formatMs(previewTime)} / ${formatMs(p.durationMs)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Vídeo:", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        EditableSeekTime(previewTime, total, onSeek = { ms ->
+                            previewTime = ms
+                            seekProjectPosition(player, p.clips, ms)
+                        }, modifier = Modifier.weight(1f))
+                    }
                     TextButton(onClick = {
                         if (player.isPlaying) player.pause() else player.play()
                         playing = player.isPlaying
-                    }) {
+                    }, contentPadding = PaddingValues(horizontal = 2.dp)) {
                         Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                             "Reproduzir ou pausar vídeo")
                         Text(if (playing) "Pausar" else "Ver prévia")
@@ -847,8 +935,9 @@ private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) ->
                     onValueChange = { next ->
                         previewTime = next.toLong()
                         seekProjectPosition(player, p.clips, previewTime)
-                    }, valueRange = 0f..total.toFloat())
-                Text("Toque em uma ferramenta para abrir os ajustes de baixo para cima. Arraste ou pince o PiP selecionado na prévia.",
+                    }, valueRange = 0f..total.toFloat(),
+                    modifier = Modifier.fillMaxWidth().height(40.dp))
+                Text("Toque nos horários para digitar. Arraste ou pince o PiP na prévia.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 // Quatro ferramentas compactas na MESMA linha; os ajustes ficam em um sheet inferior.
@@ -895,7 +984,7 @@ private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) ->
                         }
                     }
                 }
-                Text("Os outros PiPs continuam independentes. Se não houver espaço livre, a alteração não será aplicada.",
+                Text("Até quatro PiPs independentes. Sobreposições serão confirmadas antes de aplicar.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -926,14 +1015,14 @@ private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) ->
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             containerColor = MaterialTheme.colorScheme.surface,
             scrimColor = Color.Black.copy(alpha = 0.12f),
-            dragHandle = { BottomSheetDefaults.DragHandle() }
+            dragHandle = null
         ) {
             Column(Modifier.fillMaxWidth()
                 .heightIn(max = sheetHeight)
                 .verticalScroll(rememberScrollState())
                 .imePadding()
-                .padding(horizontal = 18.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Icon(when (expanded) {
                         "position" -> Icons.Default.OpenWith
@@ -1034,18 +1123,54 @@ private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) ->
                                     "duration" -> {
                                         if (pip != null) {
                                             val end = (pip.startAtMs + pip.durationMs).coerceAtMost(total)
-                                            Text("Começa em: ${formatPipMs(pip.startAtMs)}")
+                                            Text("Toque nos números para digitar (mm:ss ou mm:ss.d).",
+                                                style = MaterialTheme.typography.bodySmall)
+                                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                                val parsedStart = TimeInput.parseMs(startDraft)
+                                                val minLength = minOf(500L, end.coerceAtLeast(1L))
+                                                val validStart = parsedStart != null &&
+                                                    parsedStart in 0L..(end - minLength).coerceAtLeast(0L)
+                                                OutlinedTextField(value = startDraft, onValueChange = {
+                                                    if (it.length <= 12) { startDraft = it; editingStart = true }
+                                                }, modifier = Modifier.weight(1f), label = { Text("Começa em") },
+                                                    singleLine = true, isError = !validStart,
+                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text))
+                                                IconButton(onClick = {
+                                                    parsedStart?.let { typed ->
+                                                        editingStart = false
+                                                        onChange(pip.copy(startAtMs = typed, durationMs = end - typed))
+                                                    }
+                                                }, enabled = validStart) { Icon(Icons.Default.Check, "Aplicar horário inicial") }
+                                            }
                                             Slider(value = pip.startAtMs.coerceIn(0L, end).toFloat(),
                                                 onValueChange = { value ->
+                                                    editingStart = false
                                                     val (newStart, newDuration) = OverlayEditorLogic.startChanged(
                                                         value.toLong(), pip.startAtMs, pip.durationMs, total)
                                                     onChange(pip.copy(startAtMs = newStart, durationMs = newDuration))
                                                 }, valueRange = 0f..end.coerceAtLeast(1L).toFloat())
-                                            Text("Termina em: ${formatPipMs(end)}")
                                             val minEnd = (pip.startAtMs + 500L).coerceAtMost(total)
+                                            val parsedEnd = TimeInput.parseMs(endDraft)
+                                            val validEnd = parsedEnd != null && parsedEnd in minEnd..total
+                                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                                OutlinedTextField(value = endDraft, onValueChange = {
+                                                    if (it.length <= 12) { endDraft = it; editingEnd = true }
+                                                }, modifier = Modifier.weight(1f), label = { Text("Termina em") },
+                                                    singleLine = true, isError = !validEnd,
+                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text))
+                                                IconButton(onClick = {
+                                                    parsedEnd?.let { typed ->
+                                                        editingEnd = false
+                                                        onChange(pip.copy(durationMs = typed - pip.startAtMs))
+                                                    }
+                                                }, enabled = validEnd) { Icon(Icons.Default.Check, "Aplicar horário final") }
+                                            }
                                             if (minEnd < total) {
                                                 Slider(value = end.coerceIn(minEnd, total).toFloat(),
                                                     onValueChange = { value ->
+                                                        editingEnd = false
                                                         onChange(pip.copy(durationMs = OverlayEditorLogic.endChanged(
                                                             value.toLong(), pip.startAtMs, total)))
                                                     }, valueRange = minEnd.toFloat()..total.toFloat())
@@ -1075,11 +1200,49 @@ private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) ->
                     Icon(Icons.Default.Check, null)
                     Text(" Concluído")
                 }
-                Spacer(Modifier.height(8.dp))
             }
         }
     }
 }
+
+/** Tocar no horário substitui o texto por um campo numérico na própria tela. */
+@Composable
+private fun EditableSeekTime(currentMs: Long, totalMs: Long, onSeek: (Long) -> Unit,
+                             modifier: Modifier = Modifier) {
+    var editing by remember { mutableStateOf(false) }
+    var draft by remember { mutableStateOf("") }
+    val parsed = TimeInput.parseMs(draft)
+    if (!editing) {
+        TextButton(onClick = {
+            draft = formatPipMs(currentMs)
+            editing = true
+        }, modifier = modifier, contentPadding = PaddingValues(horizontal = 3.dp)) {
+            Text("${displayEditableTime(currentMs)} / ${displayEditableTime(totalMs)}",
+                style = MaterialTheme.typography.bodySmall)
+            Icon(Icons.Default.Edit, "Digitar horário", Modifier.size(14.dp))
+        }
+    } else {
+        Row(modifier, verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            OutlinedTextField(value = draft, onValueChange = { if (it.length <= 12) draft = it },
+                singleLine = true, modifier = Modifier.weight(1f),
+                label = { Text("Ir para (mm:ss)") },
+                isError = parsed == null || parsed !in 0L..totalMs,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text))
+            IconButton(onClick = {
+                parsed?.takeIf { it in 0L..totalMs }?.let { onSeek(it); editing = false }
+            }, enabled = parsed != null && parsed in 0L..totalMs) {
+                Icon(Icons.Default.Check, "Ir ao horário")
+            }
+            IconButton(onClick = { editing = false }) {
+                Icon(Icons.Default.Close, "Cancelar edição")
+            }
+        }
+    }
+}
+
+private fun displayEditableTime(ms: Long): String =
+    if (ms % 1000L == 0L) formatMs(ms) else formatPipMs(ms)
 
 private fun formatPipMs(ms: Long): String {
     val minutes = (ms / 60000L)

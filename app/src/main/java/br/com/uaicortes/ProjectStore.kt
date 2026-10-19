@@ -31,18 +31,26 @@ data class Overlay(
     val startAtMs: Long = 0, val x: Float = 0.5f, val y: Float = 0.5f,
     val scale: Float = 0.36f, val volume: Float = 0.5f,
     val muted: Boolean = false,
+    val overlapWith: List<String> = emptyList(),
     val id: String = UUID.randomUUID().toString()
 ) {
     fun json() = JSONObject().put("uri", uri).put("isImage", isImage)
         .put("durationMs", durationMs).put("startAtMs", startAtMs)
         .put("x", x.toDouble()).put("y", y.toDouble()).put("scale", scale.toDouble())
-        .put("volume", volume.toDouble()).put("muted", muted).put("id", id)
+        .put("volume", volume.toDouble()).put("muted", muted)
+        .put("overlapWith", JSONArray().apply { overlapWith.forEach { put(it) } }).put("id", id)
     companion object {
         fun read(j: JSONObject) = Overlay(j.getString("uri"), j.optBoolean("isImage"),
             j.optLong("durationMs", 5000), j.optLong("startAtMs"),
             j.optDouble("x", 0.5).toFloat(), j.optDouble("y", 0.5).toFloat(),
             j.optDouble("scale", 0.36).toFloat(), j.optDouble("volume", 0.5).toFloat(),
-            j.optBoolean("muted", false), j.optString("id").ifBlank { UUID.randomUUID().toString() })
+            j.optBoolean("muted", false),
+            j.optJSONArray("overlapWith")?.let { array ->
+                (0 until array.length()).mapNotNull { index ->
+                    array.optString(index).takeIf { it.isNotBlank() }
+                }.distinct()
+            } ?: emptyList(),
+            j.optString("id").ifBlank { UUID.randomUUID().toString() })
     }
 }
 
@@ -61,7 +69,7 @@ data class VideoProject(
     val pip: Overlay? get() = overlays.firstOrNull() // acesso legado somente leitura
     fun json(): JSONObject = JSONObject().put("id", id).put("title", title).put("updated", updated)
         .put("clips", JSONArray().also { a -> clips.forEach { a.put(it.json()) } })
-        .put("schemaVersion", 2)
+        .put("schemaVersion", 3)
         .put("overlays", JSONArray().also { a -> overlays.take(4).forEach { a.put(it.json()) } })
         .put("music", music?.json()).put("transition", transition)
     companion object {

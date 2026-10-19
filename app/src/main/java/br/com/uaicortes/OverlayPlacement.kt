@@ -20,9 +20,22 @@ object OverlayPlacement {
         return overlapTime && overlapX && overlapY
     }
 
+    /** Par não ordenado usado nas permissões individuais de sobreposição intencional. */
+    fun pair(a: String, b: String): Pair<String, String> =
+        if (a <= b) a to b else b to a
+
+    fun collisions(items: List<PlacementItem>): Set<Pair<String, String>> = buildSet {
+        items.forEachIndexed { index, first ->
+            items.drop(index + 1).forEach { second ->
+                if (intersects(first, second)) add(pair(first.id, second.id))
+            }
+        }
+    }
+
     /** O item editado tem prioridade, mas pode ceder um pouco de espaço quando
      * não existir distribuição válida na posição solicitada. Nunca altera a escala. */
-    fun arrange(items: List<PlacementItem>, preferredId: String? = null): Map<String, Pair<Float, Float>>? {
+    fun arrange(items: List<PlacementItem>, preferredId: String? = null,
+                allowed: Set<Pair<String, String>> = emptySet()): Map<String, Pair<Float, Float>>? {
         if (items.size > MAX_PIPS || items.map { it.id }.distinct().size != items.size) return null
         if (items.any { it.width <= 0f || it.height <= 0f || it.width > .95f || it.height > .95f }) return null
         if (items.isEmpty()) return emptyMap()
@@ -71,7 +84,8 @@ object OverlayPlacement {
                 val fit = sorted.firstOrNull { (x, y) ->
                     placed.none { other ->
                         val pos = positions.getValue(other.id)
-                        intersects(item, other, x, y, pos.first, pos.second)
+                        pair(item.id, other.id) !in allowed &&
+                            intersects(item, other, x, y, pos.first, pos.second)
                     }
                 }
                 if (fit == null) { failed = true; break }

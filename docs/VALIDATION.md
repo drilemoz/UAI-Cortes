@@ -1,4 +1,4 @@
-# Uai Cortes 0.1.9 | Validação
+# Uai Cortes 0.1.10 | Validação
 
 ## Funcionalidade implementada no código
 - Persistência de até quatro PiPs no campo `overlays`, `schemaVersion=2`, IDs estáveis; projetos com `pip` legado migrados em leitura.
@@ -20,3 +20,10 @@
 - Testar prévia/exportação com 1, 2, 3 e 4 PiPs em vídeo; H.264/H.265, áudios opcionais, posições, proporção e sincronismo.
 - A disponibilidade de 4 decodificadores simultâneos depende do hardware. Não afirmar compatibilidade antes de medir.
 - Confirmar permissões de galerias (parcial e total) e URI SAF persistente após reiniciar.
+
+## Inclusões 0.1.10 (11)
+- Entrada numérica `TimeInput` com minutos, segundos, décimos e limites; testes para valores inválidos e overflow.
+- `OverlayTiming.nextStart` baseado no último término, sem adiantar para dentro do PiP anterior; aviso quando o vídeo acaba.
+- Colisão detectada por pares de PiPs e persistência `overlapWith` mediante confirmação explícita.
+- Sem alça do ModalBottomSheet e margens compactas.
+- Compilação Android em CI e teste físico permanecem necessários.
