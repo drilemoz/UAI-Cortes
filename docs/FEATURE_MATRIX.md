@@ -105,3 +105,16 @@ Os recursos novos da versão 0.1.11 ainda **não foram validados por compilaçã
 | Fundo transparente/escuro/claro e negrito | Prévia Compose e Media3 TextOverlay | Renderização MP4 pendente |
 | Copiar estilo para todas com confirmação | Código + lógica isolada | Teste Android pendente |
 | Projetos antigos sem campos de estilo | Defaults e testes JUnit | CI e reabertura no aparelho pendentes |
+
+## v0.1.28: fontes e contornos de legendas
+| Recurso | Implementação | Validação |
+|---|---|---|
+| Três fontes locais em cada legenda | Compose + JSON e Media3 TypefaceSpan | Testar renderização Android |
+| Intensidade e cor de contorno | Stroke Compose + LineBackgroundSpan no MP4 | Comparar prévia/exportação em 16:9, 9:16 e multilinha |
+| Cópia de aparência e projetos antigos | Defaults e testes JUnit novos | Rodar no CI e reabrir projetos antigos |
+
+## v0.1.29: apresentação avançada das legendas
+- Sombra diagonal deslocada em 0–6 dp, preta ou branca, sem blur artificial; o valor zero mantém o estilo antigo.
+- Espaçamento vertical entre linhas (100–160%) e alinhamento esquerdo/central/direito para textos com múltiplas linhas.
+- A prévia usa Compose `Shadow`/`TextStyle`; a exportação usa spans de desenho/alinhamento e exige confirmação de fidelidade em aparelho.
+- Leitura segura de campos opcionais e propagação para a ação de copiar aparência em massa.

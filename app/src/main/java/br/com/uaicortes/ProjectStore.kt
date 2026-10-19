@@ -64,12 +64,20 @@ data class SubtitleCue(
     val id: String = UUID.randomUUID().toString(),
     val text: String, val startMs: Long, val endMs: Long,
     val color: Int = -1, val sizeSp: Int = 22, val y: Float = .85f, val x: Float = .5f,
-    val backgroundColor: Int = SubtitleStyles.DEFAULT_BACKGROUND, val bold: Boolean = true
+    val backgroundColor: Int = SubtitleStyles.DEFAULT_BACKGROUND, val bold: Boolean = true,
+    val fontFamily: String = SubtitleStyles.FONT_SANS,
+    val outlineWidth: Int = 0, val outlineColor: Int = 0xFF000000.toInt(),
+    val shadowOffsetDp: Int = 0, val shadowColor: Int = 0xFF000000.toInt(),
+    val lineSpacingPercent: Int = 100, val textAlignment: String = SubtitleStyles.ALIGN_CENTER
 ) {
     fun json() = JSONObject().put("id", id).put("text", text)
         .put("startMs", startMs).put("endMs", endMs).put("color", color)
         .put("sizeSp", sizeSp).put("y", y.toDouble()).put("x", x.toDouble())
         .put("backgroundColor", backgroundColor).put("bold", bold)
+        .put("fontFamily", fontFamily).put("outlineWidth", outlineWidth)
+        .put("outlineColor", outlineColor)
+        .put("shadowOffsetDp", shadowOffsetDp).put("shadowColor", shadowColor)
+        .put("lineSpacingPercent", lineSpacingPercent).put("textAlignment", textAlignment)
     companion object {
         fun read(j: JSONObject) = SubtitleCue(j.optString("id").ifBlank { UUID.randomUUID().toString() },
             j.optString("text"), j.optLong("startMs"), j.optLong("endMs"),
@@ -77,7 +85,14 @@ data class SubtitleCue(
             j.optDouble("y", .85).toFloat().coerceIn(.1f, .95f),
             j.optDouble("x", .5).toFloat().coerceIn(.1f, .9f),
             j.optInt("backgroundColor", SubtitleStyles.DEFAULT_BACKGROUND),
-            j.optBoolean("bold", true))
+            j.optBoolean("bold", true),
+            SubtitleStyles.normalizeFont(j.optString("fontFamily", SubtitleStyles.FONT_SANS)),
+            j.optInt("outlineWidth", 0).coerceIn(0, 4),
+            j.optInt("outlineColor", 0xFF000000.toInt()),
+            j.optInt("shadowOffsetDp", 0).coerceIn(0, 6),
+            SubtitleStyles.normalizeShadowColor(j.optInt("shadowColor", 0xFF000000.toInt())),
+            SubtitleStyles.normalizeLineSpacing(j.optInt("lineSpacingPercent", 100)),
+            SubtitleStyles.normalizeAlignment(j.optString("textAlignment", SubtitleStyles.ALIGN_CENTER)))
     }
 }
 

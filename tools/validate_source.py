@@ -10,10 +10,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*28',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.27"',gradle)
-assert 'Versão 0.1.27 (28)' in ui
-for label in ["VERSION: '0.1.27'", "VERSION_CODE: '28'", 'TAG="v$VERSION"',
+assert re.search(r'versionCode\s*=\s*30',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.29"',gradle)
+assert 'Versão 0.1.29 (30)' in ui
+for label in ["VERSION: '0.1.29'", "VERSION_CODE: '30'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -167,8 +167,45 @@ styles=(root/'app/src/main/java/br/com/uaicortes/SubtitleStyles.kt').read_text()
 assert 'val backgroundColor: Int = SubtitleStyles.DEFAULT_BACKGROUND' in model
 assert '.put("backgroundColor", backgroundColor).put("bold", bold)' in model
 assert 'j.optBoolean("bold", true)' in model
-assert 'Color(cue.backgroundColor)' in ui and 'if(cue.bold) FontWeight.Bold' in ui
+assert 'Color(cue.backgroundColor)' in ui and 'if (cue.bold) FontWeight.Bold' in ui
 assert 'SubtitleStyles.presets.forEach' in ui and 'SubtitleStyles.applyToAll(' in ui
 assert 'BackgroundColorSpan(active.backgroundColor)' in fx and 'StyleSpan(Typeface.BOLD)' in fx
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleStylesTest.kt').exists()
 print('OK: v0.1.27 / versionCode 28, estilos das legendas com prévia/exportação e compatibilidade legado')
+
+# v0.1.28: fonte e contorno independentes de cada legenda, com migração opcional.
+assert 'val fontFamily: String = SubtitleStyles.FONT_SANS' in model
+assert 'val outlineWidth: Int = 0' in model
+assert '.put("fontFamily", fontFamily)' in model and '.put("outlineColor", outlineColor)' in model
+assert 'SubtitleStyles.normalizeFont(j.optString(' in model
+assert 'j.optInt("outlineWidth", 0).coerceIn(0, 4)' in model
+assert 'SubtitleStyles.fonts.forEach' in ui and 'Contorno:' in ui
+assert 'subtitleFont(cue.fontFamily)' in ui and 'drawStyle=Stroke(' in ui
+assert 'TypefaceSpan(family)' in fx and 'SubtitleOutlineSpan(' in fx
+assert 'fontFamily = source.fontFamily' in styles and 'outlineWidth = source.outlineWidth' in styles
+assert (root/'app/src/test/java/br/com/uaicortes/SubtitleTypographyTest.kt').exists()
+print('OK: v0.1.28 / versionCode 29, fontes e contornos, JSON legado e cinco variantes no CI')
+
+# v0.1.29: shadow, multiline leading, paragraph alignment and backward compatibility.
+assert 'val shadowOffsetDp: Int = 0' in model and 'val lineSpacingPercent: Int = 100' in model
+assert 'val textAlignment: String = SubtitleStyles.ALIGN_CENTER' in model
+assert '.put("shadowOffsetDp", shadowOffsetDp)' in model
+assert '.put("lineSpacingPercent", lineSpacingPercent)' in model
+assert 'SubtitleStyles.normalizeAlignment(j.optString(' in model
+assert 'j.optInt("shadowOffsetDp", 0).coerceIn(0, 6)' in model
+assert 'SubtitleStyles.normalizeLineSpacing(j.optInt(' in model
+assert all(x in ui for x in [
+    'Sombra: ${selected.shadowOffsetDp}', 'Espaçamento entre linhas:',
+    'SubtitleStyles.alignments.forEach', 'Shadow(', 'lineHeight=textLineHeight',
+    'textAlign=alignment', 'Versão 0.1.29 (30)'
+])
+assert all(x in fx for x in ['class SubtitleShadowSpan(', 'class SubtitleLineSpacingSpan(',
+    'AlignmentSpan.Standard(layoutAlign)', 'SubtitleStyles.ALIGN_LEFT -> left.toFloat()',
+    'SubtitleStyles.ALIGN_RIGHT -> right - width', 'active.textAlignment),0,text.length,0)'])
+assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
+    'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
+    'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
+assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
+assert "VERSION = '0.1.29'" in package_script and 'VERSION_CODE = 30' in package_script
+assert 'versionCode 30' in gradle and 'isUniversalApk = true' in gradle
+print('OK: v0.1.29 / versionCode 30, sombra, espaçamento, alinhamento, JSON legado, APKs')

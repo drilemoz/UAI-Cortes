@@ -100,3 +100,17 @@ Correção v0.1.22: o workflow 19 compilou Kotlin Debug/Release, executou testes
 - Confirmar no Android: cinco estilos, fundo transparente/claro/escuro, negrito, textos longos, vídeos 16:9 e 9:16, tema claro/AMOLED, cor/texto visíveis e resultado no MP4.
 - Abrir projeto antigo sem `backgroundColor`/`bold`, verificar aspecto clássico; salvar/reabrir projeto editado; copiar estilo para todas, cancelar confirmação e confirmar preservação de horários, posição e texto.
 - Análise sintática/estrutural local não equivale a build Gradle Android nem prova resultado final do compositor Media3.
+
+## v0.1.28 (versionCode 29)
+- Rodar validador estrutural, `SubtitleTypographyTest`, `SubtitleStylesTest`, `ProjectStoreTest` e testes Android Debug no GitHub Actions.
+- Validar cinco APKs Release v0.1.28/versionCode 29 no metadata; SDK permanece API 36.
+- Testar três fontes, contraste com fundo, contorno em 0/1/4 dp e escolha preto/branco em clipes 16:9 e 9:16. Comparar prévia vs MP4 exportado em texto longo, acentos e múltiplas linhas.
+- Verificar abertura de projetos antigos sem campos de fonte/contorno e a ação de copiar o estilo para todas mantendo IDs, posição e tempo.
+- A validação estrutural/Kotlin não substitui Gradle nem prova fidelidade de renderização do Media3.
+
+## v0.1.29 (versionCode 30)
+- Validador estrutural (`tools/validate_source.py`), testes `SubtitlePresentationTest` e regressões das versões anteriores no CI.
+- Testar sombras pretas/brancas em 0, 1 e 6 dp; espaçamento 100/160% e alinhamento esquerda/centro/direita em textos longos/multilinha e com acentos.
+- Reabrir projeto antigo sem campos novos; copiar aparência de uma legenda a outra e verificar preservação de texto/horário/posição.
+- Pendente: `:app:testDebugUnitTest`, `:app:lintDebug`, `:app:assembleRelease`, cinco APKs e comparação quadro a quadro de prévia versus MP4 em 16:9 e 9:16.
+- Não considerar equivalência de rendering provada apenas por análise de sintaxe ou testes JVM de lógica.

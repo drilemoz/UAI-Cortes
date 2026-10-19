@@ -1,3 +1,15 @@
+## v0.1.29 (versionCode 30) · 19/10/2026
+- Novos controles de sombra deslocada (0–6 dp, preta/branca), espaçamento entre linhas (100–160%) e alinhamento à esquerda, centro ou direita.
+- Legendas antigas mantêm sombra desligada, espaçamento padrão e alinhamento centralizado.
+- Prévia e Media3 recebem os novos efeitos, com necessidade de teste real em Android e comparação com vídeo exportado para comprovar fidelidade.
+- Cinco APKs Release por ABI + universal continuam configurados para GitHub Releases; execução de CI pendente.
+
+## v0.1.28 (versionCode 29) · 19/10/2026
+- Editor de legendas: fonte Moderna, Serifada ou Monoespaçada e contorno ajustável (0–4 dp), preto ou branco.
+- Prévia Compose atualizada com traço por baixo do preenchimento e renderização Media3 estendida com `TypefaceSpan` e `LineBackgroundSpan` para contorno por linha.
+- Persistência individual em `SubtitleCue`, leitura tolerante a projetos legados e cópia de aparência para todas as legendas sem modificar intervalos e conteúdo.
+- Novo `SubtitleTypographyTest`; testes Kotlin/Gradle e comparação visual com MP4 no aparelho ainda pendentes.
+
 ## v0.1.27 (versionCode 28) · 19/10/2026
 - Adicionados cinco estilos de legenda: Clássico, Destaque, Ciano, Limpo e Etiqueta. A escolha altera apenas a aparência da legenda selecionada.
 - Seletor de fundo (sem fundo, suave, escuro ou claro) e controle de negrito, com atualização imediata das prévias no editor e sobre o quadro do vídeo.

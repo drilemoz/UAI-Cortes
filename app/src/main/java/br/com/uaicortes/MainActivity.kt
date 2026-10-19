@@ -47,6 +47,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.PathJoin
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.text.style.TextAlign
@@ -495,7 +500,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.27 (28)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.29 (30)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: estilos, fundos e negrito para legendas com prévia e exportação.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -2525,6 +2530,12 @@ private fun TransitionScreen(p:VideoProject,back:()->Unit,update:(VideoProject)-
     }
 }
 
+private fun subtitleFont(family: String): FontFamily = when (SubtitleStyles.normalizeFont(family)) {
+    SubtitleStyles.FONT_SERIF -> FontFamily.Serif
+    SubtitleStyles.FONT_MONO -> FontFamily.Monospace
+    else -> FontFamily.SansSerif
+}
+
 /** A mesma coordenada x/y usada pelo exportador Media3: centro na horizontal,
  * base do texto na vertical. Nunca usar deslocamento fixo em dp para a legenda. */
 @Composable
@@ -2543,31 +2554,49 @@ private fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
         if (cue.text.isNotBlank()) {
             val location=SubtitlePlacement.anchorPixels(frameSize.width,frameSize.height,
                 textSize.width,textSize.height,draftX,draftY)
-            Text(cue.text,color=Color(cue.color),fontSize=cue.sizeSp.sp,
-                fontWeight=if(cue.bold) FontWeight.Bold else FontWeight.Normal,textAlign=TextAlign.Center,
-                modifier=Modifier.offset { IntOffset(location.first,location.second) }
-                    .widthIn(max=280.dp)
-                    .onSizeChanged { textSize=it }
-                    .then(if (editable) Modifier.pointerInput(cue.id,frameSize) {
-                        detectDragGestures(
-                            onDragStart={dragging=true},
-                            onDragEnd={
-                                dragging=false
-                                latestCommit(draftX,draftY)
-                            },
-                            onDragCancel={
-                                dragging=false
-                                draftX=cue.x;draftY=cue.y
-                            },
-                            onDrag={change,delta->
-                                change.consume()
-                                val next=SubtitlePlacement.drag(draftX,draftY,delta.x,delta.y,
-                                    frameSize.width,frameSize.height)
-                                draftX=next.first;draftY=next.second
-                            })
-                    } else Modifier)
-                    .background(Color(cue.backgroundColor),RoundedCornerShape(3.dp))
-                    .padding(horizontal=7.dp,vertical=2.dp))
+            val family = subtitleFont(cue.fontFamily)
+            val textWeight = if (cue.bold) FontWeight.Bold else FontWeight.Normal
+            val outlineWidthPx = with(LocalDensity.current) { cue.outlineWidth.dp.toPx() }
+            val shadowPx = with(LocalDensity.current) { cue.shadowOffsetDp.dp.toPx() }
+            val alignment = when (SubtitleStyles.normalizeAlignment(cue.textAlignment)) {
+                SubtitleStyles.ALIGN_LEFT -> TextAlign.Left
+                SubtitleStyles.ALIGN_RIGHT -> TextAlign.Right
+                else -> TextAlign.Center
+            }
+            val spacing = SubtitleStyles.normalizeLineSpacing(cue.lineSpacingPercent) / 100f
+            val textLineHeight = if (cue.lineSpacingPercent > 100)
+                (cue.sizeSp * 1.2f * spacing).sp else TextUnit.Unspecified
+            val fillStyle = TextStyle(lineHeight = textLineHeight,
+                shadow = if (cue.shadowOffsetDp > 0) Shadow(
+                    color=Color(cue.shadowColor), offset=Offset(shadowPx,shadowPx),blurRadius=0f
+                ) else null)
+            Box(modifier=Modifier.offset { IntOffset(location.first,location.second) }
+                .widthIn(max=280.dp)
+                .onSizeChanged { textSize=it }
+                .then(if (editable) Modifier.pointerInput(cue.id,frameSize) {
+                    detectDragGestures(
+                        onDragStart={dragging=true},
+                        onDragEnd={dragging=false;latestCommit(draftX,draftY)},
+                        onDragCancel={dragging=false;draftX=cue.x;draftY=cue.y},
+                        onDrag={change,delta->
+                            change.consume()
+                            val next=SubtitlePlacement.drag(draftX,draftY,delta.x,delta.y,
+                                frameSize.width,frameSize.height)
+                            draftX=next.first;draftY=next.second
+                        })
+                } else Modifier)
+                .background(Color(cue.backgroundColor),RoundedCornerShape(3.dp))
+                .padding(horizontal=7.dp,vertical=2.dp)) {
+                if (cue.outlineWidth > 0) {
+                    Text(cue.text,color=Color(cue.outlineColor),fontSize=cue.sizeSp.sp,
+                        fontFamily=family,fontWeight=textWeight,textAlign=alignment,
+                        style=TextStyle(lineHeight=textLineHeight,
+                            drawStyle=Stroke(width=outlineWidthPx*2f,join=PathJoin.Round)))
+                }
+                Text(cue.text,color=Color(cue.color),fontSize=cue.sizeSp.sp,
+                    fontFamily=family,fontWeight=textWeight,textAlign=alignment,
+                    style=fillStyle)
+            }
         }
     }
 }
@@ -2721,6 +2750,77 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
                 update(p.copy(subtitles=p.subtitles.map{
                     if(it.id==selected.id)it.copy(sizeSp=v.toInt()) else it}))
             })
+            Text("Fonte",fontWeight=FontWeight.SemiBold)
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement=Arrangement.spacedBy(7.dp)) {
+                SubtitleStyles.fonts.forEach { (family,label) ->
+                    FilterChip(selected=selected.fontFamily==family,onClick={
+                        update(p.copy(subtitles=p.subtitles.map { cue ->
+                            if (cue.id==selected.id) cue.copy(fontFamily=family) else cue
+                        }))
+                    },label={Text(label,maxLines=1)})
+                }
+            }
+            Text("Contorno: ${selected.outlineWidth} dp")
+            Slider(value=selected.outlineWidth.toFloat(),valueRange=0f..4f,steps=3,
+                onValueChange={width->
+                    update(p.copy(subtitles=p.subtitles.map { cue ->
+                        if (cue.id==selected.id) cue.copy(outlineWidth=width.toInt().coerceIn(0,4)) else cue
+                    }))
+                })
+            if (selected.outlineWidth>0) {
+                Text("Cor do contorno")
+                Row(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
+                    listOf("Preto" to 0xFF000000.toInt(),
+                        "Branco" to 0xFFFFFFFF.toInt()).forEach { (label,shade) ->
+                        FilterChip(selected=selected.outlineColor==shade,onClick={
+                            update(p.copy(subtitles=p.subtitles.map { cue ->
+                                if (cue.id==selected.id) cue.copy(outlineColor=shade) else cue
+                            }))
+                        },label={Text(label)})
+                    }
+                }
+            }
+            Text("Sombra: ${selected.shadowOffsetDp} dp de deslocamento")
+            Slider(value=selected.shadowOffsetDp.toFloat(),valueRange=0f..6f,steps=5,
+                onValueChange={value->
+                    val offset=value.toInt().coerceIn(0,6)
+                    update(p.copy(subtitles=p.subtitles.map { cue ->
+                        if(cue.id==selected.id) cue.copy(shadowOffsetDp=offset) else cue
+                    }))
+                })
+            if (selected.shadowOffsetDp>0) {
+                Text("Cor da sombra")
+                Row(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
+                    listOf("Preta" to 0xFF000000.toInt(),
+                        "Branca" to 0xFFFFFFFF.toInt()).forEach { (label,shade) ->
+                        FilterChip(selected=selected.shadowColor==shade,onClick={
+                            update(p.copy(subtitles=p.subtitles.map { cue ->
+                                if(cue.id==selected.id) cue.copy(shadowColor=shade) else cue
+                            }))
+                        },label={Text(label)})
+                    }
+                }
+            }
+            Text("Espaçamento entre linhas: ${selected.lineSpacingPercent}%")
+            Slider(value=selected.lineSpacingPercent.toFloat(),valueRange=100f..160f,steps=5,
+                onValueChange={value->
+                    val spacing=SubtitleStyles.normalizeLineSpacing(value.toInt())
+                    update(p.copy(subtitles=p.subtitles.map { cue ->
+                        if(cue.id==selected.id) cue.copy(lineSpacingPercent=spacing) else cue
+                    }))
+                })
+            Text("Alinhamento das linhas",fontWeight=FontWeight.SemiBold)
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement=Arrangement.spacedBy(7.dp)) {
+                SubtitleStyles.alignments.forEach { (align,label) ->
+                    FilterChip(selected=selected.textAlignment==align,onClick={
+                        update(p.copy(subtitles=p.subtitles.map { cue ->
+                            if(cue.id==selected.id) cue.copy(textAlignment=align) else cue
+                        }))
+                    },label={Text(label)})
+                }
+            }
             Text("Cor")
             Row(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
                 listOf(-1,android.graphics.Color.YELLOW,android.graphics.Color.CYAN).forEach { shade ->
@@ -2759,7 +2859,7 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
             }
             if(confirmStyleAll) AlertDialog(onDismissRequest={confirmStyleAll=false},
                 title={Text("Aplicar estilo a todas?")},
-                text={Text("A cor, o fundo, o tamanho e o negrito serão aplicados a todas as legendas. Os textos, horários e posições serão mantidos.")},
+                text={Text("Cor, fundo, tamanho, negrito, fonte, contorno, sombra, espaçamento e alinhamento serão aplicados a todas as legendas. Os textos, horários e posições serão mantidos.")},
                 confirmButton={TextButton(onClick={
                     update(p.copy(subtitles=SubtitleStyles.applyToAll(p.subtitles,selected)))
                     confirmStyleAll=false

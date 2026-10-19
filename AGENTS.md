@@ -45,3 +45,8 @@
 
 - v0.1.26: edição de legendas mantém IDs e intervalos absolutos; cada bloco da timeline deve selecionar o texto correto. Gestos modificam só `startMs`/`endMs`, salvando ao soltar, sem alterar o arquivo SRT ou reescrever propriedades visuais. Não bloquear legendas legadas curtas; manter campos numéricos de tempo como alternativa.
 - v0.1.27: `SubtitleCue.backgroundColor` e `bold` devem manter defaults compatíveis com projetos legados; estilos são aplicados à prévia e à exportação, com cor ARGB. Fundo transparente não recebe BackgroundColorSpan. Copiar aparência para todas nunca modifica IDs, texto, início/fim ou posição X/Y. Não aumentar schemaVersion sem necessidade de migração.
+
+- v0.1.28: guardar apenas IDs de famílias de fontes locais (`sans`, `serif`, `mono`) em `SubtitleCue` e normalizar desconhecidas para `sans`; contorno limitado a 0–4 dp (0 = desabilitado). Projetos antigos assumem fonte sans-serif e nenhum contorno. Não mexer na posição ou tempos ao aplicar estilos e não alterar schemaVersion 4. Conferir fidelidade de fontes/contornos e alinhamento multilinha no MP4 real antes de declarar equivalência completa.
+
+- v0.1.29: `SubtitleCue.shadowOffsetDp` (0–6), `shadowColor` (preto/branco), `lineSpacingPercent` (100–160) e `textAlignment` (`left`/`center`/`right`) são atributos opcionais por legenda; defaults legado 0, preto, 100, centro. Contorno/fonte e schemaVersion 4 preservados.
+- Sombra implementada como cópia de texto deslocada, sem blur; espaçamento e alinhamento afetam linhas dentro do bloco, não posição X/Y. Conferir Compose versus Media3 no Android antes de afirmar fidelidade visual total.
