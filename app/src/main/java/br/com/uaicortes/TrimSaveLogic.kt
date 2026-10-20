@@ -6,8 +6,11 @@ object TrimSaveLogic {
         val clip = project.clips.firstOrNull { it.id == clipId } ?: return null
         if (!TrimLogic.valid(begin, finish, clip.sourceDurationMs)) return null
         if (begin == clip.startMs && finish == clip.endMs) return project
+        val markerStillValid = clipId != project.lastTrimCutClipId ||
+            project.lastTrimCutSourceMs?.let { it in begin..finish } == true
         return project.copy(clips = project.clips.map { existing ->
             if (existing.id == clipId) existing.copy(startMs = begin, endMs = finish) else existing
-        })
+        }, lastTrimCutClipId = project.lastTrimCutClipId.takeIf { markerStillValid },
+            lastTrimCutSourceMs = project.lastTrimCutSourceMs.takeIf { markerStillValid })
     }
 }

@@ -1,8 +1,22 @@
-# Uai Cortes 0.1.31
+# Uai Cortes 0.1.33
 
 Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
 
-## Novidades da versão 0.1.31
+## Novidades da versão 0.1.33
+- **Legendas compactas:** uma única timeline horizontal com janelas de dez segundos, carregadas sob demanda, substitui as trilhas individuais empilhadas. As posições e durações exibidas usam horários absolutos, incluindo legendas sobrepostas.
+- **Prévia fixa no topo:** vídeo Media3/ExoPlayer com reprodução do trecho selecionado e legenda arrastável; ao tocar na legenda, busca seu início sem alterar o MP4 original.
+- **Lista enxuta e virtualizada:** número, texto abreviado, horário e ícone de edição. Tocar em uma linha expande somente a legenda ativa, incluindo texto, horários e uma pista de arrasto única para ajustar início, fim e deslocamento.
+- **Avançado sob demanda:** fontes, estilos, cores, sombras, contornos, posição fina e copiar aparência para todas continuam disponíveis, mas inicialmente recolhidos.
+- Importação SRT, criação e exclusão de legenda, defaults legados, persistência de propriedades e exportação foram preservados. Validação Android completa e teste visual em aparelho ainda pendentes.
+
+## Histórico da versão 0.1.32
+- Na tela Cortar e unir, a faixa **Trechos separados** apresenta miniatura, horários e destaque da parte ativa; os cartões rolam horizontalmente e a seleção rola automaticamente até o trecho escolhido.
+- **Dividir** seleciona a parte à direita e recupera o cursor no ponto exato da divisão, sem importar novamente o vídeo. Ao reabrir o projeto, o último ponto de divisão permanece disponível.
+- Excluir escolhe o trecho vizinho; Desfazer restaura a divisão e o marcador anterior. Transições já configuradas na fronteira de um clipe são preservadas.
+- O arquivo de vídeo original não é alterado; salvar o projeto e exportar MP4 continuam separados.
+- A lógica tem testes unitários; interface e Gradle Android aguardam validação em dispositivo/CI.
+
+## Histórico da versão 0.1.31
 - Editor: ação **Salvar** virou o primeiro cartão na barra inferior de ferramentas. Ao tocar, persiste o projeto local e volta diretamente à tela Home, sem exportar MP4.
 - Os cartões da barra inferior rolam horizontalmente, retornando ao primeiro após o último, nas duas direções (lista virtual extensa, iniciada no centro para simular ciclo contínuo). Nenhuma ferramenta foi removida.
 - Cortar e unir: sexto cartão **Salvar** após **Excluir** na faixa de ações com rolagem lateral. Salvar confirma também um corte ainda não aplicado, se início/fim forem válidos, e retorna diretamente à Home; um intervalo inválido exibe aviso e não sai da tela.
@@ -11,7 +25,7 @@ Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
 
 ## Versões e ferramentas
 - `minSdk = 26`, `compileSdk = 36`, `targetSdk = 36`.
-- `versionName = 0.1.31`, `versionCode = 32`.
+- `versionName = 0.1.33`, `versionCode = 34`.
 - Kotlin 2.1.21, AGP 8.10.1, Gradle 8.11.1, JDK 17.
 - Media3 1.10.1, ExoPlayer e Transformer para composição H.264/AAC.
 - O editor não exige conta nem internet. A biblioteca PiP solicita acesso às fotos/vídeos do Android, integral ou parcial conforme consentimento; o seletor de documentos continua como alternativa.

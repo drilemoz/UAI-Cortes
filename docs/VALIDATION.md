@@ -1,3 +1,17 @@
+# Verificação v0.1.33 · 20/10/2026
+- Confirmar `python3 tools/validate_source.py`, sintaxe PSI Kotlin da UI e do helper, testes Kotlin de janelas temporais, integridade CRC do ZIP.
+- Legendas: prévia Media3 fixa ao rolar 30/300 itens, posição x/y por arrasto, player busca legenda selecionada e para no fim do trecho. Garantir liberação de ExoPlayer ao sair da tela.
+- Validar seleção de legenda na timeline única (horizontal), rolagem automática da lista, criação e importação SRT, exclusão, ordem por tempo absoluto, sobreposição, campos início/fim e gesto de arrasto da legenda ativa.
+- Testar no Redmi com projeto 90s/30 legendas, lista longa e legendas sobrepostas; confirmar tema claro/escuro, dimensões pequenas e comparação prévia/exportação MP4.
+- Pendente: execução Gradle testDebugUnitTest/lintDebug/assembleRelease, testes reais Android e publicação dos 5 APKs. Não declarar APK compilado nesta entrega.
+
+# Verificação v0.1.32 · 20/10/2026
+- Validar `tools/validate_source.py`, parser Kotlin em arquivos alterados, testes de `TrimTimelineEditTest` e CRC do ZIP.
+- Casos esperados: dividir em 4s e 10s, selecionar a parte da direita; excluir apenas 4–10s; remarcar corte no mesmo vídeo; reabrir projeto e conferir cursor 10s; desfazer remoção e marcador.
+- A faixa de trechos usa `LazyRow` e carrega somente miniaturas dos itens visíveis. Verificar comportamento com clipes longos, tela estreita, rotação, temas claro/AMOLED e permissão persistente do URI.
+- Metadados opcionais (`lastTrimCutClipId`, `lastTrimCutSourceMs`) não alteram schemaVersion 4; testar leitura de projetos antigos e transições pré-existentes.
+- A compilação Android completa, lint, funcionamento real do ExoPlayer e exportação ainda precisam ser verificados em CI e no celular.
+
 # Verificação v0.1.31 · 20/10/2026
 - Executar `python3 tools/validate_source.py` para garantir versões, links de callbacks, lógica de corte, ações Save e configuração de APKs.
 - Nova lógica `TrimSaveLogic.applyPending`: não permite clipe inexistente/trecho com menos de 250 ms, salva intervalo válido mantendo os demais clipes, não altera arquivo original. Três testes JUnit adicionados.

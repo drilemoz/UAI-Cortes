@@ -135,7 +135,8 @@ data class VideoProject(
     val music: Music? = null, val transition: String = "Corte direto",
     val subtitles: List<SubtitleCue> = emptyList(),
     val transitions: List<ClipTransition> = emptyList(),
-    val audioTracks: List<AudioTrack> = emptyList()
+    val audioTracks: List<AudioTrack> = emptyList(),
+    val lastTrimCutClipId: String? = null, val lastTrimCutSourceMs: Long? = null
 ) {
     val durationMs get() = clips.sumOf { it.durationMs }
     val pip: Overlay? get() = overlays.firstOrNull() // acesso legado somente leitura
@@ -147,6 +148,7 @@ data class VideoProject(
         .put("subtitles", JSONArray().also { a -> subtitles.forEach { a.put(it.json()) } })
         .put("transitions", JSONArray().also { a -> transitions.forEach { a.put(it.json()) } })
         .put("audioTracks", JSONArray().also { a -> audioTracks.forEach { a.put(it.json()) } })
+        .put("lastTrimCutClipId", lastTrimCutClipId).put("lastTrimCutSourceMs", lastTrimCutSourceMs)
     companion object {
         fun read(j: JSONObject): VideoProject {
             val a = j.optJSONArray("clips") ?: JSONArray()
@@ -167,7 +169,9 @@ data class VideoProject(
                 } ?: emptyList(),
                 j.optJSONArray("audioTracks")?.let { arr ->
                     (0 until arr.length()).mapNotNull { i -> runCatching { AudioTrack.read(arr.getJSONObject(i)) }.getOrNull() }
-                } ?: emptyList())
+                } ?: emptyList(),
+                j.optString("lastTrimCutClipId").takeIf { it.isNotBlank() },
+                if (j.isNull("lastTrimCutSourceMs")) null else j.optLong("lastTrimCutSourceMs"))
         }
     }
 }

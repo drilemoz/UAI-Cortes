@@ -19,6 +19,14 @@ class TrimSaveLogicTest {
     @Test fun doesNotDiscardValidUnchangedEdit() {
         assertSame(original, TrimSaveLogic.applyPending(original, "um", 0, 10000))
     }
+    @Test fun clearsStaleLastCutAfterTrimmingItOut() {
+        val split = TrimTimelineEdit.split(original, "um", 3000L, "right")!!.project
+        val trimmed = TrimSaveLogic.applyPending(split, "right", 4500L, 8000L)!!
+        assertNull(trimmed.lastTrimCutClipId)
+        assertNull(trimmed.lastTrimCutSourceMs)
+        val stillThere = TrimSaveLogic.applyPending(split, "right", 3000L, 8000L)!!
+        assertEquals("right", stillThere.lastTrimCutClipId)
+    }
     @Test fun rejectsInvalidRangesWithoutModifyingProject() {
         assertNull(TrimSaveLogic.applyPending(original, "um", 5000, 5100))
         assertNull(TrimSaveLogic.applyPending(original, "um", 1000, 12000))

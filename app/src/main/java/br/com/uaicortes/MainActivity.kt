@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.KeyboardActions
@@ -255,10 +256,10 @@ fun UaiApp() {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             when (screen) {
                 "home" -> MainHome(projects, onCreate = { pendingPicker = "new"; selectedClip = ""; videoPicker.launch(arrayOf("video/*")) },
-                    onOpen = { project = it; selectedClip = it.clips.firstOrNull()?.id ?: ""; screen = "editor" },
+                    onOpen = { project = it; selectedClip = TrimTimelineEdit.resumeClipId(it); screen = "editor" },
                     onDelete = { store.delete(it.id); projects = store.load() },
                     onSettings = { screen = "settings" }, onTab = { screen = it })
-                "projects" -> ProjectsScreen(projects, { back() }, { project = it; selectedClip = it.clips.firstOrNull()?.id ?: ""; screen = "editor" },
+                "projects" -> ProjectsScreen(projects, { back() }, { project = it; selectedClip = TrimTimelineEdit.resumeClipId(it); screen = "editor" },
                     { store.delete(it.id); projects = store.load() })
                 "settings" -> SettingsScreen({ back() }) { screen = it }
                 "general" -> GeneralScreen(store, ::back)
@@ -503,9 +504,9 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.31 (32)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.33 (34)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
-        Spacer(Modifier.height(14.dp));Text("Novidades: cartão Salvar no editor, ferramentas circulares e salvamento direto em Cortar e unir.",
+        Spacer(Modifier.height(14.dp));Text("Novidades: trechos visuais em Cortar e unir, seleção automática após dividir e cursor no último corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -1026,6 +1027,70 @@ private fun SubtitleOverviewTimeline(cues:List<SubtitleCue>,totalMs:Long,
     }
 }
 
+/** Linha do tempo única e virtualizada em janelas de 10 segundos.
+ * Cada janela usa tempos absolutos: legendas sobrepostas continuam selecionáveis pela lista.
+ * Não são criadas 30 (ou 300) trilhas individuais na tela.
+ */
+@Composable
+private fun SubtitleCompactTimeline(cues: List<SubtitleCue>, totalMs: Long,
+    selectedId: String, onSelect: (String) -> Unit) {
+    val segmentMs = SubtitleCompactLayout.WINDOW_MS
+    val duration = totalMs.coerceAtLeast(1L)
+    val count = SubtitleCompactLayout.windowCount(totalMs)
+    val listState = rememberLazyListState()
+    val selectedStart = cues.firstOrNull { it.id == selectedId }?.startMs
+    LaunchedEffect(selectedId, selectedStart, count) {
+        if (selectedStart != null) {
+            listState.animateScrollToItem(SubtitleCompactLayout.windowFor(selectedStart,totalMs))
+        }
+    }
+    LazyRow(state=listState, modifier=Modifier.fillMaxWidth().height(62.dp),
+        horizontalArrangement=Arrangement.spacedBy(3.dp)) {
+        items(count=count, key={ it }) { segment ->
+            val begin = segment.toLong() * segmentMs
+            val end = minOf(begin + segmentMs, duration)
+            val visible = cues.filter {
+                SubtitleCompactLayout.visibleRange(segment,it.startMs,it.endMs,totalMs) != null
+            }
+            Column(Modifier.width(260.dp)) {
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+                    Text(formatPipMs(begin),fontSize=10.sp,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(formatPipMs(end),fontSize=10.sp,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Box(Modifier.fillMaxWidth().height(38.dp)
+                    .clip(RoundedCornerShape(5.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)) {
+                    visible.forEach { cue ->
+                        key(cue.id) {
+                            val range = SubtitleCompactLayout.visibleRange(
+                                segment,cue.startMs,cue.endMs,totalMs)!!
+                            val leftMs = range.first
+                            val rightMs = range.second
+                            val fraction = (leftMs - begin).toFloat() / segmentMs
+                            val span = (rightMs - leftMs).toFloat() / segmentMs
+                            val width = (260.dp * span).coerceAtLeast(6.dp).coerceAtMost(260.dp)
+                            val x = (260.dp * fraction).coerceIn(0.dp, 260.dp - width)
+                            val lane = (cues.indexOf(cue) % 2) * 19
+                            Box(Modifier.offset(x=x, y=lane.dp).width(width).height(18.dp)
+                                .background(if(cue.id==selectedId)Blue
+                                    else Color(0xFFC38A38),RoundedCornerShape(3.dp))
+                                .clickable { onSelect(cue.id) }
+                                .semantics { contentDescription="Selecionar legenda: ${cue.text.take(45)}" },
+                                contentAlignment=Alignment.Center) {
+                                Text(cue.text,color=Color.White,fontSize=9.sp,maxLines=1,
+                                    overflow=TextOverflow.Ellipsis,
+                                    modifier=Modifier.padding(horizontal=2.dp))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 /** Uma pista por legenda para não ocultar controles quando os tempos se sobrepõem.
  * Os valores são rascunho enquanto o gesto ocorre; somente onFinish grava.
  */
@@ -1416,6 +1481,89 @@ private fun TrimThumbnails(uri: String, durationMs: Long, onSeek: (Long) -> Unit
     }
 }
 
+/** Um quadro por trecho visível, carregado sob demanda para economizar memória. */
+@Composable
+private fun TrimSegmentFrame(clip: Clip) {
+    val context = LocalContext.current
+    val frame by produceState<ImageBitmap?>(initialValue = null,
+        clip.uri, clip.startMs, clip.endMs) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                val retriever = MediaMetadataRetriever()
+                try {
+                    retriever.setDataSource(context, Uri.parse(clip.uri))
+                    val offsetMs = minOf(clip.durationMs / 2L, 1500L)
+                    val frameMs = (clip.startMs + offsetMs).coerceIn(
+                        0L, (clip.sourceDurationMs - 1L).coerceAtLeast(0L))
+                    val bitmap = if (Build.VERSION.SDK_INT >= 27) {
+                        retriever.getScaledFrameAtTime(frameMs * 1000L,
+                            MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 200, 110)
+                    } else {
+                        retriever.getFrameAtTime(frameMs * 1000L,
+                            MediaMetadataRetriever.OPTION_CLOSEST_SYNC)?.let { original ->
+                            val scaled = android.graphics.Bitmap.createScaledBitmap(original, 200, 110, true)
+                            if (scaled !== original) original.recycle()
+                            scaled
+                        }
+                    }
+                    bitmap?.asImageBitmap()
+                } finally { retriever.release() }
+            }.getOrNull()
+        }
+    }
+    Box(Modifier.fillMaxWidth().height(58.dp).background(Color(0xFF1D1D23)),
+        contentAlignment = Alignment.Center) {
+        if (frame != null) Image(frame!!, "Miniatura do trecho", Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop)
+        else Icon(Icons.Default.Movie, "Trecho de vídeo", tint = Color.LightGray)
+    }
+}
+
+/** Trilha de pedaços: selecione tocando, sem precisar importar a mesma mídia novamente. */
+@Composable
+private fun TrimSegmentStrip(p: VideoProject, selectedId: String, onSelect: (String) -> Unit) {
+    val scroll = rememberLazyListState()
+    val selectedIndex = p.clips.indexOfFirst { it.id == selectedId }
+    LaunchedEffect(p.id, selectedId, selectedIndex) {
+        if (selectedIndex >= 0) scroll.animateScrollToItem(selectedIndex)
+    }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically) {
+        Text("Trechos separados (${p.clips.size})", fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.bodyMedium)
+        Text("Deslize para o lado →", fontSize = 10.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    LazyRow(state = scroll, horizontalArrangement = Arrangement.spacedBy(7.dp),
+        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 3.dp),
+        modifier = Modifier.fillMaxWidth()) {
+        items(p.clips, key = { it.id }) { item ->
+            val isSelected = item.id == selectedId
+            Surface(onClick = { onSelect(item.id) },
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(if (isSelected) 2.dp else 1.dp,
+                    if (isSelected) Blue else MaterialTheme.colorScheme.outlineVariant),
+                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                    else MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.width(120.dp)) {
+                Column {
+                    TrimSegmentFrame(item)
+                    Column(Modifier.padding(horizontal = 5.dp, vertical = 3.dp)) {
+                        val part = p.clips.indexOfFirst { it.id == item.id } + 1
+                        Text("Parte $part${if (isSelected) " · selecionada" else ""}",
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            fontSize = 10.sp, maxLines = 1)
+                        Text("${formatPipMs(item.startMs)}–${formatPipMs(item.endMs)}",
+                            fontSize = 9.sp, maxLines = 1)
+                        Text("Duração: ${formatPipMs(item.durationMs)}",
+                            fontSize = 9.sp, maxLines = 1)
+                    }
+                }
+            }
+        }
+    }
+}
+
 @OptIn(UnstableApi::class)
 @Composable
 private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back: () -> Unit,
@@ -1434,16 +1582,21 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
         var playbackSpeed by remember(clip.id) { mutableFloatStateOf(1f) }
         LaunchedEffect(player, playbackSpeed) { player.setPlaybackParameters(PlaybackParameters(playbackSpeed)) }
         DisposableEffect(player) { onDispose { player.release() } }
-        var cursorMs by remember(clip.id) { mutableLongStateOf(clip.startMs) }
+        var cursorMs by remember(clip.id) { mutableLongStateOf(TrimTimelineEdit.cursorFor(p, clip)) }
         var playing by remember(clip.id) { mutableStateOf(false) }
         var begin by remember(clip.id) { mutableLongStateOf(clip.startMs) }
         var finish by remember(clip.id) { mutableLongStateOf(clip.endMs) }
         // Um nível de desfazer cobre aplicar, dividir, reordenar e excluir.
         var undoClips by remember(p.id) { mutableStateOf<List<Clip>?>(null) }
         var undoSelected by remember(p.id) { mutableStateOf("") }
+        var undoLastCut by remember(p.id) { mutableStateOf<Pair<String?, Long?>?>(null) }
         LaunchedEffect(clip.id, clip.startMs, clip.endMs) {
             begin = clip.startMs
             finish = clip.endMs
+            if (cursorMs !in clip.startMs..clip.endMs) {
+                cursorMs = cursorMs.coerceIn(clip.startMs, clip.endMs)
+                player.seekTo(cursorMs)
+            }
         }
         LaunchedEffect(clip.id, clip.uri) {
             player.setMediaItem(MediaItem.fromUri(clip.uri))
@@ -1470,6 +1623,7 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
         fun rememberUndo() {
             undoClips = p.clips.toList()
             undoSelected = clip.id
+            undoLastCut = p.lastTrimCutClipId to p.lastTrimCutSourceMs
         }
         val validRange = TrimLogic.valid(begin, finish, total)
         val dirty = begin != clip.startMs || finish != clip.endMs
@@ -1480,19 +1634,8 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Clipe ${idx + 1} de ${p.clips.size}", fontWeight = FontWeight.SemiBold)
-                Text("Toque no clipe para selecionar", style = MaterialTheme.typography.labelSmall,
+                Text("Escolha uma parte na faixa abaixo", style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                p.clips.forEachIndexed { i, c ->
-                    OutlinedButton(onClick = { player.pause(); selected(c.id) },
-                        border = BorderStroke(if (c.id == clip.id) 2.dp else 1.dp,
-                            if (c.id == clip.id) Blue else MaterialTheme.colorScheme.outlineVariant),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
-                        Text("${i + 1} · ${c.title.take(21)}", maxLines = 1)
-                    }
-                }
             }
             // Prévia e miniaturas são blocos independentes: nenhum RangeSlider cobre as fotos.
             BoxWithConstraints(Modifier.fillMaxWidth().height(215.dp)
@@ -1511,6 +1654,12 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
             Slider(value = cursorMs.toFloat().coerceIn(0f, total.toFloat()),
                 onValueChange = { player.pause(); seek(it.toLong()) },
                 valueRange = 0f..total.toFloat(), modifier = Modifier.fillMaxWidth().height(30.dp))
+            TrimSegmentStrip(p, clip.id) { id -> player.pause(); selected(id) }
+            if (p.lastTrimCutClipId == clip.id && p.lastTrimCutSourceMs != null) {
+                Text("Último corte: ${formatPipMs(p.lastTrimCutSourceMs)} · cursor recuperado automaticamente.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary)
+            }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(1.dp)) {
                 TimeDigitsField("Tempo", cursorMs, total, autoApply = true,
@@ -1572,7 +1721,7 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
                 Icon(Icons.Default.Check, null)
                 Text(" Aplicar corte")
             }
-            Text("Dividir cria dois trechos; as setas mudam a ordem; a lixeira exclui um clipe.",
+            Text("Dividir seleciona o próximo trecho e coloca o cursor no corte; toque nas partes acima para escolher.",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             // Rolagem horizontal impede esmagar os seis cartões em telas pequenas.
@@ -1583,12 +1732,14 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
                         dirty -> notifyUser("Aplique ou desfaça o corte antes de dividir.")
                         !canSplit -> notifyUser("Coloque o cursor dentro do trecho, afastado das extremidades.")
                         else -> {
-                            rememberUndo()
-                            val updated = p.clips.toMutableList()
-                            updated[idx] = clip.copy(endMs = cursorMs)
-                            updated.add(idx + 1, clip.copy(
-                                id = UUID.randomUUID().toString(), startMs = cursorMs))
-                            update(p.copy(clips = updated))
+                            val result = TrimTimelineEdit.split(p, clip.id, cursorMs)
+                            if (result == null) notifyUser("Não foi possível dividir neste ponto.")
+                            else {
+                                rememberUndo()
+                                player.pause()
+                                update(result.project)
+                                selected(result.selectedClipId) // abre a metade direita exatamente no corte
+                            }
                         }
                     }
                 }
@@ -1597,9 +1748,12 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
                     undoClips?.let { snapshot ->
                         begin = snapshot.firstOrNull { it.id == undoSelected }?.startMs ?: begin
                         finish = snapshot.firstOrNull { it.id == undoSelected }?.endMs ?: finish
-                        update(p.copy(clips = snapshot))
+                        update(p.copy(clips = snapshot,
+                            lastTrimCutClipId = undoLastCut?.first,
+                            lastTrimCutSourceMs = undoLastCut?.second))
                         selected(undoSelected)
                         undoClips = null
+                        undoLastCut = null
                     }
                 }
                 TrimQuickAction(Icons.Default.ArrowBack, "Antes", idx > 0,
@@ -1622,11 +1776,11 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
                 }
                 TrimQuickAction(Icons.Default.Delete, "Excluir", p.clips.size > 1,
                     Modifier.width(86.dp)) {
-                    val other = p.clips.firstOrNull { it.id != clip.id }
-                    if (other != null) {
+                    TrimTimelineEdit.remove(p, clip.id)?.let { result ->
                         rememberUndo()
-                        update(p.copy(clips = p.clips.filterNot { it.id == clip.id }))
-                        selected(other.id)
+                        player.pause()
+                        update(result.project)
+                        selected(result.selectedClipId)
                     }
                 }
                 TrimQuickAction(Icons.Default.Save, "Salvar", true, Modifier.width(86.dp)) {
@@ -1649,9 +1803,9 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
                         style = MaterialTheme.typography.bodySmall)
                     Text("2. Marcar início/fim define o trecho; Aplicar corte confirma. O original não muda.",
                         style = MaterialTheme.typography.bodySmall)
-                    Text("3. Dividir separa o clipe no cursor; Antes/Depois reorganizam; Excluir remove.",
+                    Text("3. Dividir cria duas partes, seleciona a da direita e lembra o último corte. Toque nas partes para alternar.",
                         style = MaterialTheme.typography.bodySmall)
-                    Text("4. Desfazer volta a última edição; Salvar guarda o corte e volta ao início.",
+                    Text("4. Excluir remove só a parte selecionada; Desfazer recupera a última edição. Salvar volta à Home.",
                         style = MaterialTheme.typography.bodySmall)
                     Text("5. O vídeo repete até pausar; velocidade de 0,25× a 2× afeta só a prévia, não o MP4 exportado.",
                         style = MaterialTheme.typography.bodySmall)
@@ -2627,44 +2781,83 @@ private fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
     }
 }
 
-/** Amostra local do quadro em que a legenda começa. Falhas de codecs/permissão
- * são apresentadas sem impedir a edição de posição. Nenhum dado sai do aparelho. */
+/** Prévia fixa e reproduzível: seleciona o quadro da legenda usando os
+ * cortes reais do projeto. O texto pode ser arrastado sem tocar no MP4 original.
+ * A reprodução para no fim da legenda selecionada; não substitui a exportação.
+ */
 @Composable
 private fun SubtitlePositionPreview(p:VideoProject,cue:SubtitleCue,
     onPositionCommit:(Float,Float)->Unit) {
     val context=LocalContext.current
+    val player=remember(p.id) { ExoPlayer.Builder(context).build() }
+    var playing by remember(p.id) { mutableStateOf(false) }
+    DisposableEffect(player) { onDispose { player.release() } }
+    LaunchedEffect(player,p.clips.map { Triple(it.uri,it.startMs,it.endMs) }) {
+        playing=false
+        player.pause()
+        player.setMediaItems(p.clips.map { clip ->
+            MediaItem.Builder().setUri(clip.uri).setClippingConfiguration(
+                MediaItem.ClippingConfiguration.Builder().setStartPositionMs(clip.startMs)
+                    .setEndPositionMs(clip.endMs).build()).build()
+        })
+        player.prepare()
+    }
+    LaunchedEffect(cue.id,cue.startMs,p.clips) {
+        playing=false
+        player.pause()
+        seekProjectPosition(player,p.clips,cue.startMs)
+    }
+    LaunchedEffect(playing,cue.id,cue.endMs) {
+        while(playing) {
+            if(player.playbackState==Player.STATE_ENDED ||
+                projectPosition(player,p.clips,p.durationMs)>=cue.endMs) {
+                player.pause()
+                playing=false
+            }
+            delay(120)
+        }
+    }
     val source=remember(p.clips,cue.startMs) {
         TimelinePrecision.sourceAt(p.clips.map { it.uri to it.durationMs },cue.startMs)
     }
     val clip=p.clips.getOrNull(source?.first ?: -1)
-    val aspect=remember(clip?.uri) { clip?.let { mediaAspect(context,it.uri,false) } ?: 16f/9f }
-    val bitmap by produceState<ImageBitmap?>(null,clip?.uri,clip?.startMs,source?.second) {
-        value=withContext(Dispatchers.IO) {
-            if (clip==null || source==null) null else runCatching {
-                val r=MediaMetadataRetriever()
-                try {
-                    r.setDataSource(context,Uri.parse(clip.uri))
-                    val atUs=(clip.startMs+source.second)*1000L
-                    val frame=if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.O_MR1) {
-                        r.getScaledFrameAtTime(atUs,MediaMetadataRetriever.OPTION_CLOSEST_SYNC,
-                            480,(480f/aspect).toInt().coerceIn(120,960))
-                    } else r.getFrameAtTime(atUs,MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
-                    frame?.asImageBitmap()
-                } finally { r.release() }
-            }.getOrNull()
-        }
+    val aspect=remember(clip?.uri) {
+        clip?.let { mediaAspect(context,it.uri,false) } ?: 16f/9f
     }
-    BoxWithConstraints(Modifier.fillMaxWidth().height(230.dp)
-        .clip(RoundedCornerShape(12.dp)).background(Color(0xFF101014)),
-        contentAlignment=Alignment.Center) {
-        val w=minOf(maxWidth,maxHeight*aspect)
-        Box(Modifier.width(w).height(w/aspect)) {
-            if(bitmap!=null) Image(bitmap!!,contentDescription="Quadro do vídeo",
-                contentScale=ContentScale.FillBounds,modifier=Modifier.fillMaxSize())
-            else Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) {
-                Text("Quadro indisponível",color=Color.LightGray,fontSize=12.sp)
+    Column {
+        BoxWithConstraints(Modifier.fillMaxWidth().height(160.dp)
+            .clip(RoundedCornerShape(12.dp)).background(Color(0xFF101014)),
+            contentAlignment=Alignment.Center) {
+            val w=minOf(maxWidth,maxHeight*aspect)
+            Box(Modifier.width(w).height(w/aspect)) {
+                AndroidView(factory={ctx->previewPlayer(ctx).apply {
+                    this.player=player
+                    useController=false
+                }},update={it.player=player},modifier=Modifier.fillMaxSize())
+                SubtitleOverlayOnFrame(cue,editable=true,onPositionCommit=onPositionCommit)
             }
-            SubtitleOverlayOnFrame(cue,editable=true,onPositionCommit=onPositionCommit)
+        }
+        Row(Modifier.fillMaxWidth().height(36.dp),verticalAlignment=Alignment.CenterVertically,
+            horizontalArrangement=Arrangement.Center) {
+            IconButton(onClick={
+                player.pause();playing=false
+                seekProjectPosition(player,p.clips,cue.startMs)
+            },modifier=Modifier.size(36.dp)) {
+                Icon(Icons.Default.SkipPrevious,"Ir ao início da legenda",modifier=Modifier.size(23.dp))
+            }
+            IconButton(enabled=p.clips.isNotEmpty(),onClick={
+                if(playing) {player.pause();playing=false}
+                else {
+                    if(projectPosition(player,p.clips,p.durationMs)>=cue.endMs)
+                        seekProjectPosition(player,p.clips,cue.startMs)
+                    player.play();playing=true
+                }
+            },modifier=Modifier.size(36.dp)) {
+                Icon(if(playing)Icons.Default.PauseCircle else Icons.Default.PlayCircle,
+                    "Reproduzir ou pausar prévia",modifier=Modifier.size(28.dp))
+            }
+            Text("Trecho ${formatPipMs(cue.startMs)} – ${formatPipMs(cue.endMs)}",
+                fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -2703,49 +2896,117 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
             }.onFailure {status="Não foi possível ler o arquivo: ${it.message}"}
         }
     }
+    val sorted = remember(p.subtitles) {
+        p.subtitles.sortedWith(compareBy<SubtitleCue> { it.startMs }.thenBy { it.id })
+    }
     val selected=p.subtitles.firstOrNull{it.id==selectedId}
-    Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
-        .padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+    var editorOpen by remember(p.id) { mutableStateOf(false) }
+    var showAdvanced by remember(p.id) { mutableStateOf(false) }
+    val captionsState=rememberLazyListState()
+    LaunchedEffect(selectedId) {
+        val index=sorted.indexOfFirst { it.id==selectedId }
+        if(index>=0) captionsState.animateScrollToItem(index)
+    }
+    LaunchedEffect(p.subtitles.size) {
+        if(selectedId.isNotEmpty() && p.subtitles.none { it.id==selectedId }) {
+            selectedId=p.subtitles.firstOrNull()?.id.orEmpty()
+            editorOpen=false
+        }
+    }
+    Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal=14.dp)) {
         Heading("Legendas",back)
-        Text("Crie legendas manuais ou importe um arquivo .srt. Os textos serão exibidos na prévia e incorporados ao MP4.",
-            style=MaterialTheme.typography.bodySmall)
-        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-            Button(onClick={
-                val start=0L
-                val cue=SubtitleCue(text="Nova legenda",startMs=start,
-                    endMs=minOf(3000L,p.durationMs).coerceAtLeast(1L))
-                update(p.copy(subtitles=p.subtitles+cue));selectedId=cue.id
-            },modifier=Modifier.weight(1f)) {Icon(Icons.Default.Add,null);Text(" Nova")}
-            OutlinedButton(onClick={importer.launch(arrayOf("text/*","application/x-subrip","*/*"))},
-                modifier=Modifier.weight(1f)) {Icon(Icons.Default.FileOpen,null);Text(" Importar SRT")}
-        }
-        Text("Timeline das legendas: arraste o centro para mover, as alças para cortar. Solte para salvar.",
-            fontSize=12.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
-        SubtitleTimelineEditor(p.subtitles,p.durationMs,selectedId,
-            onSelect = { selectedId = it },
-            onCommit = { id,start,end ->
-                update(p.copy(subtitles = p.subtitles.map { cue ->
-                    if(cue.id==id) cue.copy(startMs=start,endMs=end) else cue
-                }))
-            })
-        p.subtitles.sortedBy { it.startMs }.forEachIndexed { index,cue ->
-            Surface(onClick={selectedId=cue.id},shape=RoundedCornerShape(5.dp),
-                color=if(selectedId==cue.id)MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surfaceVariant) {
-                Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically) {
-                    Text("${index+1} · ${cue.text.take(45)}",modifier=Modifier.weight(1f),maxLines=1)
-                    Text("${formatPipMs(cue.startMs)}",fontSize=11.sp)
-                }
-            }
-        }
         if(selected!=null) {
-            Text("Arraste a legenda sobre o vídeo para posicioná-la. O ajuste é salvo ao soltar.",
-                style=MaterialTheme.typography.bodySmall)
             SubtitlePositionPreview(p,selected) { x,y ->
-                update(p.copy(subtitles=p.subtitles.map {
-                    if(it.id==selected.id) it.copy(x=x,y=y) else it
+                update(p.copy(subtitles=p.subtitles.map { cue ->
+                    if(cue.id==selected.id) cue.copy(x=x,y=y) else cue
                 }))
             }
+        } else Box(Modifier.fillMaxWidth().height(196.dp)
+            .background(Color(0xFF101014),RoundedCornerShape(12.dp)),
+            contentAlignment=Alignment.Center) {
+            Text("Adicione uma legenda para visualizar o quadro",color=Color.White,fontSize=12.sp)
+        }
+        Text("Arraste a legenda sobre a prévia para posicionar",fontSize=11.sp,
+            color=MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier=Modifier.padding(top=4.dp,bottom=4.dp))
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,
+            verticalAlignment=Alignment.CenterVertically) {
+            Text("Linha do tempo",fontSize=13.sp,fontWeight=FontWeight.SemiBold)
+            Text(if(selected==null)"Sem seleção" else
+                "${formatPipMs(selected.startMs)} – ${formatPipMs(selected.endMs)}",
+                fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        SubtitleCompactTimeline(sorted,p.durationMs,selectedId,
+            onSelect={ id -> selectedId=id;editorOpen=false })
+        Row(Modifier.fillMaxWidth().padding(vertical=4.dp),
+            verticalAlignment=Alignment.CenterVertically,
+            horizontalArrangement=Arrangement.spacedBy(5.dp)) {
+            Text("Legendas (${p.subtitles.size})",fontSize=15.sp,
+                fontWeight=FontWeight.SemiBold,modifier=Modifier.weight(1f))
+            TextButton(onClick={
+                val start=selected?.endMs?.coerceAtMost((p.durationMs-1L).coerceAtLeast(0L)) ?: 0L
+                val cue=SubtitleCue(text="Nova legenda",startMs=start,
+                    endMs=minOf(start+3000L,p.durationMs).coerceAtLeast(start+1L))
+                update(p.copy(subtitles=p.subtitles+cue))
+                selectedId=cue.id;editorOpen=true;showAdvanced=false
+            }) {Icon(Icons.Default.Add,null);Text("Nova")}
+            OutlinedButton(onClick={importer.launch(arrayOf("text/*","application/x-subrip","*/*"))},
+                contentPadding=PaddingValues(horizontal=8.dp,vertical=4.dp)) {
+                Icon(Icons.Default.FileOpen,null);Text(" SRT",fontSize=12.sp)
+            }
+        }
+        if(status.isNotBlank()) Text(status,fontSize=12.sp,
+            color=MaterialTheme.colorScheme.primary)
+        LazyColumn(state=captionsState, modifier=Modifier.fillMaxWidth().weight(1f),
+            verticalArrangement=Arrangement.spacedBy(5.dp),
+            contentPadding=PaddingValues(bottom=24.dp)) {
+            if(sorted.isEmpty()) item {
+                Text("Nenhuma legenda. Toque em Nova ou importe um SRT.",
+                    color=MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier=Modifier.padding(vertical=20.dp))
+            }
+            itemsIndexed(sorted,key={_,cue->cue.id}) { index,cue ->
+                Column {
+                    Surface(onClick={
+                        val same=selectedId==cue.id
+                        selectedId=cue.id
+                        editorOpen=if(same)!editorOpen else true
+                        showAdvanced=false
+                    },shape=RoundedCornerShape(8.dp),
+                        color=if(selectedId==cue.id)MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.surfaceVariant) {
+                        Row(Modifier.fillMaxWidth().heightIn(min=44.dp).padding(horizontal=10.dp),
+                            verticalAlignment=Alignment.CenterVertically) {
+                            Text("${index+1}",fontSize=12.sp,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier=Modifier.width(26.dp))
+                            Text(cue.text,modifier=Modifier.weight(1f),fontSize=13.sp,
+                                maxLines=1,overflow=TextOverflow.Ellipsis)
+                            Spacer(Modifier.width(6.dp))
+                            Text(formatPipMs(cue.startMs),fontSize=11.sp,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            Icon(if(selectedId==cue.id && editorOpen)Icons.Default.ExpandLess
+                                else Icons.Default.Edit,contentDescription="Editar legenda",
+                                modifier=Modifier.padding(start=8.dp).size(18.dp))
+                        }
+                    }
+                    if(selectedId==cue.id && editorOpen && selected!=null) {
+                        Column(Modifier.fillMaxWidth().padding(top=8.dp,bottom=10.dp,
+                            start=5.dp,end=5.dp),
+                            verticalArrangement=Arrangement.spacedBy(7.dp)) {
+                            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
+                                horizontalArrangement=Arrangement.SpaceBetween) {
+                                Text("Editar legenda ${index+1}",fontWeight=FontWeight.SemiBold)
+                                TextButton(onClick={editorOpen=false}) {Text("Fechar")}
+                            }
+                Text("Ajustar intervalo (arraste o centro ou as alças)",fontSize=12.sp,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                SubtitleTimelineEditor(listOf(selected),p.durationMs,selectedId,
+                    onSelect={ selectedId=it },onCommit={ id,start,end ->
+                        update(p.copy(subtitles=p.subtitles.map { cue ->
+                            if(cue.id==id) cue.copy(startMs=start,endMs=end) else cue
+                        }))
+                    })
             OutlinedTextField(value=selected.text,onValueChange={v->
                 update(p.copy(subtitles=p.subtitles.map{if(it.id==selected.id) it.copy(text=v.take(500)) else it}))
             },label={Text("Texto")},minLines=2,modifier=Modifier.fillMaxWidth())
@@ -2757,6 +3018,12 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
                 valid={it>selected.startMs && it<=p.durationMs},onCommit={v->
                     update(p.copy(subtitles=p.subtitles.map{if(it.id==selected.id)it.copy(endMs=v) else it}))
                 })
+                OutlinedButton(onClick={showAdvanced=!showAdvanced},
+                    modifier=Modifier.fillMaxWidth()) {
+                    Icon(if(showAdvanced)Icons.Default.ExpandLess else Icons.Default.Tune,null)
+                    Text(if(showAdvanced)" Recolher estilos e posição" else " Estilos e ajustes avançados")
+                }
+                if(showAdvanced) {
             // Os estilos são salvos por legenda e reproduzidos também na exportação Media3.
             Text("Estilos rápidos",fontWeight=FontWeight.SemiBold)
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -2922,13 +3189,16 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
                     },label={Text(name)})
                 }
             }
+                }
             OutlinedButton(onClick={
                 update(p.copy(subtitles=p.subtitles.filterNot{it.id==selected.id}))
-                selectedId=""
+                selectedId=""; editorOpen=false
             }) {Icon(Icons.Default.Delete,null);Text(" Excluir legenda")}
+                        }
+                    }
+                }
+            }
         }
-        if(status.isNotBlank()) Text(status,color=MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.height(20.dp))
     }
 }
 

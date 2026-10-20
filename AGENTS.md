@@ -55,3 +55,9 @@
 
 - v0.1.31: o cartão Salvar no editor chama a persistência de projeto antes de voltar à Home, e a barra inferior é rolável circularmente nos dois sentidos. Não confundir salvar projeto com exportar MP4.
 - v0.1.31: na tela Cortar e unir, o novo Salvar permanece após Excluir em faixa horizontal; deve validar e aplicar o corte pendente antes de voltar à Home, mantendo o usuário na tela se o intervalo for inválido.
+
+- v0.1.32: ao dividir, criar parte esquerda e direita na ordem original, selecionar a direita e posicionar o cursor na fronteira usando horário de origem. Persistir IDs/horários opcionais do último corte sem mudar `schemaVersion=4`.
+- v0.1.32: faixa LazyRow mostra miniatura de cada parte visível (carregamento sob demanda), duração e seleção; rolar automaticamente para o trecho escolhido. Desfazer e excluir devem manter marcador consistente, sem afetar arquivos originais nem transições de clipes vizinhos.
+
+- v0.1.33: Legendas tem uma única timeline horizontal virtualizada e lista LazyColumn compacta. Não reintroduzir uma pista completa por legenda nem duplicar lista. Prévia Media3 fica acima da lista, não acompanha rolagem; apenas o editor da legenda ativa pode expandir.
+- v0.1.33: edição avançada inicia recolhida; preservar campos numéricos de tempo, gestos para ajustar intervalo, arrasto x/y, presets/fonte/contorno/sombra e `schemaVersion=4`. Ao escolher uma legenda, reproduzir prévia a partir do início; prévia não altera exportação. Validar alinhamento UI/export em aparelho.

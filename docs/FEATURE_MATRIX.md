@@ -1,3 +1,12 @@
+## Novidade v0.1.33 (versionCode 34)
+| Tela Legendas | Situação |
+|---|---|
+| Prévia fixa no topo com ExoPlayer e arrasto da legenda | Implementado no código, pendente Android |
+| Timeline horizontal geral virtualizada em janelas de 10s | Implementado no código, pendente Android |
+| Lista compacta LazyColumn com editor ativo expansível | Implementado no código, pendente Android |
+| Estilos/posição avançada recolhidos | Implementado no código, pendente Android |
+| Importar SRT, compatibilidade de horários e schema 4 | Preservados, pendente regressão física |
+
 # Escopo por recurso
 
 | Recurso | No código desta entrega | Validação física |
