@@ -10,10 +10,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*31',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.30"',gradle)
-assert 'Versão 0.1.30 (31)' in ui
-for label in ["VERSION: '0.1.30'", "VERSION_CODE: '31'", 'TAG="v$VERSION"',
+assert re.search(r'versionCode\s*=\s*32',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.31"',gradle)
+assert 'Versão 0.1.31 (32)' in ui
+for label in ["VERSION: '0.1.31'", "VERSION_CODE: '32'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -197,7 +197,7 @@ assert 'SubtitleStyles.normalizeLineSpacing(j.optInt(' in model
 assert all(x in ui for x in [
     'Sombra: ${selected.shadowOffsetDp}', 'Espaçamento entre linhas:',
     'SubtitleStyles.alignments.forEach', 'Shadow(', 'lineHeight=textLineHeight',
-    'textAlign=alignment', 'Versão 0.1.30 (31)'
+    'textAlign=alignment', 'Versão 0.1.31 (32)'
 ])
 assert all(x in fx for x in ['class SubtitleShadowSpan(', 'class SubtitleLineSpacingSpan(',
     'AlignmentSpan.Standard(layoutAlign)', 'SubtitleStyles.ALIGN_LEFT -> left.toFloat()',
@@ -206,12 +206,22 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.30'" in package_script and 'VERSION_CODE = 31' in package_script
-assert 'versionCode 31' in gradle and 'isUniversalApk = true' in gradle
-print('OK: v0.1.30 / versionCode 31, sombra, espaçamento, alinhamento, JSON legado, APKs')
+assert "VERSION = '0.1.31'" in package_script and 'VERSION_CODE = 32' in package_script
+assert 'versionCode 32' in gradle and 'isUniversalApk = true' in gradle
+print('OK: v0.1.31 / versionCode 32, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
 assert 'import androidx.compose.ui.graphics.StrokeJoin' in ui
 assert 'join=StrokeJoin.Round' in ui
 assert 'PathJoin' not in ui
 print('OK: build 26 — tipo StrokeJoin.Round existente no Compose, sem PathJoin')
+
+# v0.1.31: salvar acessível no editor e em Cortar e unir, inclusive rascunho válido.
+assert 'LazyRow(state = toolsScroll' in ui and 'items(count = Int.MAX_VALUE)' in ui
+assert 'Triple("Salvar", Icons.Default.Save, "save")' in ui
+assert 'Salvar e voltar à Home' not in ui
+assert 'TrimQuickAction(Icons.Default.Save, "Salvar"' in ui
+assert 'TrimSaveLogic.applyPending(p, clip.id, begin, finish)' in ui
+assert 'onSaveHome = { saved -> write(saved); screen = "home" }' in ui
+assert (root/'app/src/test/java/br/com/uaicortes/TrimSaveLogicTest.kt').exists()
+print('OK: v0.1.31 / versionCode 32, rolagem circular, salvar projeto e corte antes de ir à Home')

@@ -1,10 +1,17 @@
-# Uai Cortes 0.1.30
+# Uai Cortes 0.1.31
 
 Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
 
+## Novidades da versão 0.1.31
+- Editor: ação **Salvar** virou o primeiro cartão na barra inferior de ferramentas. Ao tocar, persiste o projeto local e volta diretamente à tela Home, sem exportar MP4.
+- Os cartões da barra inferior rolam horizontalmente, retornando ao primeiro após o último, nas duas direções (lista virtual extensa, iniciada no centro para simular ciclo contínuo). Nenhuma ferramenta foi removida.
+- Cortar e unir: sexto cartão **Salvar** após **Excluir** na faixa de ações com rolagem lateral. Salvar confirma também um corte ainda não aplicado, se início/fim forem válidos, e retorna diretamente à Home; um intervalo inválido exibe aviso e não sai da tela.
+- A saída **Exportar** continua separada do salvamento do projeto editável. O arquivo original não é modificado.
+- Testes estruturais e testes unitários da nova lógica foram adicionados. Compilação Android e verificação visual no aparelho ainda estão pendentes.
+
 ## Versões e ferramentas
 - `minSdk = 26`, `compileSdk = 36`, `targetSdk = 36`.
-- `versionName = 0.1.30`, `versionCode = 31`.
+- `versionName = 0.1.31`, `versionCode = 32`.
 - Kotlin 2.1.21, AGP 8.10.1, Gradle 8.11.1, JDK 17.
 - Media3 1.10.1, ExoPlayer e Transformer para composição H.264/AAC.
 - O editor não exige conta nem internet. A biblioteca PiP solicita acesso às fotos/vídeos do Android, integral ou parcial conforme consentimento; o seletor de documentos continua como alternativa.

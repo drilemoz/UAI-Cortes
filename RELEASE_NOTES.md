@@ -1,3 +1,11 @@
+## v0.1.31 (versionCode 32) · 20/10/2026
+- Ação “Salvar e voltar à Home” retirada de acima das trilhas e convertida em cartão **Salvar** no carrossel de ferramentas do editor.
+- Barra inferior com rolagem horizontal cíclica, acessível à esquerda e à direita. Cartões de Cortar, Unir, PiP, Áudio, Transição e Legendas preservados.
+- Em Cortar e unir, **Salvar** aparece após Excluir na faixa horizontal rolável, persistindo o corte pendente quando válido e retornando ao início. Erros de intervalo não fazem perder a edição.
+- `TrimSaveLogic` criada para tornar a aplicação do corte testável; adicionado `TrimSaveLogicTest` com cenários válidos, inválidos e inalterados.
+- `versionName=0.1.31` e `versionCode=32` alinhados ao workflow, script de empacotamento, Sobre e verificador estrutural.
+- Sem exportação automática. Gradle/Android CI e validação real de interface ainda pendentes.
+
 ## v0.1.30 (versionCode 31) · 19/10/2026
 - Correção do build 26: `PathJoin` (símbolo inexistente no Compose usado pelo projeto) substituído por `StrokeJoin.Round` no contorno das legendas, mantendo a mesma intenção visual.
 - Preservados os controles de estilo, sombra, entrelinhas e alinhamento da v0.1.29.

@@ -1,3 +1,10 @@
+# Verificação v0.1.31 · 20/10/2026
+- Executar `python3 tools/validate_source.py` para garantir versões, links de callbacks, lógica de corte, ações Save e configuração de APKs.
+- Nova lógica `TrimSaveLogic.applyPending`: não permite clipe inexistente/trecho com menos de 250 ms, salva intervalo válido mantendo os demais clipes, não altera arquivo original. Três testes JUnit adicionados.
+- Em aparelho, conferir barra inferior com rolagem circular nos dois sentidos, acesso a todos os cartões e toque no Salvar mesmo em tela pequena.
+- Em Cortar e unir: verificar rolagem até Excluir/Salvar; salvar corte alterado e não aplicado; testar corte inválido bloqueado; voltar para Home e reabrir projeto comprovando persistência.
+- Ainda sem compilação Kotlin/Android integral, verificação do lint, instalação de APK, teste de persistência Android e teste visual físico nesta entrega.
+
 ## v0.1.22
 Pré-escuta adicionada com ExoPlayer e limitação de trecho. Requer compilação CI e teste em aparelho.
 

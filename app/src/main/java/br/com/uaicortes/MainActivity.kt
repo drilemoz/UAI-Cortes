@@ -16,6 +16,8 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -276,7 +278,8 @@ fun UaiApp() {
                     onSelectOverlay = { selectedOverlayId = it },
                     onTransition = { index -> selectedBoundary = index; screen = "transition" },
                     onSaveHome = { write(p); screen = "home" }) }
-                "trim" -> project?.let { TrimScreen(it, selectedClip, positionMs, ::back, { write(it) }, { selectedClip = it }) }
+                "trim" -> project?.let { TrimScreen(it, selectedClip, positionMs, ::back, { write(it) },
+                    { selectedClip = it }, onSaveHome = { saved -> write(saved); screen = "home" }) }
                 "audio" -> project?.let { AudioScreen(it, ::back, { write(it) },
                     { audioPicker.launch(arrayOf("audio/*")) }, selectedAudioTrackId,
                     onSelectionConsumed = { selectedAudioTrackId = null }) }
@@ -500,9 +503,9 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.30 (31)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.31 (32)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
-        Spacer(Modifier.height(14.dp));Text("Novidades: estilos, fundos e negrito para legendas com prévia e exportação.",
+        Spacer(Modifier.height(14.dp));Text("Novidades: cartão Salvar no editor, ferramentas circulares e salvamento direto em Cortar e unir.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -659,9 +662,6 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         TimelineRow("Vídeo",Blue,p.clips.map{ it.title to it.durationMs },p.durationMs,currentMs,selectedId,
             onClip={ id -> onSelected(p.clips[id].id); clipMenuId = p.clips[id].id },
             onBoundary=onTransition)
-        Row(Modifier.fillMaxWidth().padding(horizontal=12.dp),horizontalArrangement=Arrangement.End) {
-            TextButton(onClick=onSaveHome) { Icon(Icons.Default.Save,null); Spacer(Modifier.width(4.dp)); Text("Salvar e voltar à Home") }
-        }
         OverlayTimeline(p.overlays, p.durationMs, onClick = { id -> onSelectOverlay(id); onEdit("pip") })
         InteractiveAudioTimeline(p, onSelectTrack = onSelectAudio,
             onMoveTrack = { trackId, start ->
@@ -673,20 +673,39 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         SubtitleOverviewTimeline(p.subtitles,p.durationMs,onSelectSubtitle,
             onOpen={onEdit("subtitles")})
         Spacer(Modifier.height(5.dp));HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
-        Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(10.dp), horizontalArrangement=Arrangement.SpaceEvenly) {
-            listOf(Triple("Cortar",Icons.Default.ContentCut,"trim"),Triple("Unir",Icons.Default.Add,"add"),
-                Triple("PiP",Icons.Default.Layers,"pip"),Triple("Áudio",Icons.Default.MusicNote,"audio"),
-                Triple("Transição",Icons.Default.AutoAwesomeMotion,"transition"),
-                Triple("Legendas",Icons.Default.ClosedCaption,"subtitles")).forEach { (name,icon,key) ->
-                Column(Modifier.weight(1f).clickable {
-                    when(key) {"add"->onAddVideo();"pip"->onPiP();
-                        "audio"->onEdit("audio");else->onEdit(key)}
-                },horizontalAlignment=Alignment.CenterHorizontally) {
-                    Box(Modifier.size(52.dp).clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant),contentAlignment=Alignment.Center) {
-                        Icon(icon,name,modifier=Modifier.size(22.dp))
+        // Ferramentas em carrossel circular: salvar é um cartão, não um botão solto.
+        // Começamos no centro de Int.MAX_VALUE para permitir deslizar nas duas direções.
+        val actions = remember { listOf(
+            Triple("Salvar", Icons.Default.Save, "save"),
+            Triple("Cortar", Icons.Default.ContentCut, "trim"),
+            Triple("Unir", Icons.Default.Add, "add"),
+            Triple("PiP", Icons.Default.Layers, "pip"),
+            Triple("Áudio", Icons.Default.MusicNote, "audio"),
+            Triple("Transição", Icons.Default.AutoAwesomeMotion, "transition"),
+            Triple("Legendas", Icons.Default.ClosedCaption, "subtitles")
+        ) }
+        val carouselStart = (Int.MAX_VALUE / 2 / actions.size) * actions.size
+        val toolsScroll = rememberLazyListState(initialFirstVisibleItemIndex = carouselStart)
+        LazyRow(state = toolsScroll, modifier = Modifier.fillMaxWidth().navigationBarsPadding()
+            .padding(vertical = 10.dp), contentPadding = PaddingValues(horizontal = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+            items(count = Int.MAX_VALUE) { index ->
+                val (name, icon, key) = actions[index % actions.size]
+                Column(Modifier.width(66.dp).clip(RoundedCornerShape(12.dp)).clickable {
+                    when (key) {
+                        "save" -> onSaveHome()
+                        "add" -> onAddVideo()
+                        "pip" -> onPiP()
+                        "audio" -> onEdit("audio")
+                        else -> onEdit(key)
                     }
-                    Text(name,fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant, maxLines=1)
+                }, horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.size(52.dp).clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
+                        Icon(icon, name, modifier = Modifier.size(22.dp))
+                    }
+                    Text(name, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -1400,7 +1419,8 @@ private fun TrimThumbnails(uri: String, durationMs: Long, onSeek: (Long) -> Unit
 @OptIn(UnstableApi::class)
 @Composable
 private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back: () -> Unit,
-                       update: (VideoProject) -> Unit, selected: (String) -> Unit) {
+                       update: (VideoProject) -> Unit, selected: (String) -> Unit,
+                       onSaveHome: (VideoProject) -> Unit) {
     val context = LocalContext.current
     val clip = p.clips.firstOrNull { it.id == selectedId } ?: p.clips.firstOrNull()
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
@@ -1555,9 +1575,10 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
             Text("Dividir cria dois trechos; as setas mudam a ordem; a lixeira exclui um clipe.",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            // Cinco ações em uma só linha, com ícones e rótulos curtos.
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                TrimQuickAction(Icons.Default.ContentCut, "Dividir", true, Modifier.weight(1f)) {
+            // Rolagem horizontal impede esmagar os seis cartões em telas pequenas.
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                TrimQuickAction(Icons.Default.ContentCut, "Dividir", true, Modifier.width(86.dp)) {
                     when {
                         dirty -> notifyUser("Aplique ou desfaça o corte antes de dividir.")
                         !canSplit -> notifyUser("Coloque o cursor dentro do trecho, afastado das extremidades.")
@@ -1572,7 +1593,7 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
                     }
                 }
                 TrimQuickAction(Icons.Default.Undo, "Desfazer", undoClips != null,
-                    Modifier.weight(1f)) {
+                    Modifier.width(86.dp)) {
                     undoClips?.let { snapshot ->
                         begin = snapshot.firstOrNull { it.id == undoSelected }?.startMs ?: begin
                         finish = snapshot.firstOrNull { it.id == undoSelected }?.endMs ?: finish
@@ -1582,7 +1603,7 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
                     }
                 }
                 TrimQuickAction(Icons.Default.ArrowBack, "Antes", idx > 0,
-                    Modifier.weight(1f)) {
+                    Modifier.width(86.dp)) {
                     rememberUndo()
                     val list = p.clips.toMutableList()
                     val before = list[idx - 1]
@@ -1591,7 +1612,7 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
                     update(p.copy(clips = list))
                 }
                 TrimQuickAction(Icons.Default.ArrowForward, "Depois", idx < p.clips.lastIndex,
-                    Modifier.weight(1f)) {
+                    Modifier.width(86.dp)) {
                     rememberUndo()
                     val list = p.clips.toMutableList()
                     val after = list[idx + 1]
@@ -1600,13 +1621,18 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
                     update(p.copy(clips = list))
                 }
                 TrimQuickAction(Icons.Default.Delete, "Excluir", p.clips.size > 1,
-                    Modifier.weight(1f)) {
+                    Modifier.width(86.dp)) {
                     val other = p.clips.firstOrNull { it.id != clip.id }
                     if (other != null) {
                         rememberUndo()
                         update(p.copy(clips = p.clips.filterNot { it.id == clip.id }))
                         selected(other.id)
                     }
+                }
+                TrimQuickAction(Icons.Default.Save, "Salvar", true, Modifier.width(86.dp)) {
+                    val saved = TrimSaveLogic.applyPending(p, clip.id, begin, finish)
+                    if (saved == null) notifyUser("Corte inválido. Ajuste início e fim antes de salvar.")
+                    else onSaveHome(saved)
                 }
             }
             Surface(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .58f),
@@ -1625,9 +1651,9 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
                         style = MaterialTheme.typography.bodySmall)
                     Text("3. Dividir separa o clipe no cursor; Antes/Depois reorganizam; Excluir remove.",
                         style = MaterialTheme.typography.bodySmall)
-                    Text("4. Desfazer volta a última edição. O vídeo repete até pausar.",
+                    Text("4. Desfazer volta a última edição; Salvar guarda o corte e volta ao início.",
                         style = MaterialTheme.typography.bodySmall)
-                    Text("5. No botão de velocidade escolha de 0,25× a 2×. Afeta só a prévia, não o vídeo salvo.",
+                    Text("5. O vídeo repete até pausar; velocidade de 0,25× a 2× afeta só a prévia, não o MP4 exportado.",
                         style = MaterialTheme.typography.bodySmall)
                 }
             }

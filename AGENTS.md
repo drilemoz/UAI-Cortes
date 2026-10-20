@@ -52,3 +52,6 @@
 - Sombra implementada como cópia de texto deslocada, sem blur; espaçamento e alinhamento afetam linhas dentro do bloco, não posição X/Y. Conferir Compose versus Media3 no Android antes de afirmar fidelidade visual total.
 
 - v0.1.30: no Compose, o parâmetro `Stroke.join` usa `androidx.compose.ui.graphics.StrokeJoin`; `PathJoin` não existe nesta API. Não reintroduzir o import ou uso antigo. O workflow 26 falhou em Debug/Release por esse motivo. Atualizar sempre Gradle, workflow, `tools/package_apks.py`, validador e docs ao avançar de versão.
+
+- v0.1.31: o cartão Salvar no editor chama a persistência de projeto antes de voltar à Home, e a barra inferior é rolável circularmente nos dois sentidos. Não confundir salvar projeto com exportar MP4.
+- v0.1.31: na tela Cortar e unir, o novo Salvar permanece após Excluir em faixa horizontal; deve validar e aplicar o corte pendente antes de voltar à Home, mantendo o usuário na tela se o intervalo for inválido.
