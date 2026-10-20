@@ -67,3 +67,5 @@
 
 - v0.1.35: toda prévia de vídeo deve preservar a proporção do arquivo e, em projetos mistos, acompanhar o clipe ativo. Prévia inline usa altura responsiva limitada pela tela, preservando lista/controles abaixo.
 - v0.1.35: legenda na prévia adapta tamanho apenas quando a maior palavra não cabe na largura do vídeo; não modificar `SubtitleCue.sizeSp`, posição, tempos, SRT ou exportador de forma implícita. Confirmar alinhamento visual e MP4 com teste físico antes de declarar fidelidade total.
+
+- v0.1.36: `searchQuery` deve ser declarado antes de `rememberLauncherForActivityResult` na tela `SubtitleScreen`, pois o callback de SRT limpa a pesquisa; o workflow 31 falhou em Debug/Release quando a variável estava declarada depois. Preservar teste estrutural de ordem no validador, mas sempre confirmar build Android no CI.

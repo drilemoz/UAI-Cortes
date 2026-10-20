@@ -504,7 +504,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.35 (36)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.36 (37)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: trechos visuais em Cortar e unir, seleção automática após dividir e cursor no último corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -2910,6 +2910,8 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
             ?: p.subtitles.firstOrNull()?.id.orEmpty())
     }
     var status by remember { mutableStateOf("") }
+    // Deve preceder o callback do importador, que limpa a busca após importar SRT.
+    var searchQuery by remember(p.id) { mutableStateOf("") }
     val importer=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if(uri!=null) {
             val loaded=runCatching {
@@ -2937,7 +2939,6 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
     var editorOpen by remember(p.id) { mutableStateOf(false) }
     var showAdvanced by remember(p.id) { mutableStateOf(false) }
     var searchOpen by remember(p.id) { mutableStateOf(false) }
-    var searchQuery by remember(p.id) { mutableStateOf("") }
     var pendingDeleteId by remember(p.id) { mutableStateOf<String?>(null) }
     val filtered=remember(sorted,searchQuery) {
         sorted.filter { SubtitleListNavigation.matches(it.text,searchQuery) }

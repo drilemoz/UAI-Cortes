@@ -1,6 +1,11 @@
-# Uai Cortes 0.1.35
+# Uai Cortes 0.1.36
 
 Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
+
+## Correção de build da versão 0.1.36
+- O workflow 31 falhou ao compilar Debug e Release: a importação SRT acessava `searchQuery` antes de sua declaração em Compose. A variável foi movida para o escopo anterior ao callback, sem mudança funcional na busca.
+- `tools/validate_source.py` agora valida a ordem da declaração e uso no importador SRT, além de verificar os demais recursos.
+- Versão sincronizada em Gradle, workflow, empacotamento, tela Sobre, validação e notas de release. Compilação Android após a correção e teste no dispositivo estão pendentes.
 
 ## Novidades da versão 0.1.35
 - **Prévia com proporção automática:** telas Legendas, Cortar e unir, PiP e Exportar ajustam o quadro ao vídeo vertical, horizontal ou quadrado, sem esticá-lo; altura limitada pela tela. Editor principal também muda a moldura quando a reprodução passa para outro clipe de proporção diferente.
@@ -40,7 +45,7 @@ Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
 
 ## Versões e ferramentas
 - `minSdk = 26`, `compileSdk = 36`, `targetSdk = 36`.
-- `versionName = 0.1.35`, `versionCode = 36`.
+- `versionName = 0.1.36`, `versionCode = 37`.
 - Kotlin 2.1.21, AGP 8.10.1, Gradle 8.11.1, JDK 17.
 - Media3 1.10.1, ExoPlayer e Transformer para composição H.264/AAC.
 - O editor não exige conta nem internet. A biblioteca PiP solicita acesso às fotos/vídeos do Android, integral ou parcial conforme consentimento; o seletor de documentos continua como alternativa.

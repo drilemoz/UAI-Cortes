@@ -1,3 +1,8 @@
+# Verificação v0.1.36 · 20/10/2026
+- Diagnóstico dos logs do workflow 31: `MainActivity.kt:2926:21 Unresolved reference searchQuery` em Debug/Release. Corrigida a ordem da variável `searchQuery` antes do callback de importação SRT.
+- Executar `python3 tools/validate_source.py` para validar metadados da v0.1.36/versionCode 37 e ordem de estado/importação. Essa verificação NÃO substitui o compilador Kotlin/Android.
+- Pendente: executar `:app:testDebugUnitTest :app:lintDebug :app:assembleRelease` em GitHub Actions, conferir os cinco APKs e testar busca, importação SRT e vídeo/legendas no celular.
+
 # Verificação v0.1.35 · 20/10/2026
 - Código-fonte: `python3 tools/validate_source.py`, teste `AdaptiveVideoLayoutTest`, checagem sintática do `MainActivity.kt`, integridade ZIP e versionamento.
 - Reprodução Android: verificar proporções 9:16, 16:9, 1:1, vídeo rotacionado 90/270 graus; mudar orientação de clipe durante a reprodução no editor, PiP e Exportar.

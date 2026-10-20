@@ -1,3 +1,7 @@
+## Correção v0.1.36 (versionCode 37)
+- Corrigida falha de escopo Kotlin no importador SRT da tela Legendas (`searchQuery`), que impedia Debug e Release no workflow 31.
+- Adicionada checagem de regressão para a ordem do estado Compose. Build Android completo ainda pendente.
+
 ## Novidade v0.1.35 (versionCode 36)
 - Prévia do vídeo ajustada à orientação/proporção real no editor, Corte, PiP, Legendas e Exportar. Videos mistos mudam a geometria conforme o clipe ativo.
 - Legenda longa se adapta ao espaço disponível na prévia, sem alterar seu tamanho salvo nem renderização na exportação.
