@@ -61,3 +61,6 @@
 
 - v0.1.33: Legendas tem uma única timeline horizontal virtualizada e lista LazyColumn compacta. Não reintroduzir uma pista completa por legenda nem duplicar lista. Prévia Media3 fica acima da lista, não acompanha rolagem; apenas o editor da legenda ativa pode expandir.
 - v0.1.33: edição avançada inicia recolhida; preservar campos numéricos de tempo, gestos para ajustar intervalo, arrasto x/y, presets/fonte/contorno/sombra e `schemaVersion=4`. Ao escolher uma legenda, reproduzir prévia a partir do início; prévia não altera exportação. Validar alinhamento UI/export em aparelho.
+
+- v0.1.34: filtro textual de legendas deve ser insensível a acentos/maiúsculas, manter a numeração original e não alterar projeto enquanto se busca. Navegação cronológica anterior/próxima não deve fazer loop entre extremos; a prévia deve buscar o início da legenda ativa.
+- v0.1.34: exclusão requer confirmação explícita e não pode remover o arquivo de vídeo. Criar legenda apenas se houver duração positiva, com horários dentro de [0, duração]. SRT maior que 250 mil caracteres deve falhar visivelmente, sem importar conteúdo truncado. Manter `schemaVersion=4`.

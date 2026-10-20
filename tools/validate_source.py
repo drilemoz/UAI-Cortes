@@ -10,10 +10,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*34',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.33"',gradle)
-assert 'Versão 0.1.33 (34)' in ui
-for label in ["VERSION: '0.1.33'", "VERSION_CODE: '34'", 'TAG="v$VERSION"',
+assert re.search(r'versionCode\s*=\s*35',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.34"',gradle)
+assert 'Versão 0.1.34 (35)' in ui
+for label in ["VERSION: '0.1.34'", "VERSION_CODE: '35'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -141,7 +141,7 @@ print('OK: v0.1.24 / versionCode 25, timeline de áudio arrastável, seleção e
 # v0.1.25: coordenadas relativas da legenda na prévia, editor visual e busca fina.
 precision=(root/'app/src/main/java/br/com/uaicortes/TimelinePrecision.kt').read_text()
 assert 'SubtitleOverlayOnFrame(cue, editable = false)' in ui
-assert 'SubtitlePositionPreview(p,selected)' in ui
+assert 'SubtitlePositionPreview(p,selected,' in ui
 assert 'SubtitlePlacement.anchorPixels(' in ui
 assert 'SubtitlePlacement.drag(' in ui
 assert 'TimelinePrecision.step(' in ui and 'seekProjectPosition(player,p.clips,dest)' in ui
@@ -197,7 +197,7 @@ assert 'SubtitleStyles.normalizeLineSpacing(j.optInt(' in model
 assert all(x in ui for x in [
     'Sombra: ${selected.shadowOffsetDp}', 'Espaçamento entre linhas:',
     'SubtitleStyles.alignments.forEach', 'Shadow(', 'lineHeight=textLineHeight',
-    'textAlign=alignment', 'Versão 0.1.33 (34)'
+    'textAlign=alignment', 'Versão 0.1.34 (35)'
 ])
 assert all(x in fx for x in ['class SubtitleShadowSpan(', 'class SubtitleLineSpacingSpan(',
     'AlignmentSpan.Standard(layoutAlign)', 'SubtitleStyles.ALIGN_LEFT -> left.toFloat()',
@@ -206,9 +206,9 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.33'" in package_script and 'VERSION_CODE = 34' in package_script
-assert 'versionCode 34' in gradle and 'isUniversalApk = true' in gradle
-print('OK: v0.1.33 / versionCode 34, compatibilidade das legendas, JSON legado, APKs')
+assert "VERSION = '0.1.34'" in package_script and 'VERSION_CODE = 35' in package_script
+assert 'versionCode 35' in gradle and 'isUniversalApk = true' in gradle
+print('OK: v0.1.34 / versionCode 35, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
 assert 'import androidx.compose.ui.graphics.StrokeJoin' in ui
@@ -216,7 +216,7 @@ assert 'join=StrokeJoin.Round' in ui
 assert 'PathJoin' not in ui
 print('OK: build 26 — tipo StrokeJoin.Round existente no Compose, sem PathJoin')
 
-# v0.1.33: salvar acessível no editor e em Cortar e unir, inclusive rascunho válido.
+# v0.1.34: salvar acessível no editor e em Cortar e unir, inclusive rascunho válido.
 assert 'LazyRow(state = toolsScroll' in ui and 'items(count = Int.MAX_VALUE)' in ui
 assert 'Triple("Salvar", Icons.Default.Save, "save")' in ui
 assert 'Salvar e voltar à Home' not in ui
@@ -224,9 +224,9 @@ assert 'TrimQuickAction(Icons.Default.Save, "Salvar"' in ui
 assert 'TrimSaveLogic.applyPending(p, clip.id, begin, finish)' in ui
 assert 'onSaveHome = { saved -> write(saved); screen = "home" }' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/TrimSaveLogicTest.kt').exists()
-print('OK: v0.1.33 / versionCode 34, rolagem circular, salvar projeto e corte antes de ir à Home')
+print('OK: v0.1.34 / versionCode 35, rolagem circular, salvar projeto e corte antes de ir à Home')
 
-# v0.1.33: cortes retornam à metade direita, a faixa mostra partes selecionáveis,
+# v0.1.34: cortes retornam à metade direita, a faixa mostra partes selecionáveis,
 # e um ponto de fonte persiste sem alterar esquema legado.
 trim_edit=(root/'app/src/main/java/br/com/uaicortes/TrimTimelineEdit.kt').read_text()
 assert 'private fun TrimSegmentStrip(' in ui and 'LazyRow(state = scroll' in ui
@@ -239,17 +239,30 @@ assert 'lastTrimCutClipId = newId' in trim_edit and 'lastTrimCutSourceMs = sourc
 assert 'EditFeatures.repositionAfterDelete(project, remaining)' in trim_edit
 assert 'undoLastCut' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/TrimTimelineEditTest.kt').exists()
-print('OK: v0.1.33 / versionCode 34, faixa de trechos, seleção e restauração do último corte')
+print('OK: v0.1.34 / versionCode 35, faixa de trechos, seleção e restauração do último corte')
 
-# v0.1.33: uma timeline geral, lista virtualizada e vídeo fixo no topo.
+# v0.1.34: uma timeline geral, lista virtualizada e vídeo fixo no topo.
 assert 'private fun SubtitleCompactTimeline(' in ui
 assert 'SubtitleCompactTimeline(sorted,p.durationMs,selectedId,' in ui
 assert 'private fun SubtitlePositionPreview(' in ui and 'player=remember(p.id)' in ui
-assert 'LazyColumn(state=captionsState' in ui and 'itemsIndexed(sorted,key=' in ui
+assert 'LazyColumn(state=captionsState' in ui and 'itemsIndexed(filtered,key=' in ui
 assert 'if(selectedId==cue.id && editorOpen && selected!=null)' in ui
 assert 'if(showAdvanced)' in ui and 'SubtitleTimelineEditor(listOf(selected)' in ui
 assert 'SubtitleTimelineEditor(p.subtitles,p.durationMs' not in ui
 assert 'p.subtitles.sortedBy { it.startMs }.forEachIndexed' not in ui
 assert (root/'app/src/main/java/br/com/uaicortes/SubtitleCompactLayout.kt').exists()
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleCompactLayoutTest.kt').exists()
-print('OK: v0.1.33 / versionCode 34, timeline unica, video fixo e legendas compactas')
+print('OK: v0.1.34 / versionCode 35, timeline unica, video fixo e legendas compactas')
+
+# v0.1.34: busca, navegação e exclusão segura no editor de legendas.
+nav=(root/'app/src/main/java/br/com/uaicortes/SubtitleListNavigation.kt').read_text()
+assert 'fun matches(' in nav and 'Normalizer.Form.NFD' in nav
+assert 'fun adjacentIndex(' in nav and 'fun newInterval(' in nav
+assert 'itemsIndexed(filtered,key=' in ui and 'Buscar texto da legenda' in ui
+assert 'hasPrevious=SubtitleListNavigation.adjacentIndex' in ui
+assert 'hasNext=SubtitleListNavigation.adjacentIndex' in ui
+assert 'pendingDeleteId?.let' in ui and 'Excluir esta legenda?' in ui
+assert 'SubtitleListNavigation.readSrtBounded(reader)' in ui
+assert 'fun readSrtBounded(' in nav and 'maxCharacters + 1' in nav
+assert (root/'app/src/test/java/br/com/uaicortes/SubtitleListNavigationTest.kt').exists()
+print('OK: v0.1.34 / versionCode 35, busca e navegação, exclusão confirmada e limite SRT')

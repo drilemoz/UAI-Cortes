@@ -1,3 +1,12 @@
+## Novidade v0.1.34 (versionCode 35)
+| Tela Legendas | Situação |
+|---|---|
+| Busca sem acentos/maiúsculas, resultado filtrado e numeração original | Implementado em código, pendente Android |
+| Navegação anterior/próxima diretamente na prévia | Implementado em código, pendente Android |
+| Exclusão confirmada e seleção de legenda sobrevivente | Implementado em código, pendente Android |
+| Rejeição explícita de SRT acima do limite, sem importar parcial | Implementado em código, pendente Android |
+| Nova legenda limitada à duração real do projeto | Implementado em código, pendente Android |
+
 ## Novidade v0.1.33 (versionCode 34)
 | Tela Legendas | Situação |
 |---|---|

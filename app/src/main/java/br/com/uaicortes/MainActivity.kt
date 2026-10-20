@@ -504,7 +504,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.33 (34)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.34 (35)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: trechos visuais em Cortar e unir, seleção automática após dividir e cursor no último corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -2787,7 +2787,9 @@ private fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
  */
 @Composable
 private fun SubtitlePositionPreview(p:VideoProject,cue:SubtitleCue,
-    onPositionCommit:(Float,Float)->Unit) {
+    onPositionCommit:(Float,Float)->Unit,
+    onPrevious:()->Unit, onNext:()->Unit,
+    hasPrevious:Boolean, hasNext:Boolean) {
     val context=LocalContext.current
     val player=remember(p.id) { ExoPlayer.Builder(context).build() }
     var playing by remember(p.id) { mutableStateOf(false) }
@@ -2837,13 +2839,16 @@ private fun SubtitlePositionPreview(p:VideoProject,cue:SubtitleCue,
                 SubtitleOverlayOnFrame(cue,editable=true,onPositionCommit=onPositionCommit)
             }
         }
-        Row(Modifier.fillMaxWidth().height(36.dp),verticalAlignment=Alignment.CenterVertically,
+        Row(Modifier.fillMaxWidth().height(38.dp),verticalAlignment=Alignment.CenterVertically,
             horizontalArrangement=Arrangement.Center) {
+            IconButton(enabled=hasPrevious,onClick=onPrevious,modifier=Modifier.size(36.dp)) {
+                Icon(Icons.Default.ChevronLeft,"Legenda anterior",modifier=Modifier.size(25.dp))
+            }
             IconButton(onClick={
                 player.pause();playing=false
                 seekProjectPosition(player,p.clips,cue.startMs)
-            },modifier=Modifier.size(36.dp)) {
-                Icon(Icons.Default.SkipPrevious,"Ir ao início da legenda",modifier=Modifier.size(23.dp))
+            },modifier=Modifier.size(34.dp)) {
+                Icon(Icons.Default.SkipPrevious,"Reiniciar legenda",modifier=Modifier.size(22.dp))
             }
             IconButton(enabled=p.clips.isNotEmpty(),onClick={
                 if(playing) {player.pause();playing=false}
@@ -2856,8 +2861,11 @@ private fun SubtitlePositionPreview(p:VideoProject,cue:SubtitleCue,
                 Icon(if(playing)Icons.Default.PauseCircle else Icons.Default.PlayCircle,
                     "Reproduzir ou pausar prévia",modifier=Modifier.size(28.dp))
             }
-            Text("Trecho ${formatPipMs(cue.startMs)} – ${formatPipMs(cue.endMs)}",
-                fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            IconButton(enabled=hasNext,onClick=onNext,modifier=Modifier.size(36.dp)) {
+                Icon(Icons.Default.ChevronRight,"Próxima legenda",modifier=Modifier.size(25.dp))
+            }
+            Text("${formatPipMs(cue.startMs)}–${formatPipMs(cue.endMs)}",
+                fontSize=11.sp,maxLines=1,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -2875,14 +2883,7 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
         if(uri!=null) {
             val loaded=runCatching {
                 context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { reader ->
-                    val content=StringBuilder()
-                    val chunk=CharArray(4096)
-                    while(content.length<250_000) {
-                        val received=reader.read(chunk,0,minOf(chunk.size,250_000-content.length))
-                        if(received<=0) break
-                        content.append(chunk,0,received)
-                    }
-                    content.toString()
+                    SubtitleListNavigation.readSrtBounded(reader)
                 }.orEmpty()
             }
             loaded.onSuccess { content ->
@@ -2891,6 +2892,7 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
                 if(cues.isNotEmpty()) {
                     update(p.copy(subtitles=p.subtitles+cues))
                     selectedId=cues.first().id
+                    searchQuery=""
                     status="${cues.size} legendas importadas"
                 } else status="Nenhuma legenda SRT válida no arquivo"
             }.onFailure {status="Não foi possível ler o arquivo: ${it.message}"}
@@ -2900,12 +2902,21 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
         p.subtitles.sortedWith(compareBy<SubtitleCue> { it.startMs }.thenBy { it.id })
     }
     val selected=p.subtitles.firstOrNull{it.id==selectedId}
+    val selectedIndex=sorted.indexOfFirst { it.id==selectedId }
     var editorOpen by remember(p.id) { mutableStateOf(false) }
     var showAdvanced by remember(p.id) { mutableStateOf(false) }
+    var searchOpen by remember(p.id) { mutableStateOf(false) }
+    var searchQuery by remember(p.id) { mutableStateOf("") }
+    var pendingDeleteId by remember(p.id) { mutableStateOf<String?>(null) }
+    val filtered=remember(sorted,searchQuery) {
+        sorted.filter { SubtitleListNavigation.matches(it.text,searchQuery) }
+    }
+    val originalNumbers=remember(sorted) { sorted.mapIndexed { index,cue -> cue.id to index+1 }.toMap() }
     val captionsState=rememberLazyListState()
-    LaunchedEffect(selectedId) {
-        val index=sorted.indexOfFirst { it.id==selectedId }
+    LaunchedEffect(selectedId,searchQuery,filtered) {
+        val index=filtered.indexOfFirst { it.id==selectedId }
         if(index>=0) captionsState.animateScrollToItem(index)
+        else if(searchQuery.isNotBlank() && filtered.isNotEmpty()) captionsState.scrollToItem(0)
     }
     LaunchedEffect(p.subtitles.size) {
         if(selectedId.isNotEmpty() && p.subtitles.none { it.id==selectedId }) {
@@ -2916,11 +2927,24 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal=14.dp)) {
         Heading("Legendas",back)
         if(selected!=null) {
-            SubtitlePositionPreview(p,selected) { x,y ->
-                update(p.copy(subtitles=p.subtitles.map { cue ->
-                    if(cue.id==selected.id) cue.copy(x=x,y=y) else cue
-                }))
-            }
+            SubtitlePositionPreview(p,selected,
+                onPositionCommit={ x,y ->
+                    update(p.copy(subtitles=p.subtitles.map { cue ->
+                        if(cue.id==selected.id) cue.copy(x=x,y=y) else cue
+                    }))
+                },
+                onPrevious={
+                    SubtitleListNavigation.adjacentIndex(selectedIndex,sorted.size,-1)?.let { index ->
+                        selectedId=sorted[index].id;editorOpen=true;showAdvanced=false;searchQuery=""
+                    }
+                },
+                onNext={
+                    SubtitleListNavigation.adjacentIndex(selectedIndex,sorted.size,1)?.let { index ->
+                        selectedId=sorted[index].id;editorOpen=true;showAdvanced=false;searchQuery=""
+                    }
+                },
+                hasPrevious=SubtitleListNavigation.adjacentIndex(selectedIndex,sorted.size,-1)!=null,
+                hasNext=SubtitleListNavigation.adjacentIndex(selectedIndex,sorted.size,1)!=null)
         } else Box(Modifier.fillMaxWidth().height(196.dp)
             .background(Color(0xFF101014),RoundedCornerShape(12.dp)),
             contentAlignment=Alignment.Center) {
@@ -2943,29 +2967,46 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
             horizontalArrangement=Arrangement.spacedBy(5.dp)) {
             Text("Legendas (${p.subtitles.size})",fontSize=15.sp,
                 fontWeight=FontWeight.SemiBold,modifier=Modifier.weight(1f))
-            TextButton(onClick={
-                val start=selected?.endMs?.coerceAtMost((p.durationMs-1L).coerceAtLeast(0L)) ?: 0L
-                val cue=SubtitleCue(text="Nova legenda",startMs=start,
-                    endMs=minOf(start+3000L,p.durationMs).coerceAtLeast(start+1L))
-                update(p.copy(subtitles=p.subtitles+cue))
-                selectedId=cue.id;editorOpen=true;showAdvanced=false
+            IconButton(onClick={searchOpen=!searchOpen; if(!searchOpen) searchQuery=""},
+                modifier=Modifier.size(36.dp)) {
+                Icon(if(searchOpen) Icons.Default.SearchOff else Icons.Default.Search,
+                    if(searchOpen) "Fechar busca" else "Buscar legendas",modifier=Modifier.size(21.dp))
+            }
+            TextButton(enabled=p.durationMs>0,onClick={
+                SubtitleListNavigation.newInterval(p.durationMs,selected?.endMs)?.let { (start,end) ->
+                    val cue=SubtitleCue(text="Nova legenda",startMs=start,endMs=end)
+                    update(p.copy(subtitles=p.subtitles+cue))
+                    searchQuery="";selectedId=cue.id;editorOpen=true;showAdvanced=false
+                }
             }) {Icon(Icons.Default.Add,null);Text("Nova")}
             OutlinedButton(onClick={importer.launch(arrayOf("text/*","application/x-subrip","*/*"))},
                 contentPadding=PaddingValues(horizontal=8.dp,vertical=4.dp)) {
                 Icon(Icons.Default.FileOpen,null);Text(" SRT",fontSize=12.sp)
             }
         }
+        if(searchOpen) {
+            OutlinedTextField(value=searchQuery,onValueChange={searchQuery=it.take(100)},
+                label={Text("Buscar texto da legenda")},singleLine=true,
+                modifier=Modifier.fillMaxWidth(),
+                trailingIcon={if(searchQuery.isNotBlank()) IconButton(onClick={searchQuery=""}) {
+                    Icon(Icons.Default.Clear,"Limpar busca")
+                }})
+            Text("${filtered.size} de ${sorted.size} legendas",fontSize=11.sp,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         if(status.isNotBlank()) Text(status,fontSize=12.sp,
             color=MaterialTheme.colorScheme.primary)
         LazyColumn(state=captionsState, modifier=Modifier.fillMaxWidth().weight(1f),
             verticalArrangement=Arrangement.spacedBy(5.dp),
             contentPadding=PaddingValues(bottom=24.dp)) {
-            if(sorted.isEmpty()) item {
-                Text("Nenhuma legenda. Toque em Nova ou importe um SRT.",
+            if(filtered.isEmpty()) item {
+                Text(if(sorted.isEmpty()) "Nenhuma legenda. Toque em Nova ou importe um SRT."
+                    else "Nenhuma legenda corresponde à busca.",
                     color=MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier=Modifier.padding(vertical=20.dp))
             }
-            itemsIndexed(sorted,key={_,cue->cue.id}) { index,cue ->
+            itemsIndexed(filtered,key={_,cue->cue.id}) { _,cue ->
+                val number=originalNumbers[cue.id] ?: 0
                 Column {
                     Surface(onClick={
                         val same=selectedId==cue.id
@@ -2977,7 +3018,7 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
                             else MaterialTheme.colorScheme.surfaceVariant) {
                         Row(Modifier.fillMaxWidth().heightIn(min=44.dp).padding(horizontal=10.dp),
                             verticalAlignment=Alignment.CenterVertically) {
-                            Text("${index+1}",fontSize=12.sp,
+                            Text("$number",fontSize=12.sp,
                                 color=MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier=Modifier.width(26.dp))
                             Text(cue.text,modifier=Modifier.weight(1f),fontSize=13.sp,
@@ -2996,7 +3037,7 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
                             verticalArrangement=Arrangement.spacedBy(7.dp)) {
                             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
                                 horizontalArrangement=Arrangement.SpaceBetween) {
-                                Text("Editar legenda ${index+1}",fontWeight=FontWeight.SemiBold)
+                                Text("Editar legenda $number",fontWeight=FontWeight.SemiBold)
                                 TextButton(onClick={editorOpen=false}) {Text("Fechar")}
                             }
                 Text("Ajustar intervalo (arraste o centro ou as alças)",fontSize=12.sp,
@@ -3190,15 +3231,31 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
                 }
             }
                 }
-            OutlinedButton(onClick={
-                update(p.copy(subtitles=p.subtitles.filterNot{it.id==selected.id}))
-                selectedId=""; editorOpen=false
-            }) {Icon(Icons.Default.Delete,null);Text(" Excluir legenda")}
+            OutlinedButton(onClick={pendingDeleteId=selected.id}) {
+                Icon(Icons.Default.Delete,null);Text(" Excluir legenda")
+            }
                         }
                     }
                 }
             }
         }
+    }
+    pendingDeleteId?.let { id ->
+        val toDelete=p.subtitles.firstOrNull { it.id==id }
+        if(toDelete!=null) AlertDialog(onDismissRequest={pendingDeleteId=null},
+            title={Text("Excluir esta legenda?")},
+            text={Text("${toDelete.text.take(120)}\nEsta ação remove apenas a legenda, não o vídeo original.")},
+            confirmButton={TextButton(onClick={
+                update(p.copy(subtitles=p.subtitles.filterNot { it.id==id }))
+                if(selectedId==id) {
+                    val remaining=sorted.filterNot { it.id==id }
+                    selectedId=remaining.getOrNull(selectedIndex.coerceAtMost(remaining.lastIndex))?.id.orEmpty()
+                    editorOpen=false;showAdvanced=false
+                }
+                pendingDeleteId=null
+            }) {Text("Excluir")}},
+            dismissButton={TextButton(onClick={pendingDeleteId=null}) {Text("Cancelar")}})
+        else LaunchedEffect(id) { pendingDeleteId=null }
     }
 }
 

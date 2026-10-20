@@ -1,6 +1,14 @@
-# Uai Cortes 0.1.33
+# Uai Cortes 0.1.34
 
 Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
+
+## Novidades da versão 0.1.34
+- **Busca em legendas:** encontre rapidamente textos entre dezenas ou centenas de entradas, sem exigir acentos ou maiúsculas. Mostra total filtrado, permite limpar e mantém a numeração original.
+- **Anterior / Próxima:** navegue diretamente entre legendas cronológicas na prévia fixa. Desabilita setas nas extremidades e atualiza seleção e posição do vídeo.
+- **Exclusão com confirmação:** exige confirmação antes de remover a legenda selecionada; texto e projeto permanecem intactos ao cancelar.
+- **Segurança temporal e importação:** novas legendas não ultrapassam o vídeo; SRT acima de 250 mil caracteres é rejeitado com erro em vez de ser importado parcialmente.
+- `schemaVersion=4` preservado. Sem modificação de fontes, vídeo, trilhas de áudio ou processo de exportação.
+- **Validação Android:** build CI, comportamento real em aparelho e fidelidade do MP4 continuam pendentes.
 
 ## Novidades da versão 0.1.33
 - **Legendas compactas:** uma única timeline horizontal com janelas de dez segundos, carregadas sob demanda, substitui as trilhas individuais empilhadas. As posições e durações exibidas usam horários absolutos, incluindo legendas sobrepostas.
@@ -25,7 +33,7 @@ Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
 
 ## Versões e ferramentas
 - `minSdk = 26`, `compileSdk = 36`, `targetSdk = 36`.
-- `versionName = 0.1.33`, `versionCode = 34`.
+- `versionName = 0.1.34`, `versionCode = 35`.
 - Kotlin 2.1.21, AGP 8.10.1, Gradle 8.11.1, JDK 17.
 - Media3 1.10.1, ExoPlayer e Transformer para composição H.264/AAC.
 - O editor não exige conta nem internet. A biblioteca PiP solicita acesso às fotos/vídeos do Android, integral ou parcial conforme consentimento; o seletor de documentos continua como alternativa.

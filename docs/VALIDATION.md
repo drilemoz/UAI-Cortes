@@ -1,3 +1,12 @@
+# Verificação v0.1.34 · 20/10/2026
+- Conferir `tools/validate_source.py`, sintaxe Kotlin da UI e helper e execução isolada do helper com `kotlinc`; executar testes JUnit em CI para validação final.
+- Legendas com acentos: buscar `sao` localiza `São` e busca sem resultados é sinalizada. Após filtrar, a lista mostra os números originais. Limpar e fechar busca devem restaurar todas.
+- Navegação anterior/próxima: o player posiciona no início da legenda correta, sem pular circularmente. Botões desabilitam nas extremidades.
+- Excluir uma legenda: Cancelar preserva dados; Confirmar remove somente o item e seleciona um remanescente, sem modificar mídia original.
+- SRT até 250 mil caracteres deve ser aceito quando válido; conteúdo com caractere extra deve ser recusado por inteiro, sem importação parcial.
+- Nova legenda próxima ao último milissegundo do vídeo precisa manter início < fim <= duração; com vídeo vazio deve permanecer desabilitada.
+- Pendente: Gradle/Android CI, fidelidade da prévia/exportação, interação real com IME, telas pequenas e aparelhos de desempenho limitado.
+
 # Verificação v0.1.33 · 20/10/2026
 - Confirmar `python3 tools/validate_source.py`, sintaxe PSI Kotlin da UI e do helper, testes Kotlin de janelas temporais, integridade CRC do ZIP.
 - Legendas: prévia Media3 fixa ao rolar 30/300 itens, posição x/y por arrasto, player busca legenda selecionada e para no fim do trecho. Garantir liberação de ExoPlayer ao sair da tela.
