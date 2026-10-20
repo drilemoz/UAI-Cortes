@@ -1,3 +1,8 @@
+## Novidade v0.1.35 (versionCode 36)
+- Prévia do vídeo ajustada à orientação/proporção real no editor, Corte, PiP, Legendas e Exportar. Videos mistos mudam a geometria conforme o clipe ativo.
+- Legenda longa se adapta ao espaço disponível na prévia, sem alterar seu tamanho salvo nem renderização na exportação.
+- Testar visualmente em retrato, paisagem, quadrado, orientação rotacionada e projetos com clipes mistos; build Android pendente.
+
 ## Novidade v0.1.34 (versionCode 35)
 | Tela Legendas | Situação |
 |---|---|

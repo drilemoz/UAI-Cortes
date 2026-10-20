@@ -64,3 +64,6 @@
 
 - v0.1.34: filtro textual de legendas deve ser insensível a acentos/maiúsculas, manter a numeração original e não alterar projeto enquanto se busca. Navegação cronológica anterior/próxima não deve fazer loop entre extremos; a prévia deve buscar o início da legenda ativa.
 - v0.1.34: exclusão requer confirmação explícita e não pode remover o arquivo de vídeo. Criar legenda apenas se houver duração positiva, com horários dentro de [0, duração]. SRT maior que 250 mil caracteres deve falhar visivelmente, sem importar conteúdo truncado. Manter `schemaVersion=4`.
+
+- v0.1.35: toda prévia de vídeo deve preservar a proporção do arquivo e, em projetos mistos, acompanhar o clipe ativo. Prévia inline usa altura responsiva limitada pela tela, preservando lista/controles abaixo.
+- v0.1.35: legenda na prévia adapta tamanho apenas quando a maior palavra não cabe na largura do vídeo; não modificar `SubtitleCue.sizeSp`, posição, tempos, SRT ou exportador de forma implícita. Confirmar alinhamento visual e MP4 com teste físico antes de declarar fidelidade total.

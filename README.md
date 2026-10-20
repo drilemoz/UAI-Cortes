@@ -1,6 +1,13 @@
-# Uai Cortes 0.1.34
+# Uai Cortes 0.1.35
 
 Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
+
+## Novidades da versão 0.1.35
+- **Prévia com proporção automática:** telas Legendas, Cortar e unir, PiP e Exportar ajustam o quadro ao vídeo vertical, horizontal ou quadrado, sem esticá-lo; altura limitada pela tela. Editor principal também muda a moldura quando a reprodução passa para outro clipe de proporção diferente.
+- **Correção das legendas na prévia:** texto respeita a largura real do quadro, reduz a fonte apenas na visualização quando a palavra mais longa não cabe, e mantém a caixa visível. Evita que “Francisco” se parta entre linhas por causa da prévia estreita.
+- **Edição preservada:** posição x/y, tamanho escolhido, SRT, tempos e `schemaVersion=4` não mudam. Essa correção não reprocessa o vídeo e não promete identidade de renderização com o MP4 até teste em aparelho.
+- **Testes:** novos casos de geometria para retrato, paisagem, quadrado, metadados inválidos e passagem de clipes.
+- **Pendente:** compilar no GitHub Actions e comparar prévia/exportação no aparelho.
 
 ## Novidades da versão 0.1.34
 - **Busca em legendas:** encontre rapidamente textos entre dezenas ou centenas de entradas, sem exigir acentos ou maiúsculas. Mostra total filtrado, permite limpar e mantém a numeração original.
@@ -33,7 +40,7 @@ Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
 
 ## Versões e ferramentas
 - `minSdk = 26`, `compileSdk = 36`, `targetSdk = 36`.
-- `versionName = 0.1.34`, `versionCode = 35`.
+- `versionName = 0.1.35`, `versionCode = 36`.
 - Kotlin 2.1.21, AGP 8.10.1, Gradle 8.11.1, JDK 17.
 - Media3 1.10.1, ExoPlayer e Transformer para composição H.264/AAC.
 - O editor não exige conta nem internet. A biblioteca PiP solicita acesso às fotos/vídeos do Android, integral ou parcial conforme consentimento; o seletor de documentos continua como alternativa.

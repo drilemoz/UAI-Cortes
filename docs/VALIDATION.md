@@ -1,3 +1,10 @@
+# Verificação v0.1.35 · 20/10/2026
+- Código-fonte: `python3 tools/validate_source.py`, teste `AdaptiveVideoLayoutTest`, checagem sintática do `MainActivity.kt`, integridade ZIP e versionamento.
+- Reprodução Android: verificar proporções 9:16, 16:9, 1:1, vídeo rotacionado 90/270 graus; mudar orientação de clipe durante a reprodução no editor, PiP e Exportar.
+- Legendas: texto em retrato deve quebrar apenas entre palavras quando couber, posição arrastável e tamanho originalmente salvo preservados. Verificar palavra longa e legenda com fundo, sombra, contorno e alinhamento.
+- Exportar MP4 e comparar com prévia. O ajuste de fonte da prévia é visual, não altera `sizeSp` nem o exportador; correspondência exata entre os dois formatos requer inspeção no dispositivo.
+- Build Android, lint e testes no aparelho continuam pendentes nesta entrega.
+
 # Verificação v0.1.34 · 20/10/2026
 - Conferir `tools/validate_source.py`, sintaxe Kotlin da UI e helper e execução isolada do helper com `kotlinc`; executar testes JUnit em CI para validação final.
 - Legendas com acentos: buscar `sao` localiza `São` e busca sem resultados é sinalizada. Após filtrar, a lista mostra os números originais. Limpar e fechar busca devem restaurar todas.

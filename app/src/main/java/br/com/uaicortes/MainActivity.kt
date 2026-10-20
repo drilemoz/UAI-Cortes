@@ -504,7 +504,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.34 (35)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.35 (36)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: trechos visuais em Cortar e unir, seleção automática após dividir e cursor no último corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -572,11 +572,14 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         }
         BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)
             .background(Color(0xFF101014)).padding(10.dp), contentAlignment = Alignment.Center) {
-            val actualAspect = remember(p.clips) {
-                p.clips.firstOrNull()?.let { mediaAspect(context, it.uri, false) } ?: 16f / 9f
+            val activeIndex=AdaptiveVideoLayout.activeClipIndex(p.clips.map { it.durationMs },currentMs)
+            val previewUri=p.clips.getOrNull(activeIndex)?.uri
+            val actualAspect=remember(previewUri) {
+                previewUri?.let { mediaAspect(context,it,false) } ?: 16f/9f
             }
-            val videoW = minOf(maxWidth, maxHeight * actualAspect)
-            val videoH = videoW / actualAspect
+            val fit=AdaptiveVideoLayout.fit(maxWidth.value,maxHeight.value,actualAspect)
+            val videoW=fit.width.dp
+            val videoH=fit.height.dp
             Box(Modifier.width(videoW).height(videoH)) {
                 AndroidView(factory = { ctx -> previewPlayer(ctx).apply {
                     this.player = player
@@ -1638,16 +1641,12 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             // Prévia e miniaturas são blocos independentes: nenhum RangeSlider cobre as fotos.
-            BoxWithConstraints(Modifier.fillMaxWidth().height(215.dp)
-                .clip(RoundedCornerShape(14.dp)).background(Color(0xFF111114)),
-                contentAlignment = Alignment.Center) {
-                val videoAspect = remember(clip.uri) { mediaAspect(context, clip.uri, false) }
-                val videoWidth = minOf(maxWidth, maxHeight * videoAspect)
+            val videoAspect = remember(clip.uri) { mediaAspect(context, clip.uri, false) }
+            InlineVideoPreview(videoAspect) {
                 AndroidView(factory = { ctx -> previewPlayer(ctx).apply {
                     this.player = player
                     useController = false
-                } }, modifier = Modifier.width(videoWidth).height(videoWidth / videoAspect),
-                    update = { it.player = player })
+                } }, modifier = Modifier.fillMaxSize(), update = { it.player = player })
             }
             TrimThumbnails(clip.uri, total) { time -> player.pause(); seek(time) }
             // Uma única barra para navegar; início e fim são definidos nos campos abaixo.
@@ -2198,12 +2197,14 @@ private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) ->
     val sourceAspect = remember(pip?.uri, pip?.isImage) {
         pip?.let { mediaAspect(context, it.uri, it.isImage) } ?: 16f / 9f
     }
-    val canvasAspect = remember(p.clips) {
-        p.clips.firstOrNull()?.let { mediaAspect(context, it.uri, false) } ?: 16f / 9f
-    }
     val player = remember(p.id) { ExoPlayer.Builder(context).build() }
     var playing by remember(p.id) { mutableStateOf(false) }
     var previewTime by remember(p.id) { mutableLongStateOf(pip?.startAtMs ?: 0L) }
+    val canvasIndex=AdaptiveVideoLayout.activeClipIndex(p.clips.map { it.durationMs },previewTime)
+    val canvasUri=p.clips.getOrNull(canvasIndex)?.uri
+    val canvasAspect=remember(canvasUri) {
+        canvasUri?.let { mediaAspect(context,it,false) } ?: 16f/9f
+    }
     var expanded by remember(p.id) { mutableStateOf<String?>(null) }
     var manual by remember(pip?.id) {
         mutableStateOf(pip?.let { (it.scale * 100f).toInt().toString() } ?: "30")
@@ -2270,25 +2271,19 @@ private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) ->
                     }
                 }
                 Text("Prévia no vídeo", fontWeight = FontWeight.SemiBold)
-                BoxWithConstraints(Modifier.fillMaxWidth().height(246.dp)
-                    .clip(RoundedCornerShape(18.dp)).background(Color(0xFF141414)),
-                    contentAlignment = Alignment.Center) {
-                    val canvasWidth = minOf(maxWidth, maxHeight * canvasAspect)
-                    val canvasHeight = canvasWidth / canvasAspect
-                    Box(Modifier.width(canvasWidth).height(canvasHeight).background(Color.Black)) {
-                        AndroidView(factory = { previewPlayer(it).apply {
-                            this.player = player
-                            useController = false
-                        } }, update = { it.player = player }, modifier = Modifier.fillMaxSize())
-                        p.overlays.forEach { layer ->
-                            val active = previewTime >= layer.startAtMs &&
-                                previewTime < layer.startAtMs + layer.durationMs
-                            if (active || (layer.id == pip?.id && !playing)) {
-                                key(layer.id) {
-                                    PipLayer(layer, (previewTime - layer.startAtMs).coerceAtLeast(0L),
-                                        playing && active, editable = layer.id == pip?.id,
-                                        onUpdate = onChange)
-                                }
+                InlineVideoPreview(canvasAspect) {
+                    AndroidView(factory = { previewPlayer(it).apply {
+                        this.player = player
+                        useController = false
+                    } }, update = { it.player = player }, modifier = Modifier.fillMaxSize())
+                    p.overlays.forEach { layer ->
+                        val active = previewTime >= layer.startAtMs &&
+                            previewTime < layer.startAtMs + layer.durationMs
+                        if (active || (layer.id == pip?.id && !playing)) {
+                            key(layer.id) {
+                                PipLayer(layer, (previewTime - layer.startAtMs).coerceAtLeast(0L),
+                                    playing && active, editable = layer.id == pip?.id,
+                                    onUpdate = onChange)
                             }
                         }
                     }
@@ -2716,6 +2711,39 @@ private fun subtitleFont(family: String): FontFamily = when (SubtitleStyles.norm
     else -> FontFamily.SansSerif
 }
 
+/** Quadro sem barras pretas adicionais: respeita a proporção original e a
+ * altura disponível em cada aparelho. Mantém overlays no mesmo referencial
+ * geométrico da imagem, inclusive em vídeos verticais e quadrados. */
+@Composable
+private fun InlineVideoPreview(aspect: Float, modifier: Modifier = Modifier,
+    content: @Composable BoxScope.() -> Unit) {
+    val screenHeight = LocalConfiguration.current.screenHeightDp.toFloat()
+    BoxWithConstraints(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        val fit = AdaptiveVideoLayout.inline(maxWidth.value, screenHeight, aspect)
+        Box(Modifier.width(fit.width.dp).height(fit.height.dp)
+            .clip(RoundedCornerShape(12.dp)).background(Color(0xFF101014)),
+            content = content)
+    }
+}
+
+/** Mede a maior palavra para impedir que a prévia estreita quebre sílabas.
+ * A redução é apenas visual; sizeSp e o arquivo SRT não são modificados. */
+private fun previewSubtitleScale(cue: SubtitleCue, widthPx: Int, textSizePx: Float): Float {
+    if (widthPx <= 0 || textSizePx <= 0f || !textSizePx.isFinite()) return 1f
+    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        textSize = textSizePx
+        typeface = android.graphics.Typeface.create(when (SubtitleStyles.normalizeFont(cue.fontFamily)) {
+            SubtitleStyles.FONT_SERIF -> "serif"
+            SubtitleStyles.FONT_MONO -> "monospace"
+            else -> "sans-serif"
+        }, if (cue.bold) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
+    }
+    val longest = cue.text.split(Regex("\\s+")).maxOfOrNull { paint.measureText(it) } ?: 0f
+    if (longest <= 0f) return 1f
+    val available = (widthPx * .90f - textSizePx * .65f).coerceAtLeast(1f)
+    return (available / longest).coerceIn(.35f, 1f)
+}
+
 /** A mesma coordenada x/y usada pelo exportador Media3: centro na horizontal,
  * base do texto na vertical. Nunca usar deslocamento fixo em dp para a legenda. */
 @Composable
@@ -2732,12 +2760,20 @@ private fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
     }
     Box(Modifier.fillMaxSize().onSizeChanged { frameSize=it }) {
         if (cue.text.isNotBlank()) {
-            val location=SubtitlePlacement.anchorPixels(frameSize.width,frameSize.height,
+            val rawLocation=SubtitlePlacement.anchorPixels(frameSize.width,frameSize.height,
                 textSize.width,textSize.height,draftX,draftY)
+            val location=rawLocation.first.coerceIn(0,(frameSize.width-textSize.width).coerceAtLeast(0)) to
+                rawLocation.second.coerceIn(0,(frameSize.height-textSize.height).coerceAtLeast(0))
+            val density=LocalDensity.current
+            val frameWidthDp=with(density) { frameSize.width.toDp() }
+            val textLimitPx=minOf(frameSize.width * .94f,with(density) { 280.dp.toPx() })
+            val fontScale=previewSubtitleScale(cue,textLimitPx.toInt(),
+                with(density) { cue.sizeSp.sp.toPx() })
+            val previewFontSp=cue.sizeSp * fontScale
             val family = subtitleFont(cue.fontFamily)
             val textWeight = if (cue.bold) FontWeight.Bold else FontWeight.Normal
-            val outlineWidthPx = with(LocalDensity.current) { cue.outlineWidth.dp.toPx() }
-            val shadowPx = with(LocalDensity.current) { cue.shadowOffsetDp.dp.toPx() }
+            val outlineWidthPx = with(density) { cue.outlineWidth.dp.toPx() } * fontScale
+            val shadowPx = with(density) { cue.shadowOffsetDp.dp.toPx() } * fontScale
             val alignment = when (SubtitleStyles.normalizeAlignment(cue.textAlignment)) {
                 SubtitleStyles.ALIGN_LEFT -> TextAlign.Left
                 SubtitleStyles.ALIGN_RIGHT -> TextAlign.Right
@@ -2745,13 +2781,13 @@ private fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
             }
             val spacing = SubtitleStyles.normalizeLineSpacing(cue.lineSpacingPercent) / 100f
             val textLineHeight = if (cue.lineSpacingPercent > 100)
-                (cue.sizeSp * 1.2f * spacing).sp else TextUnit.Unspecified
+                (previewFontSp * 1.2f * spacing).sp else TextUnit.Unspecified
             val fillStyle = TextStyle(lineHeight = textLineHeight,
                 shadow = if (cue.shadowOffsetDp > 0) Shadow(
                     color=Color(cue.shadowColor), offset=Offset(shadowPx,shadowPx),blurRadius=0f
                 ) else null)
             Box(modifier=Modifier.offset { IntOffset(location.first,location.second) }
-                .widthIn(max=280.dp)
+                .widthIn(max=minOf(280.dp,(frameWidthDp * .94f).coerceAtLeast(14.dp)))
                 .onSizeChanged { textSize=it }
                 .then(if (editable) Modifier.pointerInput(cue.id,frameSize) {
                     detectDragGestures(
@@ -2768,12 +2804,12 @@ private fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
                 .background(Color(cue.backgroundColor),RoundedCornerShape(3.dp))
                 .padding(horizontal=7.dp,vertical=2.dp)) {
                 if (cue.outlineWidth > 0) {
-                    Text(cue.text,color=Color(cue.outlineColor),fontSize=cue.sizeSp.sp,
+                    Text(cue.text,color=Color(cue.outlineColor),fontSize=previewFontSp.sp,
                         fontFamily=family,fontWeight=textWeight,textAlign=alignment,
                         style=TextStyle(lineHeight=textLineHeight,
                             drawStyle=Stroke(width=outlineWidthPx*2f,join=StrokeJoin.Round)))
                 }
-                Text(cue.text,color=Color(cue.color),fontSize=cue.sizeSp.sp,
+                Text(cue.text,color=Color(cue.color),fontSize=previewFontSp.sp,
                     fontFamily=family,fontWeight=textWeight,textAlign=alignment,
                     style=fillStyle)
             }
@@ -2827,17 +2863,12 @@ private fun SubtitlePositionPreview(p:VideoProject,cue:SubtitleCue,
         clip?.let { mediaAspect(context,it.uri,false) } ?: 16f/9f
     }
     Column {
-        BoxWithConstraints(Modifier.fillMaxWidth().height(160.dp)
-            .clip(RoundedCornerShape(12.dp)).background(Color(0xFF101014)),
-            contentAlignment=Alignment.Center) {
-            val w=minOf(maxWidth,maxHeight*aspect)
-            Box(Modifier.width(w).height(w/aspect)) {
-                AndroidView(factory={ctx->previewPlayer(ctx).apply {
-                    this.player=player
-                    useController=false
-                }},update={it.player=player},modifier=Modifier.fillMaxSize())
-                SubtitleOverlayOnFrame(cue,editable=true,onPositionCommit=onPositionCommit)
-            }
+        InlineVideoPreview(aspect) {
+            AndroidView(factory={ctx->previewPlayer(ctx).apply {
+                this.player=player
+                useController=false
+            }},update={it.player=player},modifier=Modifier.fillMaxSize())
+            SubtitleOverlayOnFrame(cue,editable=true,onPositionCommit=onPositionCommit)
         }
         Row(Modifier.fillMaxWidth().height(38.dp),verticalAlignment=Alignment.CenterVertically,
             horizontalArrangement=Arrangement.Center) {
@@ -3265,6 +3296,17 @@ private fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
     val engine=remember { ExportEngine(context) }
     val previewPlayer=remember { ExoPlayer.Builder(context).build() }
     var previewPlaying by remember { mutableStateOf(false) }
+    var exportClipIndex by remember(p.id) { mutableIntStateOf(0) }
+    LaunchedEffect(previewPlayer, p.clips) {
+        while(true) {
+            exportClipIndex=previewPlayer.currentMediaItemIndex.coerceIn(0,(p.clips.size-1).coerceAtLeast(0))
+            delay(200)
+        }
+    }
+    val exportPreviewUri=p.clips.getOrNull(exportClipIndex)?.uri
+    val exportPreviewAspect=remember(exportPreviewUri) {
+        exportPreviewUri?.let { mediaAspect(context,it,false) } ?: 16f/9f
+    }
     DisposableEffect(previewPlayer) { onDispose {previewPlayer.release()} }
     LaunchedEffect(p.clips) {
         previewPlayer.setMediaItems(p.clips.map { clip ->
@@ -3285,15 +3327,16 @@ private fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
         Heading("Exportar vídeo",{if(!working)back() else {engine.cancel();working=false;result="Exportação cancelada"}},
             accessory={Icon(Icons.Default.Movie,tint=Blue,contentDescription=null)})
         Spacer(Modifier.height(8.dp))
-        Box(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF151515)),contentAlignment=Alignment.Center) {
+        InlineVideoPreview(exportPreviewAspect) {
             AndroidView(factory={previewPlayer(it).apply { player=previewPlayer;useController=false }},
                 modifier=Modifier.fillMaxSize(),update={it.player=previewPlayer})
-            IconButton(onClick={
-                previewPlaying=!previewPlaying
-                if(previewPlaying) previewPlayer.play() else previewPlayer.pause()
-            }) {Icon(if(previewPlaying)Icons.Default.PauseCircle else Icons.Default.PlayCircle,
-                "Reproduzir prévia",tint=Color.White,modifier=Modifier.size(52.dp))}
+            Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) {
+                IconButton(onClick={
+                    previewPlaying=!previewPlaying
+                    if(previewPlaying) previewPlayer.play() else previewPlayer.pause()
+                }) {Icon(if(previewPlaying)Icons.Default.PauseCircle else Icons.Default.PlayCircle,
+                    "Reproduzir prévia",tint=Color.White,modifier=Modifier.size(52.dp))}
+            }
         }
         Spacer(Modifier.height(20.dp))
         Text("Nome do arquivo",color=MaterialTheme.colorScheme.onSurfaceVariant)
