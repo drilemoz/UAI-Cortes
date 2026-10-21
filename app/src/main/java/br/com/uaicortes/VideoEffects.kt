@@ -147,9 +147,15 @@ class TimedSubtitleOverlay(
     }
     override fun getText(presentationTimeUs: Long): SpannableString {
         val active = cue(presentationTimeUs) ?: return SpannableString("")
-        val text = SpannableString(active.text)
+        val frame=SubtitleAnimations.frame(active,clipStartInProjectMs + presentationTimeUs/1000L)
+        val text = SpannableString(frame.text)
         if (text.isNotEmpty()) {
             text.setSpan(ForegroundColorSpan(active.color), 0, text.length, 0)
+            frame.highlighted?.let { highlighted ->
+                if(highlighted.first>=0 && highlighted.last<text.length)
+                    text.setSpan(ForegroundColorSpan(Color.YELLOW),highlighted.first,
+                        highlighted.last+1,0)
+            }
             if (Color.alpha(active.backgroundColor) > 0)
                 text.setSpan(BackgroundColorSpan(active.backgroundColor), 0, text.length, 0)
             if (active.bold) text.setSpan(StyleSpan(Typeface.BOLD), 0, text.length, 0)
@@ -180,10 +186,14 @@ class TimedSubtitleOverlay(
     }
     override fun getOverlaySettings(presentationTimeUs: Long): OverlaySettings {
         val active = cue(presentationTimeUs)
+        val frame=active?.let { SubtitleAnimations.frame(it,
+            clipStartInProjectMs + presentationTimeUs/1000L) }
         return StaticOverlaySettings.Builder()
-            .setBackgroundFrameAnchor(((active?.x ?: .5f)-.5f)*2f, 1f - (active?.y ?: .85f) * 2f)
-            .setOverlayFrameAnchor(0f, -1f)
-            .setAlphaScale(if (active == null) 0f else 1f)
+            .setBackgroundFrameAnchor(((active?.x ?: .5f)-.5f)*2f,
+                (1f - (active?.y ?: .85f)*2f - (frame?.slideY ?: 0f)*2f).coerceIn(-1f,1f))
+            .setOverlayFrameAnchor(0f,-1f)
+            .setScale(frame?.scale ?: 1f,frame?.scale ?: 1f)
+            .setAlphaScale(if(active==null) 0f else (frame?.alpha ?: 1f))
             .build()
     }
 }

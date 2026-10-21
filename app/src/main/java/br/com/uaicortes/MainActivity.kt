@@ -27,6 +27,12 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
@@ -504,7 +510,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.36 (37)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.37 (38)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: trechos visuais em Cortar e unir, seleção automática após dividir e cursor no último corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -616,7 +622,7 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                     }
                 }
                 p.subtitles.firstOrNull { currentMs >= it.startMs && currentMs < it.endMs }?.let { cue ->
-                    SubtitleOverlayOnFrame(cue, editable = false)
+                    SubtitleOverlayOnFrame(cue, editable = false, playbackMs=currentMs)
                 }
             }
         }
@@ -1343,7 +1349,7 @@ private object NumericTimeMask : VisualTransformation {
 private fun TimeDigitsField(label: String, timeMs: Long, totalMs: Long,
     valid: (Long) -> Boolean = { it in 0L..totalMs },
     onCommit: (Long) -> Unit, modifier: Modifier = Modifier,
-    autoApply: Boolean = false) {
+    autoApply: Boolean = false, compact: Boolean = false) {
     var digits by remember { mutableStateOf(NumericTime.fromMs(timeMs)) }
     var editing by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
@@ -1364,6 +1370,7 @@ private fun TimeDigitsField(label: String, timeMs: Long, totalMs: Long,
             visualTransformation = NumericTimeMask,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = {
+                if(compact && allowed) onCommit(parsed!!)
                 editing = false
                 focusManager.clearFocus()
             }),
@@ -1373,16 +1380,17 @@ private fun TimeDigitsField(label: String, timeMs: Long, totalMs: Long,
                     editing = true
                 } else if (!state.isFocused && editing) {
                     editing = false
-                    // Os dados digitados inválidos não substituem o último valor válido.
+                    if(compact && allowed) onCommit(parsed!!)
+                    // Entradas inválidas não substituem o último horário válido.
                     digits = NumericTime.fromMs(timeMs)
                 }
             },
             label = { Text(label) }, singleLine = true, isError = digits.isNotBlank() && !allowed,
-            supportingText = if (digits.isNotBlank() && !allowed && !autoApply) {
+            supportingText = if (!compact && digits.isNotBlank() && !allowed && !autoApply) {
                 { Text("Fora do intervalo") }
             } else null
         )
-        if (!autoApply) {
+        if (!autoApply && !compact) {
             IconButton(onClick = { digits = ""; editing = true }) {
                 Icon(Icons.Default.Backspace, "Limpar $label")
             }
@@ -2748,7 +2756,8 @@ private fun previewSubtitleScale(cue: SubtitleCue, widthPx: Int, textSizePx: Flo
  * base do texto na vertical. Nunca usar deslocamento fixo em dp para a legenda. */
 @Composable
 private fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
-    onPositionCommit: (Float,Float)->Unit = { _,_ -> }) {
+    playbackMs: Long = cue.startMs, onPositionCommit: (Float,Float)->Unit = { _,_ -> }) {
+    val animationFrame=SubtitleAnimations.frame(cue,playbackMs)
     var frameSize by remember { mutableStateOf(IntSize.Zero) }
     var textSize by remember { mutableStateOf(IntSize.Zero) }
     var draftX by remember(cue.id) { mutableFloatStateOf(cue.x) }
@@ -2759,7 +2768,7 @@ private fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
         if (!dragging) { draftX=cue.x; draftY=cue.y }
     }
     Box(Modifier.fillMaxSize().onSizeChanged { frameSize=it }) {
-        if (cue.text.isNotBlank()) {
+        if (animationFrame.text.isNotBlank()) {
             val rawLocation=SubtitlePlacement.anchorPixels(frameSize.width,frameSize.height,
                 textSize.width,textSize.height,draftX,draftY)
             val location=rawLocation.first.coerceIn(0,(frameSize.width-textSize.width).coerceAtLeast(0)) to
@@ -2789,6 +2798,12 @@ private fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
             Box(modifier=Modifier.offset { IntOffset(location.first,location.second) }
                 .widthIn(max=minOf(280.dp,(frameWidthDp * .94f).coerceAtLeast(14.dp)))
                 .onSizeChanged { textSize=it }
+                .graphicsLayer {
+                    alpha=animationFrame.alpha
+                    scaleX=animationFrame.scale
+                    scaleY=animationFrame.scale
+                    translationY=animationFrame.slideY * frameSize.height
+                }
                 .then(if (editable) Modifier.pointerInput(cue.id,frameSize) {
                     detectDragGestures(
                         onDragStart={dragging=true},
@@ -2804,12 +2819,19 @@ private fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
                 .background(Color(cue.backgroundColor),RoundedCornerShape(3.dp))
                 .padding(horizontal=7.dp,vertical=2.dp)) {
                 if (cue.outlineWidth > 0) {
-                    Text(cue.text,color=Color(cue.outlineColor),fontSize=previewFontSp.sp,
+                    Text(animationFrame.text,color=Color(cue.outlineColor),fontSize=previewFontSp.sp,
                         fontFamily=family,fontWeight=textWeight,textAlign=alignment,
                         style=TextStyle(lineHeight=textLineHeight,
                             drawStyle=Stroke(width=outlineWidthPx*2f,join=StrokeJoin.Round)))
                 }
-                Text(cue.text,color=Color(cue.color),fontSize=previewFontSp.sp,
+                val animatedText=buildAnnotatedString {
+                    append(animationFrame.text)
+                    animationFrame.highlighted?.let { range ->
+                        if(range.first>=0 && range.last<animationFrame.text.length)
+                            addStyle(SpanStyle(color=Color(0xFFFFFF00)),range.first,range.last+1)
+                    }
+                }
+                Text(animatedText,color=Color(cue.color),fontSize=previewFontSp.sp,
                     fontFamily=family,fontWeight=textWeight,textAlign=alignment,
                     style=fillStyle)
             }
@@ -2829,6 +2851,7 @@ private fun SubtitlePositionPreview(p:VideoProject,cue:SubtitleCue,
     val context=LocalContext.current
     val player=remember(p.id) { ExoPlayer.Builder(context).build() }
     var playing by remember(p.id) { mutableStateOf(false) }
+    var previewMs by remember(p.id) { mutableLongStateOf(cue.startMs) }
     DisposableEffect(player) { onDispose { player.release() } }
     LaunchedEffect(player,p.clips.map { Triple(it.uri,it.startMs,it.endMs) }) {
         playing=false
@@ -2841,12 +2864,14 @@ private fun SubtitlePositionPreview(p:VideoProject,cue:SubtitleCue,
         player.prepare()
     }
     LaunchedEffect(cue.id,cue.startMs,p.clips) {
+        previewMs=cue.startMs
         playing=false
         player.pause()
         seekProjectPosition(player,p.clips,cue.startMs)
     }
     LaunchedEffect(playing,cue.id,cue.endMs) {
         while(playing) {
+            previewMs=projectPosition(player,p.clips,p.durationMs)
             if(player.playbackState==Player.STATE_ENDED ||
                 projectPosition(player,p.clips,p.durationMs)>=cue.endMs) {
                 player.pause()
@@ -2868,7 +2893,8 @@ private fun SubtitlePositionPreview(p:VideoProject,cue:SubtitleCue,
                 this.player=player
                 useController=false
             }},update={it.player=player},modifier=Modifier.fillMaxSize())
-            SubtitleOverlayOnFrame(cue,editable=true,onPositionCommit=onPositionCommit)
+            SubtitleOverlayOnFrame(cue,editable=true,playbackMs=previewMs,
+                onPositionCommit=onPositionCommit)
         }
         Row(Modifier.fillMaxWidth().height(38.dp),verticalAlignment=Alignment.CenterVertically,
             horizontalArrangement=Arrangement.Center) {
@@ -2877,6 +2903,7 @@ private fun SubtitlePositionPreview(p:VideoProject,cue:SubtitleCue,
             }
             IconButton(onClick={
                 player.pause();playing=false
+                previewMs=cue.startMs
                 seekProjectPosition(player,p.clips,cue.startMs)
             },modifier=Modifier.size(34.dp)) {
                 Icon(Icons.Default.SkipPrevious,"Reiniciar legenda",modifier=Modifier.size(22.dp))
@@ -3063,214 +3090,21 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
                                 modifier=Modifier.padding(start=8.dp).size(18.dp))
                         }
                     }
-                    if(selectedId==cue.id && editorOpen && selected!=null) {
-                        Column(Modifier.fillMaxWidth().padding(top=8.dp,bottom=10.dp,
-                            start=5.dp,end=5.dp),
-                            verticalArrangement=Arrangement.spacedBy(7.dp)) {
-                            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
-                                horizontalArrangement=Arrangement.SpaceBetween) {
-                                Text("Editar legenda $number",fontWeight=FontWeight.SemiBold)
-                                TextButton(onClick={editorOpen=false}) {Text("Fechar")}
-                            }
-                Text("Ajustar intervalo (arraste o centro ou as alças)",fontSize=12.sp,
-                    color=MaterialTheme.colorScheme.onSurfaceVariant)
-                SubtitleTimelineEditor(listOf(selected),p.durationMs,selectedId,
-                    onSelect={ selectedId=it },onCommit={ id,start,end ->
-                        update(p.copy(subtitles=p.subtitles.map { cue ->
-                            if(cue.id==id) cue.copy(startMs=start,endMs=end) else cue
-                        }))
-                    })
-            OutlinedTextField(value=selected.text,onValueChange={v->
-                update(p.copy(subtitles=p.subtitles.map{if(it.id==selected.id) it.copy(text=v.take(500)) else it}))
-            },label={Text("Texto")},minLines=2,modifier=Modifier.fillMaxWidth())
-            TimeDigitsField("Início",selected.startMs,p.durationMs,
-                valid={it<selected.endMs},onCommit={v->
-                    update(p.copy(subtitles=p.subtitles.map{if(it.id==selected.id)it.copy(startMs=v) else it}))
-                })
-            TimeDigitsField("Fim",selected.endMs,p.durationMs,
-                valid={it>selected.startMs && it<=p.durationMs},onCommit={v->
-                    update(p.copy(subtitles=p.subtitles.map{if(it.id==selected.id)it.copy(endMs=v) else it}))
-                })
-                OutlinedButton(onClick={showAdvanced=!showAdvanced},
-                    modifier=Modifier.fillMaxWidth()) {
-                    Icon(if(showAdvanced)Icons.Default.ExpandLess else Icons.Default.Tune,null)
-                    Text(if(showAdvanced)" Recolher estilos e posição" else " Estilos e ajustes avançados")
-                }
-                if(showAdvanced) {
-            // Os estilos são salvos por legenda e reproduzidos também na exportação Media3.
-            Text("Estilos rápidos",fontWeight=FontWeight.SemiBold)
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement=Arrangement.spacedBy(7.dp)) {
-                SubtitleStyles.presets.forEach { preset ->
-                    val isSelected=selected.color==preset.foreground &&
-                        selected.backgroundColor==preset.background && selected.bold==preset.bold
-                    FilterChip(selected=isSelected,onClick={
-                        update(p.copy(subtitles=p.subtitles.map { cue ->
-                            if(cue.id==selected.id) SubtitleStyles.applyToCue(cue,preset) else cue
-                        }))
-                    },label={Text(preset.name,maxLines=1)})
-                }
-            }
-            Text("Tamanho: ${selected.sizeSp} sp")
-            Slider(value=selected.sizeSp.toFloat(),valueRange=12f..48f,onValueChange={v->
-                update(p.copy(subtitles=p.subtitles.map{
-                    if(it.id==selected.id)it.copy(sizeSp=v.toInt()) else it}))
-            })
-            Text("Fonte",fontWeight=FontWeight.SemiBold)
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement=Arrangement.spacedBy(7.dp)) {
-                SubtitleStyles.fonts.forEach { (family,label) ->
-                    FilterChip(selected=selected.fontFamily==family,onClick={
-                        update(p.copy(subtitles=p.subtitles.map { cue ->
-                            if (cue.id==selected.id) cue.copy(fontFamily=family) else cue
-                        }))
-                    },label={Text(label,maxLines=1)})
-                }
-            }
-            Text("Contorno: ${selected.outlineWidth} dp")
-            Slider(value=selected.outlineWidth.toFloat(),valueRange=0f..4f,steps=3,
-                onValueChange={width->
-                    update(p.copy(subtitles=p.subtitles.map { cue ->
-                        if (cue.id==selected.id) cue.copy(outlineWidth=width.toInt().coerceIn(0,4)) else cue
-                    }))
-                })
-            if (selected.outlineWidth>0) {
-                Text("Cor do contorno")
-                Row(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
-                    listOf("Preto" to 0xFF000000.toInt(),
-                        "Branco" to 0xFFFFFFFF.toInt()).forEach { (label,shade) ->
-                        FilterChip(selected=selected.outlineColor==shade,onClick={
-                            update(p.copy(subtitles=p.subtitles.map { cue ->
-                                if (cue.id==selected.id) cue.copy(outlineColor=shade) else cue
-                            }))
-                        },label={Text(label)})
-                    }
-                }
-            }
-            Text("Sombra: ${selected.shadowOffsetDp} dp de deslocamento")
-            Slider(value=selected.shadowOffsetDp.toFloat(),valueRange=0f..6f,steps=5,
-                onValueChange={value->
-                    val offset=value.toInt().coerceIn(0,6)
-                    update(p.copy(subtitles=p.subtitles.map { cue ->
-                        if(cue.id==selected.id) cue.copy(shadowOffsetDp=offset) else cue
-                    }))
-                })
-            if (selected.shadowOffsetDp>0) {
-                Text("Cor da sombra")
-                Row(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
-                    listOf("Preta" to 0xFF000000.toInt(),
-                        "Branca" to 0xFFFFFFFF.toInt()).forEach { (label,shade) ->
-                        FilterChip(selected=selected.shadowColor==shade,onClick={
-                            update(p.copy(subtitles=p.subtitles.map { cue ->
-                                if(cue.id==selected.id) cue.copy(shadowColor=shade) else cue
-                            }))
-                        },label={Text(label)})
-                    }
-                }
-            }
-            Text("Espaçamento entre linhas: ${selected.lineSpacingPercent}%")
-            Slider(value=selected.lineSpacingPercent.toFloat(),valueRange=100f..160f,steps=5,
-                onValueChange={value->
-                    val spacing=SubtitleStyles.normalizeLineSpacing(value.toInt())
-                    update(p.copy(subtitles=p.subtitles.map { cue ->
-                        if(cue.id==selected.id) cue.copy(lineSpacingPercent=spacing) else cue
-                    }))
-                })
-            Text("Alinhamento das linhas",fontWeight=FontWeight.SemiBold)
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement=Arrangement.spacedBy(7.dp)) {
-                SubtitleStyles.alignments.forEach { (align,label) ->
-                    FilterChip(selected=selected.textAlignment==align,onClick={
-                        update(p.copy(subtitles=p.subtitles.map { cue ->
-                            if(cue.id==selected.id) cue.copy(textAlignment=align) else cue
-                        }))
-                    },label={Text(label)})
-                }
-            }
-            Text("Cor")
-            Row(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
-                listOf(-1,android.graphics.Color.YELLOW,android.graphics.Color.CYAN).forEach { shade ->
-                    FilterChip(selected=selected.color==shade,onClick={
-                        update(p.copy(subtitles=p.subtitles.map{
-                            if(it.id==selected.id)it.copy(color=shade) else it}))
-                    },label={Text(when(shade){-1->"Branco";android.graphics.Color.YELLOW->"Amarelo";else->"Ciano"})})
-                }
-            }
-            Text("Fundo do texto")
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement=Arrangement.spacedBy(7.dp)) {
-                listOf("Sem fundo" to SubtitleStyles.NO_BACKGROUND,
-                    "Suave" to SubtitleStyles.DEFAULT_BACKGROUND,
-                    "Escuro" to SubtitleStyles.DARK_BACKGROUND,
-                    "Claro" to SubtitleStyles.LIGHT_BACKGROUND).forEach { (label,background) ->
-                    FilterChip(selected=selected.backgroundColor==background,onClick={
-                        update(p.copy(subtitles=p.subtitles.map { cue ->
-                            if(cue.id==selected.id) cue.copy(backgroundColor=background) else cue
-                        }))
-                    },label={Text(label)})
-                }
-            }
-            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                Text("Texto em negrito",modifier=Modifier.weight(1f))
-                Switch(checked=selected.bold,onCheckedChange={value ->
-                    update(p.copy(subtitles=p.subtitles.map { cue ->
-                        if(cue.id==selected.id) cue.copy(bold=value) else cue
-                    }))
-                })
-            }
-            var confirmStyleAll by remember(p.id,selected.id) { mutableStateOf(false) }
-            OutlinedButton(onClick={confirmStyleAll=true},enabled=p.subtitles.size>1) {
-                Icon(Icons.Default.ContentCopy,null)
-                Text(" Copiar aparência para todas as legendas")
-            }
-            if(confirmStyleAll) AlertDialog(onDismissRequest={confirmStyleAll=false},
-                title={Text("Aplicar estilo a todas?")},
-                text={Text("Cor, fundo, tamanho, negrito, fonte, contorno, sombra, espaçamento e alinhamento serão aplicados a todas as legendas. Os textos, horários e posições serão mantidos.")},
-                confirmButton={TextButton(onClick={
-                    update(p.copy(subtitles=SubtitleStyles.applyToAll(p.subtitles,selected)))
-                    confirmStyleAll=false
-                }) {Text("Aplicar")}},
-                dismissButton={TextButton(onClick={confirmStyleAll=false}) {Text("Cancelar")}})
-            Text("Posição horizontal: ${(selected.x*100).toInt()}%")
-            Slider(value=selected.x,valueRange=.1f.. .9f,onValueChange={v->
-                update(p.copy(subtitles=p.subtitles.map{if(it.id==selected.id)it.copy(x=v) else it}))
-            })
-            Text("Posição vertical: ${(selected.y*100).toInt()}%")
-            Slider(value=selected.y,valueRange=.1f.. .9f,onValueChange={v->
-                update(p.copy(subtitles=p.subtitles.map{if(it.id==selected.id)it.copy(y=v) else it}))
-            })
-            Text("Ajuste fino da posição (1% do quadro)",fontSize=12.sp)
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceEvenly) {
-                listOf(Triple("←",-.01f,0f),Triple("→",.01f,0f),
-                    Triple("↑",0f,-.01f),Triple("↓",0f,.01f)).forEach { (label,dx,dy) ->
-                    OutlinedButton(onClick={
-                        val next=SubtitlePlacement.nudge(selected.x,selected.y,dx,dy)
-                        update(p.copy(subtitles=p.subtitles.map {
-                            if(it.id==selected.id)it.copy(x=next.first,y=next.second) else it
-                        }))
-                    },contentPadding=PaddingValues(horizontal=13.dp,vertical=6.dp)) {
-                        Text(label)
-                    }
-                }
-            }
-            Text("Posição da legenda")
-            Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                listOf("Cima" to .15f,"Centro" to .5f,"Baixo" to .85f).forEach { (name,y) ->
-                    FilterChip(selected=kotlin.math.abs(selected.y-y)<.02f,onClick={
-                        update(p.copy(subtitles=p.subtitles.map{
-                            if(it.id==selected.id)it.copy(y=y) else it}))
-                    },label={Text(name)})
-                }
-            }
-                }
-            OutlinedButton(onClick={pendingDeleteId=selected.id}) {
-                Icon(Icons.Default.Delete,null);Text(" Excluir legenda")
-            }
-                        }
-                    }
                 }
             }
         }
+    }
+    if(editorOpen && selected!=null) {
+        SubtitleEditDialog(cue=selected,totalMs=p.durationMs,
+            number=originalNumbers[selected.id] ?: 1,onDismiss={editorOpen=false},
+            onDelete={editorOpen=false;pendingDeleteId=selected.id},
+            onSave={draft,copyOptions ->
+                val updated=p.subtitles.map { cue -> if(cue.id==draft.id) draft else cue }
+                val all=if(copyOptions!=null)
+                    SubtitleStyles.applySelectedToAll(updated,draft,copyOptions) else updated
+                update(p.copy(subtitles=all))
+                editorOpen=false
+            })
     }
     pendingDeleteId?.let { id ->
         val toDelete=p.subtitles.firstOrNull { it.id==id }
@@ -3289,6 +3123,221 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
             dismissButton={TextButton(onClick={pendingDeleteId=null}) {Text("Cancelar")}})
         else LaunchedEffect(id) { pendingDeleteId=null }
     }
+}
+
+/** Editor modal compacto. Alterações locais só são persistidas em Salvar. */
+@Composable
+private fun SubtitleEditDialog(cue: SubtitleCue,totalMs: Long,number: Int,
+    onDismiss: () -> Unit,onDelete: () -> Unit,
+    onSave: (SubtitleCue,SubtitleStyles.CopyOptions?) -> Unit) {
+    var draft by remember(cue.id) { mutableStateOf(cue) }
+    var stylesOpen by remember(cue.id) { mutableStateOf(false) }
+    var animationOpen by remember(cue.id) { mutableStateOf(false) }
+    var applyAll by remember(cue.id) { mutableStateOf(false) }
+    var copyAppearance by remember(cue.id) { mutableStateOf(true) }
+    var copyPosition by remember(cue.id) { mutableStateOf(false) }
+    var copyAnimation by remember(cue.id) { mutableStateOf(true) }
+    var confirmAll by remember(cue.id) { mutableStateOf(false) }
+    var sampleMs by remember(cue.id) { mutableLongStateOf(0L) }
+    LaunchedEffect(draft.animation,draft.animationSpeed,draft.text) {
+        sampleMs=0L
+        while(true) {
+            delay(80L)
+            sampleMs=(sampleMs+80L)%3000L
+        }
+    }
+    val valid=draft.text.isNotBlank() && draft.startMs>=0L &&
+        draft.endMs>draft.startMs && draft.endMs<=totalMs
+    fun submit() {
+        if(!valid) return
+        val options=if(applyAll) SubtitleStyles.CopyOptions(
+            appearance=copyAppearance,position=copyPosition,animation=copyAnimation) else null
+        onSave(draft,options)
+    }
+    Dialog(onDismissRequest=onDismiss,properties=DialogProperties(usePlatformDefaultWidth=false)) {
+        val screenHeight=LocalConfiguration.current.screenHeightDp.dp
+        Surface(Modifier.fillMaxWidth(.96f).heightIn(max=screenHeight*.88f),
+            shape=RoundedCornerShape(18.dp),tonalElevation=5.dp) {
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                .padding(14.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
+                Row(verticalAlignment=Alignment.CenterVertically,modifier=Modifier.fillMaxWidth()) {
+                    Text("Editar legenda $number",fontWeight=FontWeight.Bold,
+                        style=MaterialTheme.typography.titleMedium,modifier=Modifier.weight(1f))
+                    IconButton(onClick=onDismiss,modifier=Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Close,"Fechar")
+                    }
+                }
+                // Simulação do texto, sem segunda miniatura de vídeo.
+                val sample=SubtitleAnimations.frame(draft.copy(startMs=0L,endMs=3000L),sampleMs)
+                Box(Modifier.fillMaxWidth().heightIn(min=76.dp)
+                    .background(Color(0xFF13151A),RoundedCornerShape(10.dp))
+                    .padding(12.dp),contentAlignment=Alignment.Center) {
+                    val previewText=buildAnnotatedString {
+                        append(sample.text)
+                        sample.highlighted?.let { range ->
+                            if(range.first>=0 && range.last<sample.text.length)
+                                addStyle(SpanStyle(color=Color.Yellow),range.first,range.last+1)
+                        }
+                    }
+                    Box(Modifier.graphicsLayer {
+                        alpha=sample.alpha;scaleX=sample.scale;scaleY=sample.scale
+                        translationY=sample.slideY*120f
+                    }.background(Color(draft.backgroundColor),RoundedCornerShape(3.dp))
+                        .padding(horizontal=7.dp,vertical=3.dp)) {
+                        Text(previewText,color=Color(draft.color),
+                            fontSize=draft.sizeSp.sp,fontFamily=subtitleFont(draft.fontFamily),
+                            fontWeight=if(draft.bold) FontWeight.Bold else FontWeight.Normal,
+                            textAlign=TextAlign.Center)
+                    }
+                }
+                OutlinedTextField(value=draft.text,onValueChange={draft=draft.copy(text=it.take(500))},
+                    label={Text("Texto")},maxLines=3,modifier=Modifier.fillMaxWidth())
+                Row(horizontalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.fillMaxWidth()) {
+                    TimeDigitsField("Início",draft.startMs,totalMs,
+                        valid={it>=0L && it<draft.endMs},
+                        onCommit={draft=draft.copy(startMs=it)},
+                        modifier=Modifier.weight(1f),compact=true)
+                    TimeDigitsField("Fim",draft.endMs,totalMs,
+                        valid={it>draft.startMs && it<=totalMs},
+                        onCommit={draft=draft.copy(endMs=it)},
+                        modifier=Modifier.weight(1f),compact=true)
+                }
+                Row(verticalAlignment=Alignment.CenterVertically) {
+                    Text("Tamanho: ${draft.sizeSp}",fontSize=13.sp,
+                        modifier=Modifier.weight(1f))
+                    Slider(value=draft.sizeSp.toFloat(),valueRange=12f..48f,
+                        modifier=Modifier.weight(2f),
+                        onValueChange={draft=draft.copy(sizeSp=it.toInt().coerceIn(12,48))})
+                }
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(7.dp)) {
+                    OutlinedButton(onClick={stylesOpen=!stylesOpen},modifier=Modifier.weight(1f),
+                        contentPadding=PaddingValues(5.dp)) {Text("Estilo",maxLines=1)}
+                    OutlinedButton(onClick={animationOpen=!animationOpen},modifier=Modifier.weight(1f),
+                        contentPadding=PaddingValues(5.dp)) {Text("Animação",maxLines=1)}
+                    OutlinedButton(onClick=onDelete,contentPadding=PaddingValues(6.dp)) {
+                        Icon(Icons.Default.Delete,"Excluir legenda",tint=MaterialTheme.colorScheme.error)
+                    }
+                }
+                if(animationOpen) {
+                    Text("Efeitos de entrada e revelação",fontWeight=FontWeight.SemiBold)
+                    Column(verticalArrangement=Arrangement.spacedBy(3.dp)) {
+                        SubtitleAnimations.choices.forEach { (key,label) ->
+                            FilterChip(selected=draft.animation==key,onClick={
+                                draft=draft.copy(animation=key)
+                            },label={Text(label)})
+                        }
+                    }
+                    if(draft.animation!=SubtitleAnimations.NONE) {
+                        Text("Velocidade: ${"%.1f".format(java.util.Locale.US,draft.animationSpeed)}×")
+                        Slider(value=draft.animationSpeed,valueRange=.5f..2f,steps=5,
+                            onValueChange={draft=draft.copy(animationSpeed=it)})
+                        Text("Os efeitos seguem o tempo da legenda; não sincronizam com a voz.",
+                            fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                if(stylesOpen) {
+                    Text("Estilos rápidos",fontWeight=FontWeight.SemiBold)
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement=Arrangement.spacedBy(5.dp)) {
+                        SubtitleStyles.presets.forEach { preset ->
+                            FilterChip(selected=draft.color==preset.foreground &&
+                                draft.backgroundColor==preset.background,onClick={
+                                draft=SubtitleStyles.applyToCue(draft,preset)
+                            },label={Text(preset.name)})
+                        }
+                    }
+                    Text("Fonte",fontWeight=FontWeight.SemiBold)
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+                        SubtitleStyles.fonts.forEach { (family,name) ->
+                            FilterChip(selected=draft.fontFamily==family,onClick={
+                                draft=draft.copy(fontFamily=family)
+                            },label={Text(name)})
+                        }
+                    }
+                    Text("Contorno: ${draft.outlineWidth} dp")
+                    Slider(value=draft.outlineWidth.toFloat(),valueRange=0f..4f,steps=3,
+                        onValueChange={draft=draft.copy(outlineWidth=it.toInt())})
+                    if(draft.outlineWidth>0) Row {
+                        listOf("Preto" to 0xFF000000.toInt(),
+                            "Branco" to 0xFFFFFFFF.toInt()).forEach { (label,color) ->
+                            FilterChip(selected=draft.outlineColor==color,
+                                onClick={draft=draft.copy(outlineColor=color)},label={Text(label)})
+                        }
+                    }
+                    Text("Sombra: ${draft.shadowOffsetDp} dp")
+                    Slider(value=draft.shadowOffsetDp.toFloat(),valueRange=0f..6f,steps=5,
+                        onValueChange={draft=draft.copy(shadowOffsetDp=it.toInt())})
+                    if(draft.shadowOffsetDp>0) Row {
+                        listOf("Preta" to 0xFF000000.toInt(),
+                            "Branca" to 0xFFFFFFFF.toInt()).forEach { (label,color) ->
+                            FilterChip(selected=draft.shadowColor==color,
+                                onClick={draft=draft.copy(shadowColor=color)},label={Text(label)})
+                        }
+                    }
+                    Text("Espaçamento: ${draft.lineSpacingPercent}%")
+                    Slider(value=draft.lineSpacingPercent.toFloat(),valueRange=100f..160f,steps=5,
+                        onValueChange={draft=draft.copy(lineSpacingPercent=it.toInt())})
+                    Text("Alinhamento")
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+                        SubtitleStyles.alignments.forEach { (align,label) ->
+                            FilterChip(selected=draft.textAlignment==align,onClick={
+                                draft=draft.copy(textAlignment=align)
+                            },label={Text(label)})
+                        }
+                    }
+                    Row(verticalAlignment=Alignment.CenterVertically) {
+                        Text("Negrito",modifier=Modifier.weight(1f))
+                        Switch(checked=draft.bold,onCheckedChange={draft=draft.copy(bold=it)})
+                    }
+                    Text("Posição horizontal: ${(draft.x*100).toInt()}%")
+                    Slider(value=draft.x,valueRange=.1f.. .9f,
+                        onValueChange={draft=draft.copy(x=it)})
+                    Text("Posição vertical: ${(draft.y*100).toInt()}%")
+                    Slider(value=draft.y,valueRange=.1f.. .9f,
+                        onValueChange={draft=draft.copy(y=it)})
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+                        listOf("Cima" to .15f,"Centro" to .5f,"Baixo" to .85f).forEach { (name,y) ->
+                            FilterChip(selected=kotlin.math.abs(draft.y-y)<.02f,
+                                onClick={draft=draft.copy(y=y)},label={Text(name)})
+                        }
+                    }
+                }
+                Row(verticalAlignment=Alignment.CenterVertically) {
+                    Checkbox(checked=applyAll,onCheckedChange={applyAll=it})
+                    Text("Aplicar a todas as legendas",modifier=Modifier.weight(1f))
+                }
+                if(applyAll) {
+                    Row(verticalAlignment=Alignment.CenterVertically) {
+                        Checkbox(checked=copyAppearance,onCheckedChange={copyAppearance=it})
+                        Text("Aparência",fontSize=12.sp)
+                        Checkbox(checked=copyPosition,onCheckedChange={copyPosition=it})
+                        Text("Posição",fontSize=12.sp)
+                    }
+                    Row(verticalAlignment=Alignment.CenterVertically) {
+                        Checkbox(checked=copyAnimation,onCheckedChange={copyAnimation=it})
+                        Text("Animação",fontSize=12.sp)
+                    }
+                    Text("Textos e horários nunca são copiados.",fontSize=11.sp,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if(!valid) Text("Informe um texto e horários válidos.",fontSize=11.sp,
+                    color=MaterialTheme.colorScheme.error)
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(7.dp)) {
+                    OutlinedButton(onClick=onDismiss,modifier=Modifier.weight(1f)) {Text("Cancelar")}
+                    Button(onClick={if(applyAll) {confirmAll=true} else submit()},
+                        modifier=Modifier.weight(1f),enabled=valid &&
+                            (!applyAll || copyAppearance || copyPosition || copyAnimation)) {
+                        Text("Salvar")
+                    }
+                }
+            }
+        }
+    }
+    if(confirmAll) AlertDialog(onDismissRequest={confirmAll=false},
+        title={Text("Aplicar a todas?")},
+        text={Text("Somente as propriedades escolhidas serão copiadas. Texto, horários e IDs das demais legendas permanecem inalterados.")},
+        confirmButton={TextButton(onClick={confirmAll=false;submit()}) {Text("Aplicar")}},
+        dismissButton={TextButton(onClick={confirmAll=false}) {Text("Cancelar")}})
 }
 
 @Composable

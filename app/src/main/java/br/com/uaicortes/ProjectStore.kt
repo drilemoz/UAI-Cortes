@@ -63,12 +63,13 @@ data class Music(val uri: String, val title: String, val volume: Float = 0.35f) 
 data class SubtitleCue(
     val id: String = UUID.randomUUID().toString(),
     val text: String, val startMs: Long, val endMs: Long,
-    val color: Int = -1, val sizeSp: Int = 22, val y: Float = .85f, val x: Float = .5f,
+    val color: Int = -1, val sizeSp: Int = 12, val y: Float = .85f, val x: Float = .5f,
     val backgroundColor: Int = SubtitleStyles.DEFAULT_BACKGROUND, val bold: Boolean = true,
     val fontFamily: String = SubtitleStyles.FONT_SANS,
     val outlineWidth: Int = 0, val outlineColor: Int = 0xFF000000.toInt(),
     val shadowOffsetDp: Int = 0, val shadowColor: Int = 0xFF000000.toInt(),
-    val lineSpacingPercent: Int = 100, val textAlignment: String = SubtitleStyles.ALIGN_CENTER
+    val lineSpacingPercent: Int = 100, val textAlignment: String = SubtitleStyles.ALIGN_CENTER,
+    val animation: String = SubtitleAnimations.NONE, val animationSpeed: Float = 1f
 ) {
     fun json() = JSONObject().put("id", id).put("text", text)
         .put("startMs", startMs).put("endMs", endMs).put("color", color)
@@ -78,6 +79,7 @@ data class SubtitleCue(
         .put("outlineColor", outlineColor)
         .put("shadowOffsetDp", shadowOffsetDp).put("shadowColor", shadowColor)
         .put("lineSpacingPercent", lineSpacingPercent).put("textAlignment", textAlignment)
+        .put("animation", animation).put("animationSpeed", animationSpeed.toDouble())
     companion object {
         fun read(j: JSONObject) = SubtitleCue(j.optString("id").ifBlank { UUID.randomUUID().toString() },
             j.optString("text"), j.optLong("startMs"), j.optLong("endMs"),
@@ -92,7 +94,9 @@ data class SubtitleCue(
             j.optInt("shadowOffsetDp", 0).coerceIn(0, 6),
             SubtitleStyles.normalizeShadowColor(j.optInt("shadowColor", 0xFF000000.toInt())),
             SubtitleStyles.normalizeLineSpacing(j.optInt("lineSpacingPercent", 100)),
-            SubtitleStyles.normalizeAlignment(j.optString("textAlignment", SubtitleStyles.ALIGN_CENTER)))
+            SubtitleStyles.normalizeAlignment(j.optString("textAlignment", SubtitleStyles.ALIGN_CENTER)),
+            SubtitleAnimations.normalize(j.optString("animation", SubtitleAnimations.NONE)),
+            SubtitleAnimations.speed(j.optDouble("animationSpeed", 1.0).toFloat()))
     }
 }
 

@@ -10,10 +10,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*37',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.36"',gradle)
-assert 'Versão 0.1.36 (37)' in ui
-for label in ["VERSION: '0.1.36'", "VERSION_CODE: '37'", 'TAG="v$VERSION"',
+assert re.search(r'versionCode\s*=\s*38',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.37"',gradle)
+assert 'Versão 0.1.37 (38)' in ui
+for label in ["VERSION: '0.1.37'", "VERSION_CODE: '38'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -140,14 +140,14 @@ print('OK: v0.1.24 / versionCode 25, timeline de áudio arrastável, seleção e
 
 # v0.1.25: coordenadas relativas da legenda na prévia, editor visual e busca fina.
 precision=(root/'app/src/main/java/br/com/uaicortes/TimelinePrecision.kt').read_text()
-assert 'SubtitleOverlayOnFrame(cue, editable = false)' in ui
+assert 'SubtitleOverlayOnFrame(cue, editable = false, playbackMs=currentMs)' in ui
 assert 'SubtitlePositionPreview(p,selected,' in ui
 assert 'SubtitlePlacement.anchorPixels(' in ui
 assert 'SubtitlePlacement.drag(' in ui
 assert 'TimelinePrecision.step(' in ui and 'seekProjectPosition(player,p.clips,dest)' in ui
 assert 'Modifier.offset(x=((cue.x-.5f)*240).dp' not in ui
 assert 'onDragEnd' in ui and 'latestCommit(draftX,draftY)' in ui
-assert 'setOverlayFrameAnchor(0f, -1f)' in fx
+assert 'setOverlayFrameAnchor(0f,-1f)' in fx
 assert 'fun sourceAt(' in precision and 'fun anchorPixels(' in precision
 assert (root/'app/src/test/java/br/com/uaicortes/TimelinePrecisionTest.kt').exists()
 print('OK: v0.1.25 / versionCode 26, precisão da timeline e prévia de legendas proporcional')
@@ -155,7 +155,7 @@ print('OK: v0.1.25 / versionCode 26, precisão da timeline e prévia de legendas
 # v0.1.26: seleção de legenda por ID e arrasto independente de início/centro/fim.
 subtitle=(root/'app/src/main/java/br/com/uaicortes/SubtitleTimelineEdit.kt').read_text()
 assert 'SubtitleOverviewTimeline(p.subtitles,p.durationMs,onSelectSubtitle,' in ui
-assert 'SubtitleTimelineEditor(listOf(selected),p.durationMs,selectedId,' in ui
+assert 'private fun SubtitleEditDialog(' in ui
 assert 'selectedSubtitleId = id; navTo("subtitles")' in ui
 assert all(x in ui for x in ['SubtitleTimelineEdit.move(', 'SubtitleTimelineEdit.trimLeft(', 'SubtitleTimelineEdit.trimRight(', 'onFinish=::commitDraft'])
 assert all(x in subtitle for x in ['fun move(', 'fun trimLeft(', 'fun trimRight(', 'MIN_DURATION_MS = 100L'])
@@ -168,7 +168,7 @@ assert 'val backgroundColor: Int = SubtitleStyles.DEFAULT_BACKGROUND' in model
 assert '.put("backgroundColor", backgroundColor).put("bold", bold)' in model
 assert 'j.optBoolean("bold", true)' in model
 assert 'Color(cue.backgroundColor)' in ui and 'if (cue.bold) FontWeight.Bold' in ui
-assert 'SubtitleStyles.presets.forEach' in ui and 'SubtitleStyles.applyToAll(' in ui
+assert 'SubtitleStyles.presets.forEach' in ui and 'SubtitleStyles.applySelectedToAll(' in ui
 assert 'BackgroundColorSpan(active.backgroundColor)' in fx and 'StyleSpan(Typeface.BOLD)' in fx
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleStylesTest.kt').exists()
 print('OK: v0.1.27 / versionCode 28, estilos das legendas com prévia/exportação e compatibilidade legado')
@@ -195,9 +195,9 @@ assert 'SubtitleStyles.normalizeAlignment(j.optString(' in model
 assert 'j.optInt("shadowOffsetDp", 0).coerceIn(0, 6)' in model
 assert 'SubtitleStyles.normalizeLineSpacing(j.optInt(' in model
 assert all(x in ui for x in [
-    'Sombra: ${selected.shadowOffsetDp}', 'Espaçamento entre linhas:',
+    'Sombra: ${draft.shadowOffsetDp}', 'Espaçamento:',
     'SubtitleStyles.alignments.forEach', 'Shadow(', 'lineHeight=textLineHeight',
-    'textAlign=alignment', 'Versão 0.1.36 (37)'
+    'textAlign=alignment', 'Versão 0.1.37 (38)'
 ])
 assert all(x in fx for x in ['class SubtitleShadowSpan(', 'class SubtitleLineSpacingSpan(',
     'AlignmentSpan.Standard(layoutAlign)', 'SubtitleStyles.ALIGN_LEFT -> left.toFloat()',
@@ -206,9 +206,9 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.36'" in package_script and 'VERSION_CODE = 37' in package_script
-assert 'versionCode 37' in gradle and 'isUniversalApk = true' in gradle
-print('OK: versão atual 0.1.36 / versionCode 37, compatibilidade das legendas, JSON legado, APKs')
+assert "VERSION = '0.1.37'" in package_script and 'VERSION_CODE = 38' in package_script
+assert 'versionCode 38' in gradle and 'isUniversalApk = true' in gradle
+print('OK: versão atual 0.1.37 / versionCode 38, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
 assert 'import androidx.compose.ui.graphics.StrokeJoin' in ui
@@ -224,7 +224,7 @@ assert 'TrimQuickAction(Icons.Default.Save, "Salvar"' in ui
 assert 'TrimSaveLogic.applyPending(p, clip.id, begin, finish)' in ui
 assert 'onSaveHome = { saved -> write(saved); screen = "home" }' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/TrimSaveLogicTest.kt').exists()
-print('OK: versão atual 0.1.36 / versionCode 37, rolagem circular, salvar projeto e corte antes de ir à Home')
+print('OK: versão atual 0.1.37 / versionCode 38, rolagem circular, salvar projeto e corte antes de ir à Home')
 
 # v0.1.34: cortes retornam à metade direita, a faixa mostra partes selecionáveis,
 # e um ponto de fonte persiste sem alterar esquema legado.
@@ -239,20 +239,20 @@ assert 'lastTrimCutClipId = newId' in trim_edit and 'lastTrimCutSourceMs = sourc
 assert 'EditFeatures.repositionAfterDelete(project, remaining)' in trim_edit
 assert 'undoLastCut' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/TrimTimelineEditTest.kt').exists()
-print('OK: versão atual 0.1.36 / versionCode 37, faixa de trechos, seleção e restauração do último corte')
+print('OK: versão atual 0.1.37 / versionCode 38, faixa de trechos, seleção e restauração do último corte')
 
 # v0.1.34: uma timeline geral, lista virtualizada e vídeo fixo no topo.
 assert 'private fun SubtitleCompactTimeline(' in ui
 assert 'SubtitleCompactTimeline(sorted,p.durationMs,selectedId,' in ui
 assert 'private fun SubtitlePositionPreview(' in ui and 'player=remember(p.id)' in ui
 assert 'LazyColumn(state=captionsState' in ui and 'itemsIndexed(filtered,key=' in ui
-assert 'if(selectedId==cue.id && editorOpen && selected!=null)' in ui
-assert 'if(showAdvanced)' in ui and 'SubtitleTimelineEditor(listOf(selected)' in ui
+assert 'SubtitleEditDialog(cue=selected,totalMs=p.durationMs' in ui
+assert 'private fun SubtitleEditDialog(' in ui and 'TimeDigitsField("Início",draft.startMs,totalMs' in ui
 assert 'SubtitleTimelineEditor(p.subtitles,p.durationMs' not in ui
 assert 'p.subtitles.sortedBy { it.startMs }.forEachIndexed' not in ui
 assert (root/'app/src/main/java/br/com/uaicortes/SubtitleCompactLayout.kt').exists()
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleCompactLayoutTest.kt').exists()
-print('OK: versão atual 0.1.36 / versionCode 37, timeline unica, video fixo e legendas compactas')
+print('OK: versão atual 0.1.37 / versionCode 38, timeline unica, video fixo e legendas compactas')
 
 # v0.1.34: busca, navegação e exclusão segura no editor de legendas.
 nav=(root/'app/src/main/java/br/com/uaicortes/SubtitleListNavigation.kt').read_text()
@@ -265,7 +265,7 @@ assert 'pendingDeleteId?.let' in ui and 'Excluir esta legenda?' in ui
 assert 'SubtitleListNavigation.readSrtBounded(reader)' in ui
 assert 'fun readSrtBounded(' in nav and 'maxCharacters + 1' in nav
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleListNavigationTest.kt').exists()
-print('OK: versão atual 0.1.36 / versionCode 37, busca e navegação, exclusão confirmada e limite SRT')
+print('OK: versão atual 0.1.37 / versionCode 38, busca e navegação, exclusão confirmada e limite SRT')
 
 # v0.1.35: prévia se adapta ao aspecto/rotação em todas as telas de vídeo.
 layout=(root/'app/src/main/java/br/com/uaicortes/AdaptiveVideoLayout.kt').read_text()
@@ -279,7 +279,7 @@ assert 'previewSubtitleScale(cue,textLimitPx.toInt(),' in ui
 assert 'frameWidthDp * .94f' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/AdaptiveVideoLayoutTest.kt').exists()
 assert 'mediaAspect(context' in ui and 'METADATA_KEY_VIDEO_ROTATION' in ui
-print('OK: v0.1.36 / versionCode 37, proporção da prévia e largura de legenda responsivas')
+print('OK: v0.1.37 / versionCode 38, proporção da prévia e largura de legenda responsivas')
 
 # Regressão CI 31: o callback de importação SRT usa searchQuery; a declaração
 # de estado Compose deve aparecer ANTES do callback para resolver o identificador.
@@ -291,3 +291,22 @@ assert subtitle_screen.index(state_declaration)<subtitle_screen.index(importer_d
     'searchQuery deve existir antes do callback importer (erro de compilação no workflow 31)'
 assert 'selectedId=cues.first().id\n                    searchQuery=""' in subtitle_screen
 print('OK: regressão workflow 31 — estado da pesquisa declarado antes do callback de importação SRT')
+
+# v0.1.37: pop-up compacto, rascunho isolado e efeitos alinhados com exportador.
+animations=(root/'app/src/main/java/br/com/uaicortes/SubtitleAnimations.kt').read_text()
+assert 'val color: Int = -1, val sizeSp: Int = 12' in model
+assert 'j.optInt("sizeSp", 22)' in model
+assert 'val animation: String = SubtitleAnimations.NONE' in model
+assert '.put("animation", animation)' in model
+assert 'SubtitleAnimations.normalize(j.optString(' in model
+assert 'SubtitleStyles.applySelectedToAll(updated,draft,copyOptions)' in ui
+assert 'Dialog(onDismissRequest=onDismiss' in ui
+assert 'if(confirmAll) AlertDialog(' in ui
+assert 'TimeDigitsField("Fim",draft.endMs,totalMs' in ui
+assert 'SubtitleAnimations.frame(cue,playbackMs)' in ui
+assert 'SubtitleAnimations.frame(active,clipStartInProjectMs' in fx
+assert 'setScale(frame?.scale' in fx and 'setAlphaScale(if(active==null)' in fx
+assert 'private fun SubtitleEditDialog(' in ui and 'onSave(draft,options)' in ui
+assert 'fun splitPhrases(' in animations and 'KARAOKE' in animations
+assert (root/'app/src/test/java/br/com/uaicortes/SubtitleAnimationsTest.kt').exists()
+print('OK: 0.1.37 / 38, editor modal, rascunho, cópia seletiva e animações no Compose/Media3')

@@ -47,6 +47,25 @@ object SubtitleStyles {
     fun applyToCue(cue: SubtitleCue, preset: SubtitleStylePreset): SubtitleCue =
         cue.copy(color = preset.foreground, backgroundColor = preset.background, bold = preset.bold)
 
+    data class CopyOptions(val appearance: Boolean = true, val position: Boolean = false,
+        val animation: Boolean = true)
+
+    /** Copia as propriedades selecionadas sem tocar nos textos, IDs ou horários. */
+    fun applySelectedToAll(cues: List<SubtitleCue>, source: SubtitleCue,
+        options: CopyOptions): List<SubtitleCue> = cues.map { cue ->
+        var result = cue
+        if (options.appearance) result = result.copy(
+            color=source.color, sizeSp=source.sizeSp, backgroundColor=source.backgroundColor,
+            bold=source.bold, fontFamily=source.fontFamily,
+            outlineWidth=source.outlineWidth,outlineColor=source.outlineColor,
+            shadowOffsetDp=source.shadowOffsetDp,shadowColor=source.shadowColor,
+            lineSpacingPercent=source.lineSpacingPercent,textAlignment=source.textAlignment)
+        if (options.position) result = result.copy(x=source.x,y=source.y)
+        if (options.animation) result = result.copy(animation=source.animation,
+            animationSpeed=source.animationSpeed)
+        result
+    }
+
     /** Copia somente aparência, sem reescrever texto, posição, IDs ou sincronização. */
     fun applyToAll(cues: List<SubtitleCue>, source: SubtitleCue): List<SubtitleCue> = cues.map {
         it.copy(color = source.color, sizeSp = source.sizeSp,
