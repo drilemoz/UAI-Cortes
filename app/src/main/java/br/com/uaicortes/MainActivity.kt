@@ -13,6 +13,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerId
+import kotlin.math.abs
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -71,6 +75,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.exoplayer.ExoPlayer
@@ -100,14 +105,26 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        DiagnosticRecorder.initialize(applicationContext)
         setContent { UaiApp() }
     }
 }
+
+/** Observa falhas de reprodução em todos os players sem capturar caminhos de mídia. */
+private fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
+    ExoPlayer.Builder(context).build().apply {
+        addListener(object : Player.Listener {
+            override fun onPlayerError(error: PlaybackException) {
+                DiagnosticRecorder.exception("media3_player", error)
+            }
+        })
+    }
 
 @Composable
 fun UaiApp() {
     val context = LocalContext.current
     val store = remember { ProjectStore(context) }
+    var diagnosticsEnabled by remember { mutableStateOf(DiagnosticRecorder.isEnabled()) }
     var theme by remember { mutableStateOf(store.theme()) }
     var screen by remember { mutableStateOf("home") }
     var project by remember { mutableStateOf<VideoProject?>(null) }
@@ -131,10 +148,14 @@ fun UaiApp() {
     val palette = if (dark) darkColorScheme(primary = Color(0xFF72A5FF), background = if(theme=="AMOLED") Color.Black else Ink,
         surface = if(theme=="AMOLED") Color.Black else Color(0xFF202124))
     else lightColorScheme(primary = Blue, background = LightBg, surface = Color.White)
-    fun write(p: VideoProject) { project = p; store.save(p); projects = store.load() }
+    fun write(p: VideoProject) {
+        project = p; store.save(p); projects = store.load()
+        DiagnosticRecorder.action(screen, "project_saved")
+    }
     fun navTo(s: String) {
         if (s == "pip" && project != null && project!!.overlays.none { it.id == selectedOverlayId })
             selectedOverlayId = project!!.overlays.firstOrNull()?.id.orEmpty()
+        DiagnosticRecorder.action(screen, "open_${DiagnosticPrivacy.safeIdentifier(s)}")
         previous = screen; screen = s
     }
     fun saveOverlays(current: VideoProject, requested: List<Overlay>, preferredId: String?,
@@ -248,18 +269,41 @@ fun UaiApp() {
             screen = "audio"
         }
     }
-    fun back() { screen = when (screen) {
+    fun back() { DiagnosticRecorder.action(screen, "back"); screen = when (screen) {
         "editor" -> "home"
         "home" -> "home"
         "media" -> mediaOrigin
         "projects", "settings" -> "home"
-        "general", "appearance", "about" -> "settings"
+        "general", "appearance", "about", "diagnostics" -> "settings"
         "pip", "audio", "trim", "transition", "subtitles", "export" -> "editor"
         else -> previous
     } }
     BackHandler(screen != "home") { back() }
+    LaunchedEffect(screen, diagnosticsEnabled) { DiagnosticRecorder.screen(screen) }
     MaterialTheme(colorScheme = palette) {
-        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        val tapMonitor = if (diagnosticsEnabled) Modifier.pointerInput(screen) {
+            val touches = mutableMapOf<PointerId, androidx.compose.ui.geometry.Offset>()
+            val tolerance = viewConfiguration.touchSlop * 1.5f
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Final)
+                    event.changes.forEach { change ->
+                        when {
+                            !change.previousPressed && change.pressed -> touches[change.id] = change.position
+                            change.previousPressed && !change.pressed -> {
+                                val start = touches.remove(change.id)
+                                if (start != null && abs(start.x - change.position.x) <= tolerance &&
+                                    abs(start.y - change.position.y) <= tolerance) {
+                                    DiagnosticRecorder.tap(screen, change.position.x, change.position.y,
+                                        size.width, size.height)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else Modifier
+        Surface(modifier = Modifier.fillMaxSize().then(tapMonitor), color = MaterialTheme.colorScheme.background) {
             when (screen) {
                 "home" -> MainHome(projects, onCreate = { pendingPicker = "new"; selectedClip = ""; videoPicker.launch(arrayOf("video/*")) },
                     onOpen = { project = it; selectedClip = TrimTimelineEdit.resumeClipId(it); screen = "editor" },
@@ -268,6 +312,7 @@ fun UaiApp() {
                 "projects" -> ProjectsScreen(projects, { back() }, { project = it; selectedClip = TrimTimelineEdit.resumeClipId(it); screen = "editor" },
                     { store.delete(it.id); projects = store.load() })
                 "settings" -> SettingsScreen({ back() }) { screen = it }
+                "diagnostics" -> DiagnosticScreen(::back, onEnabledChanged = { diagnosticsEnabled = it })
                 "general" -> GeneralScreen(store, ::back)
                 "appearance" -> AppearanceScreen(theme, { theme = it; store.setTheme(it) }, ::back)
                 "about" -> AboutScreen(::back)
@@ -471,6 +516,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Configurações",back)
         ItemCard(Icons.Default.Tune,"Geral","Qualidade e armazenamento") {onClick("general")}
         ItemCard(Icons.Default.Palette,"Tela","Sistema, claro, escuro e AMOLED") {onClick("appearance")}
+        ItemCard(Icons.Default.BugReport,"Diagnóstico","Capturar erros e toques, exportar relatório") {onClick("diagnostics")}
         ItemCard(Icons.Default.Info,"Sobre","Versão e informações do aplicativo") {onClick("about")}
     }
 }
@@ -511,7 +557,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.40 (41)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.41 (42)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: trechos visuais em Cortar e unir, seleção automática após dividir e cursor no último corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -527,7 +573,7 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     onSelectOverlay:(String)->Unit,onTransition:(Int)->Unit,onSaveHome:()->Unit,
     onSelectAudio:(String)->Unit,onSelectSubtitle:(String)->Unit) {
     val context=LocalContext.current
-    val player=remember { ExoPlayer.Builder(context).build().apply { repeatMode = Player.REPEAT_MODE_ALL } }
+    val player=remember { diagnosticPlayer(context).apply { repeatMode = Player.REPEAT_MODE_ALL } }
     var playbackSpeed by remember(p.id) { mutableFloatStateOf(1f) }
     var clipMenuId by remember(p.id) { mutableStateOf<String?>(null) }
     var deletionRequested by remember(p.id) { mutableStateOf<String?>(null) }
@@ -788,7 +834,7 @@ private fun TrackAudioPreview(uri: String, startMs: Long, durationMs: Long,
     volume: Float, projectMs: Long, playing: Boolean, speed: Float, loop: Boolean,
     sourceStartMs: Long = 0L) {
     val context=LocalContext.current
-    val player=remember(uri) { ExoPlayer.Builder(context).build() }
+    val player=remember(uri) { diagnosticPlayer(context) }
     DisposableEffect(player) { onDispose {player.release()} }
     LaunchedEffect(player,uri,loop) {
         player.repeatMode=if(loop)Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
@@ -1244,7 +1290,7 @@ private fun PipLayer(pip: Overlay, timeMs: Long, playing: Boolean,
                      speed: Float = 1f, editable: Boolean = true, onUpdate: (Overlay) -> Unit) {
     val context = LocalContext.current
     val sourceAspect = remember(pip.uri, pip.isImage) { mediaAspect(context, pip.uri, pip.isImage) }
-    val pipPlayer = remember(pip.uri) { if (!pip.isImage) ExoPlayer.Builder(context).build() else null }
+    val pipPlayer = remember(pip.uri) { if (!pip.isImage) diagnosticPlayer(context) else null }
     DisposableEffect(pipPlayer) { onDispose { pipPlayer?.release() } }
     LaunchedEffect(pip.uri) {
         pipPlayer?.apply { setMediaItem(MediaItem.fromUri(pip.uri)); prepare() }
@@ -1590,7 +1636,7 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
             return@Column
         }
         val total = clip.sourceDurationMs.coerceAtLeast(1L)
-        val player = remember(clip.id) { ExoPlayer.Builder(context).build().apply { repeatMode = Player.REPEAT_MODE_ONE } }
+        val player = remember(clip.id) { diagnosticPlayer(context).apply { repeatMode = Player.REPEAT_MODE_ONE } }
         var playbackSpeed by remember(clip.id) { mutableFloatStateOf(1f) }
         LaunchedEffect(player, playbackSpeed) { player.setPlaybackParameters(PlaybackParameters(playbackSpeed)) }
         DisposableEffect(player) { onDispose { player.release() } }
@@ -1850,7 +1896,7 @@ private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit
         }
     }
     // Pré-escuta da origem selecionada, sem alterar a linha do tempo.
-    val previewPlayer = remember(context) { ExoPlayer.Builder(context).build() }
+    val previewPlayer = remember(context) { diagnosticPlayer(context) }
     var previewPlaying by remember { mutableStateOf(false) }
     val previewClip = externalClip ?: p.clips.getOrNull(sourceIndex)
     val previewStartMs = if (externalClip != null) (externalClip!!.sourceDurationMs * trimStart).toLong()
@@ -1909,7 +1955,7 @@ private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit
     val editValid = editingAudio != null && AudioTrackTiming.valid(
         editSourceStart, editSourceEnd, sourceAudioLength, editTimelineStart, p.durationMs)
     // Player separado evita interromper a prévia de extração de vídeo.
-    val trackPlayer = remember(context) { ExoPlayer.Builder(context).build() }
+    val trackPlayer = remember(context) { diagnosticPlayer(context) }
     var trackPlaying by remember { mutableStateOf(false) }
     LaunchedEffect(editingAudioId, editingAudio?.uri, editSourceStart, editSourceEnd) {
         trackPlayer.pause()
@@ -1953,8 +1999,8 @@ private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit
                         update(p.copy(audioTracks=p.audioTracks+track))
                         message += " Adicionado à linha do tempo."
                     }
-                },onError={error->exporting=false; message="Falha: $error"})
-            }.onFailure { exporting=false; message="Falha: ${it.message}" }
+                },onError={error->exporting=false; DiagnosticRecorder.failure("audio_extract",error);message="Falha: $error"})
+            }.onFailure { exporting=false; DiagnosticRecorder.exception("audio_extract_start", it);message="Falha: ${it.message}" }
         }
     }
     DisposableEffect(engine) { onDispose { engine.cancel() } }
@@ -2246,7 +2292,7 @@ private fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) ->
     val sourceAspect = remember(pip?.uri, pip?.isImage) {
         pip?.let { mediaAspect(context, it.uri, it.isImage) } ?: 16f / 9f
     }
-    val player = remember(p.id) { ExoPlayer.Builder(context).build() }
+    val player = remember(p.id) { diagnosticPlayer(context) }
     var playing by remember(p.id) { mutableStateOf(false) }
     var previewTime by remember(p.id) { mutableLongStateOf(pip?.startAtMs ?: 0L) }
     val canvasIndex=AdaptiveVideoLayout.activeClipIndex(p.clips.map { it.durationMs },previewTime)
@@ -2890,7 +2936,7 @@ private fun SubtitlePositionPreview(p:VideoProject,cue:SubtitleCue,
     onPrevious:()->Unit, onNext:()->Unit,
     hasPrevious:Boolean, hasNext:Boolean) {
     val context=LocalContext.current
-    val player=remember(p.id) { ExoPlayer.Builder(context).build() }
+    val player=remember(p.id) { diagnosticPlayer(context) }
     var playing by remember(p.id) { mutableStateOf(false) }
     var previewMs by remember(p.id) { mutableLongStateOf(cue.startMs) }
     DisposableEffect(player) { onDispose { player.release() } }
@@ -2996,7 +3042,7 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
                     searchQuery=""
                     status="${cues.size} legendas importadas"
                 } else status="Nenhuma legenda SRT válida no arquivo"
-            }.onFailure {status="Não foi possível ler o arquivo: ${it.message}"}
+            }.onFailure {DiagnosticRecorder.exception("srt_import", it);status="Não foi possível ler o arquivo: ${it.message}"}
         }
     }
     val sorted = remember(p.subtitles) {
@@ -3401,7 +3447,7 @@ private fun SubtitleEditDialog(cue: SubtitleCue,totalMs: Long,number: Int,
 private fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
     val context=LocalContext.current
     val engine=remember { ExportEngine(context) }
-    val previewPlayer=remember { ExoPlayer.Builder(context).build() }
+    val previewPlayer=remember { diagnosticPlayer(context) }
     var previewPlaying by remember { mutableStateOf(false) }
     var exportClipIndex by remember(p.id) { mutableIntStateOf(0) }
     var exportPreviewMs by remember(p.id) { mutableLongStateOf(0L) }
@@ -3516,11 +3562,12 @@ private fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
         } else {
             BlueButton("↓ Salvar vídeo",onClick={
                 if(name.isNotBlank() && p.clips.isNotEmpty()) {
+                    DiagnosticRecorder.action("export", "export_start_${quality}p")
                     result="";progress=0;working=true
                     runCatching {engine.start(p,quality,name,
-                        onSuccess={uri->working=false;progress=100;result="Vídeo salvo em Filmes/UaiCortes"},
-                        onError={error->working=false;result="Erro: $error"})}
-                        .onFailure {working=false;result="Erro: ${it.message}"}
+                        onSuccess={uri->working=false;progress=100;DiagnosticRecorder.action("export", "export_success");result="Vídeo salvo em Filmes/UaiCortes"},
+                        onError={error->working=false;DiagnosticRecorder.failure("export", error);result="Erro: $error"})}
+                        .onFailure {working=false;DiagnosticRecorder.exception("export_start",it);result="Erro: ${it.message}"}
                 }
             },modifier=Modifier.fillMaxWidth(),enabled=name.isNotBlank()&&p.clips.isNotEmpty())
         }

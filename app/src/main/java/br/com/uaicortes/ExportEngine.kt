@@ -106,6 +106,7 @@ class ExportEngine(private val context: Context) {
             } ?: throw FileNotFoundException("não foi possível abrir o arquivo")
         } catch (e: Exception) {
             Log.e("UaiCortesExport", "Não foi possível abrir $description para exportação", e)
+            DiagnosticRecorder.exception("export_media_read", e)
             throw IllegalStateException("$description não está acessível. Selecione novamente o arquivo original.", e)
         }
     }
@@ -131,6 +132,8 @@ class ExportEngine(private val context: Context) {
 
     private fun describeExportError(error: ExportException): String {
         Log.e("UaiCortesExport", "Transformer: código ${error.errorCode}", error)
+        DiagnosticRecorder.exception("media3_transformer", error)
+        DiagnosticRecorder.failure("media3_code", "MEDIA3_${error.errorCode} ${error.message.orEmpty()}")
         val hint = when (error.errorCode) {
             ExportException.ERROR_CODE_IO_NO_PERMISSION, ExportException.ERROR_CODE_IO_FILE_NOT_FOUND ->
                 "Sem acesso a uma mídia do projeto. Selecione o arquivo novamente."
@@ -262,6 +265,7 @@ class ExportEngine(private val context: Context) {
                             val uri = saveToGallery(target, requestedName)
                             android.os.Handler(android.os.Looper.getMainLooper()).post { onSuccess(uri) }
                         } catch (e: Exception) {
+                            DiagnosticRecorder.exception("export_gallery", e)
                             android.os.Handler(android.os.Looper.getMainLooper()).post { onError(e.message ?: "Falha ao salvar vídeo") }
                         } finally { target.delete(); tempFile = null; transformer = null }
                     }.start()

@@ -10,10 +10,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*41',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.40"',gradle)
-assert 'Versão 0.1.40 (41)' in ui
-for label in ["VERSION: '0.1.40'", "VERSION_CODE: '41'", 'TAG="v$VERSION"',
+assert re.search(r'versionCode\s*=\s*42',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.41"',gradle)
+assert 'Versão 0.1.41 (42)' in ui
+for label in ["VERSION: '0.1.41'", "VERSION_CODE: '42'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -197,7 +197,7 @@ assert 'SubtitleStyles.normalizeLineSpacing(j.optInt(' in model
 assert all(x in ui for x in [
     'Sombra: ${draft.shadowOffsetDp}', 'Espaçamento:',
     'SubtitleStyles.alignments.forEach', 'Shadow(', 'lineHeight=textLineHeight',
-    'textAlign=alignment', 'Versão 0.1.40 (41)'
+    'textAlign=alignment', 'Versão 0.1.41 (42)'
 ])
 assert all(x in fx for x in ['class SubtitleShadowSpan(', 'class SubtitleLineSpacingSpan(',
     'AlignmentSpan.Standard(layoutAlign)', 'SubtitleStyles.ALIGN_LEFT -> left.toFloat()',
@@ -206,9 +206,9 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.40'" in package_script and 'VERSION_CODE = 41' in package_script
-assert 'versionCode 41' in gradle and 'isUniversalApk = true' in gradle
-print('OK: versão atual 0.1.40 / versionCode 41, compatibilidade das legendas, JSON legado, APKs')
+assert "VERSION = '0.1.41'" in package_script and 'VERSION_CODE = 42' in package_script
+assert 'versionCode 42' in gradle and 'isUniversalApk = true' in gradle
+print('OK: versão atual 0.1.41 / versionCode 42, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
 assert 'import androidx.compose.ui.graphics.StrokeJoin' in ui
@@ -224,7 +224,7 @@ assert 'TrimQuickAction(Icons.Default.Save, "Salvar"' in ui
 assert 'TrimSaveLogic.applyPending(p, clip.id, begin, finish)' in ui
 assert 'onSaveHome = { saved -> write(saved); screen = "home" }' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/TrimSaveLogicTest.kt').exists()
-print('OK: versão atual 0.1.40 / versionCode 41, rolagem circular, salvar projeto e corte antes de ir à Home')
+print('OK: versão atual 0.1.41 / versionCode 42, rolagem circular, salvar projeto e corte antes de ir à Home')
 
 # v0.1.34: cortes retornam à metade direita, a faixa mostra partes selecionáveis,
 # e um ponto de fonte persiste sem alterar esquema legado.
@@ -239,7 +239,7 @@ assert 'lastTrimCutClipId = newId' in trim_edit and 'lastTrimCutSourceMs = sourc
 assert 'EditFeatures.repositionAfterDelete(project, remaining)' in trim_edit
 assert 'undoLastCut' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/TrimTimelineEditTest.kt').exists()
-print('OK: versão atual 0.1.40 / versionCode 41, faixa de trechos, seleção e restauração do último corte')
+print('OK: versão atual 0.1.41 / versionCode 42, faixa de trechos, seleção e restauração do último corte')
 
 # v0.1.34: uma timeline geral, lista virtualizada e vídeo fixo no topo.
 assert 'private fun SubtitleCompactTimeline(' in ui
@@ -252,7 +252,7 @@ assert 'SubtitleTimelineEditor(p.subtitles,p.durationMs' not in ui
 assert 'p.subtitles.sortedBy { it.startMs }.forEachIndexed' not in ui
 assert (root/'app/src/main/java/br/com/uaicortes/SubtitleCompactLayout.kt').exists()
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleCompactLayoutTest.kt').exists()
-print('OK: versão atual 0.1.40 / versionCode 41, timeline unica, video fixo e legendas compactas')
+print('OK: versão atual 0.1.41 / versionCode 42, timeline unica, video fixo e legendas compactas')
 
 # v0.1.34: busca, navegação e exclusão segura no editor de legendas.
 nav=(root/'app/src/main/java/br/com/uaicortes/SubtitleListNavigation.kt').read_text()
@@ -265,7 +265,7 @@ assert 'pendingDeleteId?.let' in ui and 'Excluir esta legenda?' in ui
 assert 'SubtitleListNavigation.readSrtBounded(reader)' in ui
 assert 'fun readSrtBounded(' in nav and 'maxCharacters + 1' in nav
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleListNavigationTest.kt').exists()
-print('OK: versão atual 0.1.40 / versionCode 41, busca e navegação, exclusão confirmada e limite SRT')
+print('OK: versão atual 0.1.41 / versionCode 42, busca e navegação, exclusão confirmada e limite SRT')
 
 # v0.1.35: prévia se adapta ao aspecto/rotação em todas as telas de vídeo.
 layout=(root/'app/src/main/java/br/com/uaicortes/AdaptiveVideoLayout.kt').read_text()
@@ -279,7 +279,7 @@ assert 'previewSubtitleScale(cue,textLimitPx.toInt(),' in ui
 assert 'frameWidthDp * .94f' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/AdaptiveVideoLayoutTest.kt').exists()
 assert 'mediaAspect(context' in ui and 'METADATA_KEY_VIDEO_ROTATION' in ui
-print('OK: v0.1.40 / versionCode 41, proporção da prévia e largura de legenda responsivas')
+print('OK: v0.1.41 / versionCode 42, proporção da prévia e largura de legenda responsivas')
 
 # Regressão CI 31: o callback de importação SRT usa searchQuery; a declaração
 # de estado Compose deve aparecer ANTES do callback para resolver o identificador.
@@ -309,7 +309,7 @@ assert 'setScale(frame?.scale' in fx and 'setAlphaScale(if (active == null' in f
 assert 'private fun SubtitleEditDialog(' in ui and 'onSave(draft,options)' in ui
 assert 'fun splitPhrases(' in animations and 'KARAOKE' in animations
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleAnimationsTest.kt').exists()
-print('OK: 0.1.40 / 41, editor modal, rascunho, cópia seletiva e animações no Compose/Media3')
+print('OK: 0.1.41 / 42, editor modal, rascunho, cópia seletiva e animações no Compose/Media3')
 
 # v0.1.39: Salvar/Home em Legendas, efeitos circulares e áudio compacto com confirmação.
 assert 'onSaveHome = { write(it); screen = "home" }' in ui
@@ -321,7 +321,7 @@ assert 'Text("Faixas adicionais (${p.audioTracks.size})"' in ui
 assert 'if(volumesExpanded)' in ui and 'if(trackVolumeExpandedId==track.id)' in ui
 assert 'Remover faixa de áudio?' in ui and 'pendingAudioDeleteId=track.id' in ui
 assert 'if(editingAudioId==id) editingAudioId=null' in ui
-print('OK: v0.1.40 / 41, Salvar/Home em legendas, efeitos circulares, mixagem compacta e exclusão confirmada')
+print('OK: v0.1.41 / 42, Salvar/Home em legendas, efeitos circulares, mixagem compacta e exclusão confirmada')
 
 assert (root/'app/src/test/java/br/com/uaicortes/CircularCarouselTest.kt').exists()
 print('OK: helper de índice circular e teste de limites incluídos')
@@ -342,7 +342,7 @@ assert 'EditFeatures.fadeFraction(local,clip.durationMs,fadeIn,fadeOut)' in expo
 assert (root/'app/src/test/java/br/com/uaicortes/ExportTimingPolicyTest.kt').exists()
 print('OK: v0.1.39, origem real do clipe, mídias validadas, prévia com legendas/PiPs/fade')
 
-# v0.1.40: Media3 TextOverlay nunca recebe texto com largura zero.
+# v0.1.41: Media3 TextOverlay nunca recebe texto com largura zero.
 # A prova vem do TextOverlay.getBitmap do Media3 (StaticLayout.width -> Bitmap.createBitmap).
 safety=(root/'app/src/main/java/br/com/uaicortes/SubtitleOverlayTextSafety.kt').read_text()
 assert 'INVISIBLE_GLYPH = "\\u00A0"' in safety or 'INVISIBLE_GLYPH = "\u00A0"' in safety
@@ -352,4 +352,24 @@ assert 'text.setSpan(ForegroundColorSpan(Color.TRANSPARENT)' in fx
 assert 'SubtitleOverlayTextSafety.isVisible(frame?.text.orEmpty())' in fx
 assert 'return SpannableString("")' not in fx
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleOverlayTextSafetyTest.kt').exists()
-print('OK: v0.1.40, regressão de texto vazio/bitmap 0px e transparência no Media3')
+print('OK: v0.1.41, regressão de texto vazio/bitmap 0px e transparência no Media3')
+
+# v0.1.41: observabilidade offline opt-in e sem conteúdo de usuário.
+diag=(root/'app/src/main/java/br/com/uaicortes/DiagnosticRecorder.kt').read_text()
+privacy=(root/'app/src/main/java/br/com/uaicortes/DiagnosticPrivacy.kt').read_text()
+dscreen=(root/'app/src/main/java/br/com/uaicortes/DiagnosticScreen.kt').read_text()
+manifest=(root/'app/src/main/AndroidManifest.xml').read_text()
+assert 'private const val MAX_BYTES = 512 * 1024' in diag
+assert 'AtomicBoolean(false)' in diag and 'fun setEnabled(value: Boolean)' in diag
+assert 'fun tap(' in diag and 'fun failure(' in diag and 'fun report()' in diag
+assert 'DiagnosticPrivacy.touchGrid(' in diag and 'touchGrid(' in privacy
+assert 'DiagnosticRecorder.initialize(applicationContext)' in ui
+assert 'Modifier.pointerInput(screen)' in ui and 'PointerEventPass.Final' in ui
+assert '"diagnostics" -> DiagnosticScreen(' in ui and 'Diagnóstico' in ui
+assert 'ActivityResultContracts.CreateDocument("text/plain")' in dscreen
+assert 'FileProvider.getUriForFile' in dscreen and 'androidx.core.content.FileProvider' in manifest
+assert 'diagnostic_file_paths' in manifest and 'cache-path' in (root/'app/src/main/res/xml/diagnostic_file_paths.xml').read_text()
+assert 'DiagnosticRecorder.exception("media3_transformer", error)' in source
+assert 'DiagnosticRecorder.exception("media3_player", error)' in ui
+assert 'schemaVersion' in model and '.put("schemaVersion", 4)' in model
+print('OK: 0.1.41 (42), diagnóstico opt-in, toques, erros, compartilhamento local, sem mudar schema JSON')
