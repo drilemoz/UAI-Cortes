@@ -78,3 +78,5 @@
 
 - v0.1.39: `EditedMediaItem.Builder.setDurationUs` para vídeo/áudio NÃO deve receber a duração do recorte. Para `Transformer` com duração intrínseca, deixe Media3 ler o arquivo original. Mantenha clipping explícito e valide acesso às mídias e os limites dos cortes.
 - v0.1.39: prévia de Exportar desenha legendas/PiPs/fades salvos, mas a exportação real precisa ser testada em aparelho com áudio e vídeo. Apresentar código/causa original em erros de AssetLoader, não afirmar que foi resolvido sem novo teste.
+
+- v0.1.40: `TextOverlay.getBitmap` não aceita texto vazio, pois gera StaticLayout de largura zero. `TimedSubtitleOverlay.getText` deve sempre fornecer placeholder NBSP transparente nos intervalos sem legenda ou na primeira amostra do typewriter, e `getOverlaySettings` precisa usar alpha 0 nessas condições. Guardar texto/tempos/SRT originais sem alterações; testar exportação física antes de declarar resolução definitiva.

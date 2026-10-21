@@ -140,6 +140,8 @@ class ExportEngine(private val context: Context) {
                 "O aparelho não conseguiu decodificar uma mídia. Teste outro arquivo ou formato."
             ExportException.ERROR_CODE_ENCODER_INIT_FAILED, ExportException.ERROR_CODE_ENCODING_FORMAT_UNSUPPORTED ->
                 "O aparelho não conseguiu iniciar a codificação H.264/AAC. Tente 720p."
+            ExportException.ERROR_CODE_VIDEO_FRAME_PROCESSING_FAILED ->
+                "Falha ao compor um quadro de vídeo (legendas, PiP ou efeito). Verifique as camadas do projeto."
             else -> "Não foi possível processar uma mídia do projeto. Verifique os arquivos e os cortes."
         }
         val detail = generateSequence(error as Throwable?) { it.cause }

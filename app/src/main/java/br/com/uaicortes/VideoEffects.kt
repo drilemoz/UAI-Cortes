@@ -146,10 +146,19 @@ class TimedSubtitleOverlay(
         return cues.firstOrNull { t >= it.startMs && t < it.endMs && it.text.isNotBlank() }
     }
     override fun getText(presentationTimeUs: Long): SpannableString {
-        val active = cue(presentationTimeUs) ?: return SpannableString("")
-        val frame=SubtitleAnimations.frame(active,clipStartInProjectMs + presentationTimeUs/1000L)
-        val text = SpannableString(frame.text)
-        if (text.isNotEmpty()) {
+        val active = cue(presentationTimeUs)
+        val frame = active?.let { SubtitleAnimations.frame(it,
+            clipStartInProjectMs + presentationTimeUs / 1000L) }
+        // Media3 TextOverlay.getBitmap mede o texto e cria Bitmap(width, height).
+        // Retornar "" provoca width=0 entre legendas e no primeiro frame do typewriter.
+        // O NBSP garante dimensões válidas; quando inativo, nunca desenhamos esse caractere.
+        val rendered = frame?.text.orEmpty()
+        val text = SpannableString(SubtitleOverlayTextSafety.bitmapSafeText(rendered))
+        if (!SubtitleOverlayTextSafety.isVisible(rendered)) {
+            text.setSpan(ForegroundColorSpan(Color.TRANSPARENT), 0, text.length, 0)
+            return text
+        }
+        if (active != null && frame != null) {
             text.setSpan(ForegroundColorSpan(active.color), 0, text.length, 0)
             frame.highlighted?.let { highlighted ->
                 if(highlighted.first>=0 && highlighted.last<text.length)
@@ -193,7 +202,8 @@ class TimedSubtitleOverlay(
                 (1f - (active?.y ?: .85f)*2f - (frame?.slideY ?: 0f)*2f).coerceIn(-1f,1f))
             .setOverlayFrameAnchor(0f,-1f)
             .setScale(frame?.scale ?: 1f,frame?.scale ?: 1f)
-            .setAlphaScale(if(active==null) 0f else (frame?.alpha ?: 1f))
+            .setAlphaScale(if (active == null || !SubtitleOverlayTextSafety.isVisible(frame?.text.orEmpty()))
+                0f else (frame?.alpha ?: 1f))
             .build()
     }
 }
