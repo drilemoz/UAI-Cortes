@@ -72,3 +72,9 @@
 
 - v0.1.37: `SubtitleCue.sizeSp` padrão de novas legendas = 12; ao ler projeto anterior sem `sizeSp`, assumir 22. `animation` e `animationSpeed` opcionais com defaults sem efeito / 1.0. Não elevar schemaVersion=4.
 - v0.1.37: editor modal usa rascunho; Cancelar não persiste edições. Aplicar a todas sempre confirma e copia somente aparência, posição e/ou animação conforme seleção; IDs, texto e tempo ficam intactos. Preview e Media3 usam o mesmo SubtitleAnimations.frame, mas fidelidade de renderização física depende de teste Android.
+
+- v0.1.38: Salvar em Legendas persiste projeto editável e volta à Home; preservar Nova/SRT e busca na mesma área. Efeitos devem ficar em LazyRow circular sem duplicar dados persistidos.
+- v0.1.38: Áudio mantém volumes legados acessíveis por expansão e faixas adicionais acessíveis sem expandir, com volume individual opcional; remover faixa precisa de confirmação e não apaga arquivo original. Projetos antigos continuam sem migração (`schemaVersion=4`).
+
+- v0.1.39: `EditedMediaItem.Builder.setDurationUs` para vídeo/áudio NÃO deve receber a duração do recorte. Para `Transformer` com duração intrínseca, deixe Media3 ler o arquivo original. Mantenha clipping explícito e valide acesso às mídias e os limites dos cortes.
+- v0.1.39: prévia de Exportar desenha legendas/PiPs/fades salvos, mas a exportação real precisa ser testada em aparelho com áudio e vídeo. Apresentar código/causa original em erros de AssetLoader, não afirmar que foi resolvido sem novo teste.

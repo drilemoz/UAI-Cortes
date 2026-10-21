@@ -1,3 +1,12 @@
+## v0.1.39 (versionCode 40) · 21/10/2026
+- Exportação: preview de legendas/PiPs/fades e checagens de URI/recortes; erros Media3 com código e causa.
+
+## Melhorias de interface v0.1.38 (versionCode 39)
+- Tela Legendas: Salvar projeto e retornar à Home (sem exportar), junto de Nova e SRT.
+- Efeitos em LazyRow circular; scroll nos dois sentidos e seleção apenas visual no rascunho do pop-up.
+- Áudio: volumes de clipes recolhidos por padrão, faixa adicional compacta e confirmação de exclusão.
+- Teste de layout em telas estreitas e reprodução/exportação ainda pendente no Android.
+
 ## Correção v0.1.36 (versionCode 37)
 - Corrigida falha de escopo Kotlin no importador SRT da tela Legendas (`searchQuery`), que impedia Debug e Release no workflow 31.
 - Adicionada checagem de regressão para a ordem do estado Compose. Build Android completo ainda pendente.

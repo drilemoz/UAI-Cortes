@@ -1,6 +1,20 @@
-# Uai Cortes 0.1.37
+# Uai Cortes 0.1.39
 
 Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
+
+## v0.1.39 (versionCode 40) · 21/10/2026
+- Corrigida configuração de duração de itens Media3 Transformer: não informar a duração *recortada* como se fosse a duração original da fonte em vídeos, PiPs e áudios. A biblioteca lê a duração intrínseca das mídias.
+- Exportação: valida leitura das URIs locais e limites dos cortes antes do processamento, verificando espaço mínimo temporário; em caso de falha apresenta orientação mais específica, código Media3 e detalhe da causa quando disponível (também Logcat).
+- Prévia Exportar: exibe legendas existentes com animações e estilo, camadas PiP e fades; anteriormente reproduzia somente o vídeo bruto, confundindo o usuário.
+- A prévia ainda não garante fidelidade de áudio/mixagem; conferir o MP4 real depois do build e os códigos retornados no aparelho. "Asset loader error" sem código/causa não basta para diagnóstico definitivo.
+- Mantidos projetos e esquema JSON 4, sem alterar arquivos originais. Compilação Gradle, exportação real no aparelho e conferência de legendas/PiPs pendentes.
+
+## v0.1.38 (versionCode 39) · 21/10/2026
+- Legendas: novo botão compacto **Salvar** na mesma faixa de **Nova** e **SRT**. Salva projeto editável e retorna à Home, não exporta MP4.
+- Pop-up: efeitos de revelação lado a lado em carrossel circular horizontal (itens virtualizados), sem coluna longa; o efeito ativo mantém seleção.
+- Áudio: seção **Mixagem** inicialmente recolhida para evitar controles de volume de todos os vídeos; cada faixa adicional exibe título, volume e edição em uma linha e abre o slider só quando solicitado.
+- Exclusão de faixa de áudio agora pede confirmação e preserva o arquivo de origem; ao excluir uma faixa em edição o rascunho é fechado.
+- Mantidos formato, volume e recorte reais já existentes; `schemaVersion=4` permanece. Validar UI, build Gradle, prévia e MP4 em aparelho.
 
 ## v0.1.37 (versionCode 38) · 21/10/2026
 - Tela Legendas: editor em diálogo compacto com prévia ilustrativa de estilo, texto, início/fim lado a lado, botão Estilo, Animação, Excluir e Salvar.
@@ -54,7 +68,7 @@ Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
 
 ## Versões e ferramentas
 - `minSdk = 26`, `compileSdk = 36`, `targetSdk = 36`.
-- `versionName = 0.1.37`, `versionCode = 38`.
+- `versionName = 0.1.39`, `versionCode = 40`.
 - Kotlin 2.1.21, AGP 8.10.1, Gradle 8.11.1, JDK 17.
 - Media3 1.10.1, ExoPlayer e Transformer para composição H.264/AAC.
 - O editor não exige conta nem internet. A biblioteca PiP solicita acesso às fotos/vídeos do Android, integral ou parcial conforme consentimento; o seletor de documentos continua como alternativa.

@@ -27,6 +27,8 @@ import androidx.media3.transformer.ProgressHolder
 import androidx.media3.transformer.Transformer
 import androidx.media3.common.VideoCompositorSettings
 import android.net.Uri
+import android.util.Log
+import java.io.FileNotFoundException
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -92,6 +94,60 @@ class ExportEngine(private val context: Context) {
     private var tempFile: File? = null
     private val progressHolder = ProgressHolder()
 
+    /** Não comece a codificação quando um arquivo local perdeu a permissão de leitura. */
+    private fun checkReadable(uriText: String, description: String) {
+        val uri = Uri.parse(uriText)
+        if (uri.scheme != "content" && uri.scheme != "file") {
+            throw IllegalArgumentException("$description: endereço de mídia incompatível com a exportação local")
+        }
+        try {
+            context.contentResolver.openFileDescriptor(uri, "r")?.use { file ->
+                if (file.statSize == 0L) throw FileNotFoundException("arquivo vazio")
+            } ?: throw FileNotFoundException("não foi possível abrir o arquivo")
+        } catch (e: Exception) {
+            Log.e("UaiCortesExport", "Não foi possível abrir $description para exportação", e)
+            throw IllegalStateException("$description não está acessível. Selecione novamente o arquivo original.", e)
+        }
+    }
+
+    private fun validateSources(project: VideoProject) {
+        for ((index, clip) in project.clips.withIndex()) {
+            require(ExportTimingPolicy.validClip(clip.startMs, clip.endMs, clip.sourceDurationMs)) {
+                "Trecho ${index + 1} possui início/fim inválidos; revise o corte antes de exportar."
+            }
+            checkReadable(clip.uri, "Vídeo ${index + 1}")
+        }
+        project.overlays.forEachIndexed { index, overlay ->
+            checkReadable(overlay.uri, "PiP ${index + 1}")
+        }
+        project.audioTracks.forEachIndexed { index, audio ->
+            if (audio.volume > 0f) checkReadable(audio.uri, "Áudio ${index + 1}")
+        }
+        project.music?.takeIf { it.volume > 0f }?.let { checkReadable(it.uri, "Música") }
+        require(context.cacheDir.usableSpace >= 32L * 1024L * 1024L) {
+            "Pouco espaço livre para gerar o MP4 temporário. Libere armazenamento e tente novamente."
+        }
+    }
+
+    private fun describeExportError(error: ExportException): String {
+        Log.e("UaiCortesExport", "Transformer: código ${error.errorCode}", error)
+        val hint = when (error.errorCode) {
+            ExportException.ERROR_CODE_IO_NO_PERMISSION, ExportException.ERROR_CODE_IO_FILE_NOT_FOUND ->
+                "Sem acesso a uma mídia do projeto. Selecione o arquivo novamente."
+            ExportException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE ->
+                "O corte ultrapassa um trecho disponível na mídia. Revise os horários."
+            ExportException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED, ExportException.ERROR_CODE_DECODER_INIT_FAILED ->
+                "O aparelho não conseguiu decodificar uma mídia. Teste outro arquivo ou formato."
+            ExportException.ERROR_CODE_ENCODER_INIT_FAILED, ExportException.ERROR_CODE_ENCODING_FORMAT_UNSUPPORTED ->
+                "O aparelho não conseguiu iniciar a codificação H.264/AAC. Tente 720p."
+            else -> "Não foi possível processar uma mídia do projeto. Verifique os arquivos e os cortes."
+        }
+        val detail = generateSequence(error as Throwable?) { it.cause }
+            .lastOrNull()?.message?.take(160)?.replace('\n', ' ')
+            ?.takeIf { it.isNotBlank() && it != error.message }
+        return "$hint (${error.errorCodeName})" + (detail?.let { " Detalhe: $it" } ?: "")
+    }
+
     fun progress(): Int {
         val t = transformer ?: return 0
         return if (t.getProgress(progressHolder) == Transformer.PROGRESS_STATE_AVAILABLE)
@@ -101,6 +157,7 @@ class ExportEngine(private val context: Context) {
         transformer?.cancel()
         transformer = null
         tempFile?.delete()
+        tempFile = null
     }
 
     fun start(project: VideoProject, height: Int, fileName: String,
@@ -108,6 +165,7 @@ class ExportEngine(private val context: Context) {
         require(project.clips.isNotEmpty()) { "Projeto sem vídeos" }
         require(project.overlays.size <= OverlayPlacement.MAX_PIPS) { "O limite é de 4 PiPs" }
         cancel()
+        validateSources(project)
         var globalStartMs = 0L
         val mainItems = project.clips.mapIndexed { index, clip ->
             val item = MediaItem.Builder().setUri(clip.uri).setClippingConfiguration(
@@ -125,8 +183,12 @@ class ExportEngine(private val context: Context) {
             if (project.subtitles.isNotEmpty()) videoEffects += OverlayEffect(
                 listOf(TimedSubtitleOverlay(project.subtitles, globalStartMs)))
             globalStartMs += clip.durationMs
-            EditedMediaItem.Builder(item).setDurationUs(clip.durationMs * 1000L)
-                .setEffects(Effects(listOf(GainProcessor(clip.volume)), videoEffects)).build()
+            // Media3: duração de EditedMediaItem é a duração ORIGINAL, não do recorte.
+            // Para vídeo com duração intrínseca, Transformer a descobre; omitir evita
+            // informar incorretamente clip.durationMs como duração da fonte.
+            EditedMediaItem.Builder(item)
+                .setEffects(Effects(if (clip.volume == 1f) emptyList() else listOf(GainProcessor(clip.volume)),
+                    videoEffects)).build()
         }
         val mainSequence = EditedMediaItemSequence.withAudioAndVideoFrom(mainItems)
         val sequences = mutableListOf<EditedMediaItemSequence>()
@@ -136,7 +198,7 @@ class ExportEngine(private val context: Context) {
                 .setImageDurationMs(pip.durationMs).build()
                 else MediaItem.Builder().setUri(pip.uri).setClippingConfiguration(
                     MediaItem.ClippingConfiguration.Builder().setEndPositionMs(pip.durationMs).build()).build()
-            val edited = EditedMediaItem.Builder(media).setDurationUs(pip.durationMs * 1000L)
+            val edited = EditedMediaItem.Builder(media)
                 .apply { if (pip.isImage) setFrameRate(30) }.build()
             val overlayTrack = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_VIDEO))
             if (pip.startAtMs > 0) overlayTrack.addGap(pip.startAtMs * 1000L)
@@ -153,7 +215,6 @@ class ExportEngine(private val context: Context) {
             val audioTrack = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_AUDIO))
             if (pip.startAtMs > 0) audioTrack.addGap(pip.startAtMs * 1000L)
             audioTrack.addItem(EditedMediaItem.Builder(media)
-                .setDurationUs(pip.durationMs * 1000L)
                 .setEffects(Effects(listOf(GainProcessor(pip.volume)), emptyList())).build())
             sequences += audioTrack.build()
         }
@@ -170,7 +231,6 @@ class ExportEngine(private val context: Context) {
                     .setClippingConfiguration(MediaItem.ClippingConfiguration.Builder()
                         .setStartPositionMs(sourceStart)
                         .setEndPositionMs(sourceStart + playable).build()).build())
-                    .setDurationUs(playable * 1000L)
                     .setEffects(Effects(listOf(GainProcessor(audio.volume)), emptyList())).build())
                 val trailing = project.durationMs - start - playable
                 if (trailing > 0) track.addGap(trailing * 1000L)
@@ -201,19 +261,24 @@ class ExportEngine(private val context: Context) {
                             android.os.Handler(android.os.Looper.getMainLooper()).post { onSuccess(uri) }
                         } catch (e: Exception) {
                             android.os.Handler(android.os.Looper.getMainLooper()).post { onError(e.message ?: "Falha ao salvar vídeo") }
-                        } finally { target.delete() }
+                        } finally { target.delete(); tempFile = null; transformer = null }
                     }.start()
                 }
                 override fun onError(composition: Composition, exportResult: ExportResult,
                                      exportException: ExportException) {
                     target.delete()
-                    onError(exportException.message ?: "Falha durante a exportação")
+                    tempFile = null
+                    transformer = null
+                    onError(describeExportError(exportException))
                 }
             }).build()
         transformer!!.start(composition, target.absolutePath)
     }
 
     private fun saveToGallery(file: File, fileName: String): Uri {
+        require(file.isFile && file.length() > 0L) {
+            "O arquivo MP4 temporário está vazio ou não foi gerado."
+        }
         // Android 10+ permite MediaStore sem permissão global de arquivos.
         val values = ContentValues().apply {
             put(MediaStore.Video.Media.DISPLAY_NAME, fileName)
@@ -225,9 +290,15 @@ class ExportEngine(private val context: Context) {
         val uri = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)
             ?: error("Não foi possível criar o arquivo na galeria")
         try {
-            resolver.openOutputStream(uri)?.use { out -> file.inputStream().use { it.copyTo(out) } }
-                ?: error("Não foi possível gravar o vídeo")
-            resolver.update(uri, ContentValues().apply { put(MediaStore.Video.Media.IS_PENDING, 0) }, null, null)
+            val bytesCopied = resolver.openOutputStream(uri)?.use { out ->
+                file.inputStream().use { it.copyTo(out) }
+            } ?: error("Não foi possível gravar o vídeo")
+            check(bytesCopied == file.length()) {
+                "A cópia do MP4 para a galeria terminou antes do esperado."
+            }
+            check(resolver.update(uri, ContentValues().apply {
+                put(MediaStore.Video.Media.IS_PENDING, 0)
+            }, null, null) > 0) { "Não foi possível finalizar o vídeo na galeria" }
             return uri
         } catch (e: Exception) {
             resolver.delete(uri, null, null)

@@ -316,7 +316,8 @@ fun UaiApp() {
                     insertOverlay(chosen.uri, chosen.isImage, videoMs)
                 }, openDocuments = { overlayPicker.launch(arrayOf("image/*", "video/*")) })
                 "transition" -> project?.let { TransitionScreen(it, ::back, { write(it) }, selectedBoundary) }
-                "subtitles" -> project?.let { SubtitleScreen(it, ::back, { write(it) }, selectedSubtitleId) }
+                "subtitles" -> project?.let { SubtitleScreen(it, ::back, { write(it) }, selectedSubtitleId,
+                    onSaveHome = { write(it); screen = "home" }) }
                 "export" -> project?.let { ExportScreen(it, store.quality(), ::back) }
             }
         }
@@ -510,7 +511,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.37 (38)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.39 (40)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: trechos visuais em Cortar e unir, seleção automática após dividir e cursor no último corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -1832,6 +1833,9 @@ private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit
     val engine = remember { AudioExtractionEngine(context) }
     var sourceIndex by remember(p.id) { mutableIntStateOf(-1) } // -1 = all clips
     var message by remember { mutableStateOf("") }
+    var volumesExpanded by remember(p.id) { mutableStateOf(false) }
+    var trackVolumeExpandedId by remember(p.id) { mutableStateOf<String?>(null) }
+    var pendingAudioDeleteId by remember(p.id) { mutableStateOf<String?>(null) }
     var externalClip by remember { mutableStateOf<Clip?>(null) }
     var trimStart by remember { mutableFloatStateOf(0f) }
     var trimEnd by remember { mutableFloatStateOf(1f) }
@@ -1957,25 +1961,44 @@ private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
         .padding(horizontal=16.dp)) {
         Heading("Áudio",back)
-        Text("Volumes do projeto",fontWeight=FontWeight.Bold)
-        p.clips.forEachIndexed { index,clip ->
-            Text("Clipe ${index+1}: ${clip.title} · ${(clip.volume*100).toInt()}%",
-                maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=12.sp)
-            Slider(value=clip.volume.coerceIn(0f,1f),onValueChange={volume->
-                update(p.copy(clips=p.clips.map { if(it.id==clip.id) it.copy(volume=volume) else it }))
-            })
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+            Text("Mixagem de áudio",fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
+            TextButton(onClick={volumesExpanded=!volumesExpanded}) {
+                Text(if(volumesExpanded) "Recolher" else "Volumes (${p.clips.size})")
+                Icon(if(volumesExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    "Mostrar ou ocultar volumes")
+            }
         }
-        p.music?.let { music ->
-            Text("Música antiga: ${music.title} · ${(music.volume*100).toInt()}%")
-            Slider(value=music.volume.coerceIn(0f,1f),onValueChange={update(p.copy(music=music.copy(volume=it)))})
-            TextButton(onClick={update(p.copy(music=null))}) { Icon(Icons.Default.Delete,null);Text("Remover música") }
-        }
-        p.audioTracks.forEach { track ->
-            Text(track.title,maxLines=1,overflow=TextOverflow.Ellipsis)
-            Row(verticalAlignment=Alignment.CenterVertically) {
-                Slider(value=track.volume.coerceIn(0f,1f),modifier=Modifier.weight(1f),onValueChange={v->
-                    update(p.copy(audioTracks=p.audioTracks.map { if(it.id==track.id) it.copy(volume=v) else it }))
+        if(volumesExpanded) {
+            p.clips.forEachIndexed { index,clip ->
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                    Text("${index+1}. ${clip.title}",modifier=Modifier.weight(1f),
+                        maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=12.sp)
+                    Text("${(clip.volume*100).toInt()}%",fontSize=11.sp)
+                }
+                Slider(value=clip.volume.coerceIn(0f,1f),onValueChange={volume->
+                    update(p.copy(clips=p.clips.map { if(it.id==clip.id) it.copy(volume=volume) else it }))
                 })
+            }
+            p.music?.let { music ->
+                Text("Música antiga: ${music.title} · ${(music.volume*100).toInt()}%")
+                Slider(value=music.volume.coerceIn(0f,1f),onValueChange={update(p.copy(music=music.copy(volume=it)))})
+                TextButton(onClick={update(p.copy(music=null))}) {
+                    Icon(Icons.Default.Delete,null);Text("Remover música")
+                }
+            }
+        }
+        Text("Faixas adicionais (${p.audioTracks.size})",fontWeight=FontWeight.SemiBold)
+        if(p.audioTracks.isEmpty()) Text("Nenhuma faixa importada.",fontSize=12.sp,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
+        p.audioTracks.forEach { track ->
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                Text(track.title,modifier=Modifier.weight(1f),maxLines=1,
+                    overflow=TextOverflow.Ellipsis,fontSize=13.sp)
+                TextButton(onClick={trackVolumeExpandedId=if(trackVolumeExpandedId==track.id)
+                    null else track.id},contentPadding=PaddingValues(horizontal=4.dp)) {
+                    Text("Vol ${(track.volume*100).toInt()}%",fontSize=11.sp)
+                }
                 IconButton(onClick={
                     val sourceDuration = mediaDuration(context, Uri.parse(track.uri))
                     val range = AudioTrackTiming.initialRange(track.sourceStartMs, track.durationMs,
@@ -1991,11 +2014,15 @@ private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit
                         previewPlayer.pause()
                         previewPlaying = false
                     }
-                }) { Icon(Icons.Default.ContentCut,"Editar corte da faixa") }
-                IconButton(onClick={
-                    if (editingAudioId == track.id) editingAudioId = null
-                    update(p.copy(audioTracks=p.audioTracks.filterNot{it.id==track.id}))
-                }) { Icon(Icons.Default.Delete,"Remover faixa") }
+                },modifier=Modifier.size(38.dp)) { Icon(Icons.Default.ContentCut,"Editar corte da faixa") }
+                IconButton(onClick={pendingAudioDeleteId=track.id},modifier=Modifier.size(38.dp)) {
+                    Icon(Icons.Default.Delete,"Remover faixa")
+                }
+            }
+            if(trackVolumeExpandedId==track.id) {
+                Slider(value=track.volume.coerceIn(0f,1f),onValueChange={v->
+                    update(p.copy(audioTracks=p.audioTracks.map { if(it.id==track.id) it.copy(volume=v) else it }))
+                })
             }
         }
         editingAudio?.let { track ->
@@ -2191,6 +2218,20 @@ private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit
         }
         if(message.isNotBlank()) Text(message,color=MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(30.dp))
+    }
+    pendingAudioDeleteId?.let { id ->
+        val candidate=p.audioTracks.firstOrNull { it.id==id }
+        if(candidate!=null) AlertDialog(onDismissRequest={pendingAudioDeleteId=null},
+            title={Text("Remover faixa de áudio?")},
+            text={Text("Remover '${candidate.title}' da edição? O arquivo original não será apagado.")},
+            confirmButton={TextButton(onClick={
+                if(editingAudioId==id) editingAudioId=null
+                if(trackVolumeExpandedId==id) trackVolumeExpandedId=null
+                update(p.copy(audioTracks=p.audioTracks.filterNot { it.id==id }))
+                message="Faixa removida do projeto."
+                pendingAudioDeleteId=null
+            }) {Text("Remover")}},
+            dismissButton={TextButton(onClick={pendingAudioDeleteId=null}) {Text("Cancelar")}})
     }
 }
 
@@ -2930,7 +2971,7 @@ private fun SubtitlePositionPreview(p:VideoProject,cue:SubtitleCue,
 
 @Composable
 private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit,
-    initialSelectedId: String? = null) {
+    initialSelectedId: String? = null, onSaveHome: () -> Unit) {
     val context=LocalContext.current
     var selectedId by remember(p.id,initialSelectedId) {
         mutableStateOf(initialSelectedId?.takeIf { id -> p.subtitles.any { it.id==id } }
@@ -3024,12 +3065,12 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
         Row(Modifier.fillMaxWidth().padding(vertical=4.dp),
             verticalAlignment=Alignment.CenterVertically,
             horizontalArrangement=Arrangement.spacedBy(5.dp)) {
-            Text("Legendas (${p.subtitles.size})",fontSize=15.sp,
+            Text("Legendas (${p.subtitles.size})",fontSize=14.sp,maxLines=1,
                 fontWeight=FontWeight.SemiBold,modifier=Modifier.weight(1f))
             IconButton(onClick={searchOpen=!searchOpen; if(!searchOpen) searchQuery=""},
-                modifier=Modifier.size(36.dp)) {
+                modifier=Modifier.size(30.dp)) {
                 Icon(if(searchOpen) Icons.Default.SearchOff else Icons.Default.Search,
-                    if(searchOpen) "Fechar busca" else "Buscar legendas",modifier=Modifier.size(21.dp))
+                    if(searchOpen) "Fechar busca" else "Buscar legendas",modifier=Modifier.size(19.dp))
             }
             TextButton(enabled=p.durationMs>0,onClick={
                 SubtitleListNavigation.newInterval(p.durationMs,selected?.endMs)?.let { (start,end) ->
@@ -3037,10 +3078,19 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
                     update(p.copy(subtitles=p.subtitles+cue))
                     searchQuery="";selectedId=cue.id;editorOpen=true;showAdvanced=false
                 }
-            }) {Icon(Icons.Default.Add,null);Text("Nova")}
+            },contentPadding=PaddingValues(horizontal=1.dp,vertical=2.dp)) {
+                Icon(Icons.Default.Add,"Nova legenda",Modifier.size(18.dp))
+                Text("Nova",fontSize=11.sp,maxLines=1)
+            }
             OutlinedButton(onClick={importer.launch(arrayOf("text/*","application/x-subrip","*/*"))},
-                contentPadding=PaddingValues(horizontal=8.dp,vertical=4.dp)) {
-                Icon(Icons.Default.FileOpen,null);Text(" SRT",fontSize=12.sp)
+                contentPadding=PaddingValues(horizontal=4.dp,vertical=3.dp)) {
+                Icon(Icons.Default.FileOpen,"Importar SRT",Modifier.size(17.dp))
+                Text("SRT",fontSize=11.sp,maxLines=1)
+            }
+            OutlinedButton(onClick=onSaveHome,
+                contentPadding=PaddingValues(horizontal=4.dp,vertical=3.dp)) {
+                Icon(Icons.Default.Save,"Salvar projeto e voltar à tela inicial",Modifier.size(17.dp))
+                Text("Salvar",fontSize=11.sp,maxLines=1)
             }
         }
         if(searchOpen) {
@@ -3220,11 +3270,18 @@ private fun SubtitleEditDialog(cue: SubtitleCue,totalMs: Long,number: Int,
                 }
                 if(animationOpen) {
                     Text("Efeitos de entrada e revelação",fontWeight=FontWeight.SemiBold)
-                    Column(verticalArrangement=Arrangement.spacedBy(3.dp)) {
-                        SubtitleAnimations.choices.forEach { (key,label) ->
+                    // Carrossel circular virtualizado: sempre permite rolar nos dois sentidos.
+                    val choices=SubtitleAnimations.choices
+                    val carouselStart=CircularCarousel.startIndex(choices.size)
+                    val effectsScroll=rememberLazyListState(initialFirstVisibleItemIndex=carouselStart)
+                    LazyRow(state=effectsScroll,modifier=Modifier.fillMaxWidth(),
+                        horizontalArrangement=Arrangement.spacedBy(7.dp),
+                        contentPadding=PaddingValues(horizontal=3.dp)) {
+                        items(count=Int.MAX_VALUE) { index ->
+                            val (key,label)=choices[CircularCarousel.optionIndex(index,choices.size)]
                             FilterChip(selected=draft.animation==key,onClick={
                                 draft=draft.copy(animation=key)
-                            },label={Text(label)})
+                            },label={Text(label,maxLines=1)})
                         }
                     }
                     if(draft.animation!=SubtitleAnimations.NONE) {
@@ -3347,10 +3404,15 @@ private fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
     val previewPlayer=remember { ExoPlayer.Builder(context).build() }
     var previewPlaying by remember { mutableStateOf(false) }
     var exportClipIndex by remember(p.id) { mutableIntStateOf(0) }
+    var exportPreviewMs by remember(p.id) { mutableLongStateOf(0L) }
     LaunchedEffect(previewPlayer, p.clips) {
         while(true) {
-            exportClipIndex=previewPlayer.currentMediaItemIndex.coerceIn(0,(p.clips.size-1).coerceAtLeast(0))
-            delay(200)
+            if (p.clips.isNotEmpty()) {
+                exportClipIndex=previewPlayer.currentMediaItemIndex.coerceIn(0,p.clips.lastIndex)
+                exportPreviewMs=ExportTimingPolicy.projectTime(p.clips,exportClipIndex,
+                    previewPlayer.currentPosition)
+            }
+            delay(100)
         }
     }
     val exportPreviewUri=p.clips.getOrNull(exportClipIndex)?.uri
@@ -3380,6 +3442,35 @@ private fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
         InlineVideoPreview(exportPreviewAspect) {
             AndroidView(factory={previewPlayer(it).apply { player=previewPlayer;useController=false }},
                 modifier=Modifier.fillMaxSize(),update={it.player=previewPlayer})
+            // Mesma camada visual do editor: renderize o PROJETO, não só o arquivo original.
+            p.clips.getOrNull(exportClipIndex)?.let { clip ->
+                val clipStart = p.clips.take(exportClipIndex).sumOf { it.durationMs }
+                val local = (exportPreviewMs-clipStart).coerceIn(0L,clip.durationMs)
+                val previous = EditFeatures.boundary(p,exportClipIndex-1)
+                val next = EditFeatures.boundary(p,exportClipIndex)
+                val fadeIn = EditFeatures.transitionMs(previous,
+                    p.clips.getOrElse(exportClipIndex-1){clip}.durationMs,clip.durationMs)
+                val fadeOut = EditFeatures.transitionMs(next,clip.durationMs,
+                    p.clips.getOrElse(exportClipIndex+1){clip}.durationMs)
+                val shade=1f-EditFeatures.fadeFraction(local,clip.durationMs,fadeIn,fadeOut)
+                if (shade > .001f) {
+                    val white = if(fadeIn > 0 && local < fadeIn)
+                        previous?.kind=="Fade branco" else next?.kind=="Fade branco"
+                    Box(Modifier.fillMaxSize().background((if(white)Color.White else Color.Black)
+                        .copy(alpha=shade)))
+                }
+            }
+            p.overlays.forEach { pip ->
+                if(exportPreviewMs >= pip.startAtMs && exportPreviewMs < pip.startAtMs+pip.durationMs) {
+                    key(pip.id) {
+                        PipLayer(pip,exportPreviewMs-pip.startAtMs,previewPlayer.isPlaying,
+                            editable=false) { }
+                    }
+                }
+            }
+            p.subtitles.firstOrNull { cue ->
+                exportPreviewMs >= cue.startMs && exportPreviewMs < cue.endMs && cue.text.isNotBlank()
+            }?.let { cue -> SubtitleOverlayOnFrame(cue,editable=false,playbackMs=exportPreviewMs) }
             Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) {
                 IconButton(onClick={
                     previewPlaying=!previewPlaying
@@ -3387,6 +3478,12 @@ private fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
                 }) {Icon(if(previewPlaying)Icons.Default.PauseCircle else Icons.Default.PlayCircle,
                     "Reproduzir prévia",tint=Color.White,modifier=Modifier.size(52.dp))}
             }
+        }
+        if(p.subtitles.isNotEmpty() || p.overlays.isNotEmpty()) {
+            Text("Prévia: legendas, PiPs e transições. Confira o MP4 final para validar áudio e efeitos.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier=Modifier.padding(top=7.dp))
         }
         Spacer(Modifier.height(20.dp))
         Text("Nome do arquivo",color=MaterialTheme.colorScheme.onSurfaceVariant)

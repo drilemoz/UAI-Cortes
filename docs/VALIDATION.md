@@ -1,3 +1,12 @@
+## v0.1.39 (versionCode 40) · 21/10/2026
+- Validação do exportador: duração intrínseca de mídia versus corte, validação URIs e renderização de overlays. Reproduzir em aparelho com o mesmo vídeo da captura; ainda pendente.
+
+## v0.1.38 (versionCode 39) · 21/10/2026
+- Executar `python3 tools/validate_source.py` e compilação Android + testes e Lint no GitHub Actions.
+- Conferir Salvar da tela Legendas, carrossel circular do diálogo e recolhimento/expansão de volumes.
+- Testar exclusão de faixa com confirmação e cancelamento, sem apagar a mídia.
+- Validar visual em tela estreita e projeto com muitas legendas/faixas.
+
 # Verificação v0.1.36 · 20/10/2026
 - Diagnóstico dos logs do workflow 31: `MainActivity.kt:2926:21 Unresolved reference searchQuery` em Debug/Release. Corrigida a ordem da variável `searchQuery` antes do callback de importação SRT.
 - Executar `python3 tools/validate_source.py` para validar metadados da v0.1.36/versionCode 37 e ordem de estado/importação. Essa verificação NÃO substitui o compilador Kotlin/Android.
