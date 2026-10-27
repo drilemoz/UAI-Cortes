@@ -1,3 +1,8 @@
+## v0.1.43 (versionCode 44) · 27/10/2026
+- Corrigido erro de compilação do workflow **Gerar APK Uai Cortes 37**: `MainActivity.kt` referenciava `savedName` e `savedVideo` na confirmação de exportação sem declarar o estado no escopo de `ExportScreen`.
+- Estados `remember(p.id)` adicionados antes do callback `onSuccess`, com `savedVideo` explicitamente tipado como `Uri?`; a confirmação em tela cheia, Abrir, Compartilhar, Voltar ao editor e Fechar permanecem.
+- Validação estrutural ganhou regressão específica para essas declarações e sua ordem; sem mudanças nos projetos, legendas, motor Media3 ou formato do MP4. Compilação Android e teste físico continuam pendentes.
+
 ## v0.1.42 (versionCode 43) · 27/10/2026
 - Legendas exportadas: layout com largura até 90% do quadro e quebra de linha automática, em vez de uma textura longa que é cortada nas bordas.
 - Tamanho exportado ajustado proporcionalmente à largura efetiva do vídeo; posição, estilo, tempos e texto salvos são preservados.

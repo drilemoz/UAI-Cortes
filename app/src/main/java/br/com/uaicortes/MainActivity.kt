@@ -557,7 +557,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.42 (43)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.43 (44)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: trechos visuais em Cortar e unir, seleção automática após dividir e cursor no último corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -3479,6 +3479,10 @@ private fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
     var working by remember {mutableStateOf(false)}
     var progress by remember {mutableIntStateOf(0)}
     var result by remember {mutableStateOf("")}
+    // Estados do diálogo de sucesso devem pertencer ao ExportScreen, ANTES dos callbacks.
+    // Se o projeto mudar, a confirmação anterior não pode apontar para outro MP4.
+    var savedName by remember(p.id) { mutableStateOf("") }
+    var savedVideo by remember(p.id) { mutableStateOf<Uri?>(null) }
     DisposableEffect(engine) {onDispose{engine.cancel()} }
     LaunchedEffect(working) {while(working){progress=engine.progress();delay(250)}}
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal=20.dp)) {

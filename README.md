@@ -1,6 +1,11 @@
-# Uai Cortes 0.1.42
+# Uai Cortes 0.1.43
 
 Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
+
+## v0.1.43 (versionCode 44) · 27/10/2026
+- Corrigido erro de compilação do workflow **Gerar APK Uai Cortes 37**: `MainActivity.kt` referenciava `savedName` e `savedVideo` na confirmação de exportação sem declarar o estado no escopo de `ExportScreen`.
+- Estados `remember(p.id)` adicionados antes do callback `onSuccess`, com `savedVideo` explicitamente tipado como `Uri?`; a confirmação em tela cheia, Abrir, Compartilhar, Voltar ao editor e Fechar permanecem.
+- Validação estrutural ganhou regressão específica para essas declarações e sua ordem; sem mudanças nos projetos, legendas, motor Media3 ou formato do MP4. Compilação Android e teste físico continuam pendentes.
 
 ## v0.1.42 (versionCode 43) · 27/10/2026
 - Exportação de legendas: `TimedSubtitleOverlay` respeita largura máxima de 90% do quadro, com quebras de linha automáticas e tamanho em proporção à largura real do vídeo, em vez de bitmap horizontal ilimitado. Preserve tamanho, posição, efeitos e tempos originais do projeto.
@@ -87,7 +92,7 @@ Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
 
 ## Versões e ferramentas
 - `minSdk = 26`, `compileSdk = 36`, `targetSdk = 36`.
-- `versionName = 0.1.42`, `versionCode = 43`.
+- `versionName = 0.1.43`, `versionCode = 44`.
 - Kotlin 2.1.21, AGP 8.10.1, Gradle 8.11.1, JDK 17.
 - Media3 1.10.1, ExoPlayer e Transformer para composição H.264/AAC.
 - O editor não exige conta nem internet. A biblioteca PiP solicita acesso às fotos/vídeos do Android, integral ou parcial conforme consentimento; o seletor de documentos continua como alternativa.
