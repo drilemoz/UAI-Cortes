@@ -1,3 +1,9 @@
+## v0.1.42 (versionCode 43) · 27/10/2026
+- Legendas exportadas: layout com largura até 90% do quadro e quebra de linha automática, em vez de uma textura longa que é cortada nas bordas.
+- Tamanho exportado ajustado proporcionalmente à largura efetiva do vídeo; posição, estilo, tempos e texto salvos são preservados.
+- Após salvar MP4 na galeria: confirmação em tela cheia, com ações Abrir, Compartilhar, Voltar ao editor e Fechar.
+- Requer validação real com vídeos verticais/horizontais, fontes longas e efeitos animados.
+
 ## v0.1.41 (versionCode 42) · 21/10/2026
 - Nova seção **Configurações > Diagnóstico**, desligada inicialmente e ativada manualmente, para capturar data e hora, tela ativa, toques aproximados (grade de 5%) e ações de navegação/salvamento.
 - Captura falhas não tratadas, erros Media3 dos players, código/causa categorizada da exportação, extração de áudio e falhas ao salvar o relatório; logs internos limitados a 512 KiB com rotação.

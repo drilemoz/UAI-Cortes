@@ -83,3 +83,6 @@
 
 - v0.1.41: diagnóstico desativado por padrão; registros locais de tela/toque aproximado (5%) e erros categorizados, sem texto/URI/nome de mídia/projeto/tokens. Histórico rotativo ≤512 KiB, apagável; compartilhamento apenas iniciado pelo usuário. Não gravar teclas ou capturar tela e não adicionar upload automático.
 - v0.1.41: usar FileProvider limitado ao cache de diagnósticos, respeitar callbacks de erros Media3/transformer e manter compatibilidade de projetos (`schemaVersion=4`). Confirmar taps, crashes, exportação e permissões no aparelho após compilar.
+
+- v0.1.42: legenda na exportação deve fazer StaticLayout no máximo 90% da largura REAL do quadro, com fonte escalada pela largura e quebra automática. Não regressar ao TextOverlay padrão de largura baseada em linha única. Teste em MP4 físico pendente.
+- v0.1.42: mostrar confirmação de sucesso em tela cheia SOMENTE depois da gravação concluída no MediaStore. Deve oferecer abrir, compartilhar, fechar e voltar ao editor; não exibir sucesso se falhar.

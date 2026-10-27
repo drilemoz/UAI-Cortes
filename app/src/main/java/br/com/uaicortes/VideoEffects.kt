@@ -2,6 +2,7 @@ package br.com.uaicortes
 
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.text.style.TypefaceSpan
@@ -13,11 +14,14 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.text.style.AlignmentSpan
 import android.text.style.LineHeightSpan
+import android.text.StaticLayout
+import androidx.media3.common.util.Size
 import android.text.Layout
 import android.text.TextPaint
 import android.graphics.Paint.FontMetricsInt
 import android.text.Spanned
 import kotlin.math.roundToInt
+import kotlin.math.ceil
 import androidx.media3.common.OverlaySettings
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.RgbMatrix
@@ -141,6 +145,57 @@ class ClipFadeEffect(
 class TimedSubtitleOverlay(
     private val cues: List<SubtitleCue>, private val clipStartInProjectMs: Long
 ) : TextOverlay() {
+    // Dimensões fornecidas pelo compositor para cada vídeo (inclusive mudanças de formato).
+    private var videoWidth = 720
+    private var cachedBitmap: Bitmap? = null
+    private var cachedKey: String? = null
+    private val emptyBitmap: Bitmap = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888)
+
+    override fun configure(videoSize: Size) {
+        super.configure(videoSize)
+        if (videoWidth != videoSize.width) {
+            videoWidth = SubtitleExportSizing.safeFrameWidth(videoSize.width)
+            cachedKey = null
+        }
+    }
+
+    /** Layout limitado ao quadro com quebra automática em palavras e margem lateral.
+     * TextOverlay padrão cria StaticLayout com a largura TOTAL da string, mesmo
+     * quando excede o vídeo. Assim o MP4 corta a frase no meio.
+     */
+    override fun getBitmap(presentationTimeUs: Long): Bitmap {
+        val active = cue(presentationTimeUs)
+        val frame = active?.let { SubtitleAnimations.frame(it, clipStartInProjectMs + presentationTimeUs / 1000L) }
+        if (!SubtitleOverlayTextSafety.isVisible(frame?.text.orEmpty())) return emptyBitmap
+        val contentKey = "${active?.id}:${frame?.text}:${frame?.highlighted}:$videoWidth"
+        if (cachedKey == contentKey) cachedBitmap?.let { return it }
+        val styled = getText(presentationTimeUs)
+        val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = TextOverlay.TEXT_SIZE_PIXELS.toFloat() }
+        val width = SubtitleExportSizing.textBoxWidth(videoWidth)
+        val layout = StaticLayout.Builder.obtain(styled, 0, styled.length, paint, width)
+            .setAlignment(Layout.Alignment.ALIGN_CENTER)
+            .setIncludePad(true)
+            .setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE)
+            .build()
+        val longestLine = (0 until layout.lineCount).maxOfOrNull { layout.getLineWidth(it) } ?: 0f
+        val tightWidth = ceil(longestLine + 8f).toInt().coerceIn(2, width)
+        // O bloco segue a largura real da frase, sem uma caixa 90% larga para textos curtos.
+        val finalLayout = if (tightWidth < width) StaticLayout.Builder.obtain(
+            styled, 0, styled.length, paint, tightWidth)
+            .setAlignment(Layout.Alignment.ALIGN_CENTER)
+            .setIncludePad(true)
+            .setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE)
+            .build() else layout
+        val target = cachedBitmap?.takeIf { it.width == tightWidth && it.height == finalLayout.height }
+            ?: Bitmap.createBitmap(tightWidth, finalLayout.height.coerceAtLeast(2), Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(target)
+        canvas.drawColor(Color.TRANSPARENT, android.graphics.PorterDuff.Mode.CLEAR)
+        finalLayout.draw(canvas)
+        cachedBitmap = target
+        cachedKey = contentKey
+        return target
+    }
+
     private fun cue(us: Long): SubtitleCue? {
         val t = clipStartInProjectMs + us / 1000L
         return cues.firstOrNull { t >= it.startMs && t < it.endMs && it.text.isNotBlank() }
@@ -174,7 +229,13 @@ class TimedSubtitleOverlay(
                 else -> "sans-serif"
             }
             text.setSpan(TypefaceSpan(family), 0, text.length, 0)
-            text.setSpan(RelativeSizeSpan(active.sizeSp / 22f), 0, text.length, 0)
+            val fontPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                textSize = TextOverlay.TEXT_SIZE_PIXELS.toFloat()
+                typeface = Typeface.create(family, if(active.bold) Typeface.BOLD else Typeface.NORMAL)
+            }
+            val longestWord = rendered.split(Regex("\\s+")).maxOfOrNull { fontPaint.measureText(it) } ?: 0f
+            val relativeFontSize = SubtitleExportSizing.relativeFontSize(active.sizeSp, videoWidth, longestWord)
+            text.setSpan(RelativeSizeSpan(relativeFontSize), 0, text.length, 0)
             val layoutAlign = when (SubtitleStyles.normalizeAlignment(active.textAlignment)) {
                 SubtitleStyles.ALIGN_LEFT -> Layout.Alignment.ALIGN_NORMAL
                 SubtitleStyles.ALIGN_RIGHT -> Layout.Alignment.ALIGN_OPPOSITE
@@ -185,10 +246,10 @@ class TimedSubtitleOverlay(
                 text.setSpan(SubtitleLineSpacingSpan(active.lineSpacingPercent), 0, text.length, Spanned.SPAN_PARAGRAPH)
             if (active.shadowOffsetDp > 0)
                 text.setSpan(SubtitleShadowSpan(active.shadowColor, active.shadowOffsetDp,
-                    active.fontFamily, active.bold, active.sizeSp / 22f, active.textAlignment),0,text.length,0)
+                    active.fontFamily, active.bold, relativeFontSize, active.textAlignment),0,text.length,0)
             if (active.outlineWidth > 0)
                 text.setSpan(SubtitleOutlineSpan(active.outlineColor,active.outlineWidth,
-                    active.fontFamily,active.bold,active.sizeSp / 22f,
+                    active.fontFamily,active.bold,relativeFontSize,
                     active.textAlignment),0,text.length,0)
         }
         return text
@@ -197,8 +258,12 @@ class TimedSubtitleOverlay(
         val active = cue(presentationTimeUs)
         val frame=active?.let { SubtitleAnimations.frame(it,
             clipStartInProjectMs + presentationTimeUs/1000L) }
+        val textWidth = if (active != null && SubtitleOverlayTextSafety.isVisible(frame?.text.orEmpty()))
+            getBitmap(presentationTimeUs).width else 2
+        val centerX = SubtitleExportSizing.centerX(active?.x ?: .5f, textWidth,
+            videoWidth, frame?.scale ?: 1f)
         return StaticOverlaySettings.Builder()
-            .setBackgroundFrameAnchor(((active?.x ?: .5f)-.5f)*2f,
+            .setBackgroundFrameAnchor((centerX-.5f)*2f,
                 (1f - (active?.y ?: .85f)*2f - (frame?.slideY ?: 0f)*2f).coerceIn(-1f,1f))
             .setOverlayFrameAnchor(0f,-1f)
             .setScale(frame?.scale ?: 1f,frame?.scale ?: 1f)

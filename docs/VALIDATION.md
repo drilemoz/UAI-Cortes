@@ -1,3 +1,9 @@
+## v0.1.42 (versionCode 43) · 27/10/2026
+- Exportação de legendas: `TimedSubtitleOverlay` respeita largura máxima de 90% do quadro, com quebras de linha automáticas e tamanho em proporção à largura real do vídeo, em vez de bitmap horizontal ilimitado. Preserve tamanho, posição, efeitos e tempos originais do projeto.
+- `TextOverlay.getBitmap` substituído por StaticLayout com largura controlada e cache por quadro; legenda sem texto continua transparente, protegida contra imagem 0×0.
+- Sucesso de exportação em tela cheia, somente após salvar no MediaStore, com Abrir, Compartilhar, Voltar ao editor e Fechar; falhas continuam detalhadas na tela de exportação.
+- Não foi possível realizar exportação MP4 em aparelho neste ambiente; confirmar fidelidade da prévia e os efeitos no vídeo físico, vertical e horizontal.
+
 ## v0.1.41 (versionCode 42) · 21/10/2026
 - Nova seção **Configurações > Diagnóstico**, desligada inicialmente e ativada manualmente, para capturar data e hora, tela ativa, toques aproximados (grade de 5%) e ações de navegação/salvamento.
 - Captura falhas não tratadas, erros Media3 dos players, código/causa categorizada da exportação, extração de áudio e falhas ao salvar o relatório; logs internos limitados a 512 KiB com rotação.
@@ -186,7 +192,7 @@ Correção v0.1.22: o workflow 19 compilou Kotlin Debug/Release, executou testes
 - **Pendente em CI**: `gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleRelease`, empacotamento e publicação dos cinco APKs da v0.1.30.
 - **Pendente no Android real**: checagem de contornos e alinhamento das legendas na prévia e no MP4 final. A correção resolve a referência de tipo indicada no log, não comprova ausência de outros erros.
 
-### Diagnóstico local (v0.1.41)
+### Diagnóstico local (v0.1.42)
 - [x] Validador estrutural identifica a rota, ativação opcional, observador de toques, integrações de erro, FileProvider e nenhum envio automático.
 - [x] Kotlin PSI validou a sintaxe dos arquivos; casos locais de sanitização, classificação Media3 e coordenadas em grade passaram.
 - [ ] Compilar Android Release/Debug e executar testes unitários oficiais com Gradle no GitHub Actions.

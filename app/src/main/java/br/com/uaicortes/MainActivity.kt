@@ -557,7 +557,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.41 (42)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.42 (43)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: trechos visuais em Cortar e unir, seleção automática após dividir e cursor no último corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -3565,7 +3565,12 @@ private fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
                     DiagnosticRecorder.action("export", "export_start_${quality}p")
                     result="";progress=0;working=true
                     runCatching {engine.start(p,quality,name,
-                        onSuccess={uri->working=false;progress=100;DiagnosticRecorder.action("export", "export_success");result="Vídeo salvo em Filmes/UaiCortes"},
+                        onSuccess={uri->
+                            working=false;progress=100
+                            DiagnosticRecorder.action("export", "export_success")
+                            savedName=name.trim().let { if(it.endsWith(".mp4",true)) it else "$it.mp4" }
+                            savedVideo=uri
+                        },
                         onError={error->working=false;DiagnosticRecorder.failure("export", error);result="Erro: $error"})}
                         .onFailure {working=false;DiagnosticRecorder.exception("export_start",it);result="Erro: ${it.message}"}
                 }
@@ -3575,6 +3580,57 @@ private fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
             color=if(result.startsWith("Erro"))MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(14.dp));Text("Formato MP4 · H.264/AAC · Salvamento local.",
             color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
+    }
+    // Confirmação de TELA CHEIA apenas após a cópia completa no MediaStore.
+    savedVideo?.let { savedUri ->
+        Dialog(onDismissRequest={savedVideo=null},
+            properties=DialogProperties(usePlatformDefaultWidth=false)) {
+            Surface(Modifier.fillMaxSize(), color=MaterialTheme.colorScheme.background) {
+                Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(24.dp),
+                    horizontalAlignment=Alignment.CenterHorizontally,
+                    verticalArrangement=Arrangement.Center) {
+                    Icon(Icons.Default.CheckCircle,contentDescription=null,
+                        modifier=Modifier.size(96.dp),tint=Green)
+                    Spacer(Modifier.height(20.dp))
+                    Text("Vídeo salvo!",style=MaterialTheme.typography.headlineMedium,
+                        fontWeight=FontWeight.Bold,textAlign=TextAlign.Center)
+                    Spacer(Modifier.height(10.dp))
+                    Text(savedName,style=MaterialTheme.typography.titleMedium,
+                        textAlign=TextAlign.Center,maxLines=3,overflow=TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Salvo na galeria em Filmes/UaiCortes",textAlign=TextAlign.Center,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(32.dp))
+                    BlueButton("▶ Abrir vídeo",onClick={
+                        runCatching {
+                            context.startActivity(Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(savedUri,"video/mp4")
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            })
+                        }.onFailure { result="Não há aplicativo disponível para abrir o vídeo.";savedVideo=null }
+                    },modifier=Modifier.fillMaxWidth())
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedButton(onClick={
+                        runCatching {
+                            context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                                type="video/mp4"
+                                putExtra(Intent.EXTRA_STREAM,savedUri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            },"Compartilhar vídeo"))
+                        }.onFailure { result="Não foi possível abrir o compartilhamento.";savedVideo=null }
+                    },modifier=Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.Share,contentDescription=null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Compartilhar")
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedButton(onClick={savedVideo=null;back()},modifier=Modifier.fillMaxWidth()) {
+                        Text("Voltar ao editor")
+                    }
+                    TextButton(onClick={savedVideo=null}) { Text("Fechar") }
+                }
+            }
+        }
     }
 }
 
