@@ -134,6 +134,7 @@ fun UaiApp() {
     var selectedSubtitleId by remember { mutableStateOf<String?>(null) }
     var positionMs by remember { mutableLongStateOf(0L) }
     var pendingPicker by remember { mutableStateOf("") }
+    var importedAudioSourceVideo by remember { mutableStateOf<Uri?>(null) }
     var mediaOrigin by remember { mutableStateOf("editor") }
     var selectedOverlayId by remember { mutableStateOf("") }
     var mediaAction by remember { mutableStateOf("add") }
@@ -228,16 +229,41 @@ fun UaiApp() {
         screen = "pip"
     }
     var selectedBoundary by remember { mutableIntStateOf(0) }
-    val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        if (uris.isNotEmpty()) {
-            val clips = uris.map { uri ->
-                runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-                Clip(uri = uri.toString(), title = mediaName(context, uri), sourceDurationMs = mediaDuration(context, uri))
+    fun importVideoClips(uris: List<Uri>, persistDocumentAccess: Boolean) {
+        if (uris.isEmpty()) return
+        val clips = uris.mapNotNull { uri ->
+            if (persistDocumentAccess) runCatching {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            val base = if (pendingPicker == "new") VideoProject() else project ?: VideoProject()
-            write(base.copy(clips = base.clips + clips))
-            if (selectedClip.isBlank()) selectedClip = clips.first().id
-            screen = "editor"
+            val duration = runCatching { mediaDuration(context, uri) }.getOrDefault(0L)
+            if (duration <= 0L) null else Clip(uri = uri.toString(),
+                title = runCatching { mediaName(context, uri) }.getOrDefault("Vídeo"), sourceDurationMs = duration)
+        }
+        if (clips.isEmpty()) {
+            android.widget.Toast.makeText(context, "Não foi possível abrir os vídeos selecionados",
+                android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
+        val base = if (pendingPicker == "new") VideoProject() else project ?: VideoProject()
+        write(base.copy(clips = base.clips + clips))
+        if (selectedClip.isBlank()) selectedClip = clips.first().id
+        screen = "editor"
+        if (clips.size < uris.size) android.widget.Toast.makeText(context,
+            "Alguns vídeos não puderam ser importados", android.widget.Toast.LENGTH_LONG).show()
+    }
+    fun openGallery(origin: String, action: String) {
+        mediaOrigin = origin
+        mediaAction = action
+        screen = "media"
+    }
+    val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        importVideoClips(uris, persistDocumentAccess = true)
+    }
+    val externalVideoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            importedAudioSourceVideo = uri
+            screen = "audio"
         }
     }
     val overlayPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -305,7 +331,7 @@ fun UaiApp() {
         } else Modifier
         Surface(modifier = Modifier.fillMaxSize().then(tapMonitor), color = MaterialTheme.colorScheme.background) {
             when (screen) {
-                "home" -> MainHome(projects, onCreate = { pendingPicker = "new"; selectedClip = ""; videoPicker.launch(arrayOf("video/*")) },
+                "home" -> MainHome(projects, onCreate = { pendingPicker = "new"; selectedClip = ""; openGallery("home", "new") },
                     onOpen = { project = it; selectedClip = TrimTimelineEdit.resumeClipId(it); screen = "editor" },
                     onDelete = { store.delete(it.id); projects = store.load() },
                     onSettings = { screen = "settings" }, onTab = { screen = it })
@@ -319,7 +345,7 @@ fun UaiApp() {
                 "editor" -> project?.let { p -> EditorScreen(p, selectedClip, positionMs,
                     onSelected = { selectedClip = it }, onPosition = { positionMs = it }, onBack = ::back,
                     onEdit = { navTo(it) }, onUpdate = { write(it) },
-                    onAddVideo = { pendingPicker = "append"; videoPicker.launch(arrayOf("video/*")) },
+                    onAddVideo = { pendingPicker = "append"; openGallery("editor", "append") },
                     onPiP = {
                         selectedOverlayId = project?.overlays?.firstOrNull()?.id.orEmpty()
                         screen = "pip"
@@ -334,7 +360,10 @@ fun UaiApp() {
                     { selectedClip = it }, onSaveHome = { saved -> write(saved); screen = "home" }) }
                 "audio" -> project?.let { AudioScreen(it, ::back, { write(it) },
                     { audioPicker.launch(arrayOf("audio/*")) }, selectedAudioTrackId,
-                    onSelectionConsumed = { selectedAudioTrackId = null }) }
+                    onSelectionConsumed = { selectedAudioTrackId = null },
+                    onChooseExternalVideo = { openGallery("audio", "audio_extract") },
+                    externalVideoUri = importedAudioSourceVideo,
+                    onExternalVideoConsumed = { importedAudioSourceVideo = null }) }
                 "pip" -> project?.let { current -> PipScreen(current, selectedOverlayId,
                     onSelect = { selectedOverlayId = it }, back = ::back,
                     onChange = { changed ->
@@ -351,15 +380,31 @@ fun UaiApp() {
                             android.widget.Toast.makeText(context, "Limite de quatro PiPs atingido",
                                 android.widget.Toast.LENGTH_SHORT).show()
                         } else {
-                            mediaAction = if (replace) "replace" else "add"
-                            mediaOrigin = "pip"; screen = "media"
+                            openGallery("pip", if (replace) "replace" else "add")
                         }
                     }) }
                 "media" -> DeviceMediaBrowser(::back, onSelect = { chosen ->
-                    val videoMs = if (chosen.isImage) 5000L else
-                        chosen.durationMs.takeIf { it > 0 } ?: mediaDuration(context, chosen.uri)
-                    insertOverlay(chosen.uri, chosen.isImage, videoMs)
-                }, openDocuments = { overlayPicker.launch(arrayOf("image/*", "video/*")) })
+                    when (mediaAction) {
+                        "new", "append" -> importVideoClips(chosen.map { it.uri }, persistDocumentAccess = false)
+                        "audio_extract" -> {
+                            chosen.firstOrNull()?.let { importedAudioSourceVideo = it.uri }
+                            screen = "audio"
+                        }
+                        else -> chosen.firstOrNull()?.let { item ->
+                            val videoMs = if (item.isImage) 5000L else
+                                item.durationMs.takeIf { it > 0 } ?: mediaDuration(context, item.uri)
+                            insertOverlay(item.uri, item.isImage, videoMs)
+                        }
+                    }
+                }, openDocuments = {
+                    when (mediaAction) {
+                        "new", "append" -> videoPicker.launch(arrayOf("video/*"))
+                        "audio_extract" -> externalVideoPicker.launch(arrayOf("video/*"))
+                        else -> overlayPicker.launch(arrayOf("image/*", "video/*"))
+                    }
+                }, scope = if (mediaAction == "new" || mediaAction == "append" ||
+                    mediaAction == "audio_extract") GalleryScope.VIDEOS else GalleryScope.IMAGES_AND_VIDEOS,
+                    allowMultiple = mediaAction == "new" || mediaAction == "append")
                 "transition" -> project?.let { TransitionScreen(it, ::back, { write(it) }, selectedBoundary) }
                 "subtitles" -> project?.let { SubtitleScreen(it, ::back, { write(it) }, selectedSubtitleId,
                     onSaveHome = { write(it); screen = "home" }) }
@@ -557,7 +602,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.43 (44)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.44 (45)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: trechos visuais em Cortar e unir, seleção automática após dividir e cursor no último corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -1874,7 +1919,9 @@ private fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, back
 @Composable
 private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit,
                         chooseMusic:()->Unit, requestedTrackId:String? = null,
-                        onSelectionConsumed:()->Unit = {}) {
+                        onSelectionConsumed:()->Unit = {},
+                        onChooseExternalVideo:()->Unit = {}, externalVideoUri: Uri? = null,
+                        onExternalVideoConsumed:()->Unit = {}) {
     val context = LocalContext.current
     val engine = remember { AudioExtractionEngine(context) }
     var sourceIndex by remember(p.id) { mutableIntStateOf(-1) } // -1 = all clips
@@ -1893,6 +1940,17 @@ private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit
                 externalClip = Clip(uri=uri.toString(),title=mediaName(context,uri),sourceDurationMs=duration)
                 trimStart=0f; trimEnd=1f
             } else message = "Não foi possível ler a duração do vídeo externo."
+        }
+    }
+    LaunchedEffect(externalVideoUri) {
+        if (externalVideoUri != null) {
+            val duration = mediaDuration(context, externalVideoUri)
+            if (duration > 0) {
+                externalClip = Clip(uri = externalVideoUri.toString(),
+                    title = mediaName(context, externalVideoUri), sourceDurationMs = duration)
+                trimStart = 0f; trimEnd = 1f
+            } else message = "Não foi possível ler a duração do vídeo selecionado."
+            onExternalVideoConsumed()
         }
     }
     // Pré-escuta da origem selecionada, sem alterar a linha do tempo.
@@ -2195,8 +2253,13 @@ private fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit
                 }
             }
         }
-        OutlinedButton(onClick={videoPicker.launch(arrayOf("video/*"))},enabled=!exporting) {
-            Icon(Icons.Default.FileOpen,null); Text(" Importar vídeo externo")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onChooseExternalVideo, enabled = !exporting) {
+                Icon(Icons.Default.VideoLibrary, null); Text(" Galeria de vídeos")
+            }
+            TextButton(onClick = { videoPicker.launch(arrayOf("video/*")) }, enabled = !exporting) {
+                Text("Arquivos")
+            }
         }
         externalClip?.let { clip ->
             Text("Origem externa: ${clip.title}",maxLines=2)

@@ -10,10 +10,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*44',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.43"',gradle)
-assert 'Versão 0.1.43 (44)' in ui
-for label in ["VERSION: '0.1.43'", "VERSION_CODE: '44'", 'TAG="v$VERSION"',
+assert re.search(r'versionCode\s*=\s*45',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.44"',gradle)
+assert 'Versão 0.1.44 (45)' in ui
+for label in ["VERSION: '0.1.44'", "VERSION_CODE: '45'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -28,7 +28,7 @@ assert 'len(dist_apks) != 5' in package_script
 assert 'platforms;android-36' in workflow and 'android-actions/setup-android@v4' in workflow
 assert 'abortOnError = false' not in gradle
 assert 'setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)' in ui
-assert '@OptIn(ExperimentalMaterial3Api::class)' in browser and 'PrimaryTabRow(' in browser
+assert '@OptIn(ExperimentalMaterial3Api::class)' in browser and 'LazyVerticalGrid(' in browser
 assert 'READ_MEDIA_VISUAL_USER_SELECTED' in browser
 assert 'MAX_PIPS = 4' in placement and 'intersects' in placement and 'arrange' in placement
 assert 'overlays: List<Overlay>' in model and 'optJSONObject("pip")' in model
@@ -197,7 +197,7 @@ assert 'SubtitleStyles.normalizeLineSpacing(j.optInt(' in model
 assert all(x in ui for x in [
     'Sombra: ${draft.shadowOffsetDp}', 'Espaçamento:',
     'SubtitleStyles.alignments.forEach', 'Shadow(', 'lineHeight=textLineHeight',
-    'textAlign=alignment', 'Versão 0.1.43 (44)'
+    'textAlign=alignment', 'Versão 0.1.44 (45)'
 ])
 assert all(x in fx for x in ['class SubtitleShadowSpan(', 'class SubtitleLineSpacingSpan(',
     'AlignmentSpan.Standard(layoutAlign)', 'SubtitleStyles.ALIGN_LEFT -> left.toFloat()',
@@ -206,9 +206,9 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.43'" in package_script and 'VERSION_CODE = 44' in package_script
-assert 'versionCode 44' in gradle and 'isUniversalApk = true' in gradle
-print('OK: versão atual 0.1.43 / versionCode 44, compatibilidade das legendas, JSON legado, APKs')
+assert "VERSION = '0.1.44'" in package_script and 'VERSION_CODE = 45' in package_script
+assert 'versionCode 45' in gradle and 'isUniversalApk = true' in gradle
+print('OK: versão atual 0.1.44 / versionCode 45, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
 assert 'import androidx.compose.ui.graphics.StrokeJoin' in ui
@@ -224,7 +224,7 @@ assert 'TrimQuickAction(Icons.Default.Save, "Salvar"' in ui
 assert 'TrimSaveLogic.applyPending(p, clip.id, begin, finish)' in ui
 assert 'onSaveHome = { saved -> write(saved); screen = "home" }' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/TrimSaveLogicTest.kt').exists()
-print('OK: versão atual 0.1.43 / versionCode 44, rolagem circular, salvar projeto e corte antes de ir à Home')
+print('OK: versão atual 0.1.44 / versionCode 45, rolagem circular, salvar projeto e corte antes de ir à Home')
 
 # v0.1.34: cortes retornam à metade direita, a faixa mostra partes selecionáveis,
 # e um ponto de fonte persiste sem alterar esquema legado.
@@ -239,7 +239,7 @@ assert 'lastTrimCutClipId = newId' in trim_edit and 'lastTrimCutSourceMs = sourc
 assert 'EditFeatures.repositionAfterDelete(project, remaining)' in trim_edit
 assert 'undoLastCut' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/TrimTimelineEditTest.kt').exists()
-print('OK: versão atual 0.1.43 / versionCode 44, faixa de trechos, seleção e restauração do último corte')
+print('OK: versão atual 0.1.44 / versionCode 45, faixa de trechos, seleção e restauração do último corte')
 
 # v0.1.34: uma timeline geral, lista virtualizada e vídeo fixo no topo.
 assert 'private fun SubtitleCompactTimeline(' in ui
@@ -252,7 +252,7 @@ assert 'SubtitleTimelineEditor(p.subtitles,p.durationMs' not in ui
 assert 'p.subtitles.sortedBy { it.startMs }.forEachIndexed' not in ui
 assert (root/'app/src/main/java/br/com/uaicortes/SubtitleCompactLayout.kt').exists()
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleCompactLayoutTest.kt').exists()
-print('OK: versão atual 0.1.43 / versionCode 44, timeline unica, video fixo e legendas compactas')
+print('OK: versão atual 0.1.44 / versionCode 45, timeline unica, video fixo e legendas compactas')
 
 # v0.1.34: busca, navegação e exclusão segura no editor de legendas.
 nav=(root/'app/src/main/java/br/com/uaicortes/SubtitleListNavigation.kt').read_text()
@@ -265,7 +265,7 @@ assert 'pendingDeleteId?.let' in ui and 'Excluir esta legenda?' in ui
 assert 'SubtitleListNavigation.readSrtBounded(reader)' in ui
 assert 'fun readSrtBounded(' in nav and 'maxCharacters + 1' in nav
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleListNavigationTest.kt').exists()
-print('OK: versão atual 0.1.43 / versionCode 44, busca e navegação, exclusão confirmada e limite SRT')
+print('OK: versão atual 0.1.44 / versionCode 45, busca e navegação, exclusão confirmada e limite SRT')
 
 # v0.1.35: prévia se adapta ao aspecto/rotação em todas as telas de vídeo.
 layout=(root/'app/src/main/java/br/com/uaicortes/AdaptiveVideoLayout.kt').read_text()
@@ -279,7 +279,7 @@ assert 'previewSubtitleScale(cue,textLimitPx.toInt(),' in ui
 assert 'frameWidthDp * .94f' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/AdaptiveVideoLayoutTest.kt').exists()
 assert 'mediaAspect(context' in ui and 'METADATA_KEY_VIDEO_ROTATION' in ui
-print('OK: v0.1.43 / versionCode 44, proporção da prévia e largura de legenda responsivas')
+print('OK: v0.1.44 / versionCode 45, proporção da prévia e largura de legenda responsivas')
 
 # Regressão CI 31: o callback de importação SRT usa searchQuery; a declaração
 # de estado Compose deve aparecer ANTES do callback para resolver o identificador.
@@ -309,7 +309,7 @@ assert 'setScale(frame?.scale' in fx and 'setAlphaScale(if (active == null' in f
 assert 'private fun SubtitleEditDialog(' in ui and 'onSave(draft,options)' in ui
 assert 'fun splitPhrases(' in animations and 'KARAOKE' in animations
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleAnimationsTest.kt').exists()
-print('OK: 0.1.43 / 44, editor modal, rascunho, cópia seletiva e animações no Compose/Media3')
+print('OK: 0.1.44 / 45, editor modal, rascunho, cópia seletiva e animações no Compose/Media3')
 
 # v0.1.39: Salvar/Home em Legendas, efeitos circulares e áudio compacto com confirmação.
 assert 'onSaveHome = { write(it); screen = "home" }' in ui
@@ -321,7 +321,7 @@ assert 'Text("Faixas adicionais (${p.audioTracks.size})"' in ui
 assert 'if(volumesExpanded)' in ui and 'if(trackVolumeExpandedId==track.id)' in ui
 assert 'Remover faixa de áudio?' in ui and 'pendingAudioDeleteId=track.id' in ui
 assert 'if(editingAudioId==id) editingAudioId=null' in ui
-print('OK: v0.1.43 / 44, Salvar/Home em legendas, efeitos circulares, mixagem compacta e exclusão confirmada')
+print('OK: v0.1.44 / 45, Salvar/Home em legendas, efeitos circulares, mixagem compacta e exclusão confirmada')
 
 assert (root/'app/src/test/java/br/com/uaicortes/CircularCarouselTest.kt').exists()
 print('OK: helper de índice circular e teste de limites incluídos')
@@ -342,7 +342,7 @@ assert 'EditFeatures.fadeFraction(local,clip.durationMs,fadeIn,fadeOut)' in expo
 assert (root/'app/src/test/java/br/com/uaicortes/ExportTimingPolicyTest.kt').exists()
 print('OK: v0.1.39, origem real do clipe, mídias validadas, prévia com legendas/PiPs/fade')
 
-# v0.1.43: Media3 TextOverlay nunca recebe texto com largura zero.
+# v0.1.44: Media3 TextOverlay nunca recebe texto com largura zero.
 # A prova vem do TextOverlay.getBitmap do Media3 (StaticLayout.width -> Bitmap.createBitmap).
 safety=(root/'app/src/main/java/br/com/uaicortes/SubtitleOverlayTextSafety.kt').read_text()
 assert 'INVISIBLE_GLYPH = "\\u00A0"' in safety or 'INVISIBLE_GLYPH = "\u00A0"' in safety
@@ -352,9 +352,9 @@ assert 'text.setSpan(ForegroundColorSpan(Color.TRANSPARENT)' in fx
 assert 'SubtitleOverlayTextSafety.isVisible(frame?.text.orEmpty())' in fx
 assert 'return SpannableString("")' not in fx
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleOverlayTextSafetyTest.kt').exists()
-print('OK: v0.1.43, regressão de texto vazio/bitmap 0px e transparência no Media3')
+print('OK: v0.1.44, regressão de texto vazio/bitmap 0px e transparência no Media3')
 
-# v0.1.43: observabilidade offline opt-in e sem conteúdo de usuário.
+# v0.1.44: observabilidade offline opt-in e sem conteúdo de usuário.
 diag=(root/'app/src/main/java/br/com/uaicortes/DiagnosticRecorder.kt').read_text()
 privacy=(root/'app/src/main/java/br/com/uaicortes/DiagnosticPrivacy.kt').read_text()
 dscreen=(root/'app/src/main/java/br/com/uaicortes/DiagnosticScreen.kt').read_text()
@@ -372,9 +372,9 @@ assert 'diagnostic_file_paths' in manifest and 'cache-path' in (root/'app/src/ma
 assert 'DiagnosticRecorder.exception("media3_transformer", error)' in source
 assert 'DiagnosticRecorder.exception("media3_player", error)' in ui
 assert 'schemaVersion' in model and '.put("schemaVersion", 4)' in model
-print('OK: 0.1.43 (44), diagnóstico opt-in, toques, erros, compartilhamento local, sem mudar schema JSON')
+print('OK: 0.1.44 (45), diagnóstico opt-in, toques, erros, compartilhamento local, sem mudar schema JSON')
 
-# v0.1.43: proteção da área das legendas e confirmação pós-salvamento real.
+# v0.1.44: proteção da área das legendas e confirmação pós-salvamento real.
 export_sizing=(root/'app/src/main/java/br/com/uaicortes/SubtitleExportSizing.kt').read_text()
 assert 'fun textBoxWidth(' in export_sizing and '0.90f' in export_sizing
 assert 'fun relativeFontSize(' in export_sizing
@@ -388,7 +388,7 @@ assert 'savedVideo=uri' in export and 'onSuccess={uri->' in export
 assert 'Vídeo salvo!' in export and 'Abrir vídeo' in export and 'Compartilhar' in export
 assert 'Voltar ao editor' in export and 'Filmes/UaiCortes' in export
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleExportSizingTest.kt').exists()
-print('OK: v0.1.43, legenda limitada ao quadro e confirmação em tela cheia após exportação')
+print('OK: v0.1.44, legenda limitada ao quadro e confirmação em tela cheia após exportação')
 
 # Regressão workflow 37: tela de exportação usa `savedName` e `savedVideo`
 # para sucesso em tela cheia. Ambos devem existir no escopo do ExportScreen
@@ -406,3 +406,16 @@ assert export_screen.count('savedVideo=uri')==1
 assert 'savedVideo?.let { savedUri ->' in export_screen
 assert 'Text(savedName,style=MaterialTheme.typography.titleMedium' in export_screen
 print('OK: regressão workflow 37 — savedName/savedVideo declarados antes do callback e diálogo')
+
+# v0.1.44: a galeria MediaStore é o seletor visual de todas as importações de vídeo/imagem.
+assert 'openGallery("home", "new")' in ui
+assert 'openGallery("editor", "append")' in ui
+assert 'openGallery("pip", if (replace) "replace" else "add")' in ui
+assert 'openGallery("audio", "audio_extract")' in ui
+assert 'allowMultiple = mediaAction == "new" || mediaAction == "append"' in ui
+assert 'MediaLibrary.load(context, false)' in browser and 'MediaLibrary.load(context, true)' in browser
+assert 'GalleryRules.matches(' in browser and 'Galeria de vídeos' in browser
+assert 'READ_MEDIA_VISUAL_USER_SELECTED' in browser
+assert 'videoPicker.launch(arrayOf("video/*"))' in ui
+assert (root/'app/src/test/java/br/com/uaicortes/MediaGalleryRulesTest.kt').is_file()
+print('OK: v0.1.44 / versionCode 45, galeria visual unificada e seletor Android alternativo')

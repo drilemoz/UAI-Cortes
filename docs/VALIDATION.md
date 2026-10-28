@@ -1,3 +1,6 @@
+## v0.1.44 (versionCode 45)
+- Pendente CI: :app:testDebugUnitTest, :app:lintDebug e :app:assembleRelease. Testar galeria no Android 13/14/15, acesso parcial, revogação, múltiplos vídeos, PiP, importação de vídeo externo para áudio e SAF.
+
 ## v0.1.43 (versionCode 44) · 27/10/2026
 - Corrigido erro de compilação do workflow **Gerar APK Uai Cortes 37**: `MainActivity.kt` referenciava `savedName` e `savedVideo` na confirmação de exportação sem declarar o estado no escopo de `ExportScreen`.
 - Estados `remember(p.id)` adicionados antes do callback `onSuccess`, com `savedVideo` explicitamente tipado como `Uri?`; a confirmação em tela cheia, Abrir, Compartilhar, Voltar ao editor e Fechar permanecem.

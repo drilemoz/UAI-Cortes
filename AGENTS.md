@@ -88,3 +88,5 @@
 - v0.1.42: mostrar confirmação de sucesso em tela cheia SOMENTE depois da gravação concluída no MediaStore. Deve oferecer abrir, compartilhar, fechar e voltar ao editor; não exibir sucesso se falhar.
 
 - v0.1.43: antes da confirmação em tela cheia da exportação, declarar `savedName` e `savedVideo: Uri?` como estado de `ExportScreen` ANTES de callbacks `onSuccess` do Media3. CI workflow 37 falhou por referências não resolvidas; regressão estrutural no validador não substitui compilação real.
+
+- v0.1.44: todas as importações visuais (novo projeto, adicionar clipes, PiP e vídeo para extração de áudio) passam pela galeria interna MediaStore. Usar SAF como alternativa, respeitar acesso parcial Android 14+, não supor URI MediaStore persistente após revogação. A importação múltipla de clipes preserva ordem e não copia arquivos originais; manter schemaVersion 4.
