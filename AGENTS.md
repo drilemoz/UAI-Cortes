@@ -93,3 +93,6 @@
 
 - v0.1.45: ao começar a exportar, abrir uma tela cheia bloqueada contra retorno acidental, com percentual Media3 apenas quando `PROGRESS_STATE_AVAILABLE`, cronômetro e confirmação de cancelamento.
 - v0.1.45: após `Transformer.onCompleted`, mostrar etapa de cópia MediaStore indeterminada, não mostrar conclusão antes do sucesso efetivo. Cancelamento desativado durante a cópia; não alegar exportação em segundo plano ou ETA precisa.
+
+- v0.1.46: transições são rascunho até o botão inferior Aplicar; atualizar apenas a junção escolhida ou todas as junções adjacentes se solicitado. O botão retorna ao editor após atualizar o projeto; voltar sem aplicar não grava mudanças.
+- v0.1.46: modos adicionais Flash branco/preto, Fade azul/dourado, Preto e branco e Sépia atuam por matriz RgbMatrix em cada quadro, sem crossfade ou sobreposição entre clipes. `TransitionEffects` é lógica pura compartilhada com a prévia de quadros. Preservar fades legados e `schemaVersion=4`, validar MP4 real antes de afirmar identidade visual completa.

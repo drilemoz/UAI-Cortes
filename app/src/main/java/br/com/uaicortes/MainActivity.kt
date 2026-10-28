@@ -602,7 +602,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.45 (46)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.46 (47)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: trechos visuais em Cortar e unir, seleção automática após dividir e cursor no último corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -697,13 +697,8 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                     val outMs = EditFeatures.transitionMs(outgoing, clip.durationMs,
                         p.clips.getOrElse(index+1) { clip }.durationMs)
                     val local = (currentMs - before).coerceIn(0L,clip.durationMs)
-                    val alpha = 1f - EditFeatures.fadeFraction(local,clip.durationMs,inMs,outMs)
-                    if (alpha > .001f) {
-                        val isWhite = if (inMs > 0 && local < inMs)
-                            incoming?.kind == "Fade branco" else outgoing?.kind == "Fade branco"
-                        Box(Modifier.fillMaxSize().background((if(isWhite) Color.White else Color.Black)
-                            .copy(alpha=alpha)))
-                    }
+                    TransitionPreviewTint(incoming, inMs, outgoing, outMs,
+                        local, clip.durationMs)
                 }
                 p.overlays.forEach { pip ->
                     if (currentMs >= pip.startAtMs && currentMs < pip.startAtMs + pip.durationMs) {
@@ -2748,7 +2743,36 @@ private fun formatPipMs(ms: Long): String {
     return "%02d:%02d.%d".format(minutes, seconds, tenths)
 }
 
-/** Prévia ilustrada com quadros reais da junção, sem renderização ou áudio. */
+/** Aproxima a tintura das transições na prévia do ExoPlayer.
+ * Preto e branco/sépia têm prévia correta na tela Transições com quadros estáticos;
+ * a renderização em vídeo usa Media3 no MP4 exportado.
+ */
+@Composable
+private fun TransitionPreviewTint(incoming: ClipTransition?, incomingMs: Long,
+    outgoing: ClipTransition?, outgoingMs: Long, localMs: Long, clipDurationMs: Long) {
+    val incomingKind=incoming?.kind ?: TransitionEffects.CUT
+    val outgoingKind=outgoing?.kind ?: TransitionEffects.CUT
+    val at = localMs.coerceIn(0L,clipDurationMs.coerceAtLeast(0L))
+    val inStrength = if (incomingMs > 0L) TransitionEffects.intensity(incomingKind,
+        ((incomingMs - at).toFloat() / incomingMs).coerceIn(0f,1f)) else 0f
+    val outStrength = if (outgoingMs > 0L) TransitionEffects.intensity(outgoingKind,
+        ((at - (clipDurationMs - outgoingMs)).toFloat() / outgoingMs).coerceIn(0f,1f)) else 0f
+    val kind = if (inStrength >= outStrength) incomingKind else outgoingKind
+    val strength = maxOf(inStrength,outStrength)
+    val tint = when (kind) {
+        TransitionEffects.BLACK,TransitionEffects.FLASH_BLACK -> Color.Black
+        TransitionEffects.WHITE,TransitionEffects.FLASH_WHITE -> Color.White
+        TransitionEffects.BLUE -> Color(0xFF1448F2)
+        TransitionEffects.GOLD -> Color(0xFFFFAD2E)
+        else -> null
+    }
+    if (tint != null && strength > .001f)
+        Box(Modifier.fillMaxSize().background(tint.copy(alpha=strength)))
+}
+
+/** Prévia ilustrada com quadros reais: não decodifica ambos simultaneamente.
+ * Usa a mesma matriz de cor e a mesma curva temporal do exportador.
+ */
 @Composable
 private fun TransitionFramePreview(a: Clip, b: Clip, kind: String, durationMs: Long) {
     val context = LocalContext.current
@@ -2783,82 +2807,117 @@ private fun TransitionFramePreview(a: Clip, b: Clip, kind: String, durationMs: L
             delay(450L)
         }
     }
-    val showFirst = progress < .5f
-    val fade = if (kind == "Corte direto") 0f else
-        if (showFirst) progress * 2f else (1f - progress) * 2f
-    val fadeColor = if (kind == "Fade branco") Color.White else Color.Black
+    val first = progress < .5f
+    val nearCut = if (first) progress * 2f else (1f - progress) * 2f
+    val intensity = TransitionEffects.intensity(kind, nearCut)
+    val filter = androidx.compose.ui.graphics.ColorFilter.colorMatrix(
+        androidx.compose.ui.graphics.ColorMatrix(
+            TransitionEffects.composeValues(TransitionEffects.matrix(kind, intensity))))
     Box(Modifier.fillMaxWidth().height(175.dp).clip(RoundedCornerShape(12.dp))
         .background(Color(0xFF222222)), contentAlignment = Alignment.Center) {
-        val bitmap = if (showFirst) frames.first else frames.second
+        val bitmap = if (first) frames.first else frames.second
         if (bitmap != null) Image(bitmap, "Quadro da transição", Modifier.fillMaxSize(),
-            contentScale = ContentScale.Fit)
-        else Text(if (showFirst) "Clipe A" else "Clipe B", color = Color.White)
-        if (fade > 0f) Box(Modifier.fillMaxSize().background(fadeColor.copy(alpha = fade.coerceIn(0f, 1f))))
+            contentScale = ContentScale.Fit, colorFilter = filter)
+        else Text(if (first) "Clipe A" else "Clipe B", color = Color.White)
     }
-    Text("Prévia animada com quadros dos dois clipes (sem áudio). A exportação usa o efeito Media3.",
+    Text("Simulação com quadros dos dois clipes (sem áudio); exportação Media3 mantém a sequência.",
         style = MaterialTheme.typography.bodySmall)
 }
 
 @Composable
 private fun TransitionScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit,initialBoundary:Int=0) {
-    var boundary by remember(p.id,initialBoundary) { mutableIntStateOf(initialBoundary.coerceIn(0,(p.clips.size-2).coerceAtLeast(0))) }
-    Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
-        .padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-        Heading("Transições",back)
-        if (p.clips.size < 2) Text("Adicione pelo menos dois clipes para criar uma transição.")
-        else {
-            Text("Escolha entre quais clipes aplicar",fontWeight=FontWeight.Medium)
-            p.clips.zipWithNext().forEachIndexed { index,(a,b) ->
-                FilterChip(selected=boundary==index,onClick={boundary=index},
-                    label={Text("${index+1} → ${index+2}: ${a.title.take(11)} / ${b.title.take(11)}")})
-            }
-            val current=EditFeatures.boundary(p,boundary)
-            val kind=current?.kind ?: "Corte direto"
-            TransitionFramePreview(p.clips[boundary], p.clips[boundary+1], kind, current?.durationMs ?: 500L)
-            Text("Efeito",fontWeight=FontWeight.Bold)
-            Text("Toque em um efeito para aplicá-lo à junção selecionada.",style=MaterialTheme.typography.bodySmall)
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                listOf("Corte direto","Fade preto","Fade branco").forEach { value ->
-                    val selected=kind==value
-                    Surface(onClick={
-                        val a=p.clips[boundary];val b=p.clips[boundary+1]
-                        update(p.copy(transitions=p.transitions.filterNot{
-                            it.fromId==a.id && it.toId==b.id
-                        }+ClipTransition(a.id,b.id,value,current?.durationMs?:500)))
-                    },modifier=Modifier.weight(1f),shape=RoundedCornerShape(9.dp),
-                        color=if(selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                        border=BorderStroke(if(selected)2.dp else 1.dp,
-                            if(selected)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)) {
-                        Column(Modifier.padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally,
-                            verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                            Box(Modifier.fillMaxWidth().height(55.dp).background(Color(0xFF292929),RoundedCornerShape(5.dp)),
-                                contentAlignment=Alignment.Center) {
-                                when(value) {
-                                    "Corte direto" -> Text("A | B",color=Color.White)
-                                    "Fade preto" -> Text("A ▪ B",color=Color.White)
-                                    else -> Text("A □ B",color=Color.White)
+    var boundary by remember(p.id,initialBoundary) {
+        mutableIntStateOf(initialBoundary.coerceIn(0,(p.clips.size-2).coerceAtLeast(0)))
+    }
+    fun stored(index: Int) = EditFeatures.boundary(p, index)
+    var kind by remember(p.id, initialBoundary) {
+        mutableStateOf(stored(boundary)?.kind?.takeIf(TransitionEffects::supported) ?: TransitionEffects.CUT)
+    }
+    var fadeMs by remember(p.id,initialBoundary) {
+        mutableFloatStateOf((stored(boundary)?.durationMs ?: 500L).coerceIn(250L,1000L).toFloat())
+    }
+    var applyAll by remember(p.id) { mutableStateOf(false) }
+    Column(Modifier.fillMaxSize().statusBarsPadding().imePadding()
+        .padding(horizontal=16.dp), verticalArrangement=Arrangement.spacedBy(8.dp)) {
+        Heading("Transições", back)
+        if (p.clips.size < 2) {
+            Text("Adicione pelo menos dois clipes para criar uma transição.")
+        } else {
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                Text("Junção entre clipes",fontWeight=FontWeight.Medium)
+                androidx.compose.foundation.lazy.LazyRow(
+                    horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                    items(p.clips.lastIndex) { index ->
+                        val a=p.clips[index];val b=p.clips[index+1]
+                        FilterChip(selected=boundary==index,onClick={
+                            boundary=index
+                            kind=stored(index)?.kind?.takeIf(TransitionEffects::supported) ?: TransitionEffects.CUT
+                            fadeMs=(stored(index)?.durationMs ?: 500L).coerceIn(250L,1000L).toFloat()
+                        },label={Text("${index+1} → ${index+2}: ${a.title.take(10)} / ${b.title.take(10)}")})
+                    }
+                }
+                TransitionFramePreview(p.clips[boundary],p.clips[boundary+1],kind,fadeMs.toLong())
+                Text("Efeito",fontWeight=FontWeight.Bold)
+                Text("Escolha o efeito. As mudanças só são gravadas ao tocar em Aplicar.",
+                    style=MaterialTheme.typography.bodySmall)
+                androidx.compose.foundation.lazy.LazyRow(
+                    horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    items(TransitionEffects.names.size) { index ->
+                        val value=TransitionEffects.names[index]
+                        val selected=kind==value
+                        Surface(onClick={kind=value},shape=RoundedCornerShape(9.dp),
+                            color=if(selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                            border=BorderStroke(if(selected) 2.dp else 1.dp,
+                                if(selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)) {
+                            Column(Modifier.width(105.dp).padding(7.dp),
+                                horizontalAlignment=Alignment.CenterHorizontally,
+                                verticalArrangement=Arrangement.spacedBy(5.dp)) {
+                                Box(Modifier.fillMaxWidth().height(48.dp)
+                                    .background(Color(0xFF292929),RoundedCornerShape(5.dp)),
+                                    contentAlignment=Alignment.Center) {
+                                    Text(when (value) {
+                                        TransitionEffects.CUT -> "A | B"
+                                        TransitionEffects.MONO -> "A ◐ B"
+                                        TransitionEffects.SEPIA -> "A ◒ B"
+                                        TransitionEffects.FLASH_WHITE,TransitionEffects.FLASH_BLACK -> "A ✦ B"
+                                        else -> "A ▪ B"
+                                    },color=Color.White)
                                 }
+                                Text(value,fontSize=11.sp,maxLines=2,textAlign=TextAlign.Center,
+                                    minLines=2)
                             }
-                            Text(value,fontSize=11.sp,maxLines=2,textAlign=TextAlign.Center)
                         }
                     }
                 }
+                Text(TransitionEffects.description(kind),
+                    style=MaterialTheme.typography.bodySmall)
+                if (kind != TransitionEffects.CUT) {
+                    Text("Duração: ${fadeMs.toInt()} ms",fontWeight=FontWeight.Medium)
+                    Slider(value=fadeMs,valueRange=250f..1000f,steps=2,
+                        onValueChange={fadeMs=it})
+                }
+                Text("Os efeitos atuam na saída e entrada dos vídeos. Não sobrepõem clipes nem alteram sua duração.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if(kind!="Corte direto") {
-                Text("Duração do fade: ${current?.durationMs?:500} ms")
-                Slider(value=(current?.durationMs?:500).toFloat(),valueRange=250f..1000f,steps=2,
-                    onValueChange={value->
-                        val a=p.clips[boundary];val b=p.clips[boundary+1]
-                        update(p.copy(transitions=p.transitions.filterNot{
-                            it.fromId==a.id && it.toId==b.id
-                        }+ClipTransition(a.id,b.id,kind,value.toLong())))
-                    })
+            HorizontalDivider()
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                Checkbox(checked=applyAll,onCheckedChange={applyAll=it})
+                Column(Modifier.weight(1f)) {
+                    Text("Aplicar a todas as junções",fontWeight=FontWeight.Medium)
+                    Text("${p.clips.lastIndex} ${if(p.clips.lastIndex==1) "junção" else "junções"} entre vídeos",
+                        style=MaterialTheme.typography.bodySmall)
+                }
             }
-            Text("Fade preto/branco: o vídeo escurece ou clareia no fim do clipe e volta ao normal no começo do seguinte. A duração total não muda.",
-                style=MaterialTheme.typography.bodySmall)
-            Text("Dissolvência real entre duas imagens ainda não é suportada nesta composição Media3; não será aplicada como se estivesse pronta.",
-                style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Button(onClick={
+                update(TransitionBatch.apply(p,boundary,kind,fadeMs.toLong(),applyAll))
+                back()
+            }, modifier=Modifier.fillMaxWidth().padding(bottom=8.dp)) {
+                Icon(Icons.Default.Check,null)
+                Spacer(Modifier.width(8.dp))
+                Text("Aplicar")
+            }
         }
     }
 }
@@ -3578,13 +3637,8 @@ private fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
                     p.clips.getOrElse(exportClipIndex-1){clip}.durationMs,clip.durationMs)
                 val fadeOut = EditFeatures.transitionMs(next,clip.durationMs,
                     p.clips.getOrElse(exportClipIndex+1){clip}.durationMs)
-                val shade=1f-EditFeatures.fadeFraction(local,clip.durationMs,fadeIn,fadeOut)
-                if (shade > .001f) {
-                    val white = if(fadeIn > 0 && local < fadeIn)
-                        previous?.kind=="Fade branco" else next?.kind=="Fade branco"
-                    Box(Modifier.fillMaxSize().background((if(white)Color.White else Color.Black)
-                        .copy(alpha=shade)))
-                }
+                TransitionPreviewTint(previous, fadeIn, next, fadeOut,
+                    local, clip.durationMs)
             }
             p.overlays.forEach { pip ->
                 if(exportPreviewMs >= pip.startAtMs && exportPreviewMs < pip.startAtMs+pip.durationMs) {

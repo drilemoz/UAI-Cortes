@@ -185,8 +185,9 @@ class ExportEngine(private val context: Context) {
             val fadeOut = EditFeatures.transitionMs(next, clip.durationMs,
                 project.clips.getOrElse(index + 1) { clip }.durationMs)
             val videoEffects = mutableListOf<androidx.media3.common.Effect>()
-            if (fadeIn > 0 || fadeOut > 0) videoEffects += ClipFadeEffect(clip.durationMs,
-                fadeIn, fadeOut, previous?.kind == "Fade branco", next?.kind == "Fade branco")
+            if (fadeIn > 0 || fadeOut > 0) videoEffects += ClipColorTransitionEffect(clip.durationMs,
+                previous?.kind ?: TransitionEffects.CUT, fadeIn,
+                next?.kind ?: TransitionEffects.CUT, fadeOut)
             if (project.subtitles.isNotEmpty()) videoEffects += OverlayEffect(
                 listOf(TimedSubtitleOverlay(project.subtitles, globalStartMs)))
             globalStartMs += clip.durationMs

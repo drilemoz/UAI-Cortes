@@ -140,6 +140,18 @@ class ClipFadeEffect(
     }
 }
 
+/** Matriz de transição por clipe. A lógica é compartilhada com prévias Compose. */
+@UnstableApi
+class ClipColorTransitionEffect(
+    private val clipDurationMs: Long,
+    private val incomingKind: String, private val incomingMs: Long,
+    private val outgoingKind: String, private val outgoingMs: Long
+) : RgbMatrix {
+    override fun getMatrix(presentationTimeUs: Long, useHdr: Boolean): FloatArray =
+        TransitionEffects.matrixAt(presentationTimeUs.coerceAtLeast(0L)/1000L,
+            clipDurationMs, incomingKind, incomingMs, outgoingKind, outgoingMs)
+}
+
 /** Receives absolute cue times but Media3 calls with times relative to each source clip. */
 @UnstableApi
 class TimedSubtitleOverlay(

@@ -1,3 +1,9 @@
+## v0.1.46 (versionCode 47) · 27/10/2026
+- Transições: nove opções, mantendo Corte direto, Fade preto e Fade branco e adicionando Flash branco, Flash preto, Fade azul, Fade dourado, Preto e branco e Sépia. Usam RgbMatrix do Media3 por quadro, sem sobrepor sequências de vídeo.
+- Nova seleção de efeitos em faixa horizontal, mini prévia animada a partir de quadros dos dois clipes e duração ajustável para efeitos ativos.
+- Escolhas são rascunhos até **Aplicar**. Botão inferior **Aplicar** persiste e retorna ao editor; **Aplicar a todas as junções** replica o efeito/duração nos pares adjacentes, sem alterar clipes ou mídia original.
+- Sem migração do schemaVersion 4; testes de matrizes e aplicação em lote adicionados. Exportação e aparência física ainda exigem build CI e teste Android.
+
 ## v0.1.45 (versionCode 46)
 - Verificar no GitHub Actions: `:app:testDebugUnitTest`, `:app:lintDebug` e `:app:assembleRelease`.
 - Em aparelho: exportar projeto com legendas, observar percentual quando disponível, cancelar com confirmação, repetir exportação e aguardar cópia na galeria antes da confirmação.
