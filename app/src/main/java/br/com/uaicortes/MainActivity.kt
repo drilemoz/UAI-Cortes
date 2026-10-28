@@ -301,7 +301,7 @@ fun UaiApp() {
         "media" -> mediaOrigin
         "projects", "settings" -> "home"
         "general", "appearance", "about", "diagnostics" -> "settings"
-        "pip", "audio", "trim", "transition", "subtitles", "export" -> "editor"
+        "pip", "audio", "trim", "transition", "subtitles", "watermark", "export" -> "editor"
         else -> previous
     } }
     BackHandler(screen != "home") { back() }
@@ -356,6 +356,10 @@ fun UaiApp() {
                     onSelectOverlay = { selectedOverlayId = it },
                     onTransition = { index -> selectedBoundary = index; screen = "transition" },
                     onSaveHome = { write(p); screen = "home" }) }
+                "watermark" -> project?.let { current -> TextWatermarkScreen(current, ::back) { changed ->
+                    write(changed)
+                    screen = "editor"
+                } }
                 "trim" -> project?.let { TrimScreen(it, selectedClip, positionMs, ::back, { write(it) },
                     { selectedClip = it }, onSaveHome = { saved -> write(saved); screen = "home" }) }
                 "audio" -> project?.let { AudioScreen(it, ::back, { write(it) },
@@ -602,10 +606,109 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.47 (48)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.48 (49)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: trechos visuais em Cortar e unir, seleção automática após dividir e cursor no último corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** Editor local da marca d'água. O rascunho só altera o projeto após Aplicar. */
+@OptIn(UnstableApi::class)
+@Composable
+private fun TextWatermarkScreen(p: VideoProject, back: () -> Unit,
+    onApply: (VideoProject) -> Unit) {
+    val context = LocalContext.current
+    var draft by remember(p.id) { mutableStateOf(p.textWatermark ?: TextWatermark()) }
+    val player = remember(p.id) { diagnosticPlayer(context) }
+    DisposableEffect(player) { onDispose { player.release() } }
+    LaunchedEffect(p.clips.firstOrNull()?.uri, p.clips.firstOrNull()?.startMs) {
+        p.clips.firstOrNull()?.let { clip ->
+            player.setMediaItem(MediaItem.Builder().setUri(clip.uri)
+                .setClippingConfiguration(MediaItem.ClippingConfiguration.Builder()
+                    .setStartPositionMs(clip.startMs)
+                    .setEndPositionMs(clip.endMs).build()).build())
+            player.prepare()
+        }
+    }
+    Column(Modifier.fillMaxSize().statusBarsPadding()) {
+        Heading("Marca d'água em texto", back)
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Texto fixo durante todo o vídeo. A prévia usa o quadro original; nenhum arquivo é alterado.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val first = p.clips.firstOrNull()
+            val aspect = remember(first?.uri) {
+                first?.uri?.let { mediaAspect(context, it, false) } ?: 16f / 9f
+            }
+            InlineVideoPreview(aspect) {
+                AndroidView(factory = { ctx -> previewPlayer(ctx).apply {
+                    this.player = player
+                    useController = false
+                } }, update = { it.player = player }, modifier = Modifier.fillMaxSize())
+                draft.toSubtitle(p.durationMs)?.let { watermark ->
+                    SubtitleOverlayOnFrame(watermark, editable = false, playbackMs = 0L)
+                }
+            }
+            OutlinedTextField(value = draft.text,
+                onValueChange = { draft = draft.copy(text = it.take(80)) },
+                label = { Text("Texto da marca d'água") },
+                placeholder = { Text("Ex.: Meu canal") },
+                modifier = Modifier.fillMaxWidth(), maxLines = 2)
+            Text("Tamanho: ${draft.sizeSp}")
+            Slider(value = draft.sizeSp.toFloat(),
+                onValueChange = { draft = draft.copy(sizeSp = it.toInt().coerceIn(12, 36)) },
+                valueRange = 12f..36f)
+            Text("Transparência: ${(draft.opacity * 100).toInt()}% de opacidade")
+            Slider(value = draft.opacity, onValueChange = { draft = draft.copy(opacity = it) },
+                valueRange = .1f..1f)
+            Text("Cor")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("Branca" to 0xFFFFFFFF.toInt(), "Amarela" to 0xFFFFFF00.toInt(),
+                    "Preta" to 0xFF000000.toInt()).forEach { (label, color) ->
+                    OutlinedButton(onClick = { draft = draft.copy(color = color) },
+                        modifier = Modifier.weight(1f),
+                        border = BorderStroke(if (draft.color == color) 2.dp else 1.dp,
+                            if (draft.color == color) Blue else MaterialTheme.colorScheme.outline)) {
+                        Text(label, fontSize = 11.sp)
+                    }
+                }
+            }
+            Text("Posição no vídeo")
+            val positions = listOf(
+                Triple("↖", .15f, .18f), Triple("↑", .5f, .18f), Triple("↗", .85f, .18f),
+                Triple("←", .15f, .52f), Triple("•", .5f, .52f), Triple("→", .85f, .52f),
+                Triple("↙", .15f, .9f), Triple("↓", .5f, .9f), Triple("↘", .85f, .9f))
+            positions.chunked(3).forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    row.forEach { (symbol, x, y) ->
+                        OutlinedButton(onClick = { draft = draft.copy(x = x, y = y) },
+                            modifier = Modifier.weight(1f),
+                            border = BorderStroke(if (draft.x == x && draft.y == y) 2.dp else 1.dp,
+                                if (draft.x == x && draft.y == y) Blue else MaterialTheme.colorScheme.outline)) {
+                            Text(symbol)
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+        }
+        Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedButton(onClick = { onApply(p.copy(textWatermark = null)) },
+                modifier = Modifier.weight(1f)) {
+                Icon(Icons.Default.DeleteOutline, null, modifier = Modifier.size(17.dp))
+                Text(" Remover")
+            }
+            Button(onClick = {
+                val safe = draft.normalized()
+                onApply(p.copy(textWatermark = safe.takeIf { it.text.isNotBlank() }))
+            }, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Default.Check, null, modifier = Modifier.size(17.dp))
+                Text(" Aplicar")
+            }
+        }
     }
 }
 
@@ -711,6 +814,9 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 p.subtitles.firstOrNull { currentMs >= it.startMs && currentMs < it.endMs }?.let { cue ->
                     SubtitleOverlayOnFrame(cue, editable = false, playbackMs=currentMs)
                 }
+                p.textWatermark?.toSubtitle(p.durationMs)?.let { watermark ->
+                    SubtitleOverlayOnFrame(watermark, editable = false, playbackMs=currentMs)
+                }
             }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),horizontalArrangement=Arrangement.Center,
@@ -779,7 +885,8 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             Triple("PiP", Icons.Default.Layers, "pip"),
             Triple("Áudio", Icons.Default.MusicNote, "audio"),
             Triple("Transição", Icons.Default.AutoAwesomeMotion, "transition"),
-            Triple("Legendas", Icons.Default.ClosedCaption, "subtitles")
+            Triple("Legendas", Icons.Default.ClosedCaption, "subtitles"),
+            Triple("Marca d'água", Icons.Default.TextFields, "watermark")
         ) }
         val carouselStart = (Int.MAX_VALUE / 2 / actions.size) * actions.size
         val toolsScroll = rememberLazyListState(initialFirstVisibleItemIndex = carouselStart)
@@ -801,8 +908,8 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                         .background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
                         Icon(icon, name, modifier = Modifier.size(22.dp))
                     }
-                    Text(name, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(name, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
                 }
             }
         }
@@ -3651,6 +3758,9 @@ private fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
             p.subtitles.firstOrNull { cue ->
                 exportPreviewMs >= cue.startMs && exportPreviewMs < cue.endMs && cue.text.isNotBlank()
             }?.let { cue -> SubtitleOverlayOnFrame(cue,editable=false,playbackMs=exportPreviewMs) }
+            p.textWatermark?.toSubtitle(p.durationMs)?.let { watermark ->
+                SubtitleOverlayOnFrame(watermark, editable=false, playbackMs=exportPreviewMs)
+            }
             Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) {
                 IconButton(onClick={
                     previewPlaying=!previewPlaying
@@ -3659,7 +3769,7 @@ private fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
                     "Reproduzir prévia",tint=Color.White,modifier=Modifier.size(52.dp))}
             }
         }
-        if(p.subtitles.isNotEmpty() || p.overlays.isNotEmpty()) {
+        if(p.subtitles.isNotEmpty() || p.overlays.isNotEmpty() || p.textWatermark != null) {
             Text("Prévia: legendas, PiPs e transições. Confira o MP4 final para validar áudio e efeitos.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant,

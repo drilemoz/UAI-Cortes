@@ -98,3 +98,7 @@
 - v0.1.46: modos adicionais Flash branco/preto, Fade azul/dourado, Preto e branco e Sépia atuam por matriz RgbMatrix em cada quadro, sem crossfade ou sobreposição entre clipes. `TransitionEffects` é lógica pura compartilhada com a prévia de quadros. Preservar fades legados e `schemaVersion=4`, validar MP4 real antes de afirmar identidade visual completa.
 
 - v0.1.47: LaunchedEffect da galeria nunca transforma CancellationException / LeftCompositionCancellationException em erro. Cancelamento é propagado, indicadores não são atualizados por consultas abandonadas, e erros reais oferecem retry/SAF sem exibir caminhos. O diagnóstico de permissionamento em player do projeto é independente.
+
+- v0.1.48: marca d'água em texto é propriedade opcional `VideoProject.textWatermark`, não legenda comum. Manter projeto JSON schemaVersion 4, presets de 9 posições, transparência e texto até 80 caracteres; remover marca não exclui legendas.
+- Prévia do editor e de Exportar deve renderizar marca independentemente das legendas. Media3 deve adicionar `TimedSubtitleOverlay` exclusivo da marca em cada clipe, além do overlay de legendas existente. Validar MP4 real em aparelhos com orientação vertical/horizontal.
+- Não anunciar legendas automáticas sem transcrição real: backend local deve ser opcional com download de modelo, limites de memória e revisão de SRT antes de aplicar; nenhuma API externa ou envio de áudio sem consentimento explícito.

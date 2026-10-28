@@ -188,8 +188,14 @@ class ExportEngine(private val context: Context) {
             if (fadeIn > 0 || fadeOut > 0) videoEffects += ClipColorTransitionEffect(clip.durationMs,
                 previous?.kind ?: TransitionEffects.CUT, fadeIn,
                 next?.kind ?: TransitionEffects.CUT, fadeOut)
-            if (project.subtitles.isNotEmpty()) videoEffects += OverlayEffect(
-                listOf(TimedSubtitleOverlay(project.subtitles, globalStartMs)))
+            // Marca d'água e legendas são camadas INDEPENDENTES no projeto e no MP4.
+            val textLayers = mutableListOf<androidx.media3.effect.TextureOverlay>()
+            if (project.subtitles.isNotEmpty())
+                textLayers += TimedSubtitleOverlay(project.subtitles, globalStartMs)
+            project.textWatermark?.toSubtitle(project.durationMs)?.let { watermarkCue ->
+                textLayers += TimedSubtitleOverlay(listOf(watermarkCue), globalStartMs)
+            }
+            if (textLayers.isNotEmpty()) videoEffects += OverlayEffect(textLayers)
             globalStartMs += clip.durationMs
             // Media3: duração de EditedMediaItem é a duração ORIGINAL, não do recorte.
             // Para vídeo com duração intrínseca, Transformer a descobre; omitir evita
