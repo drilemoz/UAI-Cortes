@@ -2,7 +2,7 @@
 - Atualizar sequencialmente `versionName`, `versionCode`, README, RELEASE_NOTES e nomes do APK em workflow.
 - Entregar cinco APKs Release diretamente em Release Assets no formato `UaiCortes-vX.Y.Z-{arm32,arm64,x86,x86_64,universal}.apk`; nunca publicar APK duplicado como Actions Artifact.
 - Entregas de código-fonte podem ser ZIP, mas a saída de instalação não pode ser ZIP.
-- Sem autenticação, IA, publicidade ou serviço de nuvem para edição.
+- Sem autenticação, publicidade ou serviço de nuvem para edição. Reconhecimento de fala por IA local é opcional e requer download voluntário do modelo; nunca transmite áudio do usuário.
 - Não declarar recurso pronto sem implementação e teste. Dissolvência real continua pendente; fade para preto/branco precisa de compilação e teste em aparelho.
 - Nunca adicionar chaves, tokens ou keystores ao repositório.
 
@@ -102,3 +102,7 @@
 - v0.1.48: marca d'água em texto é propriedade opcional `VideoProject.textWatermark`, não legenda comum. Manter projeto JSON schemaVersion 4, presets de 9 posições, transparência e texto até 80 caracteres; remover marca não exclui legendas.
 - Prévia do editor e de Exportar deve renderizar marca independentemente das legendas. Media3 deve adicionar `TimedSubtitleOverlay` exclusivo da marca em cada clipe, além do overlay de legendas existente. Validar MP4 real em aparelhos com orientação vertical/horizontal.
 - Não anunciar legendas automáticas sem transcrição real: backend local deve ser opcional com download de modelo, limites de memória e revisão de SRT antes de aplicar; nenhuma API externa ou envio de áudio sem consentimento explícito.
+
+- v0.1.49: voz automática precisa ser transcrita de verdade do áudio existente, respeitando cortes por clipe e 16 kHz mono PCM. Vosk opt-in; download HTTPS oficial e ZIP validado; nunca enviar áudio à nuvem. Permitir revisar e corrigir antes de gravar. Limite inicial de 10 minutos; não afirmar transcrição física validada sem APK em celular.
+- v0.1.49: projeto deve solicitar confirmação antes de excluir e não apagar mídias originais; miniaturas são extraídas sob demanda pelo MediaMetadataRetriever na thread IO e devem falhar silenciosamente caso a permissão tenha sido revogada.
+- v0.1.49: transições de zoom/pan devem ser realmente exportadas via MatrixTransformation, com identidade fora das janelas; não rotular como crossfade (não suportado pela versão atual Media3).

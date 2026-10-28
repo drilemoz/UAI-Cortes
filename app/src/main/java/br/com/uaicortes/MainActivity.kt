@@ -141,6 +141,7 @@ fun UaiApp() {
     var previous by remember { mutableStateOf("home") }
     var pendingOverlap by remember { mutableStateOf<OverlapConfirmation?>(null) }
     var pendingSequential by remember { mutableStateOf<SequentialConfirmation?>(null) }
+    var pendingProjectDelete by remember { mutableStateOf<VideoProject?>(null) }
     val dark = when (theme) {
         "Claro" -> false
         "Escuro", "AMOLED" -> true
@@ -302,6 +303,7 @@ fun UaiApp() {
         "projects", "settings" -> "home"
         "general", "appearance", "about", "diagnostics" -> "settings"
         "pip", "audio", "trim", "transition", "subtitles", "watermark", "export" -> "editor"
+        "autosubtitle" -> "subtitles"
         else -> previous
     } }
     BackHandler(screen != "home") { back() }
@@ -333,10 +335,10 @@ fun UaiApp() {
             when (screen) {
                 "home" -> MainHome(projects, onCreate = { pendingPicker = "new"; selectedClip = ""; openGallery("home", "new") },
                     onOpen = { project = it; selectedClip = TrimTimelineEdit.resumeClipId(it); screen = "editor" },
-                    onDelete = { store.delete(it.id); projects = store.load() },
+                    onDelete = { pendingProjectDelete = it },
                     onSettings = { screen = "settings" }, onTab = { screen = it })
                 "projects" -> ProjectsScreen(projects, { back() }, { project = it; selectedClip = TrimTimelineEdit.resumeClipId(it); screen = "editor" },
-                    { store.delete(it.id); projects = store.load() })
+                    { pendingProjectDelete = it })
                 "settings" -> SettingsScreen({ back() }) { screen = it }
                 "diagnostics" -> DiagnosticScreen(::back, onEnabledChanged = { diagnosticsEnabled = it })
                 "general" -> GeneralScreen(store, ::back)
@@ -410,10 +412,30 @@ fun UaiApp() {
                     mediaAction == "audio_extract") GalleryScope.VIDEOS else GalleryScope.IMAGES_AND_VIDEOS,
                     allowMultiple = mediaAction == "new" || mediaAction == "append")
                 "transition" -> project?.let { TransitionScreen(it, ::back, { write(it) }, selectedBoundary) }
+                "autosubtitle" -> project?.let { current -> AutoSubtitleScreen(current, ::back, onApply = { cues, replace ->
+                    val existing = if (replace) emptyList() else current.subtitles
+                    write(current.copy(subtitles = existing + cues))
+                    selectedSubtitleId = cues.firstOrNull()?.id
+                    screen = "subtitles"
+                }) }
                 "subtitles" -> project?.let { SubtitleScreen(it, ::back, { write(it) }, selectedSubtitleId,
-                    onSaveHome = { write(it); screen = "home" }) }
+                    onSaveHome = { write(it); screen = "home" },
+                    onAutoSubtitles = { screen = "autosubtitle" }) }
                 "export" -> project?.let { ExportScreen(it, store.quality(), ::back) }
             }
+        }
+        pendingProjectDelete?.let { target ->
+            AlertDialog(onDismissRequest = { pendingProjectDelete = null },
+                icon = { Icon(Icons.Default.DeleteOutline, null) },
+                title = { Text("Excluir projeto?") },
+                text = { Text("O projeto \"${target.title}\" e suas edições salvas serão removidos. Os vídeos e fotos originais não serão apagados. Esta ação não pode ser desfeita.") },
+                confirmButton = { TextButton(onClick = {
+                    store.delete(target.id)
+                    projects = store.load()
+                    if (project?.id == target.id) project = null
+                    pendingProjectDelete = null
+                }) { Text("Excluir projeto", color = MaterialTheme.colorScheme.error) } },
+                dismissButton = { TextButton(onClick = { pendingProjectDelete = null }) { Text("Cancelar") } })
         }
         pendingSequential?.let { pending ->
             AlertDialog(onDismissRequest = { pendingSequential = null },
@@ -533,8 +555,34 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
 @Composable private fun ProjectItem(p:VideoProject,onOpen:(VideoProject)->Unit,onDelete:(VideoProject)->Unit){
     var menu by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().clickable {onOpen(p)}.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
-        Box(Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment=Alignment.Center) {
-            Icon(Icons.Default.Videocam,null,tint=MaterialTheme.colorScheme.onSurfaceVariant)
+        val context = LocalContext.current
+        val first = p.clips.firstOrNull()
+        val thumbnail by produceState<ImageBitmap?>(null, first?.uri, first?.startMs, p.id) {
+            value = withContext(Dispatchers.IO) {
+                first?.let { clip -> runCatching {
+                    val retriever = MediaMetadataRetriever()
+                    try {
+                        retriever.setDataSource(context, Uri.parse(clip.uri))
+                        val frameTime = clip.startMs.coerceAtLeast(0L) * 1000L
+                        val frame = if (Build.VERSION.SDK_INT >= 27)
+                            retriever.getScaledFrameAtTime(frameTime,
+                                MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 192, 128)
+                        else retriever.getFrameAtTime(frameTime,
+                            MediaMetadataRetriever.OPTION_CLOSEST_SYNC)?.let { original ->
+                                val scaled = android.graphics.Bitmap.createScaledBitmap(original, 192, 128, true)
+                                if (scaled != original) original.recycle()
+                                scaled
+                            }
+                        frame?.asImageBitmap()
+                    } finally { retriever.release() }
+                }.getOrNull() }
+            }
+        }
+        Box(Modifier.size(70.dp).clip(RoundedCornerShape(10.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment=Alignment.Center) {
+            if (thumbnail != null) Image(thumbnail!!, "Miniatura do projeto ${p.title}",
+                Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            else Icon(Icons.Default.Videocam,null,tint=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
@@ -606,7 +654,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.48 (49)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.49 (50)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: trechos visuais em Cortar e unir, seleção automática após dividir e cursor no último corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -2923,8 +2971,12 @@ private fun TransitionFramePreview(a: Clip, b: Clip, kind: String, durationMs: L
     Box(Modifier.fillMaxWidth().height(175.dp).clip(RoundedCornerShape(12.dp))
         .background(Color(0xFF222222)), contentAlignment = Alignment.Center) {
         val bitmap = if (first) frames.first else frames.second
-        if (bitmap != null) Image(bitmap, "Quadro da transição", Modifier.fillMaxSize(),
-            contentScale = ContentScale.Fit, colorFilter = filter)
+        if (bitmap != null) Image(bitmap, "Quadro da transição",
+            Modifier.fillMaxSize().graphicsLayer {
+                val zoom = TransitionEffects.motionScale(kind, intensity)
+                scaleX = zoom; scaleY = zoom
+                translationX = TransitionEffects.motionX(kind, intensity) * size.width / 2f
+            }, contentScale = ContentScale.Fit, colorFilter = filter)
         else Text(if (first) "Clipe A" else "Clipe B", color = Color.White)
     }
     Text("Simulação com quadros dos dois clipes (sem áudio); exportação Media3 mantém a sequência.",
@@ -2985,6 +3037,9 @@ private fun TransitionScreen(p:VideoProject,back:()->Unit,update:(VideoProject)-
                                     contentAlignment=Alignment.Center) {
                                     Text(when (value) {
                                         TransitionEffects.CUT -> "A | B"
+                                        TransitionEffects.ZOOM_IN -> "A ⊕ B"
+                                        TransitionEffects.ZOOM_OUT -> "A ⊖ B"
+                                        TransitionEffects.PAN -> "A → B"
                                         TransitionEffects.MONO -> "A ◐ B"
                                         TransitionEffects.SEPIA -> "A ◒ B"
                                         TransitionEffects.FLASH_WHITE,TransitionEffects.FLASH_BLACK -> "A ✦ B"
@@ -3246,7 +3301,7 @@ private fun SubtitlePositionPreview(p:VideoProject,cue:SubtitleCue,
 
 @Composable
 private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit,
-    initialSelectedId: String? = null, onSaveHome: () -> Unit) {
+    initialSelectedId: String? = null, onSaveHome: () -> Unit, onAutoSubtitles: () -> Unit) {
     val context=LocalContext.current
     var selectedId by remember(p.id,initialSelectedId) {
         mutableStateOf(initialSelectedId?.takeIf { id -> p.subtitles.any { it.id==id } }
@@ -3337,9 +3392,8 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
         }
         SubtitleCompactTimeline(sorted,p.durationMs,selectedId,
             onSelect={ id -> selectedId=id;editorOpen=false })
-        Row(Modifier.fillMaxWidth().padding(vertical=4.dp),
-            verticalAlignment=Alignment.CenterVertically,
-            horizontalArrangement=Arrangement.spacedBy(5.dp)) {
+        Row(Modifier.fillMaxWidth().padding(vertical=2.dp),
+            verticalAlignment=Alignment.CenterVertically) {
             Text("Legendas (${p.subtitles.size})",fontSize=14.sp,maxLines=1,
                 fontWeight=FontWeight.SemiBold,modifier=Modifier.weight(1f))
             IconButton(onClick={searchOpen=!searchOpen; if(!searchOpen) searchQuery=""},
@@ -3347,6 +3401,11 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
                 Icon(if(searchOpen) Icons.Default.SearchOff else Icons.Default.Search,
                     if(searchOpen) "Fechar busca" else "Buscar legendas",modifier=Modifier.size(19.dp))
             }
+        }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+            .padding(vertical=2.dp),
+            verticalAlignment=Alignment.CenterVertically,
+            horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             TextButton(enabled=p.durationMs>0,onClick={
                 SubtitleListNavigation.newInterval(p.durationMs,selected?.endMs)?.let { (start,end) ->
                     val cue=SubtitleCue(text="Nova legenda",startMs=start,endMs=end)
@@ -3356,6 +3415,11 @@ private fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->U
             },contentPadding=PaddingValues(horizontal=1.dp,vertical=2.dp)) {
                 Icon(Icons.Default.Add,"Nova legenda",Modifier.size(18.dp))
                 Text("Nova",fontSize=11.sp,maxLines=1)
+            }
+            OutlinedButton(onClick=onAutoSubtitles,
+                contentPadding=PaddingValues(horizontal=3.dp,vertical=3.dp)) {
+                Icon(Icons.Default.AutoAwesome, "Gerar legendas automáticas", Modifier.size(17.dp))
+                Text("Auto",fontSize=11.sp,maxLines=1)
             }
             OutlinedButton(onClick={importer.launch(arrayOf("text/*","application/x-subrip","*/*"))},
                 contentPadding=PaddingValues(horizontal=4.dp,vertical=3.dp)) {

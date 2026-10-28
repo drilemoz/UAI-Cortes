@@ -185,9 +185,16 @@ class ExportEngine(private val context: Context) {
             val fadeOut = EditFeatures.transitionMs(next, clip.durationMs,
                 project.clips.getOrElse(index + 1) { clip }.durationMs)
             val videoEffects = mutableListOf<androidx.media3.common.Effect>()
-            if (fadeIn > 0 || fadeOut > 0) videoEffects += ClipColorTransitionEffect(clip.durationMs,
-                previous?.kind ?: TransitionEffects.CUT, fadeIn,
-                next?.kind ?: TransitionEffects.CUT, fadeOut)
+            if (fadeIn > 0 || fadeOut > 0) {
+                val entering = previous?.kind ?: TransitionEffects.CUT
+                val leaving = next?.kind ?: TransitionEffects.CUT
+                if (TransitionEffects.isMotion(entering) || TransitionEffects.isMotion(leaving))
+                    videoEffects += ClipMotionTransitionEffect(clip.durationMs,
+                        entering, fadeIn, leaving, fadeOut)
+                if (!TransitionEffects.isMotion(entering) || !TransitionEffects.isMotion(leaving))
+                    videoEffects += ClipColorTransitionEffect(clip.durationMs,
+                        entering, fadeIn, leaving, fadeOut)
+            }
             // Marca d'água e legendas são camadas INDEPENDENTES no projeto e no MP4.
             val textLayers = mutableListOf<androidx.media3.effect.TextureOverlay>()
             if (project.subtitles.isNotEmpty())

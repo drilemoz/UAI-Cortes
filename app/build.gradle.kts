@@ -11,8 +11,8 @@ android {
         applicationId = "br.com.uaicortes"
         minSdk = 26
         targetSdk = 36
-        versionCode = 49
-        versionName = "0.1.48"
+        versionCode = 50
+        versionName = "0.1.49"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     signingConfigs {
@@ -34,7 +34,7 @@ android {
         }
     }
     // Um build Release, cinco APKs diretos para GitHub Releases.
-    // Todos usam versionCode 49 para permitir trocar de arquitetura/universal
+    // Todos usam versionCode 50 para permitir trocar de arquitetura/universal
     // sem criar versões artificiais. Não publicamos multi-APK na Play Store.
     splits {
         abi {
@@ -67,6 +67,7 @@ dependencies {
     implementation("androidx.media3:media3-effect:1.10.1")
     implementation("androidx.media3:media3-common:1.10.1")
     implementation("androidx.documentfile:documentfile:1.1.0")
+    implementation("com.alphacephei:vosk-android:0.3.75")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
     debugImplementation("androidx.compose.ui:ui-tooling")

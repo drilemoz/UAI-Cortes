@@ -16,10 +16,25 @@ object TransitionEffects {
     const val GOLD = "Fade dourado"
     const val MONO = "Preto e branco"
     const val SEPIA = "Sépia"
+    const val ZOOM_IN = "Zoom cinematográfico"
+    const val ZOOM_OUT = "Recuo suave"
+    const val PAN = "Deslocamento lateral"
 
-    val names = listOf(CUT, BLACK, WHITE, FLASH_WHITE, FLASH_BLACK, BLUE, GOLD, MONO, SEPIA)
+    val names = listOf(CUT, ZOOM_IN, ZOOM_OUT, PAN, BLACK, WHITE, FLASH_WHITE, FLASH_BLACK, BLUE, GOLD, MONO, SEPIA)
 
     fun supported(kind: String): Boolean = kind in names
+    fun isMotion(kind: String) = kind == ZOOM_IN || kind == ZOOM_OUT || kind == PAN
+    fun motionScale(kind: String, strength: Float): Float {
+        val s = strength.coerceIn(0f, 1f)
+        return when (kind) {
+            ZOOM_IN -> 1f + 0.13f * s
+            ZOOM_OUT -> 1f + 0.075f * s
+            PAN -> 1f + 0.09f * s
+            else -> 1f
+        }
+    }
+    fun motionX(kind: String, strength: Float): Float =
+        if (kind == PAN) 0.06f * strength.coerceIn(0f, 1f) else 0f
 
     fun description(kind: String): String = when (kind) {
         CUT -> "Troca imediata de um vídeo para o próximo, sem efeito."
@@ -31,6 +46,9 @@ object TransitionEffects {
         GOLD -> "Banho dourado na saída e na entrada dos clipes."
         MONO -> "A imagem perde a cor na junção e recupera a cor depois."
         SEPIA -> "A imagem fica sépia na junção e retoma a cor natural depois."
+        ZOOM_IN -> "Aproximação de câmera suave junto à troca, sem ampliar a duração."
+        ZOOM_OUT -> "Recuo cinematográfico na saída e entrada dos vídeos."
+        PAN -> "Deslocamento lateral discreto, preservando as bordas do quadro."
         else -> "Corte direto."
     }
 
