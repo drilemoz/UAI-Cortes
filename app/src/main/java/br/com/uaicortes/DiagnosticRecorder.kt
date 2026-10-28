@@ -122,7 +122,12 @@ object DiagnosticRecorder {
         val context = app ?: return "Diagnóstico indisponível"
         val body = synchronized(lock) { file(context).takeIf { it.exists() }?.readText(Charsets.UTF_8).orEmpty() }
         return buildString {
-            appendLine("Uai Cortes 0.1.41 | diagnóstico local")
+            val appVersion = runCatching {
+                @Suppress("DEPRECATION")
+                val installedPackage = context.packageManager.getPackageInfo(context.packageName, 0)
+                installedPackage.versionName.orEmpty()
+            }.getOrDefault("desconhecida")
+            appendLine("Uai Cortes $appVersion | diagnóstico local")
             appendLine("Android SDK: ${Build.VERSION.SDK_INT}; aparelho: ${Build.MANUFACTURER} ${Build.MODEL}")
             appendLine("Dados: eventos, telas e toques aproximados, sem texto digitado ou caminhos de mídia")
             appendLine("Ativado: ${active.get()}")

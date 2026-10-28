@@ -40,7 +40,10 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 
 internal enum class GalleryScope { VIDEOS, IMAGES_AND_VIDEOS }
@@ -166,7 +169,9 @@ internal fun DeviceMediaBrowser(
     var forceReload by remember { mutableIntStateOf(0) }
     LaunchedEffect(permissionEpoch, permission, forceReload, scope) {
         if (!permission) {
-            entries = emptyList(); loading = false
+            entries = emptyList()
+            loading = false
+            error = null
             return@LaunchedEffect
         }
         loading = true
@@ -182,13 +187,22 @@ internal fun DeviceMediaBrowser(
                 } else emptyList()
                 (videos + images).sortedByDescending { it.dateAddedSeconds }
             }
+        } catch (e: CancellationException) {
+            // Ao sair da tela ou retornar de uma permissão, Compose cancela a consulta anterior.
+            // Cancelamento não é erro de leitura e não deve substituir o resultado da nova busca.
+            throw e
         } catch (e: SecurityException) {
             entries = emptyList()
-            error = "Acesso à galeria alterado. Revise as permissões e tente novamente."
+            error = GalleryLoadErrors.message(e)
+            DiagnosticRecorder.exception("gallery_permission", e)
         } catch (e: Exception) {
             entries = emptyList()
-            error = "Não foi possível carregar a galeria: ${e.localizedMessage ?: "erro de leitura"}"
-        } finally { loading = false }
+            error = GalleryLoadErrors.message(e)
+            DiagnosticRecorder.exception("gallery_load", e)
+        } finally {
+            // Não permitir que um carregamento cancelado apague o indicador do novo carregamento.
+            if (currentCoroutineContext().isActive) loading = false
+        }
     }
     val folders = remember(entries) { listOf("Todas") + entries.map { it.folder }.distinct().sorted() }
     val visible = remember(entries, folder, search, tab) {
@@ -245,7 +259,13 @@ internal fun DeviceMediaBrowser(
             }
             if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
             if (error != null) {
-                Text(error!!, modifier = Modifier.padding(16.dp), color = MaterialTheme.colorScheme.error)
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(error!!, color = MaterialTheme.colorScheme.error)
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        TextButton(onClick = { forceReload++ }) { Text("Tentar novamente") }
+                        TextButton(onClick = openDocuments) { Text("Procurar no Android") }
+                    }
+                }
             } else if (!loading && visible.isEmpty()) {
                 Column(Modifier.weight(1f).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center) {

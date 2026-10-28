@@ -16,3 +16,11 @@ internal object GalleryRules {
         GalleryTab.IMAGES -> isImage
     }
 }
+
+/** Somente falhas reais devem aparecer na galeria; cancelamentos são tratados pelo ciclo de vida. */
+internal object GalleryLoadErrors {
+    fun message(error: Throwable): String = when (error) {
+        is SecurityException -> "Acesso à mídia não autorizado. Revise as permissões ou escolha pelo Android."
+        else -> "Não foi possível carregar a galeria. Tente novamente ou escolha pelo Android."
+    }
+}
