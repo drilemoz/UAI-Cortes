@@ -90,3 +90,6 @@
 - v0.1.43: antes da confirmação em tela cheia da exportação, declarar `savedName` e `savedVideo: Uri?` como estado de `ExportScreen` ANTES de callbacks `onSuccess` do Media3. CI workflow 37 falhou por referências não resolvidas; regressão estrutural no validador não substitui compilação real.
 
 - v0.1.44: todas as importações visuais (novo projeto, adicionar clipes, PiP e vídeo para extração de áudio) passam pela galeria interna MediaStore. Usar SAF como alternativa, respeitar acesso parcial Android 14+, não supor URI MediaStore persistente após revogação. A importação múltipla de clipes preserva ordem e não copia arquivos originais; manter schemaVersion 4.
+
+- v0.1.45: ao começar a exportar, abrir uma tela cheia bloqueada contra retorno acidental, com percentual Media3 apenas quando `PROGRESS_STATE_AVAILABLE`, cronômetro e confirmação de cancelamento.
+- v0.1.45: após `Transformer.onCompleted`, mostrar etapa de cópia MediaStore indeterminada, não mostrar conclusão antes do sucesso efetivo. Cancelamento desativado durante a cópia; não alegar exportação em segundo plano ou ETA precisa.

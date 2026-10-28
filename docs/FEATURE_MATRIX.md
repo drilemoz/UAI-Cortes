@@ -1,3 +1,7 @@
+## v0.1.45 (versionCode 46)
+- **Exportação:** tela modal fullscreen com progresso Media3 real/indeterminado, tempo decorrido, etapas de renderização e cópia MediaStore, cancelamento com confirmação e sucesso fullscreen existente.
+- **Pendente:** serviço foreground para exportação contínua em background e teste físico de Media3.
+
 ## v0.1.44 (versionCode 45) · 27/10/2026
 - Galeria interna MediaStore integrada às entradas de mídia visual: Novo projeto, Adicionar vídeo, PiP (adicionar/substituir) e vídeo externo para Extração de áudio.
 - Filtros Recentes/Vídeos/Imagens conforme finalidade, busca por nome/pasta, pastas, miniaturas sob demanda, seleção múltipla ordenada para clipes e atualização da biblioteca.

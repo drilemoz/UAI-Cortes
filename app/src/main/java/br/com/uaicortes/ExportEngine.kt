@@ -153,10 +153,11 @@ class ExportEngine(private val context: Context) {
         return "$hint (${error.errorCodeName})" + (detail?.let { " Detalhe: $it" } ?: "")
     }
 
-    fun progress(): Int {
-        val t = transformer ?: return 0
+    /** Null quando a API Media3 não consegue estimar o percentual (sem inventar 0%). */
+    fun progressOrNull(): Int? {
+        val t = transformer ?: return null
         return if (t.getProgress(progressHolder) == Transformer.PROGRESS_STATE_AVAILABLE)
-            progressHolder.progress.coerceIn(0, 100) else 0
+            progressHolder.progress.coerceIn(0,100) else null
     }
     fun cancel() {
         transformer?.cancel()
@@ -166,6 +167,7 @@ class ExportEngine(private val context: Context) {
     }
 
     fun start(project: VideoProject, height: Int, fileName: String,
+              onSaving: () -> Unit = {},
               onSuccess: (Uri) -> Unit, onError: (String) -> Unit) {
         require(project.clips.isNotEmpty()) { "Projeto sem vídeos" }
         require(project.overlays.size <= OverlayPlacement.MAX_PIPS) { "O limite é de 4 PiPs" }
@@ -260,6 +262,8 @@ class ExportEngine(private val context: Context) {
             .setAudioMimeType(MimeTypes.AUDIO_AAC)
             .addListener(object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                    // Transformer terminou a renderização, mas a cópia MediaStore ainda não.
+                    onSaving()
                     Thread {
                         try {
                             val uri = saveToGallery(target, requestedName)

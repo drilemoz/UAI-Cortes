@@ -602,7 +602,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.44 (45)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.45 (46)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: trechos visuais em Cortar e unir, seleção automática após dividir e cursor no último corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -3540,16 +3540,29 @@ private fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
     var name by remember(p.id) {mutableStateOf("UaiCortes_001.mp4")}
     var quality by remember {mutableIntStateOf(defaultQuality)}
     var working by remember {mutableStateOf(false)}
-    var progress by remember {mutableIntStateOf(0)}
+    // O percentual só é exibido quando o Media3 o disponibiliza de verdade.
+    var progress by remember {mutableStateOf<Int?>(null)}
+    var exportPhase by remember {mutableStateOf(ExportPhase.PREPARING)}
+    var elapsedSeconds by remember {mutableLongStateOf(0L)}
+    var startedAtMs by remember {mutableLongStateOf(0L)}
+    var confirmCancelExport by remember {mutableStateOf(false)}
+    var exportingName by remember {mutableStateOf("")}
     var result by remember {mutableStateOf("")}
     // Estados do diálogo de sucesso devem pertencer ao ExportScreen, ANTES dos callbacks.
     // Se o projeto mudar, a confirmação anterior não pode apontar para outro MP4.
     var savedName by remember(p.id) { mutableStateOf("") }
     var savedVideo by remember(p.id) { mutableStateOf<Uri?>(null) }
     DisposableEffect(engine) {onDispose{engine.cancel()} }
-    LaunchedEffect(working) {while(working){progress=engine.progress();delay(250)}}
+    LaunchedEffect(working) {
+        while (working) {
+            elapsedSeconds = ((android.os.SystemClock.elapsedRealtime() - startedAtMs)
+                .coerceAtLeast(0L) / 1000L)
+            if (exportPhase == ExportPhase.RENDERING) progress = engine.progressOrNull()
+            delay(400)
+        }
+    }
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal=20.dp)) {
-        Heading("Exportar vídeo",{if(!working)back() else {engine.cancel();working=false;result="Exportação cancelada"}},
+        Heading("Exportar vídeo",{if(!working)back() else confirmCancelExport=true},
             accessory={Icon(Icons.Default.Movie,tint=Blue,contentDescription=null)})
         Spacer(Modifier.height(8.dp))
         InlineVideoPreview(exportPreviewAspect) {
@@ -3619,34 +3632,119 @@ private fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
             }
         }
         Spacer(Modifier.height(18.dp))
-        if(working) {
-            Text("Exportando: $progress%")
-            LinearProgressIndicator(progress={progress/100f},modifier=Modifier.fillMaxWidth())
-            Spacer(Modifier.height(12.dp))
-            OutlinedButton(onClick={engine.cancel();working=false;result="Exportação cancelada"},modifier=Modifier.fillMaxWidth()) {
-                Text("Cancelar exportação")
-            }
-        } else {
-            BlueButton("↓ Salvar vídeo",onClick={
-                if(name.isNotBlank() && p.clips.isNotEmpty()) {
-                    DiagnosticRecorder.action("export", "export_start_${quality}p")
-                    result="";progress=0;working=true
-                    runCatching {engine.start(p,quality,name,
-                        onSuccess={uri->
-                            working=false;progress=100
-                            DiagnosticRecorder.action("export", "export_success")
-                            savedName=name.trim().let { if(it.endsWith(".mp4",true)) it else "$it.mp4" }
-                            savedVideo=uri
-                        },
-                        onError={error->working=false;DiagnosticRecorder.failure("export", error);result="Erro: $error"})}
-                        .onFailure {working=false;DiagnosticRecorder.exception("export_start",it);result="Erro: ${it.message}"}
+        BlueButton("↓ Salvar vídeo",onClick={
+            if(name.isNotBlank() && p.clips.isNotEmpty() && !working) {
+                DiagnosticRecorder.action("export", "export_start_${quality}p")
+                previewPlayer.pause()
+                previewPlaying = false
+                result = ""
+                progress = null
+                exportPhase = ExportPhase.PREPARING
+                startedAtMs = android.os.SystemClock.elapsedRealtime()
+                elapsedSeconds = 0L
+                exportingName = name.trim().let { if(it.endsWith(".mp4",true)) it else "$it.mp4" }
+                working = true
+                runCatching { engine.start(p,quality,name,
+                    onSaving = {
+                        exportPhase = ExportPhase.SAVING
+                        progress = null
+                    },
+                    onSuccess = { uri ->
+                        working = false
+                        DiagnosticRecorder.action("export", "export_success")
+                        savedName = exportingName
+                        savedVideo = uri
+                    },
+                    onError = { error ->
+                        working = false
+                        DiagnosticRecorder.failure("export", error)
+                        result = "Erro: $error"
+                    })
+                }.onSuccess {
+                    if (working && exportPhase == ExportPhase.PREPARING) exportPhase = ExportPhase.RENDERING
+                }.onFailure {
+                    working = false
+                    DiagnosticRecorder.exception("export_start",it)
+                    result = "Erro: ${it.message ?: "Falha ao iniciar a exportação"}"
                 }
-            },modifier=Modifier.fillMaxWidth(),enabled=name.isNotBlank()&&p.clips.isNotEmpty())
-        }
+            }
+        },modifier=Modifier.fillMaxWidth(),enabled=!working && name.isNotBlank()&&p.clips.isNotEmpty())
         if(result.isNotBlank()) Text(result,modifier=Modifier.padding(vertical=15.dp),
             color=if(result.startsWith("Erro"))MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
         Spacer(Modifier.height(14.dp));Text("Formato MP4 · H.264/AAC · Salvamento local.",
             color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
+    }
+    // Enquanto o Media3 processa, a tela de exportação fica inteira visível.
+    // Sem percentual disponível, usar indicador indeterminado em vez de inventar progresso.
+    if (working) {
+        Dialog(onDismissRequest = {}, properties = DialogProperties(
+            dismissOnBackPress = false, dismissOnClickOutside = false,
+            usePlatformDefaultWidth = false)) {
+            Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background) {
+                Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
+                        .padding(horizontal=28.dp,vertical=28.dp),
+                    horizontalAlignment=Alignment.CenterHorizontally,
+                    verticalArrangement=Arrangement.SpaceBetween) {
+                    Column(horizontalAlignment=Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.Movie,contentDescription=null,tint=Blue,
+                            modifier=Modifier.size(40.dp))
+                        Spacer(Modifier.height(14.dp))
+                        Text("Exportando vídeo",style=MaterialTheme.typography.headlineSmall,
+                            fontWeight=FontWeight.Bold)
+                        Spacer(Modifier.height(9.dp))
+                        Text(exportingName,maxLines=2,overflow=TextOverflow.Ellipsis,
+                            textAlign=TextAlign.Center,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Column(horizontalAlignment=Alignment.CenterHorizontally,
+                        modifier=Modifier.fillMaxWidth()) {
+                        val currentProgress = ExportProgressUi.renderPercent(exportPhase,progress)
+                        if (currentProgress != null) {
+                            CircularProgressIndicator(progress={currentProgress / 100f},
+                                modifier=Modifier.size(144.dp),strokeWidth=9.dp)
+                            Spacer(Modifier.height(18.dp))
+                            Text("$currentProgress%",fontSize=32.sp,fontWeight=FontWeight.Bold)
+                        } else {
+                            CircularProgressIndicator(modifier=Modifier.size(100.dp),strokeWidth=7.dp)
+                        }
+                        Spacer(Modifier.height(22.dp))
+                        Text(ExportProgressUi.stageLabel(exportPhase),
+                            textAlign=TextAlign.Center,style=MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(12.dp))
+                        Text("Tempo decorrido: ${ExportProgressUi.elapsedLabel(elapsedSeconds)}",
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(10.dp))
+                        Text("Qualidade: ${quality}p · MP4",style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Column(horizontalAlignment=Alignment.CenterHorizontally,
+                        modifier=Modifier.fillMaxWidth()) {
+                        Text("Mantenha o aplicativo aberto até terminar.",
+                            textAlign=TextAlign.Center,style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.height(18.dp))
+                        OutlinedButton(onClick={confirmCancelExport=true},
+                            enabled=ExportProgressUi.canCancel(exportPhase),
+                            modifier=Modifier.fillMaxWidth()) {
+                            Text(if(exportPhase==ExportPhase.SAVING) "Concluindo salvamento…" else "Cancelar exportação")
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (confirmCancelExport && working && ExportProgressUi.canCancel(exportPhase)) {
+        AlertDialog(onDismissRequest={confirmCancelExport=false},
+            title={Text("Cancelar exportação?")},
+            text={Text("O vídeo parcial será descartado. O projeto e os arquivos originais serão preservados.")},
+            confirmButton={TextButton(onClick={
+                confirmCancelExport=false
+                engine.cancel()
+                working=false
+                progress=null
+                result="Exportação cancelada."
+                DiagnosticRecorder.action("export","export_cancelled")
+            }) {Text("Cancelar exportação")}},
+            dismissButton={TextButton(onClick={confirmCancelExport=false}) {Text("Continuar")}})
     }
     // Confirmação de TELA CHEIA apenas após a cópia completa no MediaStore.
     savedVideo?.let { savedUri ->

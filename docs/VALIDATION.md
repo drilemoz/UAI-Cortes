@@ -1,3 +1,8 @@
+## v0.1.45 (versionCode 46)
+- Verificar no GitHub Actions: `:app:testDebugUnitTest`, `:app:lintDebug` e `:app:assembleRelease`.
+- Em aparelho: exportar projeto com legendas, observar percentual quando disponível, cancelar com confirmação, repetir exportação e aguardar cópia na galeria antes da confirmação.
+- A interface não executa exportação em serviço foreground; manter o app aberto.
+
 ## v0.1.44 (versionCode 45)
 - Pendente CI: :app:testDebugUnitTest, :app:lintDebug e :app:assembleRelease. Testar galeria no Android 13/14/15, acesso parcial, revogação, múltiplos vídeos, PiP, importação de vídeo externo para áudio e SAF.
 
