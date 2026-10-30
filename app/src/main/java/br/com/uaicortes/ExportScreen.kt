@@ -57,7 +57,7 @@ internal fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
         previewPlayer.prepare()
     }
     var name by remember(p.id) {mutableStateOf("UaiCortes_001.mp4")}
-    var quality by remember {mutableIntStateOf(defaultQuality)}
+    var quality by remember {mutableIntStateOf(defaultQuality.takeIf { it == 720 || it == 1080 } ?: 1080)}
     var working by remember {mutableStateOf(false)}
     // O percentual só é exibido quando o Media3 o disponibiliza de verdade.
     var progress by remember {mutableStateOf<Int?>(null)}
@@ -142,12 +142,17 @@ internal fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
                         if(q==quality)Blue else MaterialTheme.colorScheme.outlineVariant)) {
                     Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center) {
                         Text("${q}p",fontSize=19.sp)
-                        Text(if(q==720)"Mais leve" else "Mais detalhes",fontSize=13.sp,
+                        Text(if(q==720)"8 Mb/s" else "18 Mb/s",fontSize=13.sp,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
         }
+        Text("Bitrate de vídeo solicitado. O aparelho pode ajustar o valor. " +
+            "Espaço estimado: ~${VideoExportQuality.estimatedMiBPerMinute(quality, true)} MiB/min; " +
+            "a origem limita a nitidez final.",
+            style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(18.dp))
         BlueButton("↓ Salvar vídeo",onClick={
             if(name.isNotBlank() && p.clips.isNotEmpty() && !working) {
@@ -188,7 +193,7 @@ internal fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
         },modifier=Modifier.fillMaxWidth(),enabled=!working && name.isNotBlank()&&p.clips.isNotEmpty())
         if(result.isNotBlank()) Text(result,modifier=Modifier.padding(vertical=15.dp),
             color=if(result.startsWith("Erro"))MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
-        Spacer(Modifier.height(14.dp));Text("Formato MP4 · H.264/AAC · Salvamento local.",
+        Spacer(Modifier.height(14.dp));Text("MP4 · H.264/AAC · Qualidade alta · Salvamento local.",
             color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
     }
     // Enquanto o Media3 processa, a tela de exportação fica inteira visível.

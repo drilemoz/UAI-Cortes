@@ -25,6 +25,9 @@ import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.ProgressHolder
 import androidx.media3.transformer.Transformer
+import androidx.media3.transformer.DefaultEncoderFactory
+import androidx.media3.transformer.VideoEncoderSettings
+import androidx.media3.transformer.AudioEncoderSettings
 import androidx.media3.common.VideoCompositorSettings
 import android.net.Uri
 import android.util.Log
@@ -170,6 +173,12 @@ class ExportEngine(private val context: Context) {
               onSaving: () -> Unit = {},
               onSuccess: (Uri) -> Unit, onError: (String) -> Unit) {
         require(project.clips.isNotEmpty()) { "Projeto sem vídeos" }
+        val bitrateBps = VideoExportQuality.videoBitrateBps(height)
+        require(context.cacheDir.usableSpace > VideoExportQuality.minimumFreeBytes(
+            project.durationMs, height, true)) {
+            "Espaço livre insuficiente para exportar em ${height}p com qualidade alta. " +
+                "Libere armazenamento ou escolha 720p."
+        }
         require(project.overlays.size <= OverlayPlacement.MAX_PIPS) { "O limite é de 4 PiPs" }
         cancel()
         validateSources(project)
@@ -271,11 +280,25 @@ class ExportEngine(private val context: Context) {
         val target = File(context.cacheDir, "uai-export-${System.currentTimeMillis()}.mp4")
         tempFile = target
         val requestedName = fileName.trim().let { if (it.endsWith(".mp4", true)) it else "$it.mp4" }
+        // Antes o bitrate ficava totalmente nas configurações automáticas do Media3.
+        // Pedir mais bits reduz blocagem e perda de textura, sem mudar FPS/orientação.
+        // Deixar fallback do codificador habilitado para aparelhos que não suportem a solicitação.
+        val encoderFactory = DefaultEncoderFactory.Builder(context)
+            .setRequestedVideoEncoderSettings(VideoEncoderSettings.Builder()
+                .setBitrate(bitrateBps).build())
+            .setRequestedAudioEncoderSettings(AudioEncoderSettings.Builder()
+                .setBitrate(VideoExportQuality.AUDIO_BITRATE_BPS).build())
+            .setEnableFallback(true)
+            .build()
         transformer = Transformer.Builder(context)
             .setVideoMimeType(MimeTypes.VIDEO_H264)
             .setAudioMimeType(MimeTypes.AUDIO_AAC)
+            .setEncoderFactory(encoderFactory)
             .addListener(object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                    Log.i("UaiCortesExport", "MP4: ${exportResult.width}x${exportResult.height}, " +
+                        "bitrate de vídeo medido=${exportResult.averageVideoBitrate} bps, " +
+                        "solicitado=$bitrateBps bps, quadros=${exportResult.videoFrameCount}")
                     // Transformer terminou a renderização, mas a cópia MediaStore ainda não.
                     onSaving()
                     Thread {

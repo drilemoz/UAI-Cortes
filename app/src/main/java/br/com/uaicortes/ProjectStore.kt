@@ -245,8 +245,8 @@ class ProjectStore(private val context: Context) {
 
     fun theme(): String = prefs.getString("theme", "Sistema") ?: "Sistema"
     fun setTheme(t: String) = prefs.edit().putString("theme", t).apply()
-    fun quality(): Int = prefs.getInt("quality", 720)
-    fun setQuality(q: Int) = prefs.edit().putInt("quality", q).apply()
+    fun quality(): Int = prefs.getInt("quality", 1080).takeIf { it == 720 || it == 1080 } ?: 1080
+    fun setQuality(q: Int) { require(q == 720 || q == 1080); prefs.edit().putInt("quality", q).apply() }
 }
 
 fun mediaDuration(context: Context, uri: Uri): Long = runCatching {

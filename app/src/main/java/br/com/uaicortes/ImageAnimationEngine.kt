@@ -28,6 +28,8 @@ import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.ProgressHolder
 import androidx.media3.transformer.Transformer
+import androidx.media3.transformer.DefaultEncoderFactory
+import androidx.media3.transformer.VideoEncoderSettings
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -90,8 +92,11 @@ internal class ImageAnimationEngine(private val context: Context) {
                       onSaved: (Uri) -> Unit, onError: (String) -> Unit) {
         options.checked()
         require(images.isNotEmpty() && images.size <= ImageAnimationPlan.MAX_IMAGES)
-        require(context.cacheDir.usableSpace > 100L * 1024 * 1024) {
-            "Pouco espaço livre. Libere pelo menos 100 MB para iniciar."
+        val reserveBytes = VideoExportQuality.minimumFreeBytes(
+            ImageAnimationPlan.totalDuration(images.size, options), options.quality, false)
+        require(context.cacheDir.usableSpace > reserveBytes) {
+            "Espaço livre insuficiente para gerar o vídeo nesta qualidade. " +
+                "Reduza a quantidade de fotos, selecione 720p ou libere armazenamento."
         }
         cancelled.set(false)
         saving = false
@@ -104,8 +109,12 @@ internal class ImageAnimationEngine(private val context: Context) {
                 images.mapIndexed { index, uri ->
                     coroutineContext.ensureActive()
                     if (cancelled.get()) throw CancellationException("Exportação cancelada")
-                    val file = File(folder, "image-%03d.jpg".format(index))
+                    // PNG temporário sem perdas; evita compressão JPEG antes do H.264.
+                    val file = File(folder, "image-%03d.png".format(index))
                     composeImage(uri, file, options.width, options.height)
+                    check(context.cacheDir.usableSpace > reserveBytes) {
+                        "Espaço insuficiente após preparar as fotos. Use menos imagens ou libere espaço."
+                    }
                     file
                 }
             }
@@ -138,9 +147,18 @@ internal class ImageAnimationEngine(private val context: Context) {
                 Presentation.LAYOUT_SCALE_TO_FIT)))).build()
         val target = File(folder,"render.mp4")
         outputFile = target
+        val requestedBitrate = VideoExportQuality.videoBitrateBps(options.quality)
+        val encoderFactory = DefaultEncoderFactory.Builder(context)
+            .setRequestedVideoEncoderSettings(VideoEncoderSettings.Builder()
+                .setBitrate(requestedBitrate).build())
+            .setEnableFallback(true)
+            .build()
         transformer = Transformer.Builder(context).setVideoMimeType(MimeTypes.VIDEO_H264)
+            .setEncoderFactory(encoderFactory)
             .addListener(object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, result: ExportResult) {
+                    android.util.Log.i("UaiCortesAnimation", "MP4: ${result.width}x${result.height}, " +
+                        "bitrate medido=${result.averageVideoBitrate} bps, solicitado=$requestedBitrate bps")
                     transformer = null
                     saving = true
                     onStage("Salvando na galeria")
@@ -223,7 +241,7 @@ internal class ImageAnimationEngine(private val context: Context) {
                 c.drawBitmap(img,null,android.graphics.RectF((width-fgW)/2,(height-fgH)/2,
                     (width+fgW)/2,(height+fgH)/2),Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
                 output.outputStream().buffered().use { stream ->
-                    check(canvasBitmap.compress(Bitmap.CompressFormat.JPEG,94,stream))
+                    check(canvasBitmap.compress(Bitmap.CompressFormat.PNG,100,stream))
                 }
             } finally { canvasBitmap.recycle() }
         } finally { img.recycle() }

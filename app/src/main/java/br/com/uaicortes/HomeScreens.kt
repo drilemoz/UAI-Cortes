@@ -191,6 +191,10 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
                 }
             }
         }
+        Text("Alta qualidade H.264: 720p solicita 8 Mb/s; 1080p solicita 18 Mb/s. " +
+            "O resultado depende do vídeo original e do codificador do aparelho.",
+            style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Os vídeos são salvos em Filmes/UaiCortes.", color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(12.dp)); Text("A edição ocorre no aparelho, sem enviar arquivos para a internet.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -214,7 +218,7 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.55 (56)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.56 (57)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: trechos visuais em Cortar e unir, seleção automática após dividir e cursor no último corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)

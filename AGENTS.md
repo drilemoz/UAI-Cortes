@@ -125,3 +125,8 @@
 - v0.1.55: preservar a extração `ProjectController`/`ProjectRepository`, `OverlayOperations` e `MediaImportRules`/`MediaImportController`. A UI deve confirmar mudanças de projeto apenas após `ProjectStore.save/delete` concluídos; não permitir que falha de cadastro substitua projetos em memória.
 - v0.1.55: edição de PiP continua limitada a quatro camadas; inserção em tempo sobreposto exige confirmação e colisões precisam manter os pares aprovados por ID. O seletor SAF mantém a tentativa de persistir permissão de leitura, sem presumir concessões da galeria.
 - v0.1.55: `MediaImportRules` não deve inventar dados de fontes inválidas; o helper legado `mediaDuration` ainda possui fallback de 1000 ms e merece auditoria específica antes de alegar validade de mídia. `schemaVersion=4` permanece igual. Teste completo Android/CI e validação física são pendentes.
+
+- v0.1.56: exportação de vídeo solicita 8 Mb/s em 720p e 18 Mb/s em 1080p via DefaultEncoderFactory e VideoEncoderSettings; áudio AAC 192 kb/s. Manter fallback do Media3; hardware pode ignorar parâmetros. Registrar bitrate efetivo sem URIs no log e não alegar resultado 1080p/18Mb sem teste real.
+- v0.1.56: Animar Imagens prepara arquivos PNG temporários sem perdas para evitar JPEG intermediário; manter checagem de espaço livre, limpeza de arquivos de trabalho e rascunho legado. O padrão do editor para instalação nova é 1080p, preservando escolha já salva.
+
+- v0.1.56: verificar espaço projetado para 2 arquivos MP4 mais reserva de 96 MiB antes de exportar e durante o preparo de PNG; não afirmar que essa estimativa garante conclusão.

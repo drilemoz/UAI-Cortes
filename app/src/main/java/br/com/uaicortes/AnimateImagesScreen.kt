@@ -325,7 +325,9 @@ internal fun AnimateImagesScreen(
                             EditorOptionRow("Formato",listOf("9:16","16:9","1:1"),options.aspect){options=options.copy(aspect=it);animated=false}
                             EditorOptionRow("Qualidade",listOf(720,1080),options.quality){options=options.copy(quality=it);animated=false}
                             EditorOptionRow("Transição",listOf("auto","corte","preto","branco"),options.transition){options=options.copy(transition=it);animated=false}
-                            Text("30 FPS · H.264 · offline",style=MaterialTheme.typography.labelSmall)
+                            Text("30 FPS · H.264 · ${VideoExportQuality.videoBitrateBps(options.quality)/1_000_000} Mb/s solicitados · offline. " +
+                                "Imagens preparadas sem perdas (PNG temporário); exige mais espaço livre.",
+                                style=MaterialTheme.typography.labelSmall)
                         }
                     }
                 }
