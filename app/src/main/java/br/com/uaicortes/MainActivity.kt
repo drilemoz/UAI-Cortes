@@ -1,10 +1,8 @@
 package br.com.uaicortes
 
-import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.os.Build
-import android.media.MediaMetadataRetriever
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -45,6 +43,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -124,25 +124,39 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
 fun UaiApp() {
     val context = LocalContext.current
     val store = remember { ProjectStore(context) }
+    val projectController = remember(store) { ProjectController(StoredProjectRepository(store)) }
+    val mediaController = remember(context) { MediaImportController(context) }
     val animationDraftStore = remember { ImageAnimationDraftStore(context.applicationContext) }
     var diagnosticsEnabled by remember { mutableStateOf(DiagnosticRecorder.isEnabled()) }
     var theme by remember { mutableStateOf(store.theme()) }
-    val workspace = remember { EditorWorkspaceState() }
+    val workspace = rememberSaveable(saver = EditorWorkspaceState.Saver) { EditorWorkspaceState() }
     var screen by workspace::screen
-    var project by remember { mutableStateOf<VideoProject?>(null) }
+    // Apenas o ID é salvo no Bundle. O conteúdo sempre é recuperado do ProjectStore.
+    var activeProjectId by rememberSaveable { mutableStateOf("") }
     var projects by remember { mutableStateOf(store.load()) }
+    var project by remember { mutableStateOf(projects.firstOrNull { it.id == activeProjectId }) }
     var selectedClip by workspace::selectedClip
     var selectedAudioTrackId by workspace::selectedAudioTrackId
     var selectedSubtitleId by workspace::selectedSubtitleId
     var positionMs by workspace::positionMs
-    var pendingPicker by remember { mutableStateOf("") }
-    var importedAudioSourceVideo by remember { mutableStateOf<Uri?>(null) }
-    var mediaOrigin by remember { mutableStateOf("editor") }
+    var pendingPicker by rememberSaveable { mutableStateOf("") }
+    var importedAudioSourceVideo by rememberSaveable { mutableStateOf<Uri?>(null) }
+    var mediaOrigin by rememberSaveable { mutableStateOf("editor") }
     var selectedOverlayId by workspace::selectedOverlayId
-    var mediaAction by remember { mutableStateOf("add") }
+    var mediaAction by rememberSaveable { mutableStateOf("add") }
     var previous by workspace::previous
-    val animationImages = remember { mutableStateListOf<Uri>() }
-    var animationDestination by remember { mutableStateOf("new") }
+    val animationImages = rememberSaveable(saver = listSaver<androidx.compose.runtime.snapshots.SnapshotStateList<Uri>, String>(
+        save = { images -> images.take(ImageAnimationPlan.MAX_IMAGES).map(Uri::toString) },
+        restore = { values -> mutableStateListOf<Uri>().also { list ->
+            list.addAll(values.filter(String::isNotBlank).map(Uri::parse).distinct())
+        } }
+    )) { mutableStateListOf<Uri>() }
+    var animationDestination by rememberSaveable { mutableStateOf("new") }
+    // Sanitiza seleções restauradas, inclusive se o projeto tiver sido excluído.
+    LaunchedEffect(project?.id) {
+        if (project == null && animationDestination == "append") animationDestination = "new"
+        workspace.reconcile(project, mediaOrigin, mediaAction)
+    }
     var pendingOverlap by remember { mutableStateOf<OverlapConfirmation?>(null) }
     var pendingSequential by remember { mutableStateOf<SequentialConfirmation?>(null) }
     var pendingProjectDelete by remember { mutableStateOf<VideoProject?>(null) }
@@ -155,8 +169,22 @@ fun UaiApp() {
         surface = if(theme=="AMOLED") Color.Black else Color(0xFF202124))
     else lightColorScheme(primary = Blue, background = LightBg, surface = Color.White)
     fun write(p: VideoProject) {
-        project = p; store.save(p); projects = store.load()
+        val snapshot = projectController.save(p)
+        project = snapshot.active; activeProjectId = snapshot.activeId; projects = snapshot.projects
         DiagnosticRecorder.action(screen, "project_saved")
+    }
+    fun openProject(id: String) {
+        val snapshot = projectController.open(id)
+        projects = snapshot.projects
+        project = snapshot.active
+        activeProjectId = snapshot.activeId
+        if (snapshot.active != null) {
+            selectedClip = TrimTimelineEdit.resumeClipId(snapshot.active)
+            screen = "editor"
+        } else {
+            workspace.reconcile(null)
+            screen = "home"
+        }
     }
     fun navTo(s: String) {
         if (s == "pip" && project != null && project!!.overlays.none { it.id == selectedOverlayId })
@@ -167,93 +195,54 @@ fun UaiApp() {
     fun saveOverlays(current: VideoProject, requested: List<Overlay>, preferredId: String?,
                      decision: String = "ask"): Boolean {
         val canvasAspect = current.clips.firstOrNull()?.let { mediaAspect(context, it.uri, false) } ?: 16f / 9f
-        val slots = requested.map { layer ->
-            val aspect = mediaAspect(context, layer.uri, layer.isImage)
-            val (w, h) = OverlayEditorLogic.dimensions(layer.scale, aspect, canvasAspect)
-            PlacementItem(layer.id, layer.startAtMs, layer.durationMs, layer.x, layer.y, w, h)
+        return when (val result = OverlayOperations.apply(current, requested, preferredId,
+                canvasAspect, { mediaAspect(context, it.uri, it.isImage) }, decision)) {
+            is OverlayUpdate.Confirm -> {
+                pendingOverlap = OverlapConfirmation(current, requested, preferredId.orEmpty(), result.conflicts)
+                false
+            }
+            is OverlayUpdate.Rejected -> {
+                android.widget.Toast.makeText(context, result.reason, android.widget.Toast.LENGTH_LONG).show()
+                false
+            }
+            is OverlayUpdate.Applied -> {
+                write(result.project)
+                true
+            }
         }
-        val allowed = requested.flatMap { layer ->
-            layer.overlapWith.filter { partner -> requested.any { it.id == partner } }
-                .map { OverlayPlacement.pair(layer.id, it) }
-        }.toSet()
-        val newConflicts = OverlayPlacement.collisions(slots) - allowed
-        if (newConflicts.isNotEmpty() && decision == "ask") {
-            pendingOverlap = OverlapConfirmation(current, requested, preferredId.orEmpty(), newConflicts)
-            return false
-        }
-        val approvedPairs = if (decision == "keep") allowed + newConflicts else allowed
-        val updated = requested.map { layer ->
-            if (decision == "keep" && layer.id == preferredId) {
-                val linked = newConflicts.mapNotNull { (a, b) ->
-                    when (layer.id) { a -> b; b -> a; else -> null }
-                }
-                layer.copy(overlapWith = (layer.overlapWith + linked).distinct())
-            } else layer
-        }
-        val resolved = OverlayPlacement.arrange(slots, preferredId, approvedPairs)
-        if (resolved == null) {
-            android.widget.Toast.makeText(context,
-                "Não há espaço para distribuir esses PiPs. Reduza o tamanho ou ajuste a duração.",
-                android.widget.Toast.LENGTH_LONG).show()
-            return false
-        }
-        write(current.copy(overlays = updated.map { layer ->
-            val (x, y) = resolved.getValue(layer.id)
-            layer.copy(x = x, y = y)
-        }))
-        return true
     }
     fun insertOverlay(uri: Uri, isImage: Boolean, mediaMs: Long, allowTimeOverlap: Boolean = false) {
         val current = project ?: return
-        val replacing = mediaAction == "replace"
-        if (!replacing && current.overlays.size >= OverlayPlacement.MAX_PIPS) {
-            android.widget.Toast.makeText(context, "Limite de quatro PiPs atingido", android.widget.Toast.LENGTH_SHORT).show()
-            screen = "pip"; return
+        when (val insertion = OverlayOperations.insert(current, uri.toString(), isImage,
+                mediaMs, selectedOverlayId, mediaAction == "replace", positionMs, allowTimeOverlap)) {
+            OverlayInsertion.LimitReached -> {
+                android.widget.Toast.makeText(context, "Limite de quatro PiPs atingido",
+                    android.widget.Toast.LENGTH_SHORT).show()
+            }
+            OverlayInsertion.ConfirmSequential -> {
+                pendingSequential = SequentialConfirmation(uri, isImage, mediaMs)
+            }
+            is OverlayInsertion.Proposed -> {
+                if (saveOverlays(current, insertion.requested, insertion.selectedId))
+                    selectedOverlayId = insertion.selectedId
+            }
         }
-        val previousPip = if (replacing) current.overlays.firstOrNull { it.id == selectedOverlayId } else null
-        val sequential = if (current.overlays.isEmpty()) positionMs.coerceIn(0L, (current.durationMs - 1).coerceAtLeast(0L))
-            else OverlayTiming.nextStart(current.overlays, current.durationMs)
-        if (previousPip == null && sequential == null && !allowTimeOverlap) {
-            pendingSequential = SequentialConfirmation(uri, isImage, mediaMs)
-            screen = "pip"
-            return
-        }
-        val start = (previousPip?.startAtMs ?: sequential ?:
-            OverlayTiming.suggestedOverlapStart(current.overlays, current.durationMs))
-            .coerceIn(0L, (current.durationMs - 1).coerceAtLeast(0L))
-        val remaining = (current.durationMs - start).coerceAtLeast(1L)
-        val duration = (if (isImage) (previousPip?.durationMs ?: 5000L) else mediaMs)
-            .coerceIn(1L, remaining)
-        val added = previousPip?.copy(uri = uri.toString(), isImage = isImage,
-            durationMs = duration) ?: Overlay(uri.toString(), isImage, duration,
-            startAtMs = start, scale = .30f)
-        val requested = if (previousPip != null) current.overlays.map {
-            if (it.id == previousPip.id) added else it
-        } else current.overlays + added
-        if (saveOverlays(current, requested, added.id)) selectedOverlayId = added.id
         screen = "pip"
     }
     var selectedBoundary by workspace::selectedBoundary
     fun importVideoClips(uris: List<Uri>, persistDocumentAccess: Boolean) {
         if (uris.isEmpty()) return
-        val clips = uris.mapNotNull { uri ->
-            if (persistDocumentAccess) runCatching {
-                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            val duration = runCatching { mediaDuration(context, uri) }.getOrDefault(0L)
-            if (duration <= 0L) null else Clip(uri = uri.toString(),
-                title = runCatching { mediaName(context, uri) }.getOrDefault("Vídeo"), sourceDurationMs = duration)
-        }
-        if (clips.isEmpty()) {
+        val imported = mediaController.videoClips(uris, persistDocumentAccess)
+        if (imported.clips.isEmpty()) {
             android.widget.Toast.makeText(context, "Não foi possível abrir os vídeos selecionados",
                 android.widget.Toast.LENGTH_LONG).show()
             return
         }
-        val base = if (pendingPicker == "new") VideoProject() else project ?: VideoProject()
-        write(base.copy(clips = base.clips + clips))
-        if (selectedClip.isBlank()) selectedClip = clips.first().id
+        val updated = projectController.append(project, imported.clips, createNew = pendingPicker == "new")
+        write(updated)
+        if (selectedClip.isBlank()) selectedClip = imported.clips.first().id
         screen = "editor"
-        if (clips.size < uris.size) android.widget.Toast.makeText(context,
+        if (imported.rejected > 0) android.widget.Toast.makeText(context,
             "Alguns vídeos não puderam ser importados", android.widget.Toast.LENGTH_LONG).show()
     }
     fun openGallery(origin: String, action: String) {
@@ -262,11 +251,10 @@ fun UaiApp() {
         screen = "media"
     }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        uris.forEach { uri ->
-            runCatching { context.contentResolver.takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-            if (uri !in animationImages && animationImages.size < ImageAnimationPlan.MAX_IMAGES)
-                animationImages.add(uri)
-        }
+        uris.forEach(mediaController::persistReadAccess)
+        val images = MediaImportRules.images(animationImages.map(Uri::toString), uris.map(Uri::toString))
+        animationImages.clear()
+        animationImages.addAll(images.map(Uri::parse))
         if (uris.isNotEmpty()) screen = "animate"
     }
     val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
@@ -274,15 +262,15 @@ fun UaiApp() {
     }
     val externalVideoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
-            runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            mediaController.persistReadAccess(uri)
             importedAudioSourceVideo = uri
             screen = "audio"
         }
     }
     val overlayPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
-            runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-            val image = context.contentResolver.getType(uri)?.startsWith("image/") == true
+            mediaController.persistReadAccess(uri)
+            val image = mediaController.isImage(uri)
             val duration = (if (image) 5000L else mediaDuration(context, uri))
                 .coerceAtMost(((project?.durationMs ?: 5000) - positionMs).coerceAtLeast(1L))
             insertOverlay(uri, image, duration)
@@ -290,15 +278,11 @@ fun UaiApp() {
     }
     val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
-            runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            mediaController.persistReadAccess(uri)
             project?.let { current ->
-                val lastStart = (current.durationMs - AudioTrackTiming.MIN_TRIM_MS).coerceAtLeast(0L)
-                val start = positionMs.coerceIn(0L, lastStart)
-                val sourceDuration = mediaDuration(context, uri)
-                val length = minOf(sourceDuration, current.durationMs - start)
-                if (length >= AudioTrackTiming.MIN_TRIM_MS) {
-                    val track = AudioTrack(uri.toString(), mediaName(context, uri),
-                        startMs = start, durationMs = length)
+                val track = MediaImportRules.audio(uri.toString(), mediaController.title(uri),
+                    mediaController.duration(uri), current.durationMs, positionMs)
+                if (track != null) {
                     write(current.copy(audioTracks = current.audioTracks + track))
                 } else {
                     android.widget.Toast.makeText(context, "Sem espaço para inserir áudio no projeto",
@@ -308,17 +292,10 @@ fun UaiApp() {
             screen = "audio"
         }
     }
-    fun back() { DiagnosticRecorder.action(screen, "back"); screen = when (screen) {
-        "editor" -> "home"
-        "home" -> "home"
-        "media" -> mediaOrigin
-        "animate" -> if (animationDestination == "append") "editor" else "home"
-        "projects", "settings" -> "home"
-        "general", "appearance", "about", "diagnostics" -> "settings"
-        "pip", "audio", "trim", "transition", "subtitles", "watermark", "export" -> "editor"
-        "autosubtitle" -> "subtitles"
-        else -> previous
-    } }
+    fun back() {
+        DiagnosticRecorder.action(screen, "back")
+        screen = EditorNavigation.back(screen, previous, mediaOrigin, animationDestination)
+    }
     BackHandler(screen != "home") { back() }
     LaunchedEffect(screen, diagnosticsEnabled) { DiagnosticRecorder.screen(screen) }
     MaterialTheme(colorScheme = palette) {
@@ -353,7 +330,7 @@ fun UaiApp() {
                         animationImages.addAll(animationDraftStore.load()?.images.orEmpty())
                         screen = "animate"
                     },
-                    onOpen = { project = it; selectedClip = TrimTimelineEdit.resumeClipId(it); screen = "editor" },
+                    onOpen = { openProject(it.id) },
                     onDelete = { pendingProjectDelete = it },
                     onSettings = { screen = "settings" }, onTab = { screen = it })
                 "animate" -> AnimateImagesScreen(animationImages.toList(),
@@ -371,7 +348,7 @@ fun UaiApp() {
                             selectedClip=clip.id; screen="editor"
                         } else android.widget.Toast.makeText(context,"MP4 ainda não está disponível",android.widget.Toast.LENGTH_LONG).show()
                     })
-                "projects" -> ProjectsScreen(projects, { back() }, { project = it; selectedClip = TrimTimelineEdit.resumeClipId(it); screen = "editor" },
+                "projects" -> ProjectsScreen(projects, { back() }, { openProject(it.id) },
                     { pendingProjectDelete = it })
                 "settings" -> SettingsScreen({ back() }) { screen = it }
                 "diagnostics" -> DiagnosticScreen(::back, onEnabledChanged = { diagnosticsEnabled = it })
@@ -419,8 +396,9 @@ fun UaiApp() {
                         }, changed.id)
                     },
                     onRemove = { id ->
-                        write(current.copy(overlays = current.overlays.filterNot { it.id == id }))
-                        selectedOverlayId = current.overlays.firstOrNull { it.id != id }?.id.orEmpty()
+                        val (updated, nextSelected) = OverlayOperations.remove(current, id)
+                        write(updated)
+                        selectedOverlayId = nextSelected
                     },
                     choose = { replace ->
                         if (!replace && current.overlays.size >= OverlayPlacement.MAX_PIPS) {
@@ -433,10 +411,10 @@ fun UaiApp() {
                 "media" -> DeviceMediaBrowser(::back, onSelect = { chosen ->
                     when (mediaAction) {
                         "animate_images" -> {
-                            chosen.filter { it.isImage }.forEach {
-                                if (it.uri !in animationImages && animationImages.size < ImageAnimationPlan.MAX_IMAGES)
-                                    animationImages.add(it.uri)
-                            }
+                            val images = MediaImportRules.images(animationImages.map(Uri::toString),
+                                chosen.filter { it.isImage }.map { it.uri.toString() })
+                            animationImages.clear()
+                            animationImages.addAll(images.map(Uri::parse))
                             if (animationImages.size == ImageAnimationPlan.MAX_IMAGES)
                                 android.widget.Toast.makeText(context,"Limite de 80 imagens por animação",
                                     android.widget.Toast.LENGTH_LONG).show()
@@ -484,9 +462,9 @@ fun UaiApp() {
                 title = { Text("Excluir projeto?") },
                 text = { Text("O projeto \"${target.title}\" e suas edições salvas serão removidos. Os vídeos e fotos originais não serão apagados. Esta ação não pode ser desfeita.") },
                 confirmButton = { TextButton(onClick = {
-                    store.delete(target.id)
-                    projects = store.load()
-                    if (project?.id == target.id) project = null
+                    val snapshot = projectController.delete(target.id, activeProjectId)
+                    projects = snapshot.projects
+                    if (project?.id == target.id) { project = null; activeProjectId = ""; workspace.reconcile(null) }
                     pendingProjectDelete = null
                 }) { Text("Excluir projeto", color = MaterialTheme.colorScheme.error) } },
                 dismissButton = { TextButton(onClick = { pendingProjectDelete = null }) { Text("Cancelar") } })

@@ -1,3 +1,11 @@
+## v0.1.55 (versionCode 56): controladores de projetos, PiP e importações
+
+- Ver `docs/VALIDATION_0.1.55.md` para o escopo, verificações e riscos pendentes.
+
+## v0.1.54 (versionCode 55): recuperação de contexto do editor
+- `EditorNavigation` e `EditorWorkspaceState` serializam apenas rotas, IDs, índices e cursores recuperáveis pelo SavedStateRegistry; mantém `schemaVersion=4`.
+- Ver `docs/VALIDATION_0.1.54.md` para escopo de testes e limitações.
+
 ## v0.1.53 (versionCode 54): refatoração de base
 
 - Validar novo mapeamento de telas em arquivos por funcionalidade, armazenamento fail-closed e salvamento MediaStore compartilhado.
