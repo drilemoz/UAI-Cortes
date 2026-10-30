@@ -46,7 +46,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 
-internal enum class GalleryScope { VIDEOS, IMAGES_AND_VIDEOS }
+internal enum class GalleryScope { VIDEOS, IMAGES_ONLY, IMAGES_AND_VIDEOS }
 internal data class DeviceMedia(
     val uri: Uri,
     val name: String,
@@ -59,13 +59,19 @@ internal data class DeviceMedia(
 /** Mídia indexada e permitida pelo Android. Não varre caminhos privados. */
 internal object MediaLibrary {
     fun permissions(scope: GalleryScope): Array<String> = when {
-        Build.VERSION.SDK_INT >= 34 -> (if (scope == GalleryScope.VIDEOS)
-            arrayOf(Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)
-        else arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO,
-            Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED))
-        Build.VERSION.SDK_INT >= 33 -> if (scope == GalleryScope.VIDEOS)
-            arrayOf(Manifest.permission.READ_MEDIA_VIDEO)
-        else arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)
+        Build.VERSION.SDK_INT >= 34 -> when (scope) {
+            GalleryScope.VIDEOS -> arrayOf(Manifest.permission.READ_MEDIA_VIDEO,
+                Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)
+            GalleryScope.IMAGES_ONLY -> arrayOf(Manifest.permission.READ_MEDIA_IMAGES,
+                Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)
+            else -> arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO,
+                Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)
+        }
+        Build.VERSION.SDK_INT >= 33 -> when (scope) {
+            GalleryScope.VIDEOS -> arrayOf(Manifest.permission.READ_MEDIA_VIDEO)
+            GalleryScope.IMAGES_ONLY -> arrayOf(Manifest.permission.READ_MEDIA_IMAGES)
+            else -> arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)
+        }
         else -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
     }
 
@@ -159,7 +165,11 @@ internal fun DeviceMediaBrowser(
         if (!MediaLibrary.canBrowse(context, scope)) requestAccess.launch(MediaLibrary.permissions(scope))
     }
     val permission = MediaLibrary.canBrowse(context, scope)
-    var tab by remember(scope) { mutableStateOf(if (scope == GalleryScope.VIDEOS) GalleryTab.VIDEOS else GalleryTab.RECENT) }
+    var tab by remember(scope) { mutableStateOf(when(scope) {
+        GalleryScope.VIDEOS -> GalleryTab.VIDEOS
+        GalleryScope.IMAGES_ONLY -> GalleryTab.IMAGES
+        else -> GalleryTab.RECENT
+    }) }
     var folder by remember { mutableStateOf("Todas") }
     var search by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
@@ -179,9 +189,11 @@ internal fun DeviceMediaBrowser(
         try {
             entries = withContext(Dispatchers.IO) {
                 // Consultas por tipo; quando só vídeos são necessários não pede acesso a imagens.
-                val videos = try { MediaLibrary.load(context, false) }
-                    catch (_: SecurityException) { emptyList() }
-                val images = if (scope == GalleryScope.IMAGES_AND_VIDEOS) {
+                val videos = if (scope != GalleryScope.IMAGES_ONLY) {
+                    try { MediaLibrary.load(context, false) }
+                        catch (_: SecurityException) { emptyList() }
+                } else emptyList()
+                val images = if (scope != GalleryScope.VIDEOS) {
                     try { MediaLibrary.load(context, true) }
                     catch (_: SecurityException) { emptyList() }
                 } else emptyList()
@@ -214,7 +226,11 @@ internal fun DeviceMediaBrowser(
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
         Row(Modifier.fillMaxWidth().height(58.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Voltar") }
-            Text(if (scope == GalleryScope.VIDEOS) "Galeria de vídeos" else "Galeria de mídia",
+            Text(when(scope) {
+                GalleryScope.VIDEOS -> "Galeria de vídeos"
+                GalleryScope.IMAGES_ONLY -> "Galeria de imagens"
+                else -> "Galeria de mídia"
+            },
                 style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
             IconButton(onClick = { forceReload++ }) { Icon(Icons.Default.Refresh, "Atualizar galeria") }
             IconButton(onClick = openDocuments) { Icon(Icons.Default.FolderOpen, "Procurar nos arquivos") }
@@ -241,8 +257,11 @@ internal fun DeviceMediaBrowser(
                 } })
             LazyRow(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val tabs = if (scope == GalleryScope.VIDEOS) listOf(GalleryTab.VIDEOS)
-                    else listOf(GalleryTab.RECENT, GalleryTab.VIDEOS, GalleryTab.IMAGES)
+                val tabs = when(scope) {
+                    GalleryScope.VIDEOS -> listOf(GalleryTab.VIDEOS)
+                    GalleryScope.IMAGES_ONLY -> listOf(GalleryTab.IMAGES)
+                    else -> listOf(GalleryTab.RECENT, GalleryTab.VIDEOS, GalleryTab.IMAGES)
+                }
                 items(tabs) { item ->
                     FilterChip(selected = tab == item, onClick = { tab = item; folder = "Todas" },
                         label = { Text(when (item) {
@@ -301,7 +320,7 @@ internal fun DeviceMediaBrowser(
                     if (chosen.isNotEmpty()) onSelect(chosen)
                 }, modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
                     Icon(Icons.Default.Check, null)
-                    Text(" Importar ${selected.size} vídeo${if (selected.size != 1) "s" else ""}")
+                    Text("Importar ${selected.size} ${if (scope == GalleryScope.IMAGES_ONLY) (if(selected.size==1) "imagem" else "imagens") else (if(selected.size==1) "vídeo" else "vídeos")}")
                 }
             }
         }

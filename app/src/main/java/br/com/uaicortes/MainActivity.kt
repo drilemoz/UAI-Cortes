@@ -139,6 +139,8 @@ fun UaiApp() {
     var selectedOverlayId by remember { mutableStateOf("") }
     var mediaAction by remember { mutableStateOf("add") }
     var previous by remember { mutableStateOf("home") }
+    val animationImages = remember { mutableStateListOf<Uri>() }
+    var animationDestination by remember { mutableStateOf("new") }
     var pendingOverlap by remember { mutableStateOf<OverlapConfirmation?>(null) }
     var pendingSequential by remember { mutableStateOf<SequentialConfirmation?>(null) }
     var pendingProjectDelete by remember { mutableStateOf<VideoProject?>(null) }
@@ -257,6 +259,14 @@ fun UaiApp() {
         mediaAction = action
         screen = "media"
     }
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        uris.forEach { uri ->
+            runCatching { context.contentResolver.takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            if (uri !in animationImages && animationImages.size < ImageAnimationPlan.MAX_IMAGES)
+                animationImages.add(uri)
+        }
+        if (uris.isNotEmpty()) screen = "animate"
+    }
     val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         importVideoClips(uris, persistDocumentAccess = true)
     }
@@ -300,6 +310,7 @@ fun UaiApp() {
         "editor" -> "home"
         "home" -> "home"
         "media" -> mediaOrigin
+        "animate" -> if (animationDestination == "append") "editor" else "home"
         "projects", "settings" -> "home"
         "general", "appearance", "about", "diagnostics" -> "settings"
         "pip", "audio", "trim", "transition", "subtitles", "watermark", "export" -> "editor"
@@ -334,9 +345,24 @@ fun UaiApp() {
         Surface(modifier = Modifier.fillMaxSize().then(tapMonitor), color = MaterialTheme.colorScheme.background) {
             when (screen) {
                 "home" -> MainHome(projects, onCreate = { pendingPicker = "new"; selectedClip = ""; openGallery("home", "new") },
+                    onAnimate = { animationDestination = "new"; animationImages.clear(); screen = "animate" },
                     onOpen = { project = it; selectedClip = TrimTimelineEdit.resumeClipId(it); screen = "editor" },
                     onDelete = { pendingProjectDelete = it },
                     onSettings = { screen = "settings" }, onTab = { screen = it })
+                "animate" -> AnimateImagesScreen(animationImages.toList(),
+                    onChoose = { openGallery("animate","animate_images") },
+                    onBack = { screen = if(animationDestination=="append") "editor" else "home" },
+                    onOrderChanged = { reordered -> animationImages.clear();animationImages.addAll(reordered) },
+                    onUseInEditor = { uri ->
+                        val duration = mediaDuration(context,uri)
+                        if (duration > 0L) {
+                            val clip = Clip(uri=uri.toString(),title="Vídeo animado",sourceDurationMs=duration)
+                            val target=if(animationDestination=="append") project ?: VideoProject()
+                                else VideoProject()
+                            write(target.copy(clips=target.clips+clip))
+                            selectedClip=clip.id; screen="editor"
+                        } else android.widget.Toast.makeText(context,"MP4 ainda não está disponível",android.widget.Toast.LENGTH_LONG).show()
+                    })
                 "projects" -> ProjectsScreen(projects, { back() }, { project = it; selectedClip = TrimTimelineEdit.resumeClipId(it); screen = "editor" },
                     { pendingProjectDelete = it })
                 "settings" -> SettingsScreen({ back() }) { screen = it }
@@ -346,7 +372,13 @@ fun UaiApp() {
                 "about" -> AboutScreen(::back)
                 "editor" -> project?.let { p -> EditorScreen(p, selectedClip, positionMs,
                     onSelected = { selectedClip = it }, onPosition = { positionMs = it }, onBack = ::back,
-                    onEdit = { navTo(it) }, onUpdate = { write(it) },
+                    onEdit = {
+                        if (it == "animate") {
+                            animationDestination = "append"
+                            animationImages.clear()
+                            screen = "animate"
+                        } else navTo(it)
+                    }, onUpdate = { write(it) },
                     onAddVideo = { pendingPicker = "append"; openGallery("editor", "append") },
                     onPiP = {
                         selectedOverlayId = project?.overlays?.firstOrNull()?.id.orEmpty()
@@ -391,6 +423,16 @@ fun UaiApp() {
                     }) }
                 "media" -> DeviceMediaBrowser(::back, onSelect = { chosen ->
                     when (mediaAction) {
+                        "animate_images" -> {
+                            chosen.filter { it.isImage }.forEach {
+                                if (it.uri !in animationImages && animationImages.size < ImageAnimationPlan.MAX_IMAGES)
+                                    animationImages.add(it.uri)
+                            }
+                            if (animationImages.size == ImageAnimationPlan.MAX_IMAGES)
+                                android.widget.Toast.makeText(context,"Limite de 80 imagens por animação",
+                                    android.widget.Toast.LENGTH_LONG).show()
+                            screen="animate"
+                        }
                         "new", "append" -> importVideoClips(chosen.map { it.uri }, persistDocumentAccess = false)
                         "audio_extract" -> {
                             chosen.firstOrNull()?.let { importedAudioSourceVideo = it.uri }
@@ -404,13 +446,16 @@ fun UaiApp() {
                     }
                 }, openDocuments = {
                     when (mediaAction) {
+                        "animate_images" -> imagePicker.launch(arrayOf("image/*"))
                         "new", "append" -> videoPicker.launch(arrayOf("video/*"))
                         "audio_extract" -> externalVideoPicker.launch(arrayOf("video/*"))
                         else -> overlayPicker.launch(arrayOf("image/*", "video/*"))
                     }
-                }, scope = if (mediaAction == "new" || mediaAction == "append" ||
-                    mediaAction == "audio_extract") GalleryScope.VIDEOS else GalleryScope.IMAGES_AND_VIDEOS,
-                    allowMultiple = mediaAction == "new" || mediaAction == "append")
+                }, scope = when (mediaAction) {
+                    "animate_images" -> GalleryScope.IMAGES_ONLY
+                    "new", "append", "audio_extract" -> GalleryScope.VIDEOS
+                    else -> GalleryScope.IMAGES_AND_VIDEOS
+                }, allowMultiple = mediaAction == "new" || mediaAction == "append" || mediaAction == "animate_images")
                 "transition" -> project?.let { TransitionScreen(it, ::back, { write(it) }, selectedBoundary) }
                 "autosubtitle" -> project?.let { current -> AutoSubtitleScreen(current, ::back, onApply = { cues, replace ->
                     val existing = if (replace) emptyList() else current.subtitles
@@ -506,7 +551,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
     }
 }
 
-@Composable private fun MainHome(projects: List<VideoProject>, onCreate: () -> Unit,
+@Composable private fun MainHome(projects: List<VideoProject>, onCreate: () -> Unit, onAnimate: () -> Unit,
     onOpen: (VideoProject)->Unit, onDelete: (VideoProject)->Unit, onSettings: ()->Unit, onTab:(String)->Unit) {
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -528,6 +573,9 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
                     }
                 }
             }
+            Spacer(Modifier.height(16.dp))
+            ItemCard(Icons.Default.AutoAwesomeMotion,"Animar Imagens",
+                "Crie um MP4 animado offline com suas fotos") { onAnimate() }
             Spacer(Modifier.height(24.dp)); Text("Edições recentes",fontSize=21.sp, fontWeight=FontWeight.SemiBold)
             Spacer(Modifier.height(10.dp))
             if(projects.isEmpty()) Text("Seus projetos aparecerão aqui.", color=MaterialTheme.colorScheme.onSurfaceVariant,
@@ -654,7 +702,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.49 (50)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.50 (51)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: trechos visuais em Cortar e unir, seleção automática após dividir e cursor no último corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -934,7 +982,8 @@ private fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             Triple("Áudio", Icons.Default.MusicNote, "audio"),
             Triple("Transição", Icons.Default.AutoAwesomeMotion, "transition"),
             Triple("Legendas", Icons.Default.ClosedCaption, "subtitles"),
-            Triple("Marca d'água", Icons.Default.TextFields, "watermark")
+            Triple("Marca d'água", Icons.Default.TextFields, "watermark"),
+            Triple("Animar Imagens", Icons.Default.AutoAwesomeMotion, "animate")
         ) }
         val carouselStart = (Int.MAX_VALUE / 2 / actions.size) * actions.size
         val toolsScroll = rememberLazyListState(initialFirstVisibleItemIndex = carouselStart)

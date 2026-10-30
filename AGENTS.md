@@ -106,3 +106,5 @@
 - v0.1.49: voz automática precisa ser transcrita de verdade do áudio existente, respeitando cortes por clipe e 16 kHz mono PCM. Vosk opt-in; download HTTPS oficial e ZIP validado; nunca enviar áudio à nuvem. Permitir revisar e corrigir antes de gravar. Limite inicial de 10 minutos; não afirmar transcrição física validada sem APK em celular.
 - v0.1.49: projeto deve solicitar confirmação antes de excluir e não apagar mídias originais; miniaturas são extraídas sob demanda pelo MediaMetadataRetriever na thread IO e devem falhar silenciosamente caso a permissão tenha sido revogada.
 - v0.1.49: transições de zoom/pan devem ser realmente exportadas via MatrixTransformation, com identidade fora das janelas; não rotular como crossfade (não suportado pela versão atual Media3).
+
+- v0.1.50: preservar módulo Animar Imagens totalmente offline, padrão 9:16/720p/30 FPS/5 s, seleção e reordenação, prévia, exportação H.264 e integração opcional na timeline. Limite 80 imagens; nenhum download nem modelos externos; paralaxe 2.5D não implementada. Conferir Media3 e desempenho em aparelho antes de alegar validação física. Atualizar versionCode e metadados sequencialmente.
