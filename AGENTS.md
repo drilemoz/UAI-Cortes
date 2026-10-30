@@ -108,3 +108,6 @@
 - v0.1.49: transições de zoom/pan devem ser realmente exportadas via MatrixTransformation, com identidade fora das janelas; não rotular como crossfade (não suportado pela versão atual Media3).
 
 - v0.1.50: preservar módulo Animar Imagens totalmente offline, padrão 9:16/720p/30 FPS/5 s, seleção e reordenação, prévia, exportação H.264 e integração opcional na timeline. Limite 80 imagens; nenhum download nem modelos externos; paralaxe 2.5D não implementada. Conferir Media3 e desempenho em aparelho antes de alegar validação física. Atualizar versionCode e metadados sequencialmente.
+
+- v0.1.51: nenhum `progress!!` em callbacks Compose, usar percentual local imutável limitado [0,1] ou indicador indeterminado. Regressão para `NullPointerException` de `LinearProgressIndicator`.
+- v0.1.51: tela Animar Imagens mantém proporção com prévia compacta 238 dp, ordenação durante arrasto na alça e rolagem de borda, setas e remoção. Ajustes/Animar em mesma linha, mensagens de exportação com nome Uai Cortes.

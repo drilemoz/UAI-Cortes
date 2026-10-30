@@ -1,3 +1,11 @@
+## Melhorias v0.1.51
+
+- Prévia reduzida para 238 dp, imagens com cartões compactos; alça ☰ atualiza posição durante o gesto, com rolagem de borda; setas permanecem.
+- Botões Ajustes e Animar lado a lado; configurações avançadas compactadas.
+- Progresso corrigido para evitar o `NullPointerException` documentado no TXT: capturar o valor local (0–100%) antes de alimentar a lambda Compose; sem `!!`. Sem porcentagem Media3, mostrar barra indeterminada.
+- A exibição usa a marca Uai Cortes; o processamento continua no Media3 offline.
+- Testar no aparelho: exportar 3 e 15 fotos, reordenar no meio e nas bordas, cancelar exportação, salvar MP4 e enviar à timeline.
+
 # Animar Imagens offline · v0.1.50
 
 ## Uso

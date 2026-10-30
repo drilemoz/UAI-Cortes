@@ -1,3 +1,9 @@
+## v0.1.51: regressão e interface de Animar Imagens
+
+- Inspecionar ausência de `progress!!` no Compose, clamp da porcentagem nula/negativa/acima de 100, mudanças de estágio.
+- Conferir preview 9:16/16:9/1:1 e área compacta; arrasto em tempo real + auto-rolagem de borda; controles Ajustes/Animar lado a lado.
+- Pendente: `:app:testDebugUnitTest :app:lintDebug :app:assembleRelease` no GitHub Actions e exportação real no aparelho.
+
 ## v0.1.47 (versionCode 48) · 28/10/2026
 - **Galeria interna:** corrigida a falha `The coroutine scope left the composition`. Corrotinas canceladas por troca de tela/permissão são propagadas e deixam de aparecer como erro de carregamento da mídia.
 - Indicador de carregamento não é encerrado por consulta antiga cancelada; troca de permissões limpa o estado de erro. Em falhas reais, exibe **Tentar novamente** e **Procurar no Android**, sem mostrar caminhos de mídia ou detalhes internos.
