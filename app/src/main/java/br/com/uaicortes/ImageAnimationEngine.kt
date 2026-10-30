@@ -229,32 +229,8 @@ internal class ImageAnimationEngine(private val context: Context) {
         } finally { img.recycle() }
     }
 
-    private fun saveToGallery(file: File): Uri {
-        check(file.isFile && file.length() > 0L) { "O vídeo gerado está vazio" }
-        val values = ContentValues().apply {
-            put(MediaStore.Video.Media.DISPLAY_NAME,"UaiCortes_Animado_${System.currentTimeMillis()}.mp4")
-            put(MediaStore.Video.Media.MIME_TYPE,"video/mp4")
-            put(MediaStore.Video.Media.RELATIVE_PATH,Environment.DIRECTORY_MOVIES + "/UaiCortes")
-            put(MediaStore.Video.Media.IS_PENDING,1)
-        }
-        val resolver = context.contentResolver
-        val uri = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI,values)
-            ?: throw IllegalStateException("Não foi possível criar vídeo na galeria")
-        try {
-            var written = 0L
-            resolver.openOutputStream(uri,"w")?.use { out ->
-                file.inputStream().use { input ->
-                    val buffer = ByteArray(64*1024)
-                    while (true) {
-                        val n=input.read(buffer)
-                        if(n<0) break
-                        out.write(buffer,0,n);written+=n
-                    }
-                }
-            } ?: throw IllegalStateException("Não foi possível abrir destino")
-            check(written==file.length()) { "Cópia incompleta do vídeo" }
-            check(resolver.update(uri,ContentValues().apply {put(MediaStore.Video.Media.IS_PENDING,0)},null,null)>0)
-            return uri
-        } catch (e: Exception) { resolver.delete(uri,null,null);throw e }
-    }
+    private fun saveToGallery(file: File): Uri = GalleryVideoSaver.save(
+        context, file, "UaiCortes_Animado_${System.currentTimeMillis()}.mp4"
+    )
+
 }

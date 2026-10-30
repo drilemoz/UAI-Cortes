@@ -1,3 +1,11 @@
+## v0.1.53 (versionCode 54) · 30/10/2026
+- **Refatoração de base:** `MainActivity.kt` reduzida à inicialização/coordenação. Telas do editor, cortes, áudio, PiP, transições, legendas, exportação, marca d'água e timeline extraídas para arquivos Kotlin dedicados, sem mudar os fluxos visuais.
+- **Estado compartilhado:** `EditorWorkspaceState` concentra navegação e seleções transitórias de clipes, PiPs, áudio, legendas e posição. Rascunhos e projetos continuam em seus armazenamentos próprios; não foi adicionada restauração automática de processo.
+- **Exportação reutilizável:** `GalleryVideoSaver` publica MP4s de ambos os motores no MediaStore e só devolve a URI após concluir a cópia; elimina implementação duplicada e remove o item parcial ao falhar.
+- **Segurança dos projetos:** `ProjectCollectionCodec` e `ProjectStore` preservam cópia anterior válida e bloqueiam `save/delete` se o cadastro e a cópia estiverem ilegíveis, evitando substituir dados por lista vazia. JSON de projetos continua `schemaVersion=4`.
+- **Verificações:** validador estrutural atualizado e testes unitários acrescentados para codec/recuperação; sintaxe Kotlin inspecionada. Build Android/Gradle, testes unitários completos e verificação de MP4 em aparelho permanecem pendentes.
+- Veja `docs/ARQUITETURA_REFATORACAO_0.1.53.md` e `docs/VALIDATION_0.1.53.md`.
+
 ## v0.1.52 (versionCode 53) · 30/10/2026
 - Animar Imagens: ajustes unificados com chips compactos, mesma confirmação de salvamento MP4 usada no editor principal e atalho para continuar editando com áudio, narração, legendas, PiP e cortes.
 - Novo **Salvar** no topo guarda a ordem das fotos e opções num rascunho local separado dos projetos de vídeo, retornando à Home ou ao editor de origem. Ao reabrir Animar Imagens, o rascunho é recuperado.
@@ -49,7 +57,7 @@
 - Confirmação de cancelamento antes de descartar o MP4 parcial; o projeto e as mídias originais são preservados. Ao copiar para a galeria, o cancelamento é bloqueado para não interromper a gravação.
 - Mantida a confirmação em tela cheia **Vídeo salvo!** somente após finalizar o MediaStore. Exportação não foi validada fisicamente neste ambiente.
 
-# Uai Cortes 0.1.52
+# Uai Cortes 0.1.53
 
 Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
 
@@ -149,7 +157,7 @@ Editor offline Android nativo em Kotlin, Jetpack Compose e Media3.
 
 ## Versões e ferramentas
 - `minSdk = 26`, `compileSdk = 36`, `targetSdk = 36`.
-- `versionName = 0.1.52`, `versionCode = 53`.
+- `versionName = 0.1.53`, `versionCode = 54`.
 - Kotlin 2.1.21, AGP 8.10.1, Gradle 8.11.1, JDK 17.
 - Media3 1.10.1, ExoPlayer e Transformer para composição H.264/AAC.
 - O editor não exige conta; somente o download opcional do modelo de legendas automáticas exige internet. A biblioteca PiP solicita acesso às fotos/vídeos do Android, integral ou parcial conforme consentimento; o seletor de documentos continua como alternativa.

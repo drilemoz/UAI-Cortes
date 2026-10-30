@@ -114,3 +114,7 @@
 
 - v0.1.52: Animar Imagens mantém rascunho local de URIs (MediaStore/SAF) e `ImageAnimationOptions`, sem alterar o schemaVersion 4 de projetos de vídeo. Não converter fotos em clipes MP4 fictícios; renderizar primeiro e depois usar a timeline existente para áudio/legendas/PiP/cortes.
 - v0.1.52: usar `VideoSavedDialog` compartilhado somente após MediaStore concluir, botão Salvar no topo e confirmação ao sair com alterações não gravadas. Nunca bloquear Voltar após sucesso; durante gravação final impedir cancelamento sem explicação. O rascunho não garante acesso a mídias se a permissão Android tiver sido revogada.
+
+- v0.1.53: `MainActivity.kt` coordena o aplicativo; telas extraídas por funcionalidade ficam em arquivos próprios no pacote `br.com.uaicortes`. Não voltar a concentrar telas nesse arquivo. `EditorWorkspaceState` é estado transitório, não substitui `ProjectStore` nem garante recuperação após encerramento do processo.
+- v0.1.53: ExportEngine e ImageAnimationEngine devem salvar MP4 por `GalleryVideoSaver`; nunca confirmar sucesso antes do MediaStore finalizar. Em erro, remover URI parcial; gravação ocorre fora da thread de interface.
+- v0.1.53: `ProjectStore` exige JSON legível ou backup válido antes de salvar/excluir; impedir substituição silenciosa por `[]` ao ler dados corrompidos. Preservar `schemaVersion=4`, projetos legados e histórico. Gradle/Android e testes em aparelho continuam obrigatórios antes de declarar versão validada.

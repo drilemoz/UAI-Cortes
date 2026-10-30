@@ -1,3 +1,8 @@
+## v0.1.53 (versionCode 54): refatoração de base
+
+- Validar novo mapeamento de telas em arquivos por funcionalidade, armazenamento fail-closed e salvamento MediaStore compartilhado.
+- Testes de compilação Android e MP4 físico pendentes. Ver `docs/VALIDATION_0.1.53.md`.
+
 ## v0.1.51: regressão e interface de Animar Imagens
 
 - Inspecionar ausência de `progress!!` no Compose, clamp da porcentagem nula/negativa/acima de 100, mudanças de estágio.

@@ -299,34 +299,7 @@ class ExportEngine(private val context: Context) {
         transformer!!.start(composition, target.absolutePath)
     }
 
-    private fun saveToGallery(file: File, fileName: String): Uri {
-        require(file.isFile && file.length() > 0L) {
-            "O arquivo MP4 temporário está vazio ou não foi gerado."
-        }
-        // Android 10+ permite MediaStore sem permissão global de arquivos.
-        val values = ContentValues().apply {
-            put(MediaStore.Video.Media.DISPLAY_NAME, fileName)
-            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-            put(MediaStore.Video.Media.RELATIVE_PATH, "Movies/UaiCortes")
-            put(MediaStore.Video.Media.IS_PENDING, 1)
-        }
-        val resolver = context.contentResolver
-        val uri = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)
-            ?: error("Não foi possível criar o arquivo na galeria")
-        try {
-            val bytesCopied = resolver.openOutputStream(uri)?.use { out ->
-                file.inputStream().use { it.copyTo(out) }
-            } ?: error("Não foi possível gravar o vídeo")
-            check(bytesCopied == file.length()) {
-                "A cópia do MP4 para a galeria terminou antes do esperado."
-            }
-            check(resolver.update(uri, ContentValues().apply {
-                put(MediaStore.Video.Media.IS_PENDING, 0)
-            }, null, null) > 0) { "Não foi possível finalizar o vídeo na galeria" }
-            return uri
-        } catch (e: Exception) {
-            resolver.delete(uri, null, null)
-            throw e
-        }
-    }
+    private fun saveToGallery(file: File, fileName: String): Uri =
+        GalleryVideoSaver.save(context, file, fileName)
+
 }

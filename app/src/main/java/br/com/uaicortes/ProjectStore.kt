@@ -183,19 +183,66 @@ data class VideoProject(
     }
 }
 
+/** Codec reutilizável para armazenamento e importação futura de projetos (schema 4). */
+internal object ProjectCollectionCodec {
+    fun decode(raw: String): List<VideoProject> {
+        val entries = JSONArray(raw)
+        return (0 until entries.length()).map { VideoProject.read(entries.getJSONObject(it)) }
+            .sortedByDescending { it.updated }
+    }
+
+    fun encode(projects: List<VideoProject>): String =
+        JSONArray().apply { projects.forEach { put(it.json()) } }.toString()
+
+    /** Não transforma um JSON inválido em lista vazia ao decidir salvar/excluir. */
+    fun recover(primary: String, backup: String?): List<VideoProject> =
+        runCatching { decode(primary) }.getOrElse { invalid ->
+            if (backup == null) throw IllegalStateException(
+                "O cadastro de projetos está ilegível e não há cópia recuperável.", invalid)
+            runCatching { decode(backup) }.getOrElse { invalidBackup ->
+                throw IllegalStateException("O cadastro e sua cópia de segurança estão ilegíveis.", invalidBackup)
+            }
+        }
+}
+
 class ProjectStore(private val context: Context) {
     private val prefs = context.getSharedPreferences("projects", Context.MODE_PRIVATE)
-    fun load(): List<VideoProject> = runCatching {
-        val a = JSONArray(prefs.getString("projects", "[]"))
-        (0 until a.length()).map { VideoProject.read(a.getJSONObject(it)) }.sortedByDescending { it.updated }
-    }.getOrDefault(emptyList())
+    private val currentKey = "projects"
+    private val backupKey = "projects_backup"
+
+    private fun rawPrimary(): String = prefs.getString(currentKey, "[]") ?: "[]"
+    private fun readForMutation(): List<VideoProject> = ProjectCollectionCodec.recover(
+        rawPrimary(), prefs.getString(backupKey, null))
+
+    fun load(): List<VideoProject> = try {
+        readForMutation()
+    } catch (failure: Exception) {
+        DiagnosticRecorder.exception("project_store_read", failure)
+        // A UI pode mostrar zero projetos, mas save/delete NÃO podem sobrescrever dados ilegíveis.
+        emptyList()
+    }
+
+    private fun persist(projects: List<VideoProject>) {
+        val primary = rawPrimary()
+        // Se o primário foi corrompido, conservar o último backup válido.
+        val safePrevious = runCatching { ProjectCollectionCodec.decode(primary); primary }
+            .getOrElse { prefs.getString(backupKey, null) ?: throw IllegalStateException(
+                "Não é seguro sobrescrever projetos ilegíveis.") }
+        check(prefs.edit()
+            .putString(backupKey, safePrevious)
+            .putString(currentKey, ProjectCollectionCodec.encode(projects))
+            .commit()) { "Falha ao persistir projetos no armazenamento local" }
+    }
+
     fun save(project: VideoProject) {
-        val list = load().filterNot { it.id == project.id } + project.copy(updated = System.currentTimeMillis())
-        prefs.edit().putString("projects", JSONArray().apply { list.forEach { put(it.json()) } }.toString()).apply()
+        val updated = project.copy(updated = System.currentTimeMillis())
+        persist(readForMutation().filterNot { it.id == project.id } + updated)
     }
+
     fun delete(id: String) {
-        prefs.edit().putString("projects", JSONArray().apply { load().filterNot { it.id == id }.forEach { put(it.json()) } }.toString()).apply()
+        persist(readForMutation().filterNot { it.id == id })
     }
+
     fun theme(): String = prefs.getString("theme", "Sistema") ?: "Sistema"
     fun setTheme(t: String) = prefs.edit().putString("theme", t).apply()
     fun quality(): Int = prefs.getInt("quality", 720)

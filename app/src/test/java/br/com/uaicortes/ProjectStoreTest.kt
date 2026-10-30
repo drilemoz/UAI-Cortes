@@ -72,4 +72,28 @@ class ProjectStoreTest {
         assertEquals(0L, AudioTrack.read(legacy).sourceStartMs)
     }
 
+    @Test fun projectCollectionCodecRoundTrip() {
+        val one = VideoProject(title = "Original", clips = listOf(Clip(
+            uri = "content://video", title = "Teste", sourceDurationMs = 4000)))
+        val two = VideoProject(title = "Segundo")
+        val json = ProjectCollectionCodec.encode(listOf(one, two))
+        val decoded = ProjectCollectionCodec.decode(json)
+        assertEquals(setOf(one.id, two.id), decoded.map { it.id }.toSet())
+        assertEquals(4, decoded.first { it.id == one.id }.json().getInt("schemaVersion"))
+    }
+
+    @Test fun corruptPrimaryUsesValidBackupWithoutClearingProjects() {
+        val original = VideoProject(title = "Não perder")
+        val backup = ProjectCollectionCodec.encode(listOf(original))
+        assertEquals(original.id, ProjectCollectionCodec.recover("{ inválido", backup).single().id)
+        try {
+            ProjectCollectionCodec.recover("{ inválido", null)
+            fail("JSON ilegível sem backup não pode virar lista vazia para escrita")
+        } catch (expected: IllegalStateException) { /* escrita bloqueada */ }
+        try {
+            ProjectCollectionCodec.recover("{ inválido", "{ backup inválido")
+            fail("Backup ilegível não pode autorizar escrita")
+        } catch (expected: IllegalStateException) { /* escrita bloqueada */ }
+    }
+
 }
