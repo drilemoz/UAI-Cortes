@@ -133,3 +133,5 @@
 
 - v0.1.57: índices de junção são zero-based; com 2 clipes existe 1 junção, índice 0. Ao remover clipes sem trocar ID do projeto, revalidar seleções em `EditorWorkspaceState` e usar `TransitionBoundaryPolicy` antes de acessar `p.clips[index + 1]`. O teste do workflow 50 esperava incorretamente índice 1.
 - v0.1.57: metadados de vídeo da galeria/SAF são obtidos fora da thread UI; só aplicar o lote se o projeto ativo ainda for o original, sem sobrescrever outro projeto. Durações não verificáveis são rejeitadas na importação; manter fallback legado fora desse fluxo por compatibilidade.
+
+- v0.1.58: `MainActivity` usa `rememberCoroutineScope`, `importScope.launch`, `withContext(Dispatchers.IO)` e captura `CancellationException` que deve ser sempre relançada; verificar imports correspondentes antes de submeter o workflow, além da compilação Android real. CI 51 falhou por importações ausentes, não por incompatibilidade do Media3.
