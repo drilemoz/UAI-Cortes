@@ -135,3 +135,7 @@
 - v0.1.57: metadados de vídeo da galeria/SAF são obtidos fora da thread UI; só aplicar o lote se o projeto ativo ainda for o original, sem sobrescrever outro projeto. Durações não verificáveis são rejeitadas na importação; manter fallback legado fora desse fluxo por compatibilidade.
 
 - v0.1.58: `MainActivity` usa `rememberCoroutineScope`, `importScope.launch`, `withContext(Dispatchers.IO)` e captura `CancellationException` que deve ser sempre relançada; verificar imports correspondentes antes de submeter o workflow, além da compilação Android real. CI 51 falhou por importações ausentes, não por incompatibilidade do Media3.
+
+- v0.1.59: `MediaImportTasks` deve consultar durações e nomes de vídeos/áudio/PiP apenas em dispatcher de IO. Atualizações do `VideoProject` e de estado Compose devem ocorrer no dispatcher principal.
+- v0.1.59: não iniciar importações simultâneas; descartar resultados atrasados ao mudar projeto, tela ou ferramenta. Preservar cancelamento de corrotinas, permissões SAF e o `schemaVersion=4`.
+- v0.1.59: o workflow 51 exigiu imports explícitos de corrotinas. O validador agora verifica a arquitetura com serviço compartilhado, mas a compilação Android real continua obrigatória.

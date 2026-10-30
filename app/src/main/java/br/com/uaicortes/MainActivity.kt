@@ -2,7 +2,6 @@ package br.com.uaicortes
 
 import android.net.Uri
 import android.os.Bundle
-import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -10,35 +9,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.*
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerId
 import kotlin.math.abs
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.input.TransformedText
-import androidx.compose.ui.text.input.OffsetMapping
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -48,48 +23,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.platform.LocalDensity
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
-import androidx.media3.common.PlaybackParameters
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.PlayerView
-import androidx.annotation.OptIn
-import androidx.media3.common.util.UnstableApi
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.text.DateFormat
-import java.util.Date
-import java.util.UUID
 
 internal val Blue = Color(0xFF0866FF)
 internal val Purple = Color(0xFF6954B5)
@@ -129,7 +71,9 @@ fun UaiApp() {
     val projectController = remember(store) { ProjectController(StoredProjectRepository(store)) }
     val mediaController = remember(context) { MediaImportController(context.applicationContext) }
     val importScope = rememberCoroutineScope()
-    var importingVideos by remember { mutableStateOf(false) }
+    val mediaTasks = remember(mediaController) { MediaImportTasks(mediaController) }
+    val mediaTaskGate = remember { MediaTaskGate() }
+    var activeMediaTask by remember { mutableStateOf<MediaTaskKind?>(null) }
     val animationDraftStore = remember { ImageAnimationDraftStore(context.applicationContext) }
     var diagnosticsEnabled by remember { mutableStateOf(DiagnosticRecorder.isEnabled()) }
     var theme by remember { mutableStateOf(store.theme()) }
@@ -234,41 +178,52 @@ fun UaiApp() {
         screen = "pip"
     }
     var selectedBoundary by workspace::selectedBoundary
-    fun importVideoClips(uris: List<Uri>, persistDocumentAccess: Boolean) {
-        if (uris.isEmpty() || importingVideos) return
-        val request = VideoImportRequest(project?.id.orEmpty(), pendingPicker == "new")
-        importingVideos = true
+    /** Uma única tarefa de metadados por vez, com cancelamento pelo escopo Compose. */
+    fun startMediaTask(kind: MediaTaskKind, operation: suspend () -> Unit) {
+        if (!mediaTaskGate.tryStart(kind)) {
+            android.widget.Toast.makeText(context, "Aguarde a importação atual terminar",
+                android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
+        activeMediaTask = kind
         importScope.launch {
             try {
-                // Consultas ao ContentResolver e MediaMetadataRetriever podem demorar.
-                val imported = withContext(Dispatchers.IO) {
-                    mediaController.videoClips(uris, persistDocumentAccess)
-                }
-                if (!request.stillTargets(project?.id.orEmpty())) {
-                    android.widget.Toast.makeText(context, "O projeto mudou durante a importação. Selecione os vídeos novamente.",
-                        android.widget.Toast.LENGTH_LONG).show()
-                    return@launch
-                }
-                if (imported.clips.isEmpty()) {
-                    android.widget.Toast.makeText(context, "Não foi possível abrir os vídeos selecionados",
-                        android.widget.Toast.LENGTH_LONG).show()
-                    return@launch
-                }
-                val updated = projectController.append(project, imported.clips, createNew = request.createNew)
-                write(updated)
-                if (selectedClip.isBlank()) selectedClip = imported.clips.first().id
-                screen = "editor"
-                if (imported.rejected > 0) android.widget.Toast.makeText(context,
-                    "Alguns vídeos não puderam ser importados", android.widget.Toast.LENGTH_LONG).show()
+                operation()
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                DiagnosticRecorder.exception("video_import", error)
-                android.widget.Toast.makeText(context, "Falha ao importar os vídeos. Tente novamente.",
+                DiagnosticRecorder.exception("media_import", error)
+                android.widget.Toast.makeText(context, "Não foi possível importar esta mídia",
                     android.widget.Toast.LENGTH_LONG).show()
             } finally {
-                importingVideos = false
+                mediaTaskGate.finish(kind)
+                activeMediaTask = mediaTaskGate.active
             }
+        }
+    }
+    fun importVideoClips(uris: List<Uri>, persistDocumentAccess: Boolean) {
+        if (uris.isEmpty()) return
+        val request = VideoImportRequest(project?.id.orEmpty(), pendingPicker == "new")
+        val origin = MediaTaskOrigin(project?.id.orEmpty(), screen, mediaAction)
+        startMediaTask(MediaTaskKind.VIDEO) {
+            val imported = mediaTasks.videos(uris, persistDocumentAccess)
+            if (!request.stillTargets(project?.id.orEmpty()) ||
+                !origin.matches(project?.id.orEmpty(), screen, mediaAction)) {
+                android.widget.Toast.makeText(context, "O destino mudou durante a importação. Selecione novamente.",
+                    android.widget.Toast.LENGTH_LONG).show()
+                return@startMediaTask
+            }
+            if (imported.clips.isEmpty()) {
+                android.widget.Toast.makeText(context, "Não foi possível abrir os vídeos selecionados",
+                    android.widget.Toast.LENGTH_LONG).show()
+                return@startMediaTask
+            }
+            val updated = projectController.append(project, imported.clips, createNew = request.createNew)
+            write(updated)
+            if (selectedClip.isBlank()) selectedClip = imported.clips.first().id
+            screen = "editor"
+            if (imported.rejected > 0) android.widget.Toast.makeText(context,
+                "Alguns vídeos não puderam ser importados", android.widget.Toast.LENGTH_LONG).show()
         }
     }
     fun openGallery(origin: String, action: String) {
@@ -295,27 +250,48 @@ fun UaiApp() {
     }
     val overlayPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
-            mediaController.persistReadAccess(uri)
-            val image = mediaController.isImage(uri)
-            val duration = (if (image) 5000L else mediaDuration(context, uri))
-                .coerceAtMost(((project?.durationMs ?: 5000) - positionMs).coerceAtLeast(1L))
-            insertOverlay(uri, image, duration)
+            val origin = MediaTaskOrigin(project?.id.orEmpty(), screen, mediaAction)
+            val initialProject = project
+            val insertionCursor = positionMs
+            val selectedId = selectedOverlayId
+            startMediaTask(MediaTaskKind.OVERLAY) {
+                val remaining = ((initialProject?.durationMs ?: 0L) - insertionCursor).coerceAtLeast(0L)
+                val loaded = mediaTasks.overlay(uri, remaining)
+                if (!origin.matches(project?.id.orEmpty(), screen, mediaAction) ||
+                    project !== initialProject || selectedOverlayId != selectedId || positionMs != insertionCursor) {
+                    android.widget.Toast.makeText(context, "O editor mudou. Selecione o PiP novamente.",
+                        android.widget.Toast.LENGTH_LONG).show()
+                    return@startMediaTask
+                }
+                if (loaded == null) {
+                    android.widget.Toast.makeText(context, "Não foi possível obter a duração desta mídia",
+                        android.widget.Toast.LENGTH_LONG).show()
+                    return@startMediaTask
+                }
+                insertOverlay(uri, loaded.isImage, loaded.durationMs)
+            }
         }
     }
     val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
-            mediaController.persistReadAccess(uri)
-            project?.let { current ->
-                val track = MediaImportRules.audio(uri.toString(), mediaController.title(uri),
-                    mediaController.duration(uri), current.durationMs, positionMs)
-                if (track != null) {
-                    write(current.copy(audioTracks = current.audioTracks + track))
+            val initialProject = project
+            val origin = MediaTaskOrigin(project?.id.orEmpty(), screen, mediaAction)
+            val insertionCursor = positionMs
+            startMediaTask(MediaTaskKind.AUDIO) {
+                val track = mediaTasks.audio(uri, initialProject?.durationMs ?: 0L, insertionCursor)
+                if (!origin.matches(project?.id.orEmpty(), screen, mediaAction) || project !== initialProject) {
+                    android.widget.Toast.makeText(context, "O projeto mudou. Selecione o áudio novamente.",
+                        android.widget.Toast.LENGTH_LONG).show()
+                    return@startMediaTask
+                }
+                if (track != null && initialProject != null) {
+                    write(initialProject.copy(audioTracks = initialProject.audioTracks + track))
                 } else {
-                    android.widget.Toast.makeText(context, "Sem espaço para inserir áudio no projeto",
+                    android.widget.Toast.makeText(context, "Não foi possível inserir o áudio neste projeto",
                         android.widget.Toast.LENGTH_LONG).show()
                 }
+                screen = "audio"
             }
-            screen = "audio"
         }
     }
     fun back() {
@@ -482,9 +458,9 @@ fun UaiApp() {
                 "export" -> project?.let { ExportScreen(it, store.quality(), ::back) }
             }
         }
-        if (importingVideos) {
+        if (activeMediaTask != null) {
             AlertDialog(onDismissRequest = {},
-                title = { Text("Importando vídeos") },
+                title = { Text("Importando mídia") },
                 text = { Row(verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     CircularProgressIndicator(modifier = Modifier.size(28.dp))
