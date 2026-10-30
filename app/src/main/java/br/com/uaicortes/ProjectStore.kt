@@ -249,13 +249,19 @@ class ProjectStore(private val context: Context) {
     fun setQuality(q: Int) { require(q == 720 || q == 1080); prefs.edit().putInt("quality", q).apply() }
 }
 
-fun mediaDuration(context: Context, uri: Uri): Long = runCatching {
+/** Retorna zero quando a duração não é verificável. Recomendado para importações novas. */
+fun verifiedMediaDuration(context: Context, uri: Uri): Long = runCatching {
     val retriever = MediaMetadataRetriever()
     try {
         retriever.setDataSource(context, uri)
-        retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLong()?.coerceAtLeast(1L) ?: 1000L
+        retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+            ?.toLongOrNull()?.takeIf { it > 0L } ?: 0L
     } finally { retriever.release() }
-}.getOrDefault(1000L)
+}.getOrDefault(0L)
+
+/** Fallback histórico usado em fluxos legados; não utilizar para validar mídia importada. */
+fun mediaDuration(context: Context, uri: Uri): Long =
+    verifiedMediaDuration(context, uri).takeIf { it > 0L } ?: 1000L
 
 fun formatMs(ms: Long): String {
     val sec = ms.coerceAtLeast(0) / 1000L

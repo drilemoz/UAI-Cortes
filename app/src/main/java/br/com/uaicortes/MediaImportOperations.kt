@@ -44,12 +44,12 @@ internal class MediaImportController(private val context: Context) {
         val sources = uris.map { uri ->
             if (persistDocumentAccess) persistReadAccess(uri)
             ClipSource(uri.toString(), runCatching { mediaName(context, uri) }.getOrDefault("Vídeo"),
-                runCatching { mediaDuration(context, uri) }.getOrDefault(0L))
+                runCatching { verifiedMediaDuration(context, uri) }.getOrDefault(0L))
         }
         return MediaImportRules.clips(sources)
     }
 
     fun isImage(uri: Uri): Boolean = context.contentResolver.getType(uri)?.startsWith("image/") == true
-    fun duration(uri: Uri): Long = mediaDuration(context, uri)
+    fun duration(uri: Uri): Long = verifiedMediaDuration(context, uri)
     fun title(uri: Uri): String = mediaName(context, uri)
 }

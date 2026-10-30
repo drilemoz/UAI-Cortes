@@ -118,8 +118,11 @@ internal fun TransitionFramePreview(a: Clip, b: Clip, kind: String, durationMs: 
 @Composable
 internal fun TransitionScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit,initialBoundary:Int=0) {
     var boundary by remember(p.id,initialBoundary) {
-        mutableIntStateOf(initialBoundary.coerceIn(0,(p.clips.size-2).coerceAtLeast(0)))
+        mutableIntStateOf(TransitionBoundaryPolicy.clamp(initialBoundary, p.clips.size))
     }
+    // A lista de clipes pode mudar sem que o ID do projeto mude.
+    val safeBoundary = TransitionBoundaryPolicy.clamp(boundary, p.clips.size)
+    LaunchedEffect(p.clips.size) { boundary = TransitionBoundaryPolicy.clamp(boundary, p.clips.size) }
     fun stored(index: Int) = EditFeatures.boundary(p, index)
     var kind by remember(p.id, initialBoundary) {
         mutableStateOf(stored(boundary)?.kind?.takeIf(TransitionEffects::supported) ?: TransitionEffects.CUT)
@@ -141,14 +144,14 @@ internal fun TransitionScreen(p:VideoProject,back:()->Unit,update:(VideoProject)
                     horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                     items(p.clips.lastIndex) { index ->
                         val a=p.clips[index];val b=p.clips[index+1]
-                        FilterChip(selected=boundary==index,onClick={
+                        FilterChip(selected=safeBoundary==index,onClick={
                             boundary=index
                             kind=stored(index)?.kind?.takeIf(TransitionEffects::supported) ?: TransitionEffects.CUT
                             fadeMs=(stored(index)?.durationMs ?: 500L).coerceIn(250L,1000L).toFloat()
                         },label={Text("${index+1} → ${index+2}: ${a.title.take(10)} / ${b.title.take(10)}")})
                     }
                 }
-                TransitionFramePreview(p.clips[boundary],p.clips[boundary+1],kind,fadeMs.toLong())
+                TransitionFramePreview(p.clips[safeBoundary],p.clips[safeBoundary+1],kind,fadeMs.toLong())
                 Text("Efeito",fontWeight=FontWeight.Bold)
                 Text("Escolha o efeito. As mudanças só são gravadas ao tocar em Aplicar.",
                     style=MaterialTheme.typography.bodySmall)
@@ -205,7 +208,7 @@ internal fun TransitionScreen(p:VideoProject,back:()->Unit,update:(VideoProject)
                 }
             }
             Button(onClick={
-                update(TransitionBatch.apply(p,boundary,kind,fadeMs.toLong(),applyAll))
+                update(TransitionBatch.apply(p,safeBoundary,kind,fadeMs.toLong(),applyAll))
                 back()
             }, modifier=Modifier.fillMaxWidth().padding(bottom=8.dp)) {
                 Icon(Icons.Default.Check,null)

@@ -40,7 +40,7 @@ internal class EditorWorkspaceState {
         if (project.audioTracks.none { it.id == selectedAudioTrackId }) selectedAudioTrackId = null
         if (project.subtitles.none { it.id == selectedSubtitleId }) selectedSubtitleId = null
         if (project.overlays.none { it.id == selectedOverlayId }) selectedOverlayId = project.overlays.firstOrNull()?.id.orEmpty()
-        selectedBoundary = selectedBoundary.coerceIn(0, (project.clips.size - 2).coerceAtLeast(0))
+        selectedBoundary = TransitionBoundaryPolicy.clamp(selectedBoundary, project.clips.size)
         positionMs = positionMs.coerceIn(0L, project.durationMs.coerceAtLeast(0L))
     }
 

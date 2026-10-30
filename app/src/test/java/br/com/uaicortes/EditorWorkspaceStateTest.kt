@@ -49,6 +49,19 @@ class EditorWorkspaceStateTest {
         assertEquals(0, restored.selectedBoundary)
     }
 
+    @Test fun boundaryIsClampedWhenSameProjectLosesClips() {
+        val threeClips = project.copy(clips = project.clips + Clip(
+            id = "clip-3", uri = "content://teste/3", title = "C", sourceDurationMs = 3000L))
+        val state = EditorWorkspaceState.fromTokens(listOf(
+            "1", "transition", "editor", "clip-3", "", "", "", "999", "18000"))
+        state.reconcile(threeClips)
+        assertEquals(1, state.selectedBoundary) // três clipes: índices 0 e 1
+        state.reconcile(project) // mesmo ID, mas clipe removido
+        assertEquals(0, state.selectedBoundary)
+        assertEquals("clip-1", state.selectedClip)
+        assertEquals(15000L, state.positionMs)
+    }
+
     @Test fun deletedSelectionsAreRevalidatedAgainstPersistedProject() {
         val restored = EditorWorkspaceState.fromTokens(
             listOf("1", "editor", "home", "inexistente", "audio", "legenda", "pip", "999", "99999")
@@ -59,7 +72,7 @@ class EditorWorkspaceStateTest {
         assertNull(restored.selectedAudioTrackId)
         assertNull(restored.selectedSubtitleId)
         assertEquals("", restored.selectedOverlayId)
-        assertEquals(1, restored.selectedBoundary)
+        assertEquals(0, restored.selectedBoundary) // duas mídias possuem uma única junção: índice 0
         assertEquals(15000L, restored.positionMs)
     }
 }

@@ -130,3 +130,6 @@
 - v0.1.56: Animar Imagens prepara arquivos PNG temporários sem perdas para evitar JPEG intermediário; manter checagem de espaço livre, limpeza de arquivos de trabalho e rascunho legado. O padrão do editor para instalação nova é 1080p, preservando escolha já salva.
 
 - v0.1.56: verificar espaço projetado para 2 arquivos MP4 mais reserva de 96 MiB antes de exportar e durante o preparo de PNG; não afirmar que essa estimativa garante conclusão.
+
+- v0.1.57: índices de junção são zero-based; com 2 clipes existe 1 junção, índice 0. Ao remover clipes sem trocar ID do projeto, revalidar seleções em `EditorWorkspaceState` e usar `TransitionBoundaryPolicy` antes de acessar `p.clips[index + 1]`. O teste do workflow 50 esperava incorretamente índice 1.
+- v0.1.57: metadados de vídeo da galeria/SAF são obtidos fora da thread UI; só aplicar o lote se o projeto ativo ainda for o original, sem sobrescrever outro projeto. Durações não verificáveis são rejeitadas na importação; manter fallback legado fora desse fluxo por compatibilidade.

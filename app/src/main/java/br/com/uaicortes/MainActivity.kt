@@ -125,7 +125,9 @@ fun UaiApp() {
     val context = LocalContext.current
     val store = remember { ProjectStore(context) }
     val projectController = remember(store) { ProjectController(StoredProjectRepository(store)) }
-    val mediaController = remember(context) { MediaImportController(context) }
+    val mediaController = remember(context) { MediaImportController(context.applicationContext) }
+    val importScope = rememberCoroutineScope()
+    var importingVideos by remember { mutableStateOf(false) }
     val animationDraftStore = remember { ImageAnimationDraftStore(context.applicationContext) }
     var diagnosticsEnabled by remember { mutableStateOf(DiagnosticRecorder.isEnabled()) }
     var theme by remember { mutableStateOf(store.theme()) }
@@ -153,7 +155,7 @@ fun UaiApp() {
     )) { mutableStateListOf<Uri>() }
     var animationDestination by rememberSaveable { mutableStateOf("new") }
     // Sanitiza seleções restauradas, inclusive se o projeto tiver sido excluído.
-    LaunchedEffect(project?.id) {
+    LaunchedEffect(project) {
         if (project == null && animationDestination == "append") animationDestination = "new"
         workspace.reconcile(project, mediaOrigin, mediaAction)
     }
@@ -231,19 +233,41 @@ fun UaiApp() {
     }
     var selectedBoundary by workspace::selectedBoundary
     fun importVideoClips(uris: List<Uri>, persistDocumentAccess: Boolean) {
-        if (uris.isEmpty()) return
-        val imported = mediaController.videoClips(uris, persistDocumentAccess)
-        if (imported.clips.isEmpty()) {
-            android.widget.Toast.makeText(context, "Não foi possível abrir os vídeos selecionados",
-                android.widget.Toast.LENGTH_LONG).show()
-            return
+        if (uris.isEmpty() || importingVideos) return
+        val request = VideoImportRequest(project?.id.orEmpty(), pendingPicker == "new")
+        importingVideos = true
+        importScope.launch {
+            try {
+                // Consultas ao ContentResolver e MediaMetadataRetriever podem demorar.
+                val imported = withContext(Dispatchers.IO) {
+                    mediaController.videoClips(uris, persistDocumentAccess)
+                }
+                if (!request.stillTargets(project?.id.orEmpty())) {
+                    android.widget.Toast.makeText(context, "O projeto mudou durante a importação. Selecione os vídeos novamente.",
+                        android.widget.Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+                if (imported.clips.isEmpty()) {
+                    android.widget.Toast.makeText(context, "Não foi possível abrir os vídeos selecionados",
+                        android.widget.Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+                val updated = projectController.append(project, imported.clips, createNew = request.createNew)
+                write(updated)
+                if (selectedClip.isBlank()) selectedClip = imported.clips.first().id
+                screen = "editor"
+                if (imported.rejected > 0) android.widget.Toast.makeText(context,
+                    "Alguns vídeos não puderam ser importados", android.widget.Toast.LENGTH_LONG).show()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                DiagnosticRecorder.exception("video_import", error)
+                android.widget.Toast.makeText(context, "Falha ao importar os vídeos. Tente novamente.",
+                    android.widget.Toast.LENGTH_LONG).show()
+            } finally {
+                importingVideos = false
+            }
         }
-        val updated = projectController.append(project, imported.clips, createNew = pendingPicker == "new")
-        write(updated)
-        if (selectedClip.isBlank()) selectedClip = imported.clips.first().id
-        screen = "editor"
-        if (imported.rejected > 0) android.widget.Toast.makeText(context,
-            "Alguns vídeos não puderam ser importados", android.widget.Toast.LENGTH_LONG).show()
     }
     fun openGallery(origin: String, action: String) {
         mediaOrigin = origin
@@ -455,6 +479,16 @@ fun UaiApp() {
                     onAutoSubtitles = { screen = "autosubtitle" }) }
                 "export" -> project?.let { ExportScreen(it, store.quality(), ::back) }
             }
+        }
+        if (importingVideos) {
+            AlertDialog(onDismissRequest = {},
+                title = { Text("Importando vídeos") },
+                text = { Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CircularProgressIndicator(modifier = Modifier.size(28.dp))
+                    Text("Lendo duração e informações dos arquivos locais…")
+                } },
+                confirmButton = {})
         }
         pendingProjectDelete?.let { target ->
             AlertDialog(onDismissRequest = { pendingProjectDelete = null },
