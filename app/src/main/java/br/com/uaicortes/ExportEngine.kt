@@ -96,6 +96,7 @@ class ExportEngine(private val context: Context) {
     private var transformer: Transformer? = null
     private var tempFile: File? = null
     private val progressHolder = ProgressHolder()
+    @Volatile private var isSavingToGallery = false
 
     /** Não comece a codificação quando um arquivo local perdeu a permissão de leitura. */
     private fun checkReadable(uriText: String, description: String) {
@@ -163,6 +164,8 @@ class ExportEngine(private val context: Context) {
             progressHolder.progress.coerceIn(0,100) else null
     }
     fun cancel() {
+        // A cópia MediaStore precisa chegar ao fim, com rollback próprio em caso de erro.
+        if (isSavingToGallery) return
         transformer?.cancel()
         transformer = null
         tempFile?.delete()
@@ -172,6 +175,7 @@ class ExportEngine(private val context: Context) {
     fun start(project: VideoProject, height: Int, fileName: String,
               onSaving: () -> Unit = {},
               onSuccess: (Uri) -> Unit, onError: (String) -> Unit) {
+        require(!isSavingToGallery) { "Aguarde a conclusão do salvamento anterior." }
         require(project.clips.isNotEmpty()) { "Projeto sem vídeos" }
         val bitrateBps = VideoExportQuality.videoBitrateBps(height)
         require(context.cacheDir.usableSpace > VideoExportQuality.minimumFreeBytes(
@@ -300,15 +304,27 @@ class ExportEngine(private val context: Context) {
                         "bitrate de vídeo medido=${exportResult.averageVideoBitrate} bps, " +
                         "solicitado=$bitrateBps bps, quadros=${exportResult.videoFrameCount}")
                     // Transformer terminou a renderização, mas a cópia MediaStore ainda não.
+                    isSavingToGallery = true
                     onSaving()
                     Thread {
+                        var savedUri: Uri? = null
+                        var saveError: Exception? = null
                         try {
-                            val uri = saveToGallery(target, requestedName)
-                            android.os.Handler(android.os.Looper.getMainLooper()).post { onSuccess(uri) }
+                            savedUri = saveToGallery(target, requestedName)
                         } catch (e: Exception) {
                             DiagnosticRecorder.exception("export_gallery", e)
-                            android.os.Handler(android.os.Looper.getMainLooper()).post { onError(e.message ?: "Falha ao salvar vídeo") }
-                        } finally { target.delete(); tempFile = null; transformer = null }
+                            saveError = e
+                        } finally {
+                            target.delete()
+                            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                tempFile = null
+                                transformer = null
+                                isSavingToGallery = false
+                                if (saveError != null) onError(saveError?.message ?: "Falha ao salvar vídeo")
+                                else savedUri?.let(onSuccess)
+                                    ?: onError("Não foi possível confirmar o vídeo salvo.")
+                            }
+                        }
                     }.start()
                 }
                 override fun onError(composition: Composition, exportResult: ExportResult,

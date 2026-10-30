@@ -139,3 +139,14 @@
 - v0.1.59: `MediaImportTasks` deve consultar durações e nomes de vídeos/áudio/PiP apenas em dispatcher de IO. Atualizações do `VideoProject` e de estado Compose devem ocorrer no dispatcher principal.
 - v0.1.59: não iniciar importações simultâneas; descartar resultados atrasados ao mudar projeto, tela ou ferramenta. Preservar cancelamento de corrotinas, permissões SAF e o `schemaVersion=4`.
 - v0.1.59: o workflow 51 exigiu imports explícitos de corrotinas. O validador agora verifica a arquitetura com serviço compartilhado, mas a compilação Android real continua obrigatória.
+
+- v0.1.60: `MediaTaskCoordinator` pertence ao ciclo de composição; não reter Activity/Context no serviço nem declarar recuperação de tarefas após rotação/morte do processo. `DisposableEffect` cancela ao sair da composição; a mudança de projeto/tela/ação cancela a importação pendente.
+- v0.1.60: sempre usar `MediaTaskTicket` ao liberar a exclusão mútua. Uma tarefa antiga, mesmo do mesmo tipo, não pode liberar a nova. Propagar `CancellationException` sem reportar falha; nunca gravar projeto após importação cancelada.
+- v0.1.60: testar no CI Gradle, no Android real e em rotação/troca rápida de tela antes de alegar estabilidade definitiva. O botão Cancelar atua na leitura/importação, não no processo de exportação MP4.
+
+- v0.1.61: `EditorProjectViewModel` é dono do catálogo e do projeto ativo; não voltar a duplicar `projects`, `project` ou `activeProjectId` em `remember` da UI. O ViewModel usa `applicationContext` e `ProjectSessionCoordinator`, nunca `Activity`/`Composable`/`Uri` de tarefa.
+- v0.1.61: no `SavedStateHandle` persistir somente o identificador `editor_active_project_id`; recuperar dados através de `ProjectStore`, sem serializar vídeo, mídia, JSON ou trabalhos de exportação. `EditorWorkspaceState` permanece saveable na composição para seleções de interface.
+- v0.1.61: manter snapshots inalterados se operações do repositório lançarem exceção. Não criar projeto fictício ao restaurar um ID que não existe mais. Validar rotação e recuperação após morte de processo em testes Android reais antes de afirmar estabilidade completa.
+
+- v0.1.62: estado do MP4 principal pertence a `ExportTaskViewModel`, não a `remember` do ExportScreen; não serializar `ExportEngine`/Uri/frames/arquivos no SavedStateHandle. Progresso desconhecido deve permanecer indeterminado.
+- v0.1.62: manter tickets de `ExportTaskCoordinator` para ignorar callbacks atrasados; não cancelar o Transformer durante a cópia de arquivo final ao MediaStore; finalizar e limpar na thread principal. Testar rotação, cancelar, sair e falha de espaço no Android antes de afirmar fidelidade.

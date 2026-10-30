@@ -12,18 +12,25 @@ internal enum class MediaTaskKind { VIDEO, AUDIO, OVERLAY }
  * Exclusão mútua sem estado Android. A UI observa o estado Compose separadamente.
  * O término de uma tarefa antiga não libera uma tarefa diferente.
  */
+internal data class MediaTaskTicket(val serial: Long, val kind: MediaTaskKind)
+
+/** Tickets impedem que o finally de uma leitura cancelada solte outra leitura do mesmo tipo. */
 internal class MediaTaskGate {
-    var active: MediaTaskKind? = null
+    private var nextSerial = 0L
+    var active: MediaTaskTicket? = null
         private set
 
-    fun tryStart(kind: MediaTaskKind): Boolean {
-        if (active != null) return false
-        active = kind
-        return true
+    fun tryStart(kind: MediaTaskKind): MediaTaskTicket? {
+        if (active != null) return null
+        return MediaTaskTicket(++nextSerial, kind).also { active = it }
     }
 
-    fun finish(kind: MediaTaskKind) {
-        if (active == kind) active = null
+    fun isActive(ticket: MediaTaskTicket): Boolean = active == ticket
+
+    fun finish(ticket: MediaTaskTicket): Boolean {
+        if (!isActive(ticket)) return false
+        active = null
+        return true
     }
 }
 

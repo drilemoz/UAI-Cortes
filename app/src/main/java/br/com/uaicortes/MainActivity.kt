@@ -20,6 +20,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -30,8 +31,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.launch
 
 internal val Blue = Color(0xFF0866FF)
 internal val Purple = Color(0xFF6954B5)
@@ -67,22 +66,33 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
 @Composable
 fun UaiApp() {
     val context = LocalContext.current
-    val store = remember { ProjectStore(context) }
-    val projectController = remember(store) { ProjectController(StoredProjectRepository(store)) }
+    val projectSession: EditorProjectViewModel = viewModel()
+    val store = projectSession.store
     val mediaController = remember(context) { MediaImportController(context.applicationContext) }
     val importScope = rememberCoroutineScope()
     val mediaTasks = remember(mediaController) { MediaImportTasks(mediaController) }
-    val mediaTaskGate = remember { MediaTaskGate() }
     var activeMediaTask by remember { mutableStateOf<MediaTaskKind?>(null) }
+    val mediaTaskCoordinator = remember(importScope) {
+        MediaTaskCoordinator(importScope,
+            onActiveChange = { activeMediaTask = it },
+            onError = { error ->
+                DiagnosticRecorder.exception("media_import", error)
+                android.widget.Toast.makeText(context, "Não foi possível importar esta mídia",
+                    android.widget.Toast.LENGTH_LONG).show()
+            })
+    }
+    DisposableEffect(mediaTaskCoordinator) {
+        onDispose { mediaTaskCoordinator.cancel() }
+    }
     val animationDraftStore = remember { ImageAnimationDraftStore(context.applicationContext) }
     var diagnosticsEnabled by remember { mutableStateOf(DiagnosticRecorder.isEnabled()) }
     var theme by remember { mutableStateOf(store.theme()) }
     val workspace = rememberSaveable(saver = EditorWorkspaceState.Saver) { EditorWorkspaceState() }
     var screen by workspace::screen
-    // Apenas o ID é salvo no Bundle. O conteúdo sempre é recuperado do ProjectStore.
-    var activeProjectId by rememberSaveable { mutableStateOf("") }
-    var projects by remember { mutableStateOf(store.load()) }
-    var project by remember { mutableStateOf(projects.firstOrNull { it.id == activeProjectId }) }
+    // O ViewModel mantém o cadastro durante rotação; SavedStateHandle preserva apenas o ID.
+    val activeProjectId = projectSession.activeProjectId
+    val projects = projectSession.projects
+    val project = projectSession.project
     var selectedClip by workspace::selectedClip
     var selectedAudioTrackId by workspace::selectedAudioTrackId
     var selectedSubtitleId by workspace::selectedSubtitleId
@@ -117,17 +127,13 @@ fun UaiApp() {
         surface = if(theme=="AMOLED") Color.Black else Color(0xFF202124))
     else lightColorScheme(primary = Blue, background = LightBg, surface = Color.White)
     fun write(p: VideoProject) {
-        val snapshot = projectController.save(p)
-        project = snapshot.active; activeProjectId = snapshot.activeId; projects = snapshot.projects
+        projectSession.save(p)
         DiagnosticRecorder.action(screen, "project_saved")
     }
     fun openProject(id: String) {
-        val snapshot = projectController.open(id)
-        projects = snapshot.projects
-        project = snapshot.active
-        activeProjectId = snapshot.activeId
-        if (snapshot.active != null) {
-            selectedClip = TrimTimelineEdit.resumeClipId(snapshot.active)
+        val opened = projectSession.open(id)
+        if (opened != null) {
+            selectedClip = TrimTimelineEdit.resumeClipId(opened)
             screen = "editor"
         } else {
             workspace.reconcile(null)
@@ -178,34 +184,21 @@ fun UaiApp() {
         screen = "pip"
     }
     var selectedBoundary by workspace::selectedBoundary
-    /** Uma única tarefa de metadados por vez, com cancelamento pelo escopo Compose. */
-    fun startMediaTask(kind: MediaTaskKind, operation: suspend () -> Unit) {
-        if (!mediaTaskGate.tryStart(kind)) {
+    /** Importações são canceláveis e vinculadas ao contexto que iniciou a leitura. */
+    fun startMediaTask(kind: MediaTaskKind, origin: MediaTaskOrigin, operation: suspend () -> Unit) {
+        if (!mediaTaskCoordinator.start(kind, origin, operation)) {
             android.widget.Toast.makeText(context, "Aguarde a importação atual terminar",
                 android.widget.Toast.LENGTH_SHORT).show()
-            return
         }
-        activeMediaTask = kind
-        importScope.launch {
-            try {
-                operation()
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: Exception) {
-                DiagnosticRecorder.exception("media_import", error)
-                android.widget.Toast.makeText(context, "Não foi possível importar esta mídia",
-                    android.widget.Toast.LENGTH_LONG).show()
-            } finally {
-                mediaTaskGate.finish(kind)
-                activeMediaTask = mediaTaskGate.active
-            }
-        }
+    }
+    LaunchedEffect(activeProjectId, screen, mediaAction, mediaTaskCoordinator) {
+        mediaTaskCoordinator.cancelIfDestinationChanged(activeProjectId, screen, mediaAction)
     }
     fun importVideoClips(uris: List<Uri>, persistDocumentAccess: Boolean) {
         if (uris.isEmpty()) return
         val request = VideoImportRequest(project?.id.orEmpty(), pendingPicker == "new")
         val origin = MediaTaskOrigin(project?.id.orEmpty(), screen, mediaAction)
-        startMediaTask(MediaTaskKind.VIDEO) {
+        startMediaTask(MediaTaskKind.VIDEO, origin) {
             val imported = mediaTasks.videos(uris, persistDocumentAccess)
             if (!request.stillTargets(project?.id.orEmpty()) ||
                 !origin.matches(project?.id.orEmpty(), screen, mediaAction)) {
@@ -218,7 +211,7 @@ fun UaiApp() {
                     android.widget.Toast.LENGTH_LONG).show()
                 return@startMediaTask
             }
-            val updated = projectController.append(project, imported.clips, createNew = request.createNew)
+            val updated = projectSession.append(project, imported.clips, createNew = request.createNew)
             write(updated)
             if (selectedClip.isBlank()) selectedClip = imported.clips.first().id
             screen = "editor"
@@ -254,7 +247,7 @@ fun UaiApp() {
             val initialProject = project
             val insertionCursor = positionMs
             val selectedId = selectedOverlayId
-            startMediaTask(MediaTaskKind.OVERLAY) {
+            startMediaTask(MediaTaskKind.OVERLAY, origin) {
                 val remaining = ((initialProject?.durationMs ?: 0L) - insertionCursor).coerceAtLeast(0L)
                 val loaded = mediaTasks.overlay(uri, remaining)
                 if (!origin.matches(project?.id.orEmpty(), screen, mediaAction) ||
@@ -277,7 +270,7 @@ fun UaiApp() {
             val initialProject = project
             val origin = MediaTaskOrigin(project?.id.orEmpty(), screen, mediaAction)
             val insertionCursor = positionMs
-            startMediaTask(MediaTaskKind.AUDIO) {
+            startMediaTask(MediaTaskKind.AUDIO, origin) {
                 val track = mediaTasks.audio(uri, initialProject?.durationMs ?: 0L, insertionCursor)
                 if (!origin.matches(project?.id.orEmpty(), screen, mediaAction) || project !== initialProject) {
                     android.widget.Toast.makeText(context, "O projeto mudou. Selecione o áudio novamente.",
@@ -466,7 +459,9 @@ fun UaiApp() {
                     CircularProgressIndicator(modifier = Modifier.size(28.dp))
                     Text("Lendo duração e informações dos arquivos locais…")
                 } },
-                confirmButton = {})
+                confirmButton = { TextButton(onClick = { mediaTaskCoordinator.cancel() }) {
+                    Text("Cancelar importação")
+                } })
         }
         pendingProjectDelete?.let { target ->
             AlertDialog(onDismissRequest = { pendingProjectDelete = null },
@@ -474,9 +469,9 @@ fun UaiApp() {
                 title = { Text("Excluir projeto?") },
                 text = { Text("O projeto \"${target.title}\" e suas edições salvas serão removidos. Os vídeos e fotos originais não serão apagados. Esta ação não pode ser desfeita.") },
                 confirmButton = { TextButton(onClick = {
-                    val snapshot = projectController.delete(target.id, activeProjectId)
-                    projects = snapshot.projects
-                    if (project?.id == target.id) { project = null; activeProjectId = ""; workspace.reconcile(null) }
+                    val wasActive = project?.id == target.id
+                    projectSession.delete(target.id)
+                    if (wasActive) workspace.reconcile(null)
                     pendingProjectDelete = null
                 }) { Text("Excluir projeto", color = MaterialTheme.colorScheme.error) } },
                 dismissButton = { TextButton(onClick = { pendingProjectDelete = null }) { Text("Cancelar") } })

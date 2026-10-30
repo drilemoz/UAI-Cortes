@@ -6,14 +6,18 @@ import org.junit.Test
 class MediaImportTasksTest {
     @Test fun singleTaskAtATimeAndSafeRelease() {
         val gate = MediaTaskGate()
-        assertTrue(gate.tryStart(MediaTaskKind.VIDEO))
-        assertFalse(gate.tryStart(MediaTaskKind.AUDIO))
-        assertFalse(gate.tryStart(MediaTaskKind.VIDEO))
-        gate.finish(MediaTaskKind.AUDIO)
-        assertEquals(MediaTaskKind.VIDEO, gate.active)
-        gate.finish(MediaTaskKind.VIDEO)
+        val first = requireNotNull(gate.tryStart(MediaTaskKind.VIDEO))
+        assertNull(gate.tryStart(MediaTaskKind.AUDIO))
+        assertNull(gate.tryStart(MediaTaskKind.VIDEO))
+        assertFalse(gate.finish(MediaTaskTicket(0L, MediaTaskKind.AUDIO)))
+        assertEquals(first, gate.active)
+        assertTrue(gate.finish(first))
+        val second = requireNotNull(gate.tryStart(MediaTaskKind.VIDEO))
+        assertNotEquals(first, second)
+        assertFalse(gate.finish(first))
+        assertEquals(second, gate.active)
+        assertTrue(gate.finish(second))
         assertNull(gate.active)
-        assertTrue(gate.tryStart(MediaTaskKind.OVERLAY))
     }
 
     @Test fun lateResultCannotApplyToAnotherToolOrRoute() {

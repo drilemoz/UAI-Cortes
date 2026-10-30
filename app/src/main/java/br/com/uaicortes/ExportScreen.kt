@@ -1,6 +1,5 @@
 package br.com.uaicortes
 
-import android.net.Uri
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -22,13 +22,24 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import kotlinx.coroutines.delay
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 // Extraído da MainActivity na v0.1.53 para reutilização de componentes.
 
 @Composable
 internal fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
     val context=LocalContext.current
-    val engine=remember { ExportEngine(context) }
+    val exportVm: ExportTaskViewModel = viewModel()
+    val exportState = exportVm.task
+    val working = exportState.working
+    val progress = exportState.progress
+    val exportPhase = exportState.phase
+    val elapsedSeconds = exportState.elapsedSeconds
+    val exportingName = exportState.fileName
+    val result = exportState.message
+    val savedVideo = exportVm.savedVideo
+    val savedName = exportVm.savedName
+    LaunchedEffect(p.id) { exportVm.setProject(p.id) }
     val previewPlayer=remember { diagnosticPlayer(context) }
     var previewPlaying by remember { mutableStateOf(false) }
     var exportClipIndex by remember(p.id) { mutableIntStateOf(0) }
@@ -56,30 +67,9 @@ internal fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
         })
         previewPlayer.prepare()
     }
-    var name by remember(p.id) {mutableStateOf("UaiCortes_001.mp4")}
-    var quality by remember {mutableIntStateOf(defaultQuality.takeIf { it == 720 || it == 1080 } ?: 1080)}
-    var working by remember {mutableStateOf(false)}
-    // O percentual só é exibido quando o Media3 o disponibiliza de verdade.
-    var progress by remember {mutableStateOf<Int?>(null)}
-    var exportPhase by remember {mutableStateOf(ExportPhase.PREPARING)}
-    var elapsedSeconds by remember {mutableLongStateOf(0L)}
-    var startedAtMs by remember {mutableLongStateOf(0L)}
+    var name by rememberSaveable(p.id) {mutableStateOf("UaiCortes_001.mp4")}
+    var quality by rememberSaveable(p.id) {mutableIntStateOf(defaultQuality.takeIf { it == 720 || it == 1080 } ?: 1080)}
     var confirmCancelExport by remember {mutableStateOf(false)}
-    var exportingName by remember {mutableStateOf("")}
-    var result by remember {mutableStateOf("")}
-    // Estados do diálogo de sucesso devem pertencer ao ExportScreen, ANTES dos callbacks.
-    // Se o projeto mudar, a confirmação anterior não pode apontar para outro MP4.
-    var savedName by remember(p.id) { mutableStateOf("") }
-    var savedVideo by remember(p.id) { mutableStateOf<Uri?>(null) }
-    DisposableEffect(engine) {onDispose{engine.cancel()} }
-    LaunchedEffect(working) {
-        while (working) {
-            elapsedSeconds = ((android.os.SystemClock.elapsedRealtime() - startedAtMs)
-                .coerceAtLeast(0L) / 1000L)
-            if (exportPhase == ExportPhase.RENDERING) progress = engine.progressOrNull()
-            delay(400)
-        }
-    }
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal=20.dp)) {
         Heading("Exportar vídeo",{if(!working)back() else confirmCancelExport=true},
             accessory={Icon(Icons.Default.Movie,tint=Blue,contentDescription=null)})
@@ -156,39 +146,9 @@ internal fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
         Spacer(Modifier.height(18.dp))
         BlueButton("↓ Salvar vídeo",onClick={
             if(name.isNotBlank() && p.clips.isNotEmpty() && !working) {
-                DiagnosticRecorder.action("export", "export_start_${quality}p")
                 previewPlayer.pause()
                 previewPlaying = false
-                result = ""
-                progress = null
-                exportPhase = ExportPhase.PREPARING
-                startedAtMs = android.os.SystemClock.elapsedRealtime()
-                elapsedSeconds = 0L
-                exportingName = name.trim().let { if(it.endsWith(".mp4",true)) it else "$it.mp4" }
-                working = true
-                runCatching { engine.start(p,quality,name,
-                    onSaving = {
-                        exportPhase = ExportPhase.SAVING
-                        progress = null
-                    },
-                    onSuccess = { uri ->
-                        working = false
-                        DiagnosticRecorder.action("export", "export_success")
-                        savedName = exportingName
-                        savedVideo = uri
-                    },
-                    onError = { error ->
-                        working = false
-                        DiagnosticRecorder.failure("export", error)
-                        result = "Erro: $error"
-                    })
-                }.onSuccess {
-                    if (working && exportPhase == ExportPhase.PREPARING) exportPhase = ExportPhase.RENDERING
-                }.onFailure {
-                    working = false
-                    DiagnosticRecorder.exception("export_start",it)
-                    result = "Erro: ${it.message ?: "Falha ao iniciar a exportação"}"
-                }
+                exportVm.start(p, quality, name)
             }
         },modifier=Modifier.fillMaxWidth(),enabled=!working && name.isNotBlank()&&p.clips.isNotEmpty())
         if(result.isNotBlank()) Text(result,modifier=Modifier.padding(vertical=15.dp),
@@ -235,7 +195,7 @@ internal fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
                         Text("Tempo decorrido: ${ExportProgressUi.elapsedLabel(elapsedSeconds)}",
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(10.dp))
-                        Text("Qualidade: ${quality}p · MP4",style=MaterialTheme.typography.bodySmall,
+                        Text("Qualidade: ${exportState.quality}p · MP4",style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Column(horizontalAlignment=Alignment.CenterHorizontally,
@@ -260,18 +220,14 @@ internal fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
             text={Text("O vídeo parcial será descartado. O projeto e os arquivos originais serão preservados.")},
             confirmButton={TextButton(onClick={
                 confirmCancelExport=false
-                engine.cancel()
-                working=false
-                progress=null
-                result="Exportação cancelada."
-                DiagnosticRecorder.action("export","export_cancelled")
+                exportVm.cancel()
             }) {Text("Cancelar exportação")}},
             dismissButton={TextButton(onClick={confirmCancelExport=false}) {Text("Continuar")}})
     }
     // Confirmação compartilhada com Animar Imagens, somente após MediaStore concluir.
     savedVideo?.let { savedUri ->
         VideoSavedDialog(uri=savedUri,name=savedName,editLabel="Voltar ao editor",
-            onEdit={savedVideo=null;back()},onClose={savedVideo=null})
+            onEdit={exportVm.dismissSaved();back()},onClose={exportVm.dismissSaved()})
     }
 
 }

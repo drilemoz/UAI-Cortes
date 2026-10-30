@@ -19,10 +19,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*60',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.59"',gradle)
-assert 'Versão 0.1.59 (60)' in ui
-for label in ["VERSION: '0.1.59'", "VERSION_CODE: '60'", 'TAG="v$VERSION"',
+assert re.search(r'versionCode\s*=\s*63',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.62"',gradle)
+assert 'Versão 0.1.62 (63)' in ui
+for label in ["VERSION: '0.1.62'", "VERSION_CODE: '63'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -206,7 +206,7 @@ assert 'SubtitleStyles.normalizeLineSpacing(j.optInt(' in model
 assert all(x in ui for x in [
     'Sombra: ${draft.shadowOffsetDp}', 'Espaçamento:',
     'SubtitleStyles.alignments.forEach', 'Shadow(', 'lineHeight=textLineHeight',
-    'textAlign=alignment', 'Versão 0.1.59 (60)'
+    'textAlign=alignment', 'Versão 0.1.62 (63)'
 ])
 assert all(x in fx for x in ['class SubtitleShadowSpan(', 'class SubtitleLineSpacingSpan(',
     'AlignmentSpan.Standard(layoutAlign)', 'SubtitleStyles.ALIGN_LEFT -> left.toFloat()',
@@ -215,9 +215,9 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.59'" in package_script and 'VERSION_CODE = 60' in package_script
-assert 'versionCode 60' in gradle and 'isUniversalApk = true' in gradle
-print('OK: versão atual 0.1.59 / versionCode 60, compatibilidade das legendas, JSON legado, APKs')
+assert "VERSION = '0.1.62'" in package_script and 'VERSION_CODE = 63' in package_script
+assert 'versionCode 63' in gradle and 'isUniversalApk = true' in gradle
+print('OK: versão atual 0.1.62 / versionCode 63, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
 assert 'import androidx.compose.ui.graphics.StrokeJoin' in ui
@@ -233,7 +233,7 @@ assert 'TrimQuickAction(Icons.Default.Save, "Salvar"' in ui
 assert 'TrimSaveLogic.applyPending(p, clip.id, begin, finish)' in ui
 assert 'onSaveHome = { saved -> write(saved); screen = "home" }' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/TrimSaveLogicTest.kt').exists()
-print('OK: versão atual 0.1.59 / versionCode 60, rolagem circular, salvar projeto e corte antes de ir à Home')
+print('OK: versão atual 0.1.62 / versionCode 63, rolagem circular, salvar projeto e corte antes de ir à Home')
 
 # v0.1.34: cortes retornam à metade direita, a faixa mostra partes selecionáveis,
 # e um ponto de fonte persiste sem alterar esquema legado.
@@ -248,7 +248,7 @@ assert 'lastTrimCutClipId = newId' in trim_edit and 'lastTrimCutSourceMs = sourc
 assert 'EditFeatures.repositionAfterDelete(project, remaining)' in trim_edit
 assert 'undoLastCut' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/TrimTimelineEditTest.kt').exists()
-print('OK: versão atual 0.1.59 / versionCode 60, faixa de trechos, seleção e restauração do último corte')
+print('OK: versão atual 0.1.62 / versionCode 63, faixa de trechos, seleção e restauração do último corte')
 
 # v0.1.34: uma timeline geral, lista virtualizada e vídeo fixo no topo.
 assert 'internal fun SubtitleCompactTimeline(' in ui
@@ -261,7 +261,7 @@ assert 'SubtitleTimelineEditor(p.subtitles,p.durationMs' not in ui
 assert 'p.subtitles.sortedBy { it.startMs }.forEachIndexed' not in ui
 assert (root/'app/src/main/java/br/com/uaicortes/SubtitleCompactLayout.kt').exists()
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleCompactLayoutTest.kt').exists()
-print('OK: versão atual 0.1.59 / versionCode 60, timeline unica, video fixo e legendas compactas')
+print('OK: versão atual 0.1.62 / versionCode 63, timeline unica, video fixo e legendas compactas')
 
 # v0.1.34: busca, navegação e exclusão segura no editor de legendas.
 nav=(root/'app/src/main/java/br/com/uaicortes/SubtitleListNavigation.kt').read_text()
@@ -274,7 +274,7 @@ assert 'pendingDeleteId?.let' in ui and 'Excluir esta legenda?' in ui
 assert 'SubtitleListNavigation.readSrtBounded(reader)' in ui
 assert 'fun readSrtBounded(' in nav and 'maxCharacters + 1' in nav
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleListNavigationTest.kt').exists()
-print('OK: versão atual 0.1.59 / versionCode 60, busca e navegação, exclusão confirmada e limite SRT')
+print('OK: versão atual 0.1.62 / versionCode 63, busca e navegação, exclusão confirmada e limite SRT')
 
 # v0.1.35: prévia se adapta ao aspecto/rotação em todas as telas de vídeo.
 layout=(root/'app/src/main/java/br/com/uaicortes/AdaptiveVideoLayout.kt').read_text()
@@ -288,7 +288,7 @@ assert 'previewSubtitleScale(cue,textLimitPx.toInt(),' in ui
 assert 'frameWidthDp * .94f' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/AdaptiveVideoLayoutTest.kt').exists()
 assert 'mediaAspect(context' in ui and 'METADATA_KEY_VIDEO_ROTATION' in ui
-print('OK: v0.1.59 / versionCode 60, proporção da prévia e largura de legenda responsivas')
+print('OK: v0.1.62 / versionCode 63, proporção da prévia e largura de legenda responsivas')
 
 # Regressão CI 31: o callback de importação SRT usa searchQuery; a declaração
 # de estado Compose deve aparecer ANTES do callback para resolver o identificador.
@@ -397,27 +397,21 @@ assert 'SubtitleExportSizing.textBoxWidth(videoWidth)' in fx
 assert 'setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE)' in fx
 assert 'RelativeSizeSpan(relativeFontSize)' in fx
 assert 'VideoSavedDialog(uri=savedUri' in export
-assert 'savedVideo = uri' in export and 'onSuccess = { uri ->' in export
+assert 'savedVideo = uri' in (root/'app/src/main/java/br/com/uaicortes/ExportTaskViewModel.kt').read_text() and 'onSuccess = { uri ->' in (root/'app/src/main/java/br/com/uaicortes/ExportTaskViewModel.kt').read_text()
 assert all(t in (root/'app/src/main/java/br/com/uaicortes/VideoSavedDialog.kt').read_text() for t in ['Vídeo salvo!', 'Abrir vídeo', 'Compartilhar'])
 assert 'Voltar ao editor' in export and 'Filmes/UaiCortes' in (root/'app/src/main/java/br/com/uaicortes/VideoSavedDialog.kt').read_text()
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleExportSizingTest.kt').exists()
 print('OK: v0.1.52, legenda limitada ao quadro e confirmação em tela cheia após exportação')
 
-# Regressão workflow 37: tela de exportação usa `savedName` e `savedVideo`
-# para sucesso em tela cheia. Ambos devem existir no escopo do ExportScreen
-# ANTES do callback onSuccess, mesmo que a sintaxe Kotlin pareça válida.
-export_screen=ui[ui.index('internal fun ExportScreen('):ui.index('/** Calcula proporção', ui.index('internal fun ExportScreen('))]
-for declaration in [
-    'var savedName by remember(p.id) { mutableStateOf("") }',
-    'var savedVideo by remember(p.id) { mutableStateOf<Uri?>(null) }',
-]:
-    assert export_screen.count(declaration)==1, f'estado ausente/duplicado no ExportScreen: {declaration}'
-    assert export_screen.index(declaration)<export_screen.index('onSuccess = { uri ->'), (
-        'estado da confirmação deve existir antes do callback de exportação'
-    )
-assert export_screen.count('savedVideo = uri')==1
-assert 'savedVideo?.let { savedUri ->' in export_screen
-assert 'VideoSavedDialog(uri=savedUri,name=savedName' in export_screen
+# Regressão workflow 37: o resultado deve existir antes da observação pela tela.
+# A partir da v0.1.62, o ViewModel gerencia ambos os estados, não remember local.
+export_vm_source=(root/'app/src/main/java/br/com/uaicortes/ExportTaskViewModel.kt').read_text()
+assert 'var savedName by mutableStateOf("")' in export_vm_source
+assert 'var savedVideo by mutableStateOf<Uri?>(null)' in export_vm_source
+assert export_vm_source.index('var savedVideo by') < export_vm_source.index('onSuccess = { uri ->')
+assert export_vm_source.count('savedVideo = uri') == 1
+assert 'val savedVideo = exportVm.savedVideo' in export
+assert 'savedVideo?.let { savedUri ->' in export
 print('OK: regressão workflow 37 — savedName/savedVideo declarados antes do callback e diálogo')
 
 # v0.1.52: a galeria MediaStore é o seletor visual de todas as importações de vídeo/imagem.
@@ -431,7 +425,7 @@ assert 'GalleryRules.matches(' in browser and 'Galeria de vídeos' in browser
 assert 'READ_MEDIA_VISUAL_USER_SELECTED' in browser
 assert 'videoPicker.launch(arrayOf("video/*"))' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/MediaGalleryRulesTest.kt').is_file()
-print('OK: v0.1.59 / versionCode 60, galeria visual unificada e seletor Android alternativo')
+print('OK: v0.1.62 / versionCode 63, galeria visual unificada e seletor Android alternativo')
 
 # v0.1.52: interface de exportação em tela cheia, sem porcentagem fictícia.
 progress_ui=(root/'app/src/main/java/br/com/uaicortes/ExportProgressUi.kt').read_text()
@@ -442,7 +436,7 @@ assert 'Tempo decorrido: ${ExportProgressUi.elapsedLabel(elapsedSeconds)}' in ui
 assert 'ExportProgressUi.canCancel(exportPhase)' in ui
 assert 'confirmCancelExport && working' in ui
 assert 'savedVideo?.let { savedUri ->' in ui
-assert 'onSaving = {' in ui and 'ExportPhase.SAVING' in ui
+assert 'onSaving = {' in export_vm_source and 'ExportPhase.SAVING' in (root/'app/src/main/java/br/com/uaicortes/ExportTaskCoordinator.kt').read_text()
 assert 'fun progressOrNull(): Int?' in source
 assert 'if (t.getProgress(progressHolder) == Transformer.PROGRESS_STATE_AVAILABLE)' in source
 assert 'onSaving: () -> Unit = {}' in source and 'onSaving()' in source
@@ -498,7 +492,7 @@ assert 'project.textWatermark?.toSubtitle(project.durationMs)' in source
 assert 'textLayers += TimedSubtitleOverlay(listOf(watermarkCue), globalStartMs)' in source
 assert 'OverlayEffect(textLayers)' in source
 assert (root/'app/src/test/java/br/com/uaicortes/TextWatermarkTest.kt').exists()
-print('OK: v0.1.59 / versionCode 60, marca de texto em prévia/editor/MP4 e JSON legado')
+print('OK: v0.1.62 / versionCode 63, marca de texto em prévia/editor/MP4 e JSON legado')
 
 # v0.1.52: transcrição offline real e galeria de projetos segura.
 auto=(root/'app/src/main/java/br/com/uaicortes/AutoSubtitleEngine.kt').read_text()
@@ -511,7 +505,7 @@ assert 'Recognizer(model, RATE.toFloat())' in auto and 'currentCoroutineContext(
 assert 'vosk-model-small-pt-0.3.zip' in auto and 'MAX_EXTRACTED' in auto
 assert 'Passo 1' in auto_ui and 'Passo 2' in auto_ui and 'Passo 3' in auto_ui
 assert 'AutoSubtitleScreen(current' in ui and 'onAutoSubtitles' in ui
-assert 'pendingProjectDelete' in ui and 'Excluir projeto?' in ui and 'projectController.delete(target.id, activeProjectId)' in ui
+assert 'pendingProjectDelete' in ui and 'Excluir projeto?' in ui and 'projectSession.delete(target.id)' in ui
 assert 'getScaledFrameAtTime' in ui and 'Miniatura do projeto' in ui
 assert 'ClipMotionTransitionEffect(' in source and 'MatrixTransformation' in motion
 assert 'ZOOM_IN' in (root/'app/src/main/java/br/com/uaicortes/TransitionEffects.kt').read_text()
@@ -530,7 +524,7 @@ assert 'ImageAnimationPlan.frame' in anim and 'ImageAnimationPlan.frame' in engi
 assert 'MediaStore.Video.Media.IS_PENDING' in saver and 'VIDEO_H264' in engine
 assert 'Cancelar exportação' in anim and 'onUseInEditor' in anim and 'onOrderChanged' in anim
 assert 'MAX_IMAGES = 80' in plan and 'secondsPerImage: Int = 5' in plan
-print('OK: v0.1.59 / versionCode 60, animar imagens offline, galeria, preview, MP4 e integração')
+print('OK: v0.1.62 / versionCode 63, animar imagens offline, galeria, preview, MP4 e integração')
 
 # Regressão do NullPointerException do progresso em Animar Imagens.
 anim=(root/'app/src/main/java/br/com/uaicortes/AnimateImagesScreen.kt').read_text()
@@ -554,7 +548,7 @@ assert all(t in anim for t in ['Salvar edição das imagens?', 'confirmExit', 'V
 assert 'progress!!' not in anim and 'onUseInEditor(uri)' in anim
 assert 'VideoSavedDialog(uri=savedUri' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/ImageAnimationDraftRulesTest.kt').is_file()
-print('OK: v0.1.59 / versionCode 60, rascunho, voltar, sucesso compartilhado e ajustes padronizados')
+print('OK: v0.1.62 / versionCode 63, rascunho, voltar, sucesso compartilhado e ajustes padronizados')
 
 
 # v0.1.56: contratos de modularização e serviços compartilhados.
@@ -575,16 +569,26 @@ assert 'GalleryVideoSaver.save(context, file, fileName)' in source
 assert 'GalleryVideoSaver.save(' in engine
 assert "IS_PENDING, 1" in saver and "IS_PENDING, 0" in saver
 assert 'projectCollectionCodecRoundTrip' in (root/'app/src/test/java/br/com/uaicortes/ProjectStoreTest.kt').read_text()
-print('OK: v0.1.59 / 60, modularização, estado transitório, MediaStore único e backup fail-closed')
+print('OK: v0.1.62 / 63, modularização, estado transitório, MediaStore único e backup fail-closed')
 
 # v0.1.56: restauração conservadora da navegação sem serializar mídia no Bundle.
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
 state=(app_files/'EditorWorkspaceState.kt').read_text()
 assert 'rememberSaveable(saver = EditorWorkspaceState.Saver)' in main
-assert 'activeProjectId by rememberSaveable' in main
-assert 'projects.firstOrNull { it.id == activeProjectId }' in main
-assert 'activeProjectId = snapshot.activeId' in main
+vm = (app_files/'EditorProjectViewModel.kt').read_text()
+session = (app_files/'ProjectSessionCoordinator.kt').read_text()
+assert 'val projectSession: EditorProjectViewModel = viewModel()' in main
+assert 'val activeProjectId = projectSession.activeProjectId' in main
+assert 'val project = projectSession.project' in main
+assert 'val projects = projectSession.projects' in main
+assert 'state[ACTIVE_ID] = it' in vm
+assert 'ProjectController(StoredProjectRepository(store))' in vm
+assert all(token in vm for token in ['fun save(', 'fun open(', 'fun delete(', 'fun append('])
+assert 'state[ACTIVE_ID]' in vm and 'state[ACTIVE_ID] ?: ""' in vm
+assert 'projectController.' not in main
+assert 'controller.load(restoredId)' in session
+assert (root/'app/src/test/java/br/com/uaicortes/ProjectSessionCoordinatorTest.kt').exists()
 assert 'EditorNavigation.back(' in main and 'workspace.reconcile(project, mediaOrigin, mediaAction)' in main
 assert 'listSaver<androidx.compose.runtime.snapshots.SnapshotStateList<Uri>, String>' in main
 assert 'val Saver: Saver<EditorWorkspaceState, ArrayList<String>>' in state
@@ -593,7 +597,7 @@ assert 'fun restoreRoute(' in nav and 'fun back(' in nav
 assert 'VideoProject' not in state.split('snapshotTokens()')[1].split('companion object')[0]
 assert (root/'app/src/test/java/br/com/uaicortes/EditorNavigationTest.kt').exists()
 assert (root/'app/src/test/java/br/com/uaicortes/EditorWorkspaceStateTest.kt').exists()
-print('OK: v0.1.59 / 60, saved state reduzido, projeto por ID, navegação e testes de recuperação')
+print('OK: v0.1.62 / 63, saved state reduzido, projeto por ID, navegação e testes de recuperação')
 
 # v0.1.56: controllers extraídos da atividade e testes de regressão.
 operations = (root/'app/src/main/java/br/com/uaicortes/ProjectOperations.kt').read_text()
@@ -603,11 +607,11 @@ main = (root/'app/src/main/java/br/com/uaicortes/MainActivity.kt').read_text()
 assert all(v in operations for v in ['class ProjectController(', 'interface ProjectRepository', 'fun delete(', 'fun append('])
 assert all(v in pip_operations for v in ['object OverlayOperations', 'fun insert(', 'fun apply(', 'fun remove('])
 assert all(v in import_operations for v in ['object MediaImportRules', 'class MediaImportController', 'fun videoClips(', 'fun audio('])
-assert all(v in main for v in ['projectController.save(p)', 'projectController.append(', 'OverlayOperations.apply(', 'OverlayOperations.insert(', 'mediaTasks.videos('])
+assert all(v in main for v in ['projectSession.save(p)', 'projectSession.append(', 'OverlayOperations.apply(', 'OverlayOperations.insert(', 'mediaTasks.videos('])
 assert 'store.save(p)' not in main and 'store.delete(target.id)' not in main
 for name in ['ProjectOperationsTest.kt', 'OverlayOperationsTest.kt', 'MediaImportOperationsTest.kt']:
     assert (root/'app/src/test/java/br/com/uaicortes'/name).exists()
-print('OK: v0.1.59 / 60, controllers projetos/PiP/importação e testes')
+print('OK: v0.1.62 / 63, controllers projetos/PiP/importação e testes')
 
 # v0.1.56: o Media3 recebe solicitação explícita de bitrate nos dois exportadores.
 quality=(root/'app/src/main/java/br/com/uaicortes/VideoExportQuality.kt').read_text()
@@ -640,19 +644,57 @@ assert all((root/'app/src/test/java/br/com/uaicortes'/n).exists() for n in [
  'TransitionBoundaryPolicyTest.kt','MediaImportJobPolicyTest.kt'])
 print('OK: v0.1.57, junção zero-based (workflow 50) e importação verificada em IO')
 
-# v0.1.59: serviços de metadados executados em IO; UI não consulta áudio/PiP síncronos.
-from collections import Counter
-coroutine_imports = Counter(re.findall(r'^import (kotlinx\.coroutines\.[A-Za-z0-9_]+)$', main, re.MULTILINE))
-for required in ['kotlinx.coroutines.launch', 'kotlinx.coroutines.CancellationException']:
-    assert coroutine_imports[required] == 1, f'Import ausente/duplicado: {required}'
-assert 'importScope.launch {' in main and 'catch (cancelled: CancellationException)' in main
-assert 'throw cancelled' in main
-assert all(s in main for s in ['MediaTaskGate()', 'MediaImportTasks(mediaController)', 'startMediaTask(MediaTaskKind.VIDEO)',
-                              'startMediaTask(MediaTaskKind.AUDIO)', 'startMediaTask(MediaTaskKind.OVERLAY)'])
+# v0.1.62: serviços de metadados em IO; trabalhos canceláveis e vinculados à rota.
+assert 'rememberCoroutineScope()' in main and 'MediaTaskCoordinator(importScope,' in main
+assert 'catch (cancelled: CancellationException)' not in main  # tratamento fica no coordenador
+assert all(s in main for s in ['MediaImportTasks(mediaController)', 'startMediaTask(MediaTaskKind.VIDEO, origin)',
+                              'startMediaTask(MediaTaskKind.AUDIO, origin)', 'startMediaTask(MediaTaskKind.OVERLAY, origin)'])
 assert 'mediaController.duration(uri)' not in main and 'mediaController.title(uri)' not in main
-assert 'if (activeMediaTask != null)' in main
+assert 'if (activeMediaTask != null)' in main and 'Text("Cancelar importação")' in main
+assert 'DisposableEffect(mediaTaskCoordinator)' in main
+assert 'mediaTaskCoordinator.cancelIfDestinationChanged(activeProjectId, screen, mediaAction)' in main
 media_tasks = (app_files/'MediaImportTasks.kt').read_text()
+coordinator = (app_files/'MediaTaskCoordinator.kt').read_text()
 assert all(s in media_tasks for s in ['withContext(ioDispatcher)', 'fun tryStart(', 'fun matches(',
-                                     'suspend fun videos(', 'suspend fun audio(', 'suspend fun overlay('])
+                                     'suspend fun videos(', 'suspend fun audio(', 'suspend fun overlay(',
+                                     'data class MediaTaskTicket', 'fun isActive(ticket: MediaTaskTicket)'])
+assert all(s in coordinator for s in ['CoroutineStart.LAZY', 'val ticket = gate.tryStart(kind)',
+                                      'if (gate.finish(ticket))', 'previous?.cancel()',
+                                      'catch (cancelled: CancellationException)', 'throw cancelled'])
 assert (root/'app/src/test/java/br/com/uaicortes/MediaImportTasksTest.kt').exists()
-print('OK: v0.1.59, imports corrotinas, tarefas de mídia em IO, exclusão mútua e destino protegido')
+assert (root/'app/src/test/java/br/com/uaicortes/MediaTaskCoordinatorTest.kt').exists()
+print('OK: v0.1.62, cancelamento e identidade de tarefa, dispatcher IO, destino protegido')
+
+# v0.1.62: o ViewModel gerencia projetos; mídia/sessão inteira nunca no SavedStateHandle.
+vm = (app_files/'EditorProjectViewModel.kt').read_text()
+session = (app_files/'ProjectSessionCoordinator.kt').read_text()
+assert 'lifecycle-viewmodel-compose:2.9.0' in gradle
+assert 'class EditorProjectViewModel(' in vm and 'SavedStateHandle' in vm
+assert 'ProjectSessionCoordinator' in vm and 'fun save(' in vm and 'fun delete(' in vm
+assert 'state[ACTIVE_ID] = it' in vm and 'state[ACTIVE_ID] ?: ""' in vm
+assert 'ProjectStore(application.applicationContext)' in vm
+assert 'fun save(project: VideoProject): ProjectSnapshot = accept(controller.save(project))' in session
+assert 'fun delete(id: String): ProjectSnapshot = accept(controller.delete(id, snapshot.activeId))' in session
+assert 'val project = projectSession.project' in main
+assert 'ProjectStore(context)' not in main
+assert 'projectController.' not in main
+assert (root/'app/src/test/java/br/com/uaicortes/ProjectSessionCoordinatorTest.kt').exists()
+print('OK: v0.1.62 ViewModel e sessão de projetos, restaurando ID sem serializar mídia')
+
+# v0.1.62: motor exportação gerenciado pelo ViewModel, sem serializar mídia ou trabalho.
+export_screen = (app_files/'ExportScreen.kt').read_text()
+export_vm = (app_files/'ExportTaskViewModel.kt').read_text()
+export_tasks = (app_files/'ExportTaskCoordinator.kt').read_text()
+engine = (app_files/'ExportEngine.kt').read_text()
+assert 'val exportVm: ExportTaskViewModel = viewModel()' in export_screen
+assert 'exportVm.start(p, quality, name)' in export_screen
+assert 'exportVm.cancel()' in export_screen
+assert 'DisposableEffect(engine)' not in export_screen
+assert 'class ExportTaskViewModel(application: Application)' in export_vm
+assert 'viewModelScope.launch' in export_vm and 'override fun onCleared()' in export_vm
+assert 'fun setProject(' in export_vm and 'fun dismissSaved()' in export_vm
+assert 'class ExportTaskCoordinator' in export_tasks
+assert 'current.id != id' in export_tasks and 'snapshot.phase == ExportPhase.SAVING' in export_tasks
+assert 'isSavingToGallery = true' in engine and 'if (isSavingToGallery) return' in engine
+assert (root/'app/src/test/java/br/com/uaicortes/ExportTaskCoordinatorTest.kt').exists()
+print('OK: v0.1.62 ViewModel de exportação, tickets, progresso real, cancelamento e salvamento protegido')
