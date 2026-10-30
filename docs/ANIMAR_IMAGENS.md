@@ -45,3 +45,17 @@
 6. Teste de aquecimento e memória em aparelho modesto.
 
 **Atenção:** validação de código-fonte não comprova exportação real em hardware. Build CI e testes físicos permanecem pendentes.
+
+## Versão 0.1.52: edição padronizada e continuação no editor
+
+1. Importe as fotografias e ajuste a ordem pela alça ou pelas setas.
+2. Use **Ajustes** para intensidade, tempo por foto, proporção, qualidade e transição.
+3. Toque em **Salvar** (cabeçalho) para guardar **somente o rascunho** da sequência e seus ajustes. Isso não cria vídeo. Ao abrir Animar Imagens outra vez, o rascunho é recuperado se a mídia ainda estiver acessível pelo Android.
+4. Pressionar **Voltar** com alterações não salvas abre **Salvar e voltar / Descartar alterações / Continuar**. Se o Uai Cortes estiver terminando a cópia do MP4 na galeria, aguarde a confirmação antes de sair.
+5. Toque em **Animar**, avalie a prévia e depois escolha **Salvar MP4**. O app salva o rascunho antes da renderização e a mídia gerada em Filmes/UaiCortes.
+6. Na confirmação em tela cheia, escolha **Abrir vídeo**, **Compartilhar** ou **Editar com áudio, legendas e PiP**. Essa última ação leva o MP4 ao **mesmo editor** usado por qualquer vídeo; se a ferramenta foi aberta de dentro de um projeto, o MP4 é acrescentado como clipe, caso contrário vira um novo projeto editável.
+7. No editor, adicione áudio, narração, cortes, legendas, marca d’água e PiP, salvando o projeto e exportando novamente depois dessas edições.
+
+**Importante:** o rascunho de fotos e o projeto editável de vídeo são estados distintos. O rascunho referencia URIs locais (MediaStore/SAF); se o usuário revogar permissão ou excluir as imagens, o aplicativo poderá precisar que elas sejam selecionadas novamente. O aplicativo não duplica nem envia fotos para a rede. Esta mudança não implementa áudio no motor de animações antes do MP4, mas reutiliza o editor completo após renderizar.
+
+**Validação pendente:** compilação Gradle/Android, navegação real, persistência após processo reiniciar, permissões MediaStore e exportação/MP4 no celular.

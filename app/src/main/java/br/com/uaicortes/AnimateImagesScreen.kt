@@ -45,7 +45,8 @@ import kotlin.math.abs
 @Composable
 internal fun AnimateImagesScreen(
     selected: List<Uri>, onChoose: () -> Unit, onBack: () -> Unit,
-    onOrderChanged: (List<Uri>) -> Unit, onUseInEditor: (Uri) -> Unit
+    onOrderChanged: (List<Uri>) -> Unit, onUseInEditor: (Uri) -> Unit,
+    onSaveDraft: (List<Uri>, ImageAnimationOptions) -> Boolean
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -58,7 +59,12 @@ internal fun AnimateImagesScreen(
             images.clear(); images.addAll(selected)
         }
     }
-    var options by remember { mutableStateOf(ImageAnimationOptions()) }
+    val originalDraft = remember { ImageAnimationDraftStore(context).load() }
+    var options by remember { mutableStateOf(originalDraft?.options ?: ImageAnimationOptions()) }
+    var lastSavedImages by remember { mutableStateOf(selected.toList()) }
+    var lastSavedOptions by remember { mutableStateOf(options) }
+    var confirmExit by remember { mutableStateOf(false) }
+    var saveError by remember { mutableStateOf(false) }
     var advanced by remember { mutableStateOf(false) }
     var animated by remember { mutableStateOf(false) }
     var playing by remember { mutableStateOf(true) }
@@ -86,8 +92,32 @@ internal fun AnimateImagesScreen(
     DisposableEffect(Unit) {
         onDispose { if (!engine.isSaving) engine.cancel() }
     }
-    fun goBack() { if (busy && !engine.isSaving) confirmCancel = true else if (!busy) onBack() }
+    fun saveDraftAndReturn() {
+        if (onSaveDraft(images.toList(), options)) {
+            lastSavedImages = images.toList()
+            lastSavedOptions = options
+            saveError = false
+            onBack()
+        } else saveError = true
+    }
+    fun goBack() {
+        if (busy) {
+            if (!engine.isSaving) confirmCancel=true
+            else android.widget.Toast.makeText(context,"O Uai Cortes está finalizando o vídeo.",
+                android.widget.Toast.LENGTH_SHORT).show()
+        } else if (ImageAnimationDraftRules.changed(lastSavedImages.map(Uri::toString),
+            lastSavedOptions,images.map(Uri::toString),options)) confirmExit=true
+        else onBack()
+    }
     BackHandler { goBack() }
+    if (confirmExit) AlertDialog(onDismissRequest={confirmExit=false},
+        title={Text("Salvar edição das imagens?")},
+        text={Text("Guarde a sequência e os ajustes para continuar depois. Isso não exporta um MP4.")},
+        confirmButton={TextButton(onClick={confirmExit=false;saveDraftAndReturn()}) {Text("Salvar e voltar")} },
+        dismissButton={Row {
+            TextButton(onClick={confirmExit=false;onBack()}) {Text("Descartar alterações")}
+            TextButton(onClick={confirmExit=false}) {Text("Continuar")}
+        }})
     if (confirmCancel) AlertDialog(onDismissRequest={confirmCancel=false},
         title={Text("Cancelar a animação?")},
         text={Text("O vídeo parcial será removido. As imagens selecionadas permanecem intactas.")},
@@ -118,10 +148,17 @@ internal fun AnimateImagesScreen(
     }
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
         Row(Modifier.fillMaxWidth().height(56.dp),verticalAlignment=Alignment.CenterVertically) {
-            IconButton(onClick={::goBack},enabled=!engine.isSaving) {Icon(Icons.Default.ArrowBack,"Voltar")}
+            IconButton(onClick={::goBack}) {Icon(Icons.Default.ArrowBack,"Voltar")}
             Text("Animar Imagens",style=MaterialTheme.typography.titleLarge,
                 modifier=Modifier.weight(1f))
-            IconButton(onClick=onChoose,enabled=!busy) {Icon(Icons.Default.AddPhotoAlternate,"Importar imagens")}
+            TextButton(onClick={::saveDraftAndReturn},enabled=!busy) {
+                Icon(Icons.Default.Save,null,Modifier.size(18.dp))
+                Spacer(Modifier.width(3.dp))
+                Text("Salvar",maxLines=1)
+            }
+            IconButton(onClick=onChoose,enabled=!busy) {
+                Icon(Icons.Default.AddPhotoAlternate,"Importar imagens")
+            }
         }
         if (busy) {
             Column(Modifier.fillMaxSize().padding(22.dp),verticalArrangement=Arrangement.Center,
@@ -281,51 +318,49 @@ internal fun AnimateImagesScreen(
                     }
                 }
                 if(advanced) {
-                    optionRow("Intensidade",listOf("suave","normal","intensa"),options.intensity){options=options.copy(intensity=it);animated=false}
-                    optionRow("Duração",listOf(3,5,8),options.secondsPerImage){options=options.copy(secondsPerImage=it);animated=false}
-                    optionRow("Formato",listOf("9:16","16:9","1:1"),options.aspect){options=options.copy(aspect=it);animated=false}
-                    optionRow("Qualidade",listOf(720,1080),options.quality){options=options.copy(quality=it);animated=false}
-                    optionRow("Transição",listOf("auto","corte","preto","branco"),options.transition){options=options.copy(transition=it);animated=false}
-                    Text("30 FPS · H.264 · offline",style=MaterialTheme.typography.labelSmall)
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(2.dp)) {
+                            EditorOptionRow("Intensidade",listOf("suave","normal","intensa"),options.intensity){options=options.copy(intensity=it);animated=false}
+                            EditorOptionRow("Duração",listOf(3,5,8),options.secondsPerImage){options=options.copy(secondsPerImage=it);animated=false}
+                            EditorOptionRow("Formato",listOf("9:16","16:9","1:1"),options.aspect){options=options.copy(aspect=it);animated=false}
+                            EditorOptionRow("Qualidade",listOf(720,1080),options.quality){options=options.copy(quality=it);animated=false}
+                            EditorOptionRow("Transição",listOf("auto","corte","preto","branco"),options.transition){options=options.copy(transition=it);animated=false}
+                            Text("30 FPS · H.264 · offline",style=MaterialTheme.typography.labelSmall)
+                        }
+                    }
                 }
                 if(animated) {
                     Button(onClick={
-                        error=null;saved=null;busy=true;stage="Preparando imagens";progress=null
-                        val snapshot=images.toList()
-                        job=scope.launch {
-                            try {engine.start(snapshot,options,{stage=it},{uri->saved=uri;busy=false},
-                                {reason->error=reason;busy=false})}
-                            catch(e:CancellationException){engine.cancel();busy=false}
-                            catch(e:Exception){DiagnosticRecorder.exception("image_animation",e)
-                                error=e.message ?: "Erro ao gerar animação";busy=false;engine.cancel()}
+                        error=null
+                        if (!onSaveDraft(images.toList(),options)) saveError=true
+                        else {
+                            saveError=false
+                            lastSavedImages = images.toList();lastSavedOptions = options
+                            saved=null;busy=true;stage="Preparando imagens";progress=null
+                            val snapshot=images.toList()
+                            job=scope.launch {
+                                try {engine.start(snapshot,options,{stage=it},{uri->saved=uri;busy=false},
+                                    {reason->error=reason;busy=false})}
+                                catch(e:CancellationException){engine.cancel();busy=false}
+                                catch(e:Exception){DiagnosticRecorder.exception("image_animation",e)
+                                    error=e.message ?: "Erro ao gerar animação";busy=false;engine.cancel()}
+                            }
                         }
                     },modifier=Modifier.fillMaxWidth(),enabled=images.isNotEmpty()) {
                         Icon(Icons.Default.Save,null);Spacer(Modifier.width(8.dp));Text("Salvar MP4")
                     }
                 }
-                if(saved!=null) {
-                    Text("Vídeo animado salvo em Filmes/UaiCortes",color=MaterialTheme.colorScheme.primary)
-                    Button(onClick={onUseInEditor(saved!!) },modifier=Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.VideoLibrary,null);Spacer(Modifier.width(8.dp));Text("Enviar para timeline do editor")
-                    }
-                }
+                Text("Depois de gerar o MP4, use o editor para adicionar músicas, narração, legendas, cortes e PiP.",
+                    style=MaterialTheme.typography.labelSmall)
+                if(saveError) Text("Não foi possível salvar a edição. Verifique o armazenamento.",
+                    color=MaterialTheme.colorScheme.error)
                 error?.let {Text("Erro: $it",color=MaterialTheme.colorScheme.error)}
             }
         }
     }
-}
-
-@Composable
-private fun <T> optionRow(title:String, values:List<T>, selected:T, choose:(T)->Unit) {
-    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-        Text(title,style=MaterialTheme.typography.labelSmall,modifier=Modifier.width(77.dp))
-        androidx.compose.foundation.lazy.LazyRow(Modifier.weight(1f),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-            items(values.size) { i ->
-                val item=values[i]
-                FilterChip(selected=selected==item,onClick={choose(item)},
-                    label={Text(item.toString(),fontSize=12.sp)})
-            }
-        }
+    saved?.let { uri ->
+        VideoSavedDialog(uri=uri,name="",editLabel="Editar com áudio, legendas e PiP",
+            onEdit={ onUseInEditor(uri) }, onClose={ saved=null })
     }
 }
 

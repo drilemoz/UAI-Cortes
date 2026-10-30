@@ -111,3 +111,6 @@
 
 - v0.1.51: nenhum `progress!!` em callbacks Compose, usar percentual local imutável limitado [0,1] ou indicador indeterminado. Regressão para `NullPointerException` de `LinearProgressIndicator`.
 - v0.1.51: tela Animar Imagens mantém proporção com prévia compacta 238 dp, ordenação durante arrasto na alça e rolagem de borda, setas e remoção. Ajustes/Animar em mesma linha, mensagens de exportação com nome Uai Cortes.
+
+- v0.1.52: Animar Imagens mantém rascunho local de URIs (MediaStore/SAF) e `ImageAnimationOptions`, sem alterar o schemaVersion 4 de projetos de vídeo. Não converter fotos em clipes MP4 fictícios; renderizar primeiro e depois usar a timeline existente para áudio/legendas/PiP/cortes.
+- v0.1.52: usar `VideoSavedDialog` compartilhado somente após MediaStore concluir, botão Salvar no topo e confirmação ao sair com alterações não gravadas. Nunca bloquear Voltar após sucesso; durante gravação final impedir cancelamento sem explicação. O rascunho não garante acesso a mídias se a permissão Android tiver sido revogada.

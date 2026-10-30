@@ -1,3 +1,10 @@
+## v0.1.52 (versionCode 53) · 30/10/2026
+- **Animar Imagens:** controles padronizados e compactos; botão Salvar edição no cabeçalho para persistir fotos e configurações como rascunho local.
+- Ao voltar, alterações não salvas geram confirmação; importações e reordenação preservadas. Voltar não permanece desativado após finalização.
+- Tela de vídeo salvo reutilizada do editor principal, com Abrir, Compartilhar, Editar com áudio/legendas/PiP e Fechar; MP4 gerado continua sendo adicionado como clipe editável normal.
+- Nova regra testável de alterações de rascunho e validação estrutural ampliada. Sem migração dos projetos existentes, sem dependências adicionais e sem envio de mídia à nuvem.
+- Build Android e testes físicos ainda pendentes.
+
 ## v0.1.51 (versionCode 52) · 30/10/2026
 - Animar Imagens: corrigido o NPE do `LinearProgressIndicator` removendo `progress!!` e usando percentual imutável limitado a 0–100%, barra indeterminada quando ausente.
 - Prévia com área compacta de 238 dp e proporção preservada, cartões menores, nomes curtos e controles **Ajustes/Animar** lado a lado.

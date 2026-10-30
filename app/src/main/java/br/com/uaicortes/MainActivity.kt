@@ -124,6 +124,7 @@ private fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
 fun UaiApp() {
     val context = LocalContext.current
     val store = remember { ProjectStore(context) }
+    val animationDraftStore = remember { ImageAnimationDraftStore(context.applicationContext) }
     var diagnosticsEnabled by remember { mutableStateOf(DiagnosticRecorder.isEnabled()) }
     var theme by remember { mutableStateOf(store.theme()) }
     var screen by remember { mutableStateOf("home") }
@@ -345,7 +346,12 @@ fun UaiApp() {
         Surface(modifier = Modifier.fillMaxSize().then(tapMonitor), color = MaterialTheme.colorScheme.background) {
             when (screen) {
                 "home" -> MainHome(projects, onCreate = { pendingPicker = "new"; selectedClip = ""; openGallery("home", "new") },
-                    onAnimate = { animationDestination = "new"; animationImages.clear(); screen = "animate" },
+                    onAnimate = {
+                        animationDestination = "new"
+                        animationImages.clear()
+                        animationImages.addAll(animationDraftStore.load()?.images.orEmpty())
+                        screen = "animate"
+                    },
                     onOpen = { project = it; selectedClip = TrimTimelineEdit.resumeClipId(it); screen = "editor" },
                     onDelete = { pendingProjectDelete = it },
                     onSettings = { screen = "settings" }, onTab = { screen = it })
@@ -353,6 +359,7 @@ fun UaiApp() {
                     onChoose = { openGallery("animate","animate_images") },
                     onBack = { screen = if(animationDestination=="append") "editor" else "home" },
                     onOrderChanged = { reordered -> animationImages.clear();animationImages.addAll(reordered) },
+                    onSaveDraft = { chosen, opts -> animationDraftStore.save(chosen,opts) },
                     onUseInEditor = { uri ->
                         val duration = mediaDuration(context,uri)
                         if (duration > 0L) {
@@ -376,6 +383,7 @@ fun UaiApp() {
                         if (it == "animate") {
                             animationDestination = "append"
                             animationImages.clear()
+                            animationImages.addAll(animationDraftStore.load()?.images.orEmpty())
                             screen = "animate"
                         } else navTo(it)
                     }, onUpdate = { write(it) },
@@ -702,7 +710,7 @@ private fun Heading(title: String, back: () -> Unit, accessory: @Composable (() 
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.51 (52)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.52 (53)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: trechos visuais em Cortar e unir, seleção automática após dividir e cursor no último corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -4023,57 +4031,12 @@ private fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
             }) {Text("Cancelar exportação")}},
             dismissButton={TextButton(onClick={confirmCancelExport=false}) {Text("Continuar")}})
     }
-    // Confirmação de TELA CHEIA apenas após a cópia completa no MediaStore.
+    // Confirmação compartilhada com Animar Imagens, somente após MediaStore concluir.
     savedVideo?.let { savedUri ->
-        Dialog(onDismissRequest={savedVideo=null},
-            properties=DialogProperties(usePlatformDefaultWidth=false)) {
-            Surface(Modifier.fillMaxSize(), color=MaterialTheme.colorScheme.background) {
-                Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(24.dp),
-                    horizontalAlignment=Alignment.CenterHorizontally,
-                    verticalArrangement=Arrangement.Center) {
-                    Icon(Icons.Default.CheckCircle,contentDescription=null,
-                        modifier=Modifier.size(96.dp),tint=Green)
-                    Spacer(Modifier.height(20.dp))
-                    Text("Vídeo salvo!",style=MaterialTheme.typography.headlineMedium,
-                        fontWeight=FontWeight.Bold,textAlign=TextAlign.Center)
-                    Spacer(Modifier.height(10.dp))
-                    Text(savedName,style=MaterialTheme.typography.titleMedium,
-                        textAlign=TextAlign.Center,maxLines=3,overflow=TextOverflow.Ellipsis)
-                    Spacer(Modifier.height(8.dp))
-                    Text("Salvo na galeria em Filmes/UaiCortes",textAlign=TextAlign.Center,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(32.dp))
-                    BlueButton("▶ Abrir vídeo",onClick={
-                        runCatching {
-                            context.startActivity(Intent(Intent.ACTION_VIEW).apply {
-                                setDataAndType(savedUri,"video/mp4")
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            })
-                        }.onFailure { result="Não há aplicativo disponível para abrir o vídeo.";savedVideo=null }
-                    },modifier=Modifier.fillMaxWidth())
-                    Spacer(Modifier.height(10.dp))
-                    OutlinedButton(onClick={
-                        runCatching {
-                            context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-                                type="video/mp4"
-                                putExtra(Intent.EXTRA_STREAM,savedUri)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            },"Compartilhar vídeo"))
-                        }.onFailure { result="Não foi possível abrir o compartilhamento.";savedVideo=null }
-                    },modifier=Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.Share,contentDescription=null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Compartilhar")
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    OutlinedButton(onClick={savedVideo=null;back()},modifier=Modifier.fillMaxWidth()) {
-                        Text("Voltar ao editor")
-                    }
-                    TextButton(onClick={savedVideo=null}) { Text("Fechar") }
-                }
-            }
-        }
+        VideoSavedDialog(uri=savedUri,name=savedName,editLabel="Voltar ao editor",
+            onEdit={savedVideo=null;back()},onClose={savedVideo=null})
     }
+
 }
 
 /** Calcula proporção sem carregar um bitmap integral em memória. */

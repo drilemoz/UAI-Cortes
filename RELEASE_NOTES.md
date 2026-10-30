@@ -1,3 +1,11 @@
+## v0.1.52 (versionCode 53) · 30/10/2026
+- Padronização dos ajustes de Animar Imagens e botão Salvar edição no cabeçalho.
+- Rascunho local persistente (fotos, sequência e opções) com confirmação ao sair e recuperação ao reabrir.
+- Confirmação de vídeo salvo compartilhada com a exportação do editor: Abrir, Compartilhar, Editar na timeline, Fechar.
+- O editor continua sendo o local das ferramentas de música, áudio, legendas, PiP e cortes, após a geração do MP4.
+- Corrigido bloqueio de Voltar depois de salvar; a finalização MediaStore permanece protegida.
+- Código-fonte validado estruturalmente; compilação Android e teste real no dispositivo pendentes.
+
 ## v0.1.51 (versionCode 52) · 30/10/2026
 - Animar Imagens: corrigido o NPE do `LinearProgressIndicator` removendo `progress!!` e usando percentual imutável limitado a 0–100%, barra indeterminada quando ausente.
 - Prévia com área compacta de 238 dp e proporção preservada, cartões menores, nomes curtos e controles **Ajustes/Animar** lado a lado.
