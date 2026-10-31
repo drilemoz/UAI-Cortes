@@ -172,6 +172,7 @@ internal fun DeviceMediaBrowser(
     }) }
     var folder by remember { mutableStateOf("Todas") }
     var search by remember { mutableStateOf("") }
+    var showSearch by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
     var entries by remember { mutableStateOf<List<DeviceMedia>>(emptyList()) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -232,6 +233,9 @@ internal fun DeviceMediaBrowser(
                 else -> "Galeria de mídia"
             },
                 style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+            IconButton(onClick = { showSearch = !showSearch; if (!showSearch) search = "" }) {
+                Icon(Icons.Default.Search, "Pesquisar mídias")
+            }
             IconButton(onClick = { forceReload++ }) { Icon(Icons.Default.Refresh, "Atualizar galeria") }
             IconButton(onClick = openDocuments) { Icon(Icons.Default.FolderOpen, "Procurar nos arquivos") }
         }
@@ -248,14 +252,15 @@ internal fun DeviceMediaBrowser(
                 TextButton(onClick = openDocuments) { Text("Escolher pelo Android") }
             }
         } else {
-            OutlinedTextField(value = search, onValueChange = { search = it },
+            if (showSearch) OutlinedTextField(value = search, onValueChange = { search = it },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                 singleLine = true, label = { Text("Buscar pelo nome ou pasta") },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
                 trailingIcon = { if (search.isNotEmpty()) IconButton(onClick = { search = "" }) {
                     Icon(Icons.Default.Close, "Limpar busca")
                 } })
-            LazyRow(contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+            if (scope == GalleryScope.IMAGES_AND_VIDEOS) LazyRow(
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val tabs = when(scope) {
                     GalleryScope.VIDEOS -> listOf(GalleryTab.VIDEOS)

@@ -64,7 +64,8 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
 }
 
 @Composable internal fun MainHome(projects: List<VideoProject>, onCreate: () -> Unit, onAnimate: () -> Unit,
-    onOpen: (VideoProject)->Unit, onDelete: (VideoProject)->Unit, onSettings: ()->Unit, onTab:(String)->Unit) {
+    onOpen: (VideoProject)->Unit, onDelete: (VideoProject)->Unit, onDeleteAll: ()->Unit,
+    onSettings: ()->Unit, onTab:(String)->Unit) {
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Movie, null, tint = Blue, modifier = Modifier.size(30.dp))
@@ -88,7 +89,14 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
             Spacer(Modifier.height(16.dp))
             ItemCard(Icons.Default.AutoAwesomeMotion,"Animar Imagens",
                 "Crie um MP4 animado offline com suas fotos") { onAnimate() }
-            Spacer(Modifier.height(24.dp)); Text("Edições recentes",fontSize=21.sp, fontWeight=FontWeight.SemiBold)
+            Spacer(Modifier.height(24.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Edições recentes",fontSize=21.sp, fontWeight=FontWeight.SemiBold,
+                    modifier=Modifier.weight(1f))
+                if (projects.isNotEmpty()) IconButton(onClick=onDeleteAll) {
+                    Icon(Icons.Default.DeleteSweep, "Excluir todos os projetos")
+                }
+            }
             Spacer(Modifier.height(10.dp))
             if(projects.isEmpty()) Text("Seus projetos aparecerão aqui.", color=MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier=Modifier.padding(16.dp))
@@ -113,7 +121,6 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
 }
 
 @Composable internal fun ProjectItem(p:VideoProject,onOpen:(VideoProject)->Unit,onDelete:(VideoProject)->Unit){
-    var menu by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().clickable {onOpen(p)}.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
         val context = LocalContext.current
         val first = p.clips.firstOrNull()
@@ -150,11 +157,8 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
             Text("Rascunho salvo · ${formatMs(p.durationMs)}",style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Box {
-            IconButton(onClick={menu=true}) {Icon(Icons.Default.MoreVert,"Opções")}
-            DropdownMenu(expanded=menu,onDismissRequest={menu=false}) {
-                DropdownMenuItem(text={Text("Excluir projeto")},onClick={menu=false;onDelete(p)})
-            }
+        IconButton(onClick={onDelete(p)}) {
+            Icon(Icons.Default.DeleteOutline, "Excluir ${p.title}")
         }
     }
     HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.45f))
@@ -173,6 +177,8 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
         Heading("Configurações",back)
         ItemCard(Icons.Default.Tune,"Geral","Qualidade e armazenamento") {onClick("general")}
         ItemCard(Icons.Default.Palette,"Tela","Sistema, claro, escuro e AMOLED") {onClick("appearance")}
+        ItemCard(Icons.Default.RecordVoiceOver,"Reconhecimento de voz",
+            "Instalar modelo offline de legendas em português") { onClick("speech_model") }
         ItemCard(Icons.Default.BugReport,"Diagnóstico","Capturar erros e toques, exportar relatório") {onClick("diagnostics")}
         ItemCard(Icons.Default.Info,"Sobre","Versão e informações do aplicativo") {onClick("about")}
     }
@@ -218,7 +224,7 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
         Heading("Sobre",back)
         Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
         Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.66 (67)",color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Versão 0.1.67 (67)",color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
         Spacer(Modifier.height(14.dp));Text("Novidades: trechos visuais em Cortar e unir, seleção automática após dividir e cursor no último corte.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)

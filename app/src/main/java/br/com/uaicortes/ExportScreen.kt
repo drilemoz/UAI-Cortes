@@ -67,7 +67,7 @@ internal fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
         })
         previewPlayer.prepare()
     }
-    var name by rememberSaveable(p.id) {mutableStateOf("UaiCortes_001.mp4")}
+    var name by rememberSaveable(p.id) { mutableStateOf(ProjectNaming.exportName(p.title)) }
     var quality by rememberSaveable(p.id) {mutableIntStateOf(defaultQuality.takeIf { it == 720 || it == 1080 } ?: 1080)}
     var confirmCancelExport by remember {mutableStateOf(false)}
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal=20.dp)) {

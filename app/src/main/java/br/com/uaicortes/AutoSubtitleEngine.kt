@@ -37,13 +37,15 @@ object AutoSubtitleEngine {
         return File(root, "am/final.mdl").isFile && File(root, "conf/model.conf").isFile
     }
 
-    suspend fun install(context: Context, onProgress: suspend (Int?) -> Unit) = withContext(Dispatchers.IO) {
+    suspend fun install(context: Context, onProgress: suspend (Int?) -> Unit,
+        onStage: suspend (String) -> Unit = {}) = withContext(Dispatchers.IO) {
         if (installed(context)) return@withContext
         val base = File(context.filesDir, "speech-models").apply { mkdirs() }
         val zip = File(base, "$MODEL_NAME.tmp.zip")
         val unpack = File(base, "$MODEL_NAME.unpack")
         val target = modelFolder(context)
         try {
+            onStage("Conectando ao servidor do modelo…")
             val conn = (URL(MODEL_URL).openConnection() as HttpURLConnection).apply {
                 connectTimeout = 15000; readTimeout = 30000
                 instanceFollowRedirects = true
@@ -53,6 +55,7 @@ object AutoSubtitleEngine {
                 if (conn.responseCode !in 200..299) error("Download HTTP ${conn.responseCode}")
                 val total = conn.contentLengthLong
                 if (total > MAX_DOWNLOAD) error("Modelo ultrapassa o limite permitido")
+                onStage("Baixando modelo Vosk…")
                 conn.inputStream.use { input ->
                     FileOutputStream(zip).use { output ->
                         val bytes = ByteArray(32 * 1024)
@@ -70,7 +73,12 @@ object AutoSubtitleEngine {
                         }
                     }
                 }
+                if (total > 0 && zip.length() != total)
+                    error("Download incompleto: tamanho recebido diferente do informado")
+                if (zip.length() < 1024L)
+                    error("Arquivo do modelo vazio ou incompleto")
             } finally { conn.disconnect() }
+            onStage("Descompactando e verificando o modelo…")
             unpack.deleteRecursively()
             unpack.mkdirs()
             val safeRoot = unpack.canonicalFile
@@ -107,6 +115,8 @@ object AutoSubtitleEngine {
             }
             if (!File(unpack, "am/final.mdl").isFile || !File(unpack, "conf/model.conf").isFile)
                 error("O download não contém um modelo Vosk válido")
+            // Não apagar uma instalação válida antes de confirmar o novo pacote.
+            if (installed(context)) return@withContext
             target.deleteRecursively()
             if (!unpack.renameTo(target)) error("Não foi possível instalar o modelo")
             onProgress(100)

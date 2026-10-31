@@ -118,6 +118,9 @@ fun UaiApp() {
     var pendingOverlap by remember { mutableStateOf<OverlapConfirmation?>(null) }
     var pendingSequential by remember { mutableStateOf<SequentialConfirmation?>(null) }
     var pendingProjectDelete by remember { mutableStateOf<VideoProject?>(null) }
+    var pendingDeleteAll by remember { mutableStateOf(false) }
+    var pendingNewProjectName by remember { mutableStateOf(false) }
+    var newProjectName by rememberSaveable { mutableStateOf("Meu vídeo") }
     var catalogAlertDismissed by rememberSaveable { mutableStateOf(false) }
     val dark = when (theme) {
         "Claro" -> false
@@ -219,7 +222,8 @@ fun UaiApp() {
                     android.widget.Toast.LENGTH_LONG).show()
                 return@startMediaTask
             }
-            val updated = projectSession.append(project, imported.clips, createNew = request.createNew)
+            val base = projectSession.append(project, imported.clips, createNew = request.createNew)
+            val updated = if (request.createNew) base.copy(title = ProjectNaming.title(newProjectName)) else base
             if (!write(updated)) return@startMediaTask
             if (selectedClip.isBlank()) selectedClip = imported.clips.first().id
             screen = "editor"
@@ -326,7 +330,7 @@ fun UaiApp() {
         } else Modifier
         Surface(modifier = Modifier.fillMaxSize().then(tapMonitor), color = MaterialTheme.colorScheme.background) {
             when (screen) {
-                "home" -> MainHome(projects, onCreate = { pendingPicker = "new"; selectedClip = ""; openGallery("home", "new") },
+                "home" -> MainHome(projects, onCreate = { newProjectName = "Meu vídeo"; pendingNewProjectName = true },
                     onAnimate = {
                         animationDestination = "new"
                         animationImages.clear()
@@ -335,6 +339,7 @@ fun UaiApp() {
                     },
                     onOpen = { openProject(it.id) },
                     onDelete = { pendingProjectDelete = it },
+                    onDeleteAll = { pendingDeleteAll = true },
                     onSettings = { screen = "settings" }, onTab = { screen = it })
                 "animate" -> AnimateImagesScreen(animationImages.toList(),
                     onChoose = { openGallery("animate","animate_images") },
@@ -354,9 +359,10 @@ fun UaiApp() {
                     })
                 "projects" -> ProjectsScreen(projects, { back() }, { openProject(it.id) },
                     { pendingProjectDelete = it })
-                "settings" -> SettingsScreen({ back() }) { screen = it }
+                "settings" -> SettingsScreen({ back() }) { previous = "settings"; screen = it }
                 "diagnostics" -> DiagnosticScreen(::back, onEnabledChanged = { diagnosticsEnabled = it })
                 "general" -> GeneralScreen(store, ::back)
+                "speech_model" -> SpeechModelSettingsScreen(::back)
                 "appearance" -> AppearanceScreen(theme, { theme = it; store.setTheme(it) }, ::back)
                 "about" -> AboutScreen(::back)
                 "editor" -> project?.let { p -> EditorScreen(p, selectedClip, positionMs,
@@ -447,7 +453,8 @@ fun UaiApp() {
                     else -> GalleryScope.IMAGES_AND_VIDEOS
                 }, allowMultiple = mediaAction == "new" || mediaAction == "append" || mediaAction == "animate_images")
                 "transition" -> project?.let { TransitionScreen(it, ::back, { write(it) }, selectedBoundary) }
-                "autosubtitle" -> project?.let { current -> AutoSubtitleScreen(current, ::back, onApply = { cues, replace ->
+                "autosubtitle" -> project?.let { current -> AutoSubtitleScreen(current, ::back,
+                    onManageModel = { previous = "autosubtitle"; screen = "speech_model" }, onApply = { cues, replace ->
                     val existing = if (replace) emptyList() else current.subtitles
                     if (write(current.copy(subtitles = existing + cues))) {
                         selectedSubtitleId = cues.firstOrNull()?.id
@@ -482,6 +489,26 @@ fun UaiApp() {
                     Text("Cancelar importação")
                 } })
         }
+        if (pendingNewProjectName) CreateProjectNameDialog(newProjectName,
+            onNameChange = { newProjectName = it },
+            onConfirm = {
+                newProjectName = ProjectNaming.title(newProjectName)
+                pendingNewProjectName = false
+                pendingPicker = "new"; selectedClip = ""; openGallery("home", "new")
+            }, onCancel = { pendingNewProjectName = false })
+        if (pendingDeleteAll) DeleteAllProjectsDialog(projects.size, onConfirm = {
+            try {
+                projectSession.deleteAll()
+                workspace.reconcile(null)
+                screen = "home"
+            } catch (failure: Exception) {
+                DiagnosticRecorder.exception("project_delete_all_failure", failure)
+                android.widget.Toast.makeText(context,
+                    "Não foi possível excluir os projetos; os dados foram preservados.",
+                    android.widget.Toast.LENGTH_LONG).show()
+            }
+            pendingDeleteAll = false
+        }, onCancel = { pendingDeleteAll = false })
         pendingProjectDelete?.let { target ->
             AlertDialog(onDismissRequest = { pendingProjectDelete = null },
                 icon = { Icon(Icons.Default.DeleteOutline, null) },

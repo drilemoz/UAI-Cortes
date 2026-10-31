@@ -49,6 +49,11 @@ internal class EditorProjectViewModel(
 
     fun delete(id: String) = publish(session.delete(id))
 
+    fun deleteAll() {
+        store.deleteAll() // Se a gravação falhar, não publica uma lista vazia.
+        publish(session.reload())
+    }
+
     fun append(base: VideoProject?, clips: List<Clip>, createNew: Boolean): VideoProject =
         session.append(base, clips, createNew)
 

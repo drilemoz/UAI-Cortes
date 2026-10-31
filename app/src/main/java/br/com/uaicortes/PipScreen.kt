@@ -46,6 +46,29 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
         canvasUri?.let { mediaAspect(context,it,false) } ?: 16f/9f
     }
     var expanded by remember(p.id) { mutableStateOf<String?>(null) }
+    var showTimePresets by remember { mutableStateOf(false) }
+    val overlaySourceDuration by produceState<Long?>(null, pip?.uri, pip?.isImage) {
+        value = if (pip == null || pip.isImage) null else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            verifiedMediaDuration(context, android.net.Uri.parse(pip.uri)).takeIf { it > 0L }
+        }
+    }
+    fun applyPreset(period: PipTimePresets.Period) {
+        val selected = pip ?: return
+        val adjusted = PipTimePresets.limited(period, selected.isImage, overlaySourceDuration)
+        if (adjusted == null) {
+            android.widget.Toast.makeText(context,
+                "Não foi possível confirmar a duração do vídeo do PiP.",
+                android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
+        if (adjusted.durationMs != period.durationMs) {
+            android.widget.Toast.makeText(context,
+                "PiP limitado à duração da mídia original.",
+                android.widget.Toast.LENGTH_LONG).show()
+        }
+        onChange(selected.copy(startAtMs=adjusted.startMs, durationMs=adjusted.durationMs))
+        showTimePresets = false
+    }
     var manual by remember(pip?.id) {
         mutableStateOf(pip?.let { (it.scale * 100f).toInt().toString() } ?: "30")
     }
@@ -137,6 +160,23 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                             previewTime = ms
                             seekProjectPosition(player, p.clips, ms)
                         }, modifier = Modifier.weight(1f))
+                    }
+                    Box {
+                        TextButton(onClick={showTimePresets=true}, enabled=pip != null,
+                            contentPadding=PaddingValues(horizontal=4.dp)) {
+                            Icon(Icons.Default.Schedule, "Aplicar duração a clipe", Modifier.size(20.dp))
+                            Icon(Icons.Default.ArrowDropDown, null)
+                        }
+                        DropdownMenu(expanded=showTimePresets, onDismissRequest={showTimePresets=false}) {
+                            PipTimePresets.clipPeriods(p.clips.map { it.durationMs }).forEachIndexed { index, period ->
+                                DropdownMenuItem(text={Text("Aplicar ao ${index+1}º vídeo (${formatMs(period.durationMs)})")},
+                                    onClick={applyPreset(period)})
+                            }
+                            DropdownMenuItem(text={Text("Aplicar ao projeto inteiro")},
+                                onClick={applyPreset(PipTimePresets.Period(0L,p.durationMs))})
+                            DropdownMenuItem(text={Text("Do cursor até o fim")},
+                                onClick={applyPreset(PipTimePresets.Period(previewTime,p.durationMs))})
+                        }
                     }
                     TextButton(onClick = {
                         if (player.isPlaying) player.pause() else player.play()
@@ -339,39 +379,34 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                                     "duration" -> {
                                         if (pip != null) {
                                             val end = (pip.startAtMs + pip.durationMs).coerceAtMost(total)
-                                            Text("Digite somente números; a máscara preenche mm:ss.d automaticamente.",
-                                                style = MaterialTheme.typography.bodySmall)
-                                            val minLength = minOf(500L, end.coerceAtLeast(1L))
-                                            TimeDigitsField("Começa em", pip.startAtMs, total,
-                                                valid = { it in 0L..(end - minLength).coerceAtLeast(0L) },
-                                                onCommit = { typed -> onChange(pip.copy(
-                                                    startAtMs = typed, durationMs = end - typed)) })
-                                            Slider(value = pip.startAtMs.coerceIn(0L, end).toFloat(),
-                                                onValueChange = { value ->
-                                                    val (newStart, newDuration) = OverlayEditorLogic.startChanged(
-                                                        value.toLong(), pip.startAtMs, pip.durationMs, total)
-                                                    onChange(pip.copy(startAtMs = newStart, durationMs = newDuration))
-                                                }, valueRange = 0f..end.coerceAtLeast(1L).toFloat())
-                                            val minEnd = (pip.startAtMs + 500L).coerceAtMost(total)
-                                            TimeDigitsField("Termina em", end, total,
-                                                valid = { it in minEnd..total },
-                                                onCommit = { typed -> onChange(pip.copy(
-                                                    durationMs = typed - pip.startAtMs)) })
-                                            if (minEnd < total) {
-                                                Slider(value = end.coerceIn(minEnd, total).toFloat(),
-                                                    onValueChange = { value ->
-                                                        onChange(pip.copy(durationMs = OverlayEditorLogic.endChanged(
-                                                            value.toLong(), pip.startAtMs, total)))
-                                                    }, valueRange = minEnd.toFloat()..total.toFloat())
-                                            } else Text("Limite do vídeo alcançado")
-                                            BoxWithConstraints(Modifier.fillMaxWidth().height(16.dp)
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(MaterialTheme.colorScheme.primary.copy(alpha = .14f))) {
-                                                Box(Modifier.offset(x = maxWidth * (pip.startAtMs.toFloat() / total))
-                                                    .width(maxWidth * (pip.durationMs.toFloat() / total))
-                                                    .fillMaxHeight().clip(RoundedCornerShape(8.dp))
-                                                    .background(MaterialTheme.colorScheme.primary))
+                                            val minLength = minOf(500L, total)
+                                            Row(Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                verticalAlignment = Alignment.CenterVertically) {
+                                                TimeDigitsField("Início", pip.startAtMs, total,
+                                                    valid={it in 0L..(end-minLength).coerceAtLeast(0L)},
+                                                    onCommit={ typed -> onChange(pip.copy(
+                                                        startAtMs=typed,durationMs=end-typed)) },
+                                                    modifier=Modifier.weight(1f),compact=true)
+                                                TimeDigitsField("Fim", end, total,
+                                                    valid={it in (pip.startAtMs+minLength).coerceAtMost(total)..total},
+                                                    onCommit={ typed -> onChange(pip.copy(
+                                                        durationMs=typed-pip.startAtMs)) },
+                                                    modifier=Modifier.weight(1f),compact=true)
                                             }
+                                            Text("Intervalo selecionado: ${formatPipMs(pip.durationMs)}",
+                                                style=MaterialTheme.typography.bodySmall)
+                                            if (total > minLength) RangeSlider(
+                                                value=pip.startAtMs.toFloat().coerceIn(0f,total.toFloat())..
+                                                    end.toFloat().coerceIn(0f,total.toFloat()),
+                                                onValueChange={ range ->
+                                                    val begin=range.start.toLong().coerceIn(0L,total-minLength)
+                                                    val finish=range.endInclusive.toLong().coerceIn(begin+minLength,total)
+                                                    onChange(pip.copy(startAtMs=begin,durationMs=finish-begin))
+                                                },
+                                                valueRange=0f..total.toFloat())
+                                            Text("Toque em Início ou Fim para digitar; use a barra para ajustar ambos.",
+                                                style=MaterialTheme.typography.bodySmall)
                                         }
                                     }
                                     "media" -> {

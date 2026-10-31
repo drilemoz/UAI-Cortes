@@ -284,6 +284,9 @@ class ProjectStore(private val context: Context) {
         persist(readForMutation().filterNot { it.id == id })
     }
 
+    /** Uma transação de preferência para excluir o cadastro; mantém backup validado. */
+    fun deleteAll() { persist(emptyList()) }
+
     fun theme(): String = prefs.getString("theme", "Sistema") ?: "Sistema"
     fun setTheme(t: String) = prefs.edit().putString("theme", t).apply()
     fun quality(): Int = prefs.getInt("quality", 1080).takeIf { it == 720 || it == 1080 } ?: 1080

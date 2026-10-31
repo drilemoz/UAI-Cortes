@@ -24,10 +24,10 @@ import kotlinx.coroutines.withContext
  */
 @Composable
 fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
-    onApply: (List<SubtitleCue>, Boolean) -> Unit) {
+    onManageModel: () -> Unit, onApply: (List<SubtitleCue>, Boolean) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var installed by remember { mutableStateOf(AutoSubtitleEngine.installed(context)) }
+    val installed = AutoSubtitleEngine.installed(context)
     var busy by remember { mutableStateOf(false) }
     var progress by remember { mutableStateOf<Int?>(null) }
     var message by remember { mutableStateOf("") }
@@ -43,32 +43,14 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),
             verticalArrangement=Arrangement.spacedBy(12.dp)) {
-            Text("Passo 1 · Instalar o português brasileiro", fontWeight=FontWeight.SemiBold)
-            Text("Modelo Vosk pequeno (~31 MB). O download é único e requer internet; " +
-                "depois a transcrição funciona offline. O APK não inclui o modelo.",
+            Text("Modelo de reconhecimento de voz", fontWeight=FontWeight.SemiBold)
+            Text(if (installed) "Português brasileiro instalado. Transcrição offline disponível."
+                else "Modelo ainda não instalado. Instale-o em Configurações para gerar legendas.",
                 style=MaterialTheme.typography.bodySmall)
-            Text(if(installed) "Modelo instalado e pronto." else "Modelo ainda não instalado.",
-                color=if(installed)MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedButton(onClick={
-                task=scope.launch {
-                    busy=true; progress=null; message="Baixando modelo oficial…"
-                    try {
-                        AutoSubtitleEngine.install(context) { pct ->
-                            withContext(Dispatchers.Main) { progress=pct }
-                        }
-                        installed=AutoSubtitleEngine.installed(context)
-                        message=if(installed)"Modelo pronto para uso offline." else "Instalação não concluída."
-                    } catch (_: CancellationException) {
-                        message="Download cancelado."
-                    } catch (e: Exception) {
-                        message="Falha ao baixar modelo: ${e.message?.take(150) ?: "erro desconhecido"}"
-                    } finally {busy=false;task=null}
-                }
-            }, enabled=!busy && !installed, modifier=Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.Download, null)
+            if (!installed) OutlinedButton(onClick=onManageModel, modifier=Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Settings, null)
                 Spacer(Modifier.width(8.dp))
-                Text(if(installed)"Modelo já instalado" else "Baixar e configurar modelo")
+                Text("Abrir configuração de voz")
             }
             HorizontalDivider()
             Text("Passo 2 · Gerar legendas", fontWeight=FontWeight.SemiBold)
