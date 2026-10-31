@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -35,7 +36,7 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
     val engine = remember { AudioExtractionEngine(context) }
     var sourceIndex by remember(p.id) { mutableIntStateOf(-1) } // -1 = all clips
     var message by remember { mutableStateOf("") }
-    var volumesExpanded by remember(p.id) { mutableStateOf(false) }
+    var volumesExpanded by remember(p.id) { mutableStateOf(p.clips.size <= 2) }
     var trackVolumeExpandedId by remember(p.id) { mutableStateOf<String?>(null) }
     var pendingAudioDeleteId by remember(p.id) { mutableStateOf<String?>(null) }
     var externalClip by remember { mutableStateOf<Clip?>(null) }
@@ -171,73 +172,106 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
         }
     }
     DisposableEffect(engine) { onDispose { engine.cancel() } }
-    Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
-        .padding(horizontal=16.dp)) {
+    val pageScroll = rememberScrollState()
+    val pageScope = rememberCoroutineScope()
+    Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(pageScroll)
+        .padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         Heading("Áudio",back)
-        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-            Text("Mixagem de áudio",fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
-            TextButton(onClick={volumesExpanded=!volumesExpanded}) {
-                Text(if(volumesExpanded) "Recolher" else "Volumes (${p.clips.size})")
-                Icon(if(volumesExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    "Mostrar ou ocultar volumes")
-            }
-        }
-        if(volumesExpanded) {
-            p.clips.forEachIndexed { index,clip ->
-                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                    Text("${index+1}. ${clip.title}",modifier=Modifier.weight(1f),
-                        maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=12.sp)
-                    Text("${(clip.volume*100).toInt()}%",fontSize=11.sp)
-                }
-                Slider(value=clip.volume.coerceIn(0f,1f),onValueChange={volume->
-                    update(p.copy(clips=p.clips.map { if(it.id==clip.id) it.copy(volume=volume) else it }))
-                })
-            }
-            p.music?.let { music ->
-                Text("Música antiga: ${music.title} · ${(music.volume*100).toInt()}%")
-                Slider(value=music.volume.coerceIn(0f,1f),onValueChange={update(p.copy(music=music.copy(volume=it)))})
-                TextButton(onClick={update(p.copy(music=null))}) {
-                    Icon(Icons.Default.Delete,null);Text("Remover música")
-                }
-            }
-        }
-        Text("Faixas adicionais (${p.audioTracks.size})",fontWeight=FontWeight.SemiBold)
-        if(p.audioTracks.isEmpty()) Text("Nenhuma faixa importada.",fontSize=12.sp,
-            color=MaterialTheme.colorScheme.onSurfaceVariant)
-        p.audioTracks.forEach { track ->
+        AudioPanelCard {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                Text(track.title,modifier=Modifier.weight(1f),maxLines=1,
-                    overflow=TextOverflow.Ellipsis,fontSize=13.sp)
-                TextButton(onClick={trackVolumeExpandedId=if(trackVolumeExpandedId==track.id)
-                    null else track.id},contentPadding=PaddingValues(horizontal=4.dp)) {
-                    Text("Vol ${(track.volume*100).toInt()}%",fontSize=11.sp)
+                Icon(Icons.Default.Tune,"Mixagem",tint=MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(9.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Mixagem do projeto",fontWeight=FontWeight.Bold,fontSize=18.sp)
+                    Text("${AudioScreenLabels.activeTrackCount(p.clips.size, p.audioTracks.size, p.music != null)} faixas ativas",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconButton(onClick={
-                    val sourceDuration = mediaDuration(context, Uri.parse(track.uri))
-                    val range = AudioTrackTiming.initialRange(track.sourceStartMs, track.durationMs,
-                        sourceDuration, track.startMs, p.durationMs)
-                    if (range == null) {
-                        message = "O arquivo é curto demais ou não há espaço para editar a faixa."
-                    } else {
-                        editingAudioId = track.id
-                        editTimelineStart = track.startMs.coerceIn(0L,
-                            (p.durationMs - (range.last - range.first)).coerceAtLeast(0L))
-                        editSourceStart = range.first
-                        editSourceEnd = range.last
-                        previewPlayer.pause()
-                        previewPlaying = false
+                TextButton(onClick={volumesExpanded=!volumesExpanded}) {
+                    Icon(Icons.Default.Tune,null,modifier=Modifier.size(17.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(if(volumesExpanded) "Recolher" else "Gerenciar faixas",fontSize=12.sp)
+                }
+            }
+            if(volumesExpanded) {
+                p.clips.forEachIndexed { index,clip ->
+                    AudioTrackCard {
+                        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                            Icon(Icons.Default.PlayCircleOutline,null,tint=MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(8.dp))
+                            Text(clip.title.ifBlank { "Vídeo ${index+1}" },modifier=Modifier.weight(1f),
+                                maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=13.sp)
+                            Text("${(clip.volume*100).toInt()}%",fontSize=12.sp,
+                                color=MaterialTheme.colorScheme.primary)
+                        }
+                        Slider(value=clip.volume.coerceIn(0f,1f),onValueChange={volume->
+                            update(p.copy(clips=p.clips.map { if(it.id==clip.id) it.copy(volume=volume) else it }))
+                        },modifier=Modifier.height(28.dp))
                     }
-                },modifier=Modifier.size(38.dp)) { Icon(Icons.Default.ContentCut,"Editar corte da faixa") }
-                IconButton(onClick={pendingAudioDeleteId=track.id},modifier=Modifier.size(38.dp)) {
-                    Icon(Icons.Default.Delete,"Remover faixa")
+                }
+                p.music?.let { music ->
+                    AudioTrackCard {
+                        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                            Icon(Icons.Default.MusicNote,null,tint=MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(8.dp))
+                            Text(music.title,modifier=Modifier.weight(1f),maxLines=1,fontSize=13.sp)
+                            Text("${(music.volume*100).toInt()}%",fontSize=12.sp)
+                            IconButton(onClick={update(p.copy(music=null))},modifier=Modifier.size(40.dp)) {
+                                Icon(Icons.Default.Delete,"Remover música")
+                            }
+                        }
+                        Slider(value=music.volume.coerceIn(0f,1f),onValueChange={
+                            update(p.copy(music=music.copy(volume=it)))
+                        },modifier=Modifier.height(28.dp))
+                    }
                 }
             }
-            if(trackVolumeExpandedId==track.id) {
-                Slider(value=track.volume.coerceIn(0f,1f),onValueChange={v->
-                    update(p.copy(audioTracks=p.audioTracks.map { if(it.id==track.id) it.copy(volume=v) else it }))
-                })
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                Text("Faixas adicionais (${p.audioTracks.size})",fontWeight=FontWeight.SemiBold,
+                    modifier=Modifier.weight(1f),fontSize=14.sp)
             }
-        }
+            if(p.audioTracks.isEmpty()) {
+                Text("Nenhuma faixa adicional. Use a seção Adicionar áudio.",fontSize=12.sp,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            p.audioTracks.forEach { track ->
+                AudioTrackCard {
+                    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                        Icon(Icons.Default.GraphicEq,null,tint=MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(8.dp))
+                        Text(AudioScreenLabels.readableFileName(track.title),modifier=Modifier.weight(1f),
+                            maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=13.sp)
+                        TextButton(onClick={trackVolumeExpandedId=if(trackVolumeExpandedId==track.id) null else track.id},
+                            contentPadding=PaddingValues(horizontal=4.dp)) {
+                            Text("${(track.volume*100).toInt()}%",fontSize=12.sp)
+                        }
+                        IconButton(onClick={
+                            val sourceDuration = mediaDuration(context, Uri.parse(track.uri))
+                            val range = AudioTrackTiming.initialRange(track.sourceStartMs, track.durationMs,
+                                sourceDuration, track.startMs, p.durationMs)
+                            if (range == null) {
+                                message = "O arquivo é curto demais ou não há espaço para editar a faixa."
+                            } else {
+                                editingAudioId = track.id
+                                editTimelineStart = track.startMs.coerceIn(0L,
+                                    (p.durationMs - (range.last - range.first)).coerceAtLeast(0L))
+                                editSourceStart = range.first
+                                editSourceEnd = range.last
+                                previewPlayer.pause()
+                                previewPlaying = false
+                            }
+                        },modifier=Modifier.size(40.dp)) { Icon(Icons.Default.ContentCut,"Editar corte da faixa") }
+                        IconButton(onClick={pendingAudioDeleteId=track.id},modifier=Modifier.size(40.dp)) {
+                            Icon(Icons.Default.Delete,"Remover faixa")
+                        }
+                    }
+                    if(trackVolumeExpandedId==track.id) {
+                        Slider(value=track.volume.coerceIn(0f,1f),onValueChange={v->
+                            update(p.copy(audioTracks=p.audioTracks.map { if(it.id==track.id) it.copy(volume=v) else it }))
+                        },modifier=Modifier.height(28.dp))
+                    }
+                }
+            }
         editingAudio?.let { track ->
             HorizontalDivider(Modifier.padding(vertical=8.dp))
             Text("Editar trecho · ${track.title}",fontWeight=FontWeight.Bold,fontSize=17.sp)
@@ -341,35 +375,68 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
             }
             HorizontalDivider(Modifier.padding(vertical=8.dp))
         }
-        OutlinedButton(onClick=chooseMusic,modifier=Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.LibraryMusic,null);Text(" Adicionar áudio à timeline")
         }
-        HorizontalDivider(Modifier.padding(vertical=12.dp))
-        Text("Extrair áudio de vídeo",fontWeight=FontWeight.Bold,fontSize=19.sp)
-        Text("Escolha o vídeo de origem e salve o áudio separado. A extração não altera o vídeo original.",
-            style=MaterialTheme.typography.bodySmall)
-        var expanded by remember { mutableStateOf(false) }
-        Box {
-            OutlinedButton(onClick={expanded=true},enabled=!exporting) {
-                Text(if(externalClip!=null)"Vídeo externo" else if(sourceIndex==-1)"Projeto inteiro" else "Clipe ${sourceIndex+1}")
-                Icon(Icons.Default.ArrowDropDown,null)
-            }
-            DropdownMenu(expanded=expanded,onDismissRequest={expanded=false}) {
-                DropdownMenuItem(text={Text("Projeto inteiro")},onClick={sourceIndex=-1;externalClip=null;expanded=false})
-                p.clips.forEachIndexed { i,clip ->
-                    DropdownMenuItem(text={Text("${i+1} · ${clip.title}",maxLines=1)},
-                        onClick={sourceIndex=i;externalClip=null;expanded=false})
+        AudioPanelCard {
+            Row(verticalAlignment=Alignment.CenterVertically) {
+                Icon(Icons.Default.LibraryMusic,null,tint=MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(9.dp))
+                Column {
+                    Text("Adicionar áudio",fontWeight=FontWeight.Bold,fontSize=18.sp)
+                    Text("Música, narração ou efeitos",style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = onChooseExternalVideo, enabled = !exporting) {
-                Icon(Icons.Default.VideoLibrary, null); Text(" Galeria de vídeos")
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                AudioQuickAction("Escolher áudio",Icons.Default.LibraryMusic,{
+                    chooseMusic()
+                },Modifier.weight(1f))
+                AudioQuickAction("Extrair",Icons.Default.VideoLibrary,{
+                    pageScope.launch { pageScroll.animateScrollTo(pageScroll.maxValue) }
+                },Modifier.weight(1f))
             }
-            TextButton(onClick = { videoPicker.launch(arrayOf("video/*")) }, enabled = !exporting) {
-                Text("Arquivos")
-            }
+            Text("Os áudios selecionados são adicionados diretamente ao projeto pelo seletor de arquivos do Android.",
+                style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        AudioPanelCard {
+                Row(verticalAlignment=Alignment.CenterVertically) {
+                    Icon(Icons.Default.VideoLibrary,null,tint=MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(9.dp))
+                    Column {
+                        Text("Extrair áudio de vídeo",fontWeight=FontWeight.Bold,fontSize=18.sp)
+                        Text("Extraia o áudio sem alterar o vídeo original.",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                Text("Origem do vídeo",fontWeight=FontWeight.SemiBold)
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                    FilterChip(selected=externalClip==null && sourceIndex==-1,
+                        onClick={externalClip=null;sourceIndex=-1},label={Text("Projeto inteiro",fontSize=11.sp)},
+                        enabled=!exporting,modifier=Modifier.weight(1f))
+                    var showClips by remember { mutableStateOf(false) }
+                    Box(Modifier.weight(1f)) {
+                        FilterChip(selected=externalClip==null && sourceIndex>=0,
+                            onClick={showClips=true},label={Text(if(sourceIndex>=0 && externalClip==null)
+                                "Clipe ${sourceIndex+1}" else "Clipe atual",fontSize=11.sp,maxLines=1)},
+                            enabled=!exporting && p.clips.isNotEmpty(),modifier=Modifier.fillMaxWidth())
+                        DropdownMenu(expanded=showClips,onDismissRequest={showClips=false}) {
+                            p.clips.forEachIndexed { i,clip ->
+                                DropdownMenuItem(text={Text("${i+1} · ${clip.title}",maxLines=1)},
+                                    onClick={sourceIndex=i;externalClip=null;showClips=false})
+                            }
+                        }
+                    }
+                    FilterChip(selected=externalClip!=null,onClick=onChooseExternalVideo,
+                        label={Text("Vídeo externo",fontSize=11.sp,maxLines=1)},
+                        enabled=!exporting,modifier=Modifier.weight(1f))
+                }
+                Text("Fonte externa",fontWeight=FontWeight.SemiBold)
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    AudioQuickAction("Galeria de vídeos",Icons.Default.VideoLibrary,onChooseExternalVideo,
+                        Modifier.weight(1f),enabled=!exporting)
+                    AudioQuickAction("Arquivos",Icons.Default.FolderOpen,
+                        {videoPicker.launch(arrayOf("video/*"))},Modifier.weight(1f),enabled=!exporting)
+                }
         externalClip?.let { clip ->
             Text("Origem externa: ${clip.title}",maxLines=2)
             Text("Início: ${formatPipMs((clip.sourceDurationMs*trimStart).toLong())}")
@@ -407,35 +474,43 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
             Text("Para ouvir antes de extrair, escolha um clipe ou importe um vídeo externo.",
                 style=MaterialTheme.typography.bodySmall)
         }
-        Text("Formato de áudio",fontWeight=FontWeight.Medium)
-        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            listOf("m4a","mp4").forEach { format ->
-                FilterChip(selected=outputExtension==format,onClick={outputExtension=format},
-                    label={Text(format.uppercase())})
-            }
-        }
-        Text("Ambos usam áudio AAC em contêiner MP4. MP3 e WAV exigem codificadores adicionais.",
-            style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-        Row(horizontalArrangement=Arrangement.spacedBy(7.dp)) {
-            OutlinedButton(onClick={
-                addAfterExtract=false
-                saveAudio.launch("UaiCortes_audio.$outputExtension")
-            },modifier=Modifier.weight(1f),enabled=!exporting && p.clips.isNotEmpty()) {
-                Icon(Icons.Default.Save,null);Text(" Salvar",fontSize=12.sp)
-            }
-            Button(onClick={
-                addAfterExtract=true
-                saveAudio.launch("UaiCortes_audio.$outputExtension")
-            },modifier=Modifier.weight(1f),enabled=!exporting && p.clips.isNotEmpty()) {
-                Icon(Icons.Default.PlaylistAdd,null);Text(" Salvar e usar",fontSize=12.sp)
-            }
-        }
-        if(exporting) {
-            LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
-            Text("Extraindo áudio... mantenha esta tela aberta.",fontSize=12.sp)
+                Text("Formato de áudio",fontWeight=FontWeight.SemiBold)
+                Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    listOf("m4a","mp4").forEach { format ->
+                        FilterChip(selected=outputExtension==format,onClick={outputExtension=format},
+                            label={Text(format.uppercase())},enabled=!exporting)
+                    }
+                }
+                Text("M4A e MP4 usam AAC. MP3 e WAV não são suportados por esta extração.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick={
+                        addAfterExtract=false
+                        saveAudio.launch("UaiCortes_audio.$outputExtension")
+                    },modifier=Modifier.weight(1f),enabled=!exporting && (externalClip!=null || p.clips.isNotEmpty()),
+                        contentPadding=PaddingValues(horizontal=8.dp)) {
+                        Icon(Icons.Default.Save,null,modifier=Modifier.size(17.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Salvar",fontSize=12.sp,maxLines=1)
+                    }
+                    Button(onClick={
+                        addAfterExtract=true
+                        saveAudio.launch("UaiCortes_audio.$outputExtension")
+                    },modifier=Modifier.weight(1f),enabled=!exporting && p.clips.isNotEmpty(),
+                        contentPadding=PaddingValues(horizontal=8.dp)) {
+                        Icon(Icons.Default.PlaylistAdd,null,modifier=Modifier.size(17.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Salvar e usar",fontSize=12.sp,maxLines=1)
+                    }
+                }
+                if(exporting) {
+                    LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
+                    Text("Extraindo áudio... mantenha esta tela aberta.",fontSize=12.sp)
+                }
         }
         if(message.isNotBlank()) Text(message,color=MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.height(30.dp))
+        Spacer(Modifier.height(20.dp))
     }
     pendingAudioDeleteId?.let { id ->
         val candidate=p.audioTracks.firstOrNull { it.id==id }

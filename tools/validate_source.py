@@ -19,10 +19,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*74',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.73"',gradle)
+assert re.search(r'versionCode\s*=\s*75',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.74"',gradle)
 assert 'AppReleaseNotes.VERSION_NAME' in (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
-for label in ["VERSION: '0.1.73'", "VERSION_CODE: '74'", 'TAG="v$VERSION"',
+for label in ["VERSION: '0.1.74'", "VERSION_CODE: '75'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -215,8 +215,8 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.73'" in package_script and 'VERSION_CODE = 74' in package_script
-assert 'versionCode 74' in gradle and 'isUniversalApk = true' in gradle
+assert "VERSION = '0.1.74'" in package_script and 'VERSION_CODE = 75' in package_script
+assert 'versionCode 75' in gradle and 'isUniversalApk = true' in gradle
 print('OK: versão atual 0.1.64 / versionCode 74, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
@@ -326,7 +326,7 @@ assert 'Text("Salvar",fontSize=11.sp,maxLines=1)' in ui
 assert 'internal fun SubtitleScreen(p:VideoProject' in ui and 'onSaveHome: () -> Unit, onAutoSubtitles: () -> Unit)' in ui
 assert 'val carouselStart=CircularCarousel.startIndex(choices.size)' in ui
 assert 'items(count=Int.MAX_VALUE)' in ui and 'CircularCarousel.optionIndex(index,choices.size)' in ui
-assert 'Text("Faixas adicionais (${p.audioTracks.size})"' in ui
+assert 'Faixas adicionais (${p.audioTracks.size})' in ui
 assert 'if(volumesExpanded)' in ui and 'if(trackVolumeExpandedId==track.id)' in ui
 assert 'Remover faixa de áudio?' in ui and 'pendingAudioDeleteId=track.id' in ui
 assert 'if(editingAudioId==id) editingAudioId=null' in ui
@@ -791,7 +791,7 @@ news=(app_files/'WhatsNewScreen.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
-assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.73', 'VERSION_CODE = 74'])
+assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.74', 'VERSION_CODE = 75'])
 assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
@@ -812,7 +812,7 @@ assert 'rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()
 assert 'Text("Navegador"' in vosk_ui and 'Text("Importar ZIP"' in vosk_ui
 assert 'ModelTransferProgress.percent' in vosk and 'ModelTransferProgress.bytesLabel' in vosk_ui
 assert 'onTransfer(count, expected)' in vosk and 'Servidor demorou a responder' in vosk
-assert '0.1.73' in (root/'app/src/main/java/br/com/uaicortes/AppReleaseNotes.kt').read_text()
+assert '0.1.74' in (root/'app/src/main/java/br/com/uaicortes/AppReleaseNotes.kt').read_text()
 print('OK: v0.1.69 / versionCode 74, importação SAF, progresso de bytes, limpeza e diagnóstico Vosk')
 
 # v0.1.71: modelo oficial pt antigo usa final.mdl/mfcc.conf na raiz, não am/conf.
@@ -851,9 +851,9 @@ assert 'MediaMetadataRetriever.OPTION_CLOSEST' in frame_saver
 assert 'MediaStore.Images.Media.IS_PENDING' in frame_saver and 'resolver.delete(uri' in frame_saver
 assert 'TimelinePlaybackCoordinator.target' in frame_plan
 assert (root/'app/src/test/java/br/com/uaicortes/FrameCapturePlanTest.kt').exists()
-print('OK: v0.1.72: captura PNG com MediaStore seguro; v0.1.73 velocidades até 6×')
+print('OK: v0.1.72: captura PNG com MediaStore seguro; v0.1.74 velocidades até 6×')
 
-# v0.1.73: botões -/+ e quadro anterior/próximo aproximados.
+# v0.1.74: botões -/+ e quadro anterior/próximo aproximados.
 ui = (app_files/'EditorTimelineUi.kt').read_text()
 editor = (app_files/'EditorScreen.kt').read_text()
 policy = (app_files/'FrameStepPolicy.kt').read_text()
@@ -864,4 +864,18 @@ assert 'Ajuste fino' not in editor and 'Voltar cinco segundos' not in editor
 assert 'val SPEEDS = listOf(0.1f' in (app_files/'PreviewPlayback.kt').read_text()
 assert all(x in policy for x in ['FALLBACK_FPS', 'intervalMs', 'fun target'])
 assert (root/'app/src/test/java/br/com/uaicortes/FrameStepPolicyTest.kt').exists()
-print('OK: v0.1.73 seletor -/+/1×, passo aproximado por FPS e testes de regressão')
+print('OK: v0.1.74 seletor -/+/1×, passo aproximado por FPS e testes de regressão')
+
+# v0.1.74: novos cartões e ações de áudio sem alterar modelos/exportação.
+audio_ui=(root/'app/src/main/java/br/com/uaicortes/AudioScreen.kt').read_text()
+audio_parts=(root/'app/src/main/java/br/com/uaicortes/AudioSectionUi.kt').read_text()
+audio_labels=(root/'app/src/main/java/br/com/uaicortes/AudioScreenLabels.kt').read_text()
+assert all(label in audio_ui for label in [
+    'Mixagem do projeto', 'Adicionar áudio', 'Extrair áudio de vídeo',
+    'Projeto inteiro', 'Clipe atual', 'Vídeo externo', 'Salvar e usar',
+    'Editar corte da faixa', 'Remover faixa', 'onChooseExternalVideo'
+])
+assert 'AudioPanelCard' in audio_parts and 'AudioTrackCard' in audio_parts
+assert 'readableFileName' in audio_labels and 'activeTrackCount' in audio_labels
+assert (root/'app/src/test/java/br/com/uaicortes/AudioScreenLabelsTest.kt').exists()
+print('OK: v0.1.74 Áudio modularizado em cartões com funcionalidades preservadas')

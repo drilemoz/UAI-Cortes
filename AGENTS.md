@@ -177,3 +177,5 @@
 - v0.1.72: salvar em `Pictures/UaiCortes` com MediaStore `IS_PENDING` Android 10+, descartar entradas parciais em erro, recuperar falhas de permissão sem crash. Android 8/9 usa pasta específica do app. Analisar orientação real, codecs, cortes e velocidades 3×–5× no APK antes de confirmar fidelidade.
 
 - v0.1.73: velocidade da prévia com -/+/toque no valor, 14 passos 0,1×–6×, restaurar 1×; não alterar MP4. Substituir ajustes finos por buscas aproximadas de quadro via FPS nominal quando disponível; não prometer frame stepping exato em arquivos de FPS variável. Manter captura PNG. Verificar Media3 no aparelho antes de declarar velocidades extremas validadas.
+
+- v0.1.74: preservar organização da tela Áudio em três cartões com UI em `AudioSectionUi.kt`. Não substituir seletor SAF por URI efêmera sem persistência; áudio escolhido já entra no projeto. Manter controles de volume por clipe e trilha, corte com rascunho, confirmação de exclusão, pré-escuta e extração M4A/MP4. `schemaVersion=4` inalterado.
