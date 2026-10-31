@@ -1,11 +1,13 @@
 import br.com.uaicortes.PreviewPlayback
 fun main() {
-  check(PreviewPlayback.SPEEDS == listOf(.25f, .5f, .75f, 1f, 1.25f, 1.5f, 2f))
-  check(PreviewPlayback.label(.25f) == "0,25×")
+  check(PreviewPlayback.SPEEDS.size == 14)
+  check(PreviewPlayback.SPEEDS.first() == 0.1f && PreviewPlayback.SPEEDS.last() == 6f)
+  check(PreviewPlayback.label(.1f) == "0,1×")
   check(PreviewPlayback.label(1f) == "1×")
-  check(PreviewPlayback.label(1.5f) == "1,5×")
-  check(PreviewPlayback.label(2f) == "2×")
-  val invalid = runCatching { PreviewPlayback.label(3f) }.exceptionOrNull()
-  check(invalid is IllegalArgumentException)
-  println("PASS: PreviewPlayback 7 velocidades, formatação pt-BR e validação")
+  check(PreviewPlayback.label(6f) == "6×")
+  check(PreviewPlayback.previous(1f) == .75f)
+  check(PreviewPlayback.next(1f) == 1.25f)
+  check(PreviewPlayback.previous(.1f) == .1f && PreviewPlayback.next(6f) == 6f)
+  check(runCatching { PreviewPlayback.label(7f) }.isFailure)
+  println("PASS: 14 velocidades, +/- com limites, nomes pt-BR")
 }

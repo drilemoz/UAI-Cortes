@@ -26,6 +26,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import android.widget.Toast
 import java.util.UUID
 
 // Extraído da MainActivity na v0.1.53 para reutilização de componentes.
@@ -39,9 +43,19 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     onSelectOverlay:(String)->Unit,onTransition:(Int)->Unit,onSaveHome:()->Unit,
     onSelectAudio:(String)->Unit,onSelectSubtitle:(String)->Unit) {
     val context=LocalContext.current
+    val captureScope = rememberCoroutineScope()
+    var savingFrame by remember { mutableStateOf(false) }
     val playbackVm: EditorPlaybackViewModel = viewModel()
     LaunchedEffect(p.id) { playbackVm.selectProject(p.id) }
     val playbackSpeed = playbackVm.speed
+    val activeFrameIndex = AdaptiveVideoLayout.activeClipIndex(p.clips.map { it.durationMs }, currentMs)
+    val activeFrameUri = p.clips.getOrNull(activeFrameIndex)?.uri
+    // Um clipe novo pode ter FPS diferente. A leitura não bloqueia a interface.
+    val frameFps by produceState<Float?>(initialValue = null, activeFrameUri) {
+        value = activeFrameUri?.let { uri ->
+            withContext(Dispatchers.IO) { VideoFrameRate.read(context, uri) }
+        }
+    }
     val player=remember(p.id) { diagnosticPlayer(context).apply { repeatMode = Player.REPEAT_MODE_ALL } }
     var isPlaying by remember(player) { mutableStateOf(player.isPlaying) }
     var restoringMedia by remember(player) { mutableStateOf(true) }
@@ -162,13 +176,52 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         }
         Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),horizontalArrangement=Arrangement.Center,
             verticalAlignment=Alignment.CenterVertically) {
-            IconButton(onClick={seekGlobal(TimelinePrecision.step(currentMs, -5000L, p.durationMs))}) { Icon(Icons.Default.SkipPrevious,"Voltar cinco segundos") }
+            IconButton(onClick = {
+                player.pause()
+                seekGlobal(FrameStepPolicy.target(currentMs, p.durationMs, -1, frameFps))
+            }, enabled = p.durationMs > 0) {
+                Icon(Icons.Default.SkipPrevious, "Voltar aproximadamente um quadro")
+            }
             IconButton(onClick={if(isPlaying)player.pause() else player.play()}) {
                 Icon(if(isPlaying) Icons.Default.PauseCircle else Icons.Default.PlayCircle, "Reproduzir / pausar",
                     modifier=Modifier.size(35.dp))
             }
-            IconButton(onClick={seekGlobal(TimelinePrecision.step(currentMs, 5000L, p.durationMs))}) { Icon(Icons.Default.SkipNext,"Avançar cinco segundos") }
+            IconButton(onClick = {
+                player.pause()
+                seekGlobal(FrameStepPolicy.target(currentMs, p.durationMs, 1, frameFps))
+            }, enabled = p.durationMs > 0) {
+                Icon(Icons.Default.SkipNext, "Avançar aproximadamente um quadro")
+            }
             PlaybackSpeedButton(playbackSpeed, onSelect = playbackVm::updateSpeed)
+            // Fotografa o quadro original no cursor; PiP/legendas não entram no PNG.
+            IconButton(onClick = {
+                val selection = FrameCapturePlan.locate(p.clips.map {
+                    FrameCaptureClip(it.uri, it.startMs, it.endMs)
+                }, currentMs)
+                if (selection == null) {
+                    Toast.makeText(context, "Nenhum quadro disponível para capturar.", Toast.LENGTH_SHORT).show()
+                } else if (!savingFrame) {
+                    val title = p.title
+                    savingFrame = true
+                    captureScope.launch {
+                        try {
+                            val name = FrameCapturePlan.filename(title, System.currentTimeMillis(), selection.sourceTimeMs)
+                            withContext(Dispatchers.IO) {
+                                VideoFrameSaver.save(context.applicationContext, selection, name)
+                            }
+                            Toast.makeText(context, "Quadro salvo em Imagens/UaiCortes", Toast.LENGTH_LONG).show()
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Não foi possível salvar o quadro: ${e.message ?: "falha de leitura"}", Toast.LENGTH_LONG).show()
+                        } finally {
+                            savingFrame = false
+                        }
+                    }
+                }
+            }, enabled = p.clips.isNotEmpty() && !savingFrame,
+                modifier = Modifier.size(42.dp)) {
+                if (savingFrame) CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+                else Icon(Icons.Default.PhotoCamera, "Capturar quadro e salvar na galeria")
+            }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically) {
@@ -177,22 +230,8 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 seekGlobal(ms)
             }, modifier = Modifier.weight(1f))
         }
-        // Passos temporais explícitos evitam tentar acertar um quadro em uma barra curta.
-        Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),
-            verticalAlignment=Alignment.CenterVertically,
-            horizontalArrangement=Arrangement.spacedBy(5.dp)) {
-            Text("Ajuste fino",fontSize=11.sp,modifier=Modifier.weight(1f))
-            listOf(-1000L to "−1s", -100L to "−0,1s",
-                100L to "+0,1s", 1000L to "+1s").forEach { (delta,label) ->
-                OutlinedButton(onClick={
-                    val dest=TimelinePrecision.step(currentMs,delta,p.durationMs)
-                    seekGlobal(dest)
-                },contentPadding=PaddingValues(horizontal=7.dp,vertical=2.dp),
-                    modifier=Modifier.height(32.dp),enabled=p.durationMs>0) {
-                    Text(label,fontSize=11.sp)
-                }
-            }
-        }
+        // Os botões junto de play/pause substituem os quatro ajustes finos redundantes.
+        // O Slider continua disponível para deslocamentos longos e arrasto direto.
         if(p.durationMs>0) Slider(value=currentMs.toFloat().coerceIn(0f,p.durationMs.toFloat()),
             onValueChange={global ->
                 scrubbing = true

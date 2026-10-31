@@ -19,10 +19,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*72',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.71"',gradle)
+assert re.search(r'versionCode\s*=\s*74',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.73"',gradle)
 assert 'AppReleaseNotes.VERSION_NAME' in (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
-for label in ["VERSION: '0.1.71'", "VERSION_CODE: '72'", 'TAG="v$VERSION"',
+for label in ["VERSION: '0.1.73'", "VERSION_CODE: '74'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -153,7 +153,7 @@ assert 'SubtitleOverlayOnFrame(cue, editable = false, playbackMs=currentMs)' in 
 assert 'SubtitlePositionPreview(p,selected,' in ui
 assert 'SubtitlePlacement.anchorPixels(' in ui
 assert 'SubtitlePlacement.drag(' in ui
-assert 'TimelinePrecision.step(' in ui and 'seekGlobal(dest)' in ui
+assert 'fun step(positionMs:' in precision and 'FrameStepPolicy.target(' in ui
 assert 'Modifier.offset(x=((cue.x-.5f)*240).dp' not in ui
 assert 'onDragEnd' in ui and 'latestCommit(draftX,draftY)' in ui
 assert 'setOverlayFrameAnchor(0f,-1f)' in fx
@@ -215,9 +215,9 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.71'" in package_script and 'VERSION_CODE = 72' in package_script
-assert 'versionCode 72' in gradle and 'isUniversalApk = true' in gradle
-print('OK: versão atual 0.1.64 / versionCode 72, compatibilidade das legendas, JSON legado, APKs')
+assert "VERSION = '0.1.73'" in package_script and 'VERSION_CODE = 74' in package_script
+assert 'versionCode 74' in gradle and 'isUniversalApk = true' in gradle
+print('OK: versão atual 0.1.64 / versionCode 74, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
 assert 'import androidx.compose.ui.graphics.StrokeJoin' in ui
@@ -233,7 +233,7 @@ assert 'TrimQuickAction(Icons.Default.Save, "Salvar"' in ui
 assert 'TrimSaveLogic.applyPending(p, clip.id, begin, finish)' in ui
 assert 'onSaveHome = { saved -> if (write(saved)) screen = "home" }' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/TrimSaveLogicTest.kt').exists()
-print('OK: versão atual 0.1.64 / versionCode 72, rolagem circular, salvar projeto e corte antes de ir à Home')
+print('OK: versão atual 0.1.64 / versionCode 74, rolagem circular, salvar projeto e corte antes de ir à Home')
 
 # v0.1.34: cortes retornam à metade direita, a faixa mostra partes selecionáveis,
 # e um ponto de fonte persiste sem alterar esquema legado.
@@ -248,7 +248,7 @@ assert 'lastTrimCutClipId = newId' in trim_edit and 'lastTrimCutSourceMs = sourc
 assert 'EditFeatures.repositionAfterDelete(project, remaining)' in trim_edit
 assert 'undoLastCut' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/TrimTimelineEditTest.kt').exists()
-print('OK: versão atual 0.1.64 / versionCode 72, faixa de trechos, seleção e restauração do último corte')
+print('OK: versão atual 0.1.64 / versionCode 74, faixa de trechos, seleção e restauração do último corte')
 
 # v0.1.34: uma timeline geral, lista virtualizada e vídeo fixo no topo.
 assert 'internal fun SubtitleCompactTimeline(' in ui
@@ -261,7 +261,7 @@ assert 'SubtitleTimelineEditor(p.subtitles,p.durationMs' not in ui
 assert 'p.subtitles.sortedBy { it.startMs }.forEachIndexed' not in ui
 assert (root/'app/src/main/java/br/com/uaicortes/SubtitleCompactLayout.kt').exists()
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleCompactLayoutTest.kt').exists()
-print('OK: versão atual 0.1.64 / versionCode 72, timeline unica, video fixo e legendas compactas')
+print('OK: versão atual 0.1.64 / versionCode 74, timeline unica, video fixo e legendas compactas')
 
 # v0.1.34: busca, navegação e exclusão segura no editor de legendas.
 nav=(root/'app/src/main/java/br/com/uaicortes/SubtitleListNavigation.kt').read_text()
@@ -274,7 +274,7 @@ assert 'pendingDeleteId?.let' in ui and 'Excluir esta legenda?' in ui
 assert 'SubtitleListNavigation.readSrtBounded(reader)' in ui
 assert 'fun readSrtBounded(' in nav and 'maxCharacters + 1' in nav
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleListNavigationTest.kt').exists()
-print('OK: versão atual 0.1.64 / versionCode 72, busca e navegação, exclusão confirmada e limite SRT')
+print('OK: versão atual 0.1.64 / versionCode 74, busca e navegação, exclusão confirmada e limite SRT')
 
 # v0.1.35: prévia se adapta ao aspecto/rotação em todas as telas de vídeo.
 layout=(root/'app/src/main/java/br/com/uaicortes/AdaptiveVideoLayout.kt').read_text()
@@ -288,7 +288,7 @@ assert 'previewSubtitleScale(cue,textLimitPx.toInt(),' in ui
 assert 'frameWidthDp * .94f' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/AdaptiveVideoLayoutTest.kt').exists()
 assert 'mediaAspect(context' in ui and 'METADATA_KEY_VIDEO_ROTATION' in ui
-print('OK: v0.1.64 / versionCode 72, proporção da prévia e largura de legenda responsivas')
+print('OK: v0.1.64 / versionCode 74, proporção da prévia e largura de legenda responsivas')
 
 # Regressão CI 31: o callback de importação SRT usa searchQuery; a declaração
 # de estado Compose deve aparecer ANTES do callback para resolver o identificador.
@@ -425,7 +425,7 @@ assert 'GalleryRules.matches(' in browser and 'Galeria de vídeos' in browser
 assert 'READ_MEDIA_VISUAL_USER_SELECTED' in browser
 assert 'videoPicker.launch(arrayOf("video/*"))' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/MediaGalleryRulesTest.kt').is_file()
-print('OK: v0.1.64 / versionCode 72, galeria visual unificada e seletor Android alternativo')
+print('OK: v0.1.64 / versionCode 74, galeria visual unificada e seletor Android alternativo')
 
 # v0.1.52: interface de exportação em tela cheia, sem porcentagem fictícia.
 progress_ui=(root/'app/src/main/java/br/com/uaicortes/ExportProgressUi.kt').read_text()
@@ -492,7 +492,7 @@ assert 'project.textWatermark?.toSubtitle(project.durationMs)' in source
 assert 'textLayers += TimedSubtitleOverlay(listOf(watermarkCue), globalStartMs)' in source
 assert 'OverlayEffect(textLayers)' in source
 assert (root/'app/src/test/java/br/com/uaicortes/TextWatermarkTest.kt').exists()
-print('OK: v0.1.64 / versionCode 72, marca de texto em prévia/editor/MP4 e JSON legado')
+print('OK: v0.1.64 / versionCode 74, marca de texto em prévia/editor/MP4 e JSON legado')
 
 # v0.1.52: transcrição offline real e galeria de projetos segura.
 auto=(root/'app/src/main/java/br/com/uaicortes/AutoSubtitleEngine.kt').read_text()
@@ -525,7 +525,7 @@ assert 'ImageAnimationPlan.frame' in anim and 'ImageAnimationPlan.frame' in engi
 assert 'MediaStore.Video.Media.IS_PENDING' in saver and 'VIDEO_H264' in engine
 assert 'Cancelar exportação' in anim and 'onUseInEditor' in anim and 'onOrderChanged' in anim
 assert 'MAX_IMAGES = 80' in plan and 'secondsPerImage: Int = 5' in plan
-print('OK: v0.1.64 / versionCode 72, animar imagens offline, galeria, preview, MP4 e integração')
+print('OK: v0.1.64 / versionCode 74, animar imagens offline, galeria, preview, MP4 e integração')
 
 # Regressão do NullPointerException do progresso em Animar Imagens.
 anim=(root/'app/src/main/java/br/com/uaicortes/AnimateImagesScreen.kt').read_text()
@@ -550,7 +550,7 @@ assert all(t in anim for t in ['Salvar edição das imagens?', 'confirmExit', 'V
 assert 'progress!!' not in anim and 'onUseInEditor(uri)' in anim
 assert 'VideoSavedDialog(uri=savedUri' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/ImageAnimationDraftRulesTest.kt').is_file()
-print('OK: v0.1.64 / versionCode 72, rascunho, voltar, sucesso compartilhado e ajustes padronizados')
+print('OK: v0.1.64 / versionCode 74, rascunho, voltar, sucesso compartilhado e ajustes padronizados')
 
 
 # v0.1.56: contratos de modularização e serviços compartilhados.
@@ -731,14 +731,14 @@ assert 'TimelinePlaybackCoordinator.target(' in preview and 'TimelinePlaybackCoo
 assert 'val playbackVm: EditorPlaybackViewModel = viewModel()' in editor
 assert 'LaunchedEffect(p.id) { playbackVm.selectProject(p.id) }' in editor
 assert 'onIsPlayingChanged(playing: Boolean)' in editor
-assert 'seekGlobal(TimelinePrecision.step(currentMs, -5000L, p.durationMs))' in editor
-assert 'seekGlobal(TimelinePrecision.step(currentMs, 5000L, p.durationMs))' in editor
+assert 'FrameStepPolicy.target(currentMs, p.durationMs, -1, frameFps)' in editor
+assert 'FrameStepPolicy.target(currentMs, p.durationMs, 1, frameFps)' in editor
 assert 'onValueChangeFinished = { scrubbing = false }' in editor
 assert 'if (!restoringMedia && !scrubbing' in editor
 assert 'seekProjectPosition(player, p.clips, latestPosition)' in editor
 assert (root/'app/src/test/java/br/com/uaicortes/TimelinePlaybackCoordinatorTest.kt').exists()
 assert (root/'app/src/test/java/br/com/uaicortes/EditorPlaybackViewModelTest.kt').exists()
-print('OK: v0.1.64 / versionCode 72, timeline global, ViewModel de velocidade, seek/cancelamento de arrasto')
+print('OK: v0.1.64 / versionCode 74, timeline global, ViewModel de velocidade, seek/cancelamento de arrasto')
 
 # v0.1.69: recuperação explícita e gravação segura.
 codec=(app_files/'ProjectStore.kt').read_text()
@@ -752,7 +752,7 @@ assert 'lastReadIssue' in codec and 'storageWarning' in vm
 assert 'catalogAlertDismissed' in main and 'Atenção ao armazenamento de projetos' in main
 assert 'if (write(p)) screen = "home"' in main
 assert (root/'app/src/test/java/br/com/uaicortes/ProjectCatalogRecoveryTest.kt').exists()
-print('OK: v0.1.69 / versionCode 72, recuperação de backup, aviso e escrita protegida')
+print('OK: v0.1.69 / versionCode 74, recuperação de backup, aviso e escrita protegida')
 
 # v0.1.69: codec fail-closed, backup do Animar Imagens e permissões de leitura.
 codec=(app_files/'ImageAnimationDraftCodec.kt').read_text()
@@ -765,7 +765,7 @@ assert all(t in access for t in ['Dispatchers.IO', 'openFileDescriptor(', 'ensur
 assert all(t in anim for t in ['inaccessible(', 'unavailableImages', 'ImageDraftStatus.DAMAGED', 'requestDraftReset', 'allImagesReadable'])
 assert (root/'app/src/test/java/br/com/uaicortes/ImageAnimationDraftCodecTest.kt').is_file()
 assert 'uris.forEach(mediaController::persistReadAccess)' in main
-print('OK: v0.1.69 / versionCode 72, backup fail-closed e validação de permissão de fotos')
+print('OK: v0.1.69 / versionCode 74, backup fail-closed e validação de permissão de fotos')
 
 # v0.1.69: novos fluxos de Home, galeria, nomes, PiP e modelo Vosk.
 home=(root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
@@ -782,7 +782,7 @@ assert 'PipTimePresets.clipPeriods' in pipui and 'RangeSlider(' in pipui
 assert 'TimeDigitsField("Início"' in pipui and 'compact=true' in pipui
 assert 'AutoSubtitleEngine.install' in vosk and '"$it%"' in vosk
 assert 'speech_model' in main and 'onManageModel' in main
-print('OK: v0.1.69 / versionCode 72, melhorias UI, nome de projeto, PiP e Vosk')
+print('OK: v0.1.69 / versionCode 74, melhorias UI, nome de projeto, PiP e Vosk')
 
 # v0.1.69: Sobre e Novidades compartilham a mesma fonte e fluxo de exibição única.
 notes=(app_files/'AppReleaseNotes.kt').read_text()
@@ -791,7 +791,7 @@ news=(app_files/'WhatsNewScreen.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
-assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.71', 'VERSION_CODE = 72'])
+assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.73', 'VERSION_CODE = 74'])
 assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
@@ -799,7 +799,7 @@ assert 'if (whatsNewSeen.shouldOpen())' in main and 'screen = "whats_new"' in ma
 assert '"whats_new"' in nav and '"whats_new"' in home
 assert 'putStringSet' in seen and '.commit()' in seen
 assert (root/'app/src/test/java/br/com/uaicortes/WhatsNewReleaseNotesTest.kt').exists()
-print('OK: v0.1.69 / versionCode 72, tela Novidades uma vez e fonte única com Sobre')
+print('OK: v0.1.69 / versionCode 74, tela Novidades uma vez e fonte única com Sobre')
 
 # v0.1.69: além de download interno, permitir importação segura de ZIP via SAF.
 vosk=(root/'app/src/main/java/br/com/uaicortes/AutoSubtitleEngine.kt').read_text()
@@ -812,8 +812,8 @@ assert 'rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()
 assert 'Text("Navegador"' in vosk_ui and 'Text("Importar ZIP"' in vosk_ui
 assert 'ModelTransferProgress.percent' in vosk and 'ModelTransferProgress.bytesLabel' in vosk_ui
 assert 'onTransfer(count, expected)' in vosk and 'Servidor demorou a responder' in vosk
-assert '0.1.71' in (root/'app/src/main/java/br/com/uaicortes/AppReleaseNotes.kt').read_text()
-print('OK: v0.1.69 / versionCode 72, importação SAF, progresso de bytes, limpeza e diagnóstico Vosk')
+assert '0.1.73' in (root/'app/src/main/java/br/com/uaicortes/AppReleaseNotes.kt').read_text()
+print('OK: v0.1.69 / versionCode 74, importação SAF, progresso de bytes, limpeza e diagnóstico Vosk')
 
 # v0.1.71: modelo oficial pt antigo usa final.mdl/mfcc.conf na raiz, não am/conf.
 model_layout = (app_files/'VoskModelLayout.kt').read_text()
@@ -837,3 +837,31 @@ assert 'if (installed && !busy)' in speech_ui
 assert '!installed && !busy && failure.isBlank()' in speech_policy
 assert (root/'app/src/test/java/br/com/uaicortes/SpeechInstallUiPolicyTest.kt').exists()
 print('OK: v0.1.71, limpeza de progresso concluido e teste da etapa antiga')
+
+# v0.1.72: câmera de quadro e velocidades de prévia mais rápidas.
+frame_plan = (app_files/'FrameCapturePlan.kt').read_text()
+frame_saver = (app_files/'VideoFrameSaver.kt').read_text()
+editor = (app_files/'EditorScreen.kt').read_text()
+speed = (app_files/'PreviewPlayback.kt').read_text()
+assert all(v in speed for v in ['0.1f', '2.5f', '3f', '4f', '5f', '6f'])
+assert 'PreviewPlayback.SPEEDS.chunked(3)' in (app_files/'EditorTimelineUi.kt').read_text()
+assert 'FrameCapturePlan.locate' in editor and 'VideoFrameSaver.save' in editor
+assert 'Dispatchers.IO' in editor and 'savingFrame' in editor and 'PhotoCamera' in editor
+assert 'MediaMetadataRetriever.OPTION_CLOSEST' in frame_saver
+assert 'MediaStore.Images.Media.IS_PENDING' in frame_saver and 'resolver.delete(uri' in frame_saver
+assert 'TimelinePlaybackCoordinator.target' in frame_plan
+assert (root/'app/src/test/java/br/com/uaicortes/FrameCapturePlanTest.kt').exists()
+print('OK: v0.1.72: captura PNG com MediaStore seguro; v0.1.73 velocidades até 6×')
+
+# v0.1.73: botões -/+ e quadro anterior/próximo aproximados.
+ui = (app_files/'EditorTimelineUi.kt').read_text()
+editor = (app_files/'EditorScreen.kt').read_text()
+policy = (app_files/'FrameStepPolicy.kt').read_text()
+assert 'PreviewPlayback.previous(speed)' in ui and 'PreviewPlayback.next(speed)' in ui
+assert 'Restaurar 1×' in ui and 'PreviewPlayback.SPEEDS.chunked(3)' in ui
+assert 'FrameStepPolicy.target' in editor and 'VideoFrameRate.read' in editor
+assert 'Ajuste fino' not in editor and 'Voltar cinco segundos' not in editor
+assert 'val SPEEDS = listOf(0.1f' in (app_files/'PreviewPlayback.kt').read_text()
+assert all(x in policy for x in ['FALLBACK_FPS', 'intervalMs', 'fun target'])
+assert (root/'app/src/test/java/br/com/uaicortes/FrameStepPolicyTest.kt').exists()
+print('OK: v0.1.73 seletor -/+/1×, passo aproximado por FPS e testes de regressão')

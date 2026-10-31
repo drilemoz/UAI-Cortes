@@ -172,3 +172,8 @@
 - v0.1.70: `vosk-model-small-pt-0.3` oficial usa layout legado plano (`final.mdl`, `mfcc.conf`, `HCLr.fst`, `Gr.fst`), que o Vosk nativo suporta. Não voltar a exigir exclusivamente `am/final.mdl` e `conf/model.conf`; continuar aceitando também o layout moderno. Verificar integridade e caminhos seguros no ZIP. Três botões de instalação devem permanecer lado a lado em uma linha e funcionar em largura pequena.
 
 - v0.1.71: não exibir `stage` antiga se `installed=true`; limpar `stage` quando importação/download confirmam instalação, manter botão tríplice, ZIP legado/moderno e testes de status. Detecção de arquivos não equivale a reconhecimento de fala testado.
+
+- v0.1.72: velocidade da prévia de 0,25× a 5× com opções compactas; nunca aplicar velocidade ao MP4 sem opção separada. Um botão câmera ao lado da velocidade salva quadro original em PNG usando o tempo global, o início de cada corte e `MediaMetadataRetriever.OPTION_CLOSEST`. Não confundir captura do arquivo com screenshot de PiP/legendas da composição; informar a diferença.
+- v0.1.72: salvar em `Pictures/UaiCortes` com MediaStore `IS_PENDING` Android 10+, descartar entradas parciais em erro, recuperar falhas de permissão sem crash. Android 8/9 usa pasta específica do app. Analisar orientação real, codecs, cortes e velocidades 3×–5× no APK antes de confirmar fidelidade.
+
+- v0.1.73: velocidade da prévia com -/+/toque no valor, 14 passos 0,1×–6×, restaurar 1×; não alterar MP4. Substituir ajustes finos por buscas aproximadas de quadro via FPS nominal quando disponível; não prometer frame stepping exato em arquivos de FPS variável. Manter captura PNG. Verificar Media3 no aparelho antes de declarar velocidades extremas validadas.

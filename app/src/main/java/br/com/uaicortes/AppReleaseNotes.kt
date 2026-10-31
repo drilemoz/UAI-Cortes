@@ -16,11 +16,23 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.71"
-    const val VERSION_CODE = 72
+    const val VERSION_NAME = "0.1.73"
+    const val VERSION_CODE = 74
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.73", listOf(
+            ReleaseFeature("velocidade-menos-mais", "Velocidade com botões − e +",
+                "Controle a prévia de 0,1× a 6×, toque no número para escolher e restaure 1× rapidamente.", "speed"),
+            ReleaseFeature("passo-quadro", "Quadro anterior e seguinte",
+                "Dois botões substituem o ajuste fino antigo, pausando e avançando aproximadamente um quadro.", "film")
+        )),
+        ReleaseSummary("0.1.72", listOf(
+            ReleaseFeature("velocidade-previa-5x", "Mais velocidades na prévia",
+                "Reproduza de 0,25× até 5× com um seletor compacto, sem acelerar o vídeo exportado.", "speed"),
+            ReleaseFeature("quadro-png-galeria", "Salvar quadro do vídeo",
+                "Toque na câmera do editor para salvar uma imagem PNG do quadro original, no tempo escolhido.", "film")
+        )),
         ReleaseSummary("0.1.71", listOf(
             ReleaseFeature("vosk-etapa-concluida", "Status de instalação corrigido",
                 "Após instalar o modelo Vosk, a tela não fica mais mostrando descompactação em andamento.", "captions"),
