@@ -19,10 +19,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*76',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.75"',gradle)
+assert re.search(r'versionCode\s*=\s*77',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.76"',gradle)
 assert 'AppReleaseNotes.VERSION_NAME' in (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
-for label in ["VERSION: '0.1.75'", "VERSION_CODE: '76'", 'TAG="v$VERSION"',
+for label in ["VERSION: '0.1.76'", "VERSION_CODE: '77'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -215,8 +215,8 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.75'" in package_script and 'VERSION_CODE = 76' in package_script
-assert 'versionCode 76' in gradle and 'isUniversalApk = true' in gradle
+assert "VERSION = '0.1.76'" in package_script and 'VERSION_CODE = 77' in package_script
+assert 'versionCode 77' in gradle and 'isUniversalApk = true' in gradle
 print('OK: versão atual 0.1.64 / versionCode 74, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
@@ -791,7 +791,7 @@ news=(app_files/'WhatsNewScreen.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
-assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.75', 'VERSION_CODE = 76'])
+assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 77'])
 assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
@@ -812,7 +812,7 @@ assert 'rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()
 assert 'Text("Navegador"' in vosk_ui and 'Text("Importar ZIP"' in vosk_ui
 assert 'ModelTransferProgress.percent' in vosk and 'ModelTransferProgress.bytesLabel' in vosk_ui
 assert 'onTransfer(count, expected)' in vosk and 'Servidor demorou a responder' in vosk
-assert '0.1.75' in (root/'app/src/main/java/br/com/uaicortes/AppReleaseNotes.kt').read_text()
+assert '0.1.76' in (root/'app/src/main/java/br/com/uaicortes/AppReleaseNotes.kt').read_text()
 print('OK: v0.1.69 / versionCode 74, importação SAF, progresso de bytes, limpeza e diagnóstico Vosk')
 
 # v0.1.71: modelo oficial pt antigo usa final.mdl/mfcc.conf na raiz, não am/conf.
@@ -906,3 +906,18 @@ assert 'schemaVersion", 4' in model
 assert (root/'app/src/test/java/br/com/uaicortes/ClipAudioBindingsTest.kt').exists()
 assert (root/'app/src/test/java/br/com/uaicortes/ClipAudioTimingTest.kt').exists()
 print('OK: v0.1.75 narração por clipe, vínculo e alinhamento na prévia/exportação, duplicação/divisão e JSON legado')
+
+# v0.1.76: integração opcional TTS, sem alterar esquema de projeto nem publicar chaves.
+credentials=(app_files/'GeminiCredentialStore.kt').read_text()
+gemini_core=(app_files/'GeminiTtsCore.kt').read_text()
+gemini_ui=(app_files/'GeminiNarrationUi.kt').read_text()
+gemini_settings=(app_files/'GeminiSettingsUi.kt').read_text()
+assert all(x in credentials for x in ['AndroidKeyStore', 'AES/GCM/NoPadding', 'GCMParameterSpec(128, iv)', 'MODE_PRIVATE'])
+assert all(x in gemini_core for x in ['v1beta/$path', 'speech_metadata', 'audio/wav', 'GeminiWaveParser.duration', 'RIFF', 'WAVE', 'GeminiModels'])
+assert all(x in gemini_settings for x in ['GeminiKeyParser.masked', 'ActivityResultContracts.OpenDocument()', 'ActivityResultContracts.CreateDocument(', 'ClipDescription.EXTRA_IS_SENSITIVE'])
+assert all(x in gemini_ui for x in ['GeminiAudioFiles.save', 'AudioTrack(', 'project.copy(audioTracks', 'Cancelar', 'GeminiModels.supported'])
+assert 'GeminiNarrationSection(p, timelinePositionMs, update, onOpenGeminiSettings)' in (app_files/'AudioScreen.kt').read_text()
+assert 'GeminiSettingsSection()' in home
+assert 'android:allowBackup="false"' in (root/'app/src/main/AndroidManifest.xml').read_text()
+assert (root/'app/src/test/java/br/com/uaicortes/GeminiTtsCoreTest.kt').exists()
+print('OK: v0.1.76: infraestrutura Gemini, Keystore, UI, WAV, metadados e testes presentes (não substitui build)')

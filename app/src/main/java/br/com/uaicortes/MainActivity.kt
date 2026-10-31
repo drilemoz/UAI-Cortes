@@ -352,7 +352,8 @@ fun UaiApp() {
                     onOpen = { openProject(it.id) },
                     onDelete = { pendingProjectDelete = it },
                     onDeleteAll = { pendingDeleteAll = true },
-                    onSettings = { screen = "settings" }, onTab = { screen = it })
+                    onSettings = { previous = "home"; screen = "settings" },
+                    onTab = { if (it == "settings") previous = "home"; screen = it })
                 "animate" -> AnimateImagesScreen(animationImages.toList(),
                     onChoose = { openGallery("animate","animate_images") },
                     onBack = { screen = if(animationDestination=="append") "editor" else "home" },
@@ -425,7 +426,9 @@ fun UaiApp() {
                     onSelectionConsumed = { selectedAudioTrackId = null },
                     onChooseExternalVideo = { openGallery("audio", "audio_extract") },
                     externalVideoUri = importedAudioSourceVideo,
-                    onExternalVideoConsumed = { importedAudioSourceVideo = null }) }
+                    onExternalVideoConsumed = { importedAudioSourceVideo = null },
+                    timelinePositionMs = positionMs,
+                    onOpenGeminiSettings = { previous = "audio"; screen = "settings" }) }
                 "pip" -> project?.let { current -> PipScreen(current, selectedOverlayId,
                     onSelect = { selectedOverlayId = it }, back = ::back,
                     onChange = { changed ->

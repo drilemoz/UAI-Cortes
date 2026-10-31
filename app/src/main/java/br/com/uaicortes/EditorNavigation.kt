@@ -23,7 +23,8 @@ internal object EditorNavigation {
     }
 
     fun back(route: String, previous: String, mediaOrigin: String, animationDestination: String): String = when (route) {
-        "editor", "home", "projects", "settings" -> "home"
+        "editor", "home", "projects" -> "home"
+        "settings" -> if (previous == "audio") "audio" else "home"
         "media" -> knownRoute(mediaOrigin)
         "animate" -> if (animationDestination == "append") "editor" else "home"
         "general", "appearance", "about", "diagnostics" -> "settings"

@@ -1,3 +1,11 @@
+## v0.1.76 (versionCode 77) · 31/10/2026
+
+- **Gemini TTS opcional:** Configurações inclui chave pessoal criptografada via Android Keystore, importação `.env`/TXT/JSON, exportação confirmada, teste real de geração e link para AI Studio.
+- **Áudio > Narração com IA:** consulta vozes via `GET /v1beta/voices`, suporta modelos `gemini-3.8-flash-tts` e `gemini-3.8-flash-lite-tts` em Interactions; estilos enviados como `speech_metadata.style`.
+- **Integração local:** valida RIFF/WAV, salva áudio em `files/gemini_narrations`, reproduz e insere na faixa `audioTracks` do projeto preservando `schemaVersion=4`. Exportação do MP4 via Media3 existente; WAV aceito como entrada pelo Media3, mas composição real deve ser confirmada em aparelho.
+- **Privacidade:** gerações enviam somente o texto/voz/estilo/modelo; os demais recursos permanecem offline. Não insira chaves de desenvolvedor em APK distribuído: use um backend. Áudios locais não são automaticamente apagados ao excluir trilhas ou projetos.
+- **Validação:** verificações estáticas e testes JVM; API com chave real, Gradle/Android e exportação em aparelho ainda pendentes.
+
 ## v0.1.75 (versionCode 76) · 31/10/2026
 
 - O menu Editar clipe agora abre Áudio do clipe: importar, ouvir, volume e aplicar; preserva vínculos nos cortes, divisões, duplicações e reordenação.

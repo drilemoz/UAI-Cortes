@@ -1,3 +1,11 @@
+## v0.1.76 (versionCode 77) · 31/10/2026
+
+- Integração opcional do Gemini TTS via `/v1beta/interactions`: geração WAV, modelos Flash/Lite 3.8, vozes consultadas na conta, estilo estruturado e prévia gerada com aviso de cota.
+- Nova seção em Configurações com chaves AES-256-GCM no Android Keystore, SAF, pré-visualização mascarada, confirmação de cópia/exportação/remoção e teste de serviço TTS efetivo.
+- Faixa Gemini persistida como `AudioTrack` padrão para corte, volume, timeline e composição Media3; schemaVersion 4 preservado. Suporte WAV precisa de validação física na exportação final.
+- Tratamento de falhas de rede/cota/autorização, limite de resposta, validação de RIFF, arquivo temporário atômico, cancelamento sem retry automático e mensagens de privacidade.
+- Testes unitários da importação, WAV, classificação de erros e serialização, além da validação estrutural; build Android pendente neste ambiente.
+
 ## v0.1.75 (versionCode 76) · 31/10/2026
 
 - Adicionada tela Áudio do clipe (importar via SAF, pré-escuta, volume, aplicar/remover). Vínculo opcional por ID e âncora na fonte; prévia e MP4 usam a posição resolvida dinamicamente.

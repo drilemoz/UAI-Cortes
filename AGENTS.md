@@ -181,3 +181,7 @@
 - v0.1.74: preservar organização da tela Áudio em três cartões com UI em `AudioSectionUi.kt`. Não substituir seletor SAF por URI efêmera sem persistência; áudio escolhido já entra no projeto. Manter controles de volume por clipe e trilha, corte com rascunho, confirmação de exclusão, pré-escuta e extração M4A/MP4. `schemaVersion=4` inalterado.
 
 - v0.1.75: faixa de áudio com `clipId` e `clipSourceAnchorMs` opcionais mantém JSON esquema 4. Resolver posição/recorte da faixa ancorada dinamicamente na prévia, timeline e exportação; após dividir/duplicar preservar fragmentos com novos IDs. Na remoção ou desfazer de divisão, limpar trilhas órfãs. O controle de volume no editor e Áudio do clipe nunca alteram a origem. Não alegar build Android sem CI.
+
+- v0.1.76: Gemini TTS opcional é exceção explícita à edição offline: somente texto e parâmetros TTS enviados após ação do usuário. Não enviar vídeos nem chaves em diagnósticos.
+- v0.1.76: credencial AES/GCM no Keystore e arquivo privado sem backup; importação SAF, cópia/exportação sob confirmação. Nunca embutir chaves. A versão pública com credencial administrada exige backend.
+- v0.1.76: usar apenas modelos reais `gemini-3.8-flash-tts` e `gemini-3.8-flash-lite-tts` pela Interactions API; WAV unary com RIFF intacto. Inserir áudio como AudioTrack global com URI durável mantendo schemaVersion=4; compilar e validar renderização final em dispositivo antes de declarar equivalência.

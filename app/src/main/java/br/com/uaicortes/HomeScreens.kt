@@ -173,12 +173,14 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
 }
 
 @Composable internal fun SettingsScreen(back:()->Unit, onClick:(String)->Unit) {
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal=18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
+        .padding(horizontal=18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Heading("Configurações",back)
         ItemCard(Icons.Default.Tune,"Geral","Qualidade e armazenamento") {onClick("general")}
         ItemCard(Icons.Default.Palette,"Tela","Sistema, claro, escuro e AMOLED") {onClick("appearance")}
         ItemCard(Icons.Default.RecordVoiceOver,"Reconhecimento de voz",
             "Instalar modelo offline de legendas em português") { onClick("speech_model") }
+        GeminiSettingsSection()
         ItemCard(Icons.Default.BugReport,"Diagnóstico","Capturar erros e toques, exportar relatório") {onClick("diagnostics")}
         ItemCard(Icons.Default.AutoAwesome,"Novidades","Veja o que mudou nas últimas versões") { onClick("whats_new") }
         ItemCard(Icons.Default.Info,"Sobre","Versão e informações do aplicativo") {onClick("about")}

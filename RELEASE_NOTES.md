@@ -1,3 +1,10 @@
+## v0.1.76 (versionCode 77) · 31/10/2026
+
+- Configurações > Google Gemini: configure sua chave pessoal, importe/exporte, teste acesso real e remova com confirmação.
+- Editor > Áudio > Narração com IA: escolha modelo/voz, estilo, gere, escute, salve WAV e adicione à timeline do projeto.
+- Geração na internet com avisos de possível cobrança; áudios armazenados localmente continuam acessíveis offline.
+- Compatibilidade: projetos schemaVersion=4, editor e Media3 existentes. Build Android, teste com chave real e MP4 final ainda não executados.
+
 ## v0.1.75 (versionCode 76) · 31/10/2026
 
 - Áudio do clipe: toque em um trecho e escolha Adicionar áudio somente a este clipe. Importe uma narração, escute, configure o volume e aplique. O áudio segue o clipe durante alterações da timeline.
