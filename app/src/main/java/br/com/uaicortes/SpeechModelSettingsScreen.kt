@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
@@ -71,6 +72,70 @@ internal fun SpeechModelSettingsScreen(back: () -> Unit) {
             color = if (installed) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant)
 
+        if (!installed) {
+            // Três opções na mesma linha, com largura igual e ícones acima dos textos.
+            // O seletor continua disponível mesmo quando a transferência interna falha.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = {
+                        failure = ""; progress = null; received = 0; expected = null
+                        stage = "Conectando ao servidor oficial…"
+                        task = scope.launch {
+                            try {
+                                AutoSubtitleEngine.install(context,
+                                    onProgress = { pct -> withContext(Dispatchers.Main) { progress = pct } },
+                                    onStage = { value -> withContext(Dispatchers.Main) { stage = value } },
+                                    onTransfer = { count, total -> withContext(Dispatchers.Main) { received = count; expected = total } })
+                                installed = AutoSubtitleEngine.installed(context)
+                                if (!installed) failure = "Modelo não pôde ser validado após o download."
+                            } catch (_: CancellationException) {
+                                stage = "Download cancelado."
+                            } catch (e: Exception) {
+                                DiagnosticRecorder.exception("vosk_install", e)
+                                failure = "Falha no download: ${e.message?.take(180) ?: "erro de rede"}"
+                            } finally { task = null }
+                        }
+                    }, enabled = !busy, modifier = Modifier.weight(1f).heightIn(min = 76.dp),
+                    contentPadding = PaddingValues(horizontal = 2.dp, vertical = 8.dp)
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.height(4.dp))
+                        Text("Baixar", style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                    }
+                }
+                OutlinedButton(
+                    onClick = {
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(AutoSubtitleEngine.MODEL_URL)))
+                        } catch (e: Exception) {
+                            failure = "Não foi possível abrir o navegador: ${e.message?.take(100) ?: "sem navegador"}"
+                        }
+                    }, enabled = !busy, modifier = Modifier.weight(1f).heightIn(min = 76.dp),
+                    contentPadding = PaddingValues(horizontal = 2.dp, vertical = 8.dp)
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.OpenInBrowser, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.height(4.dp))
+                        Text("Navegador", style = MaterialTheme.typography.labelSmall, maxLines = 1,
+                            overflow = TextOverflow.Ellipsis)
+                    }
+                }
+                OutlinedButton(
+                    onClick = { pickZip.launch(arrayOf("*/*")) },
+                    enabled = !busy, modifier = Modifier.weight(1f).heightIn(min = 76.dp),
+                    contentPadding = PaddingValues(horizontal = 2.dp, vertical = 8.dp)
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.height(4.dp))
+                        Text("Importar ZIP", style = MaterialTheme.typography.labelSmall, maxLines = 1,
+                            overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        }
+
         if (busy) {
             Text(stage.ifBlank { "Preparando…" })
             Row(verticalAlignment = Alignment.CenterVertically,
@@ -97,48 +162,8 @@ internal fun SpeechModelSettingsScreen(back: () -> Unit) {
                 Text("Cancelar operação")
             }
         } else if (!installed) {
-            Button(onClick = {
-                failure = ""; progress = null; received = 0; expected = null
-                stage = "Conectando ao servidor oficial…"
-                task = scope.launch {
-                    try {
-                        AutoSubtitleEngine.install(context,
-                            onProgress = { pct -> withContext(Dispatchers.Main) { progress = pct } },
-                            onStage = { value -> withContext(Dispatchers.Main) { stage = value } },
-                            onTransfer = { count, total -> withContext(Dispatchers.Main) { received = count; expected = total } })
-                        installed = AutoSubtitleEngine.installed(context)
-                        if (!installed) failure = "Modelo não pôde ser validado após o download."
-                    } catch (_: CancellationException) {
-                        stage = "Download cancelado."
-                    } catch (e: Exception) {
-                        DiagnosticRecorder.exception("vosk_install", e)
-                        failure = "Falha no download: ${e.message?.take(180) ?: "erro de rede"}"
-                    } finally { task = null }
-                }
-            }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.Download, null)
-                Spacer(Modifier.width(8.dp))
-                Text("Baixar pelo aplicativo")
-            }
-            OutlinedButton(onClick = {
-                try {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(AutoSubtitleEngine.MODEL_URL)))
-                } catch (e: Exception) {
-                    failure = "Não foi possível abrir o navegador: ${e.message?.take(100) ?: "sem navegador"}"
-                }
-            }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.OpenInBrowser, null)
-                Spacer(Modifier.width(8.dp))
-                Text("Baixar ZIP no navegador")
-            }
-            OutlinedButton(onClick = { pickZip.launch(arrayOf("*/*")) },
-                modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.FolderOpen, null)
-                Spacer(Modifier.width(8.dp))
-                Text("Importar ZIP já baixado")
-            }
-            Text("Na importação, selecione vosk-model-small-pt-0.3.zip. " +
-                "O app verifica o conteúdo antes de instalar.",
+            Text("Selecione vosk-model-small-pt-0.3.zip no armazenamento ou baixe pelo navegador. " +
+                "O modelo oficial usa um formato de pasta antigo, agora aceito pelo instalador.",
                 style = MaterialTheme.typography.bodySmall)
         }
 

@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.69"
-    const val VERSION_CODE = 70
+    const val VERSION_NAME = "0.1.70"
+    const val VERSION_CODE = 71
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.70", listOf(
+            ReleaseFeature("vosk-pt-legado", "Modelo de português corrigido",
+                "Instala o ZIP oficial de português do Vosk nos formatos antigo e moderno, sem rejeitar arquivos válidos.", "captions"),
+            ReleaseFeature("vosk-botoes-linha", "Instalação mais compacta",
+                "As opções de baixar no app, abrir no navegador e importar ZIP ficam na mesma linha.", "download")
+        )),
         ReleaseSummary("0.1.69", listOf(
             ReleaseFeature("vosk-zip-manual", "Legendas offline sem depender do download interno",
                 "Baixe o modelo no navegador e importe o ZIP diretamente no aplicativo.", "captions"),

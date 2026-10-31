@@ -38,8 +38,7 @@ object AutoSubtitleEngine {
 
     fun modelFolder(context: Context): File = File(context.filesDir, "speech-models/$MODEL_NAME")
     fun installed(context: Context): Boolean {
-        val root = modelFolder(context)
-        return File(root, "am/final.mdl").isFile && File(root, "conf/model.conf").isFile
+        return VoskModelLayout.detect(modelFolder(context)) != null
     }
 
     /** O download permanece opcional. Relata bytes reais mesmo antes de completar 1%. */
@@ -200,10 +199,9 @@ object AutoSubtitleEngine {
                 input.closeEntry()
             }
         }
-        if (entries == 0 || !File(unpack, "am/final.mdl").isFile ||
-            !File(unpack, "conf/model.conf").isFile)
-            error("ZIP não contém o modelo oficial $MODEL_NAME. Selecione o arquivo correto.")
-        if (File(target, "am/final.mdl").isFile && File(target, "conf/model.conf").isFile) return
+        if (entries == 0 || VoskModelLayout.detect(unpack) == null)
+            error("ZIP não contém um modelo Vosk válido. Verifique o arquivo $MODEL_NAME.")
+        if (VoskModelLayout.detect(target) != null) return
         // Só troca instalação antiga quando o pacote novo foi validado.
         if (target.exists() && !target.deleteRecursively()) error("Falha ao remover instalação incompleta")
         if (!unpack.renameTo(target)) error("Não foi possível instalar o modelo")
