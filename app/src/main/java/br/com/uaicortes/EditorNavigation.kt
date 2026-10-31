@@ -3,7 +3,7 @@ package br.com.uaicortes
 /** Rotas e regras de recuperação em um único lugar para todas as ferramentas. */
 internal object EditorNavigation {
     private val routes = setOf(
-        "home", "projects", "settings", "general", "appearance", "about", "diagnostics", "speech_model",
+        "home", "projects", "settings", "general", "appearance", "about", "whats_new", "diagnostics", "speech_model",
         "editor", "media", "animate", "pip", "audio", "trim", "transition", "subtitles",
         "watermark", "export", "autosubtitle"
     )
@@ -27,6 +27,7 @@ internal object EditorNavigation {
         "media" -> knownRoute(mediaOrigin)
         "animate" -> if (animationDestination == "append") "editor" else "home"
         "general", "appearance", "about", "diagnostics" -> "settings"
+        "whats_new" -> if (previous == "settings" || previous == "about") previous else "home"
         "speech_model" -> if (previous == "autosubtitle") "autosubtitle" else "settings"
         "pip", "audio", "trim", "transition", "subtitles", "watermark", "export" -> "editor"
         "autosubtitle" -> "subtitles"

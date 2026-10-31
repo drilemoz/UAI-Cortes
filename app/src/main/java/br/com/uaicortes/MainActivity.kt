@@ -68,6 +68,7 @@ fun UaiApp() {
     val context = LocalContext.current
     val projectSession: EditorProjectViewModel = viewModel()
     val store = projectSession.store
+    val whatsNewSeen = remember(context) { WhatsNewSeenStore(context.applicationContext) }
     val mediaController = remember(context) { MediaImportController(context.applicationContext) }
     val importScope = rememberCoroutineScope()
     val mediaTasks = remember(mediaController) { MediaImportTasks(mediaController) }
@@ -87,7 +88,14 @@ fun UaiApp() {
     val animationDraftStore = remember { ImageAnimationDraftStore(context.applicationContext) }
     var diagnosticsEnabled by remember { mutableStateOf(DiagnosticRecorder.isEnabled()) }
     var theme by remember { mutableStateOf(store.theme()) }
-    val workspace = rememberSaveable(saver = EditorWorkspaceState.Saver) { EditorWorkspaceState() }
+    val workspace = rememberSaveable(saver = EditorWorkspaceState.Saver) {
+        EditorWorkspaceState().apply {
+            if (whatsNewSeen.shouldOpen()) {
+                screen = "whats_new"
+                previous = "home"
+            }
+        }
+    }
     var screen by workspace::screen
     // O ViewModel mantém o cadastro durante rotação; SavedStateHandle preserva apenas o ID.
     val activeProjectId = projectSession.activeProjectId
@@ -300,6 +308,10 @@ fun UaiApp() {
         }
     }
     fun back() {
+        if (screen == "whats_new" && !whatsNewSeen.markViewed()) {
+            android.widget.Toast.makeText(context, "Não foi possível registrar a leitura das novidades",
+                android.widget.Toast.LENGTH_SHORT).show()
+        }
         DiagnosticRecorder.action(screen, "back")
         screen = EditorNavigation.back(screen, previous, mediaOrigin, animationDestination)
     }
@@ -360,11 +372,12 @@ fun UaiApp() {
                 "projects" -> ProjectsScreen(projects, { back() }, { openProject(it.id) },
                     { pendingProjectDelete = it })
                 "settings" -> SettingsScreen({ back() }) { previous = "settings"; screen = it }
+                "whats_new" -> WhatsNewScreen(::back)
                 "diagnostics" -> DiagnosticScreen(::back, onEnabledChanged = { diagnosticsEnabled = it })
                 "general" -> GeneralScreen(store, ::back)
                 "speech_model" -> SpeechModelSettingsScreen(::back)
                 "appearance" -> AppearanceScreen(theme, { theme = it; store.setTheme(it) }, ::back)
-                "about" -> AboutScreen(::back)
+                "about" -> AboutScreen(::back, onShowWhatsNew = { previous = "about"; screen = "whats_new" })
                 "editor" -> project?.let { p -> EditorScreen(p, selectedClip, positionMs,
                     onSelected = { selectedClip = it }, onPosition = { positionMs = it }, onBack = ::back,
                     onEdit = {

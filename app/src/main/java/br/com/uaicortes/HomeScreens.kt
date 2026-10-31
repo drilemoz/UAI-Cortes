@@ -180,6 +180,7 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
         ItemCard(Icons.Default.RecordVoiceOver,"Reconhecimento de voz",
             "Instalar modelo offline de legendas em português") { onClick("speech_model") }
         ItemCard(Icons.Default.BugReport,"Diagnóstico","Capturar erros e toques, exportar relatório") {onClick("diagnostics")}
+        ItemCard(Icons.Default.AutoAwesome,"Novidades","Veja o que mudou nas últimas versões") { onClick("whats_new") }
         ItemCard(Icons.Default.Info,"Sobre","Versão e informações do aplicativo") {onClick("about")}
     }
 }
@@ -219,14 +220,30 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
     }
 }
 
-@Composable internal fun AboutScreen(back:()->Unit) {
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal=20.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+@Composable internal fun AboutScreen(back:()->Unit, onShowWhatsNew:()->Unit) {
+    Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal=20.dp)) {
         Heading("Sobre",back)
-        Icon(Icons.Default.MovieCreation,null,tint=Blue,modifier=Modifier.size(70.dp))
-        Spacer(Modifier.height(14.dp));Text("Uai Cortes",fontSize=24.sp,fontWeight=FontWeight.Bold)
-        Text("Versão 0.1.67 (67)",color=MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(24.dp));Text("Editor de vídeo local para Android.",textAlign=androidx.compose.ui.text.style.TextAlign.Center)
-        Spacer(Modifier.height(14.dp));Text("Novidades: trechos visuais em Cortar e unir, seleção automática após dividir e cursor no último corte.",
-            color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally) {
+            Spacer(Modifier.height(18.dp))
+            Icon(Icons.Default.MovieCreation, null,
+                tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(65.dp))
+            Spacer(Modifier.height(12.dp))
+            Text("Uai Cortes", fontSize=24.sp, fontWeight=FontWeight.Bold)
+            Text("Versão ${AppReleaseNotes.VERSION_NAME} (${AppReleaseNotes.VERSION_CODE})",
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(14.dp))
+            Text("Editor de vídeos local para Android.",
+                textAlign=TextAlign.Center, color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(18.dp))
+            OutlinedButton(onClick = onShowWhatsNew, shape = RoundedCornerShape(15.dp)) {
+                Icon(Icons.Default.AutoAwesome, contentDescription=null)
+                Spacer(Modifier.width(8.dp))
+                Text("Ver novidades")
+            }
+            Spacer(Modifier.height(22.dp))
+            ReleaseHighlights(AppReleaseNotes.forAbout())
+            Spacer(Modifier.height(24.dp))
+        }
     }
 }
