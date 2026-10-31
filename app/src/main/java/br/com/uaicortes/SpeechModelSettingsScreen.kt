@@ -46,7 +46,13 @@ internal fun SpeechModelSettingsScreen(back: () -> Unit) {
                     onStage = { value -> withContext(Dispatchers.Main) { stage = value } },
                     onTransfer = { count, total -> withContext(Dispatchers.Main) { received = count; expected = total } })
                 installed = AutoSubtitleEngine.installed(context)
-                if (!installed) failure = "O ZIP não instalou um modelo válido."
+                if (installed) {
+                    // A última etapa era a extração: nunca mostrá-la após sucesso.
+                    stage = ""
+                    progress = null
+                    received = 0L
+                    expected = null
+                } else failure = "O ZIP não instalou um modelo válido."
             } catch (_: CancellationException) {
                 stage = "Importação cancelada."
             } catch (e: Exception) {
@@ -87,7 +93,12 @@ internal fun SpeechModelSettingsScreen(back: () -> Unit) {
                                     onStage = { value -> withContext(Dispatchers.Main) { stage = value } },
                                     onTransfer = { count, total -> withContext(Dispatchers.Main) { received = count; expected = total } })
                                 installed = AutoSubtitleEngine.installed(context)
-                                if (!installed) failure = "Modelo não pôde ser validado após o download."
+                                if (installed) {
+                                    stage = ""
+                                    progress = null
+                                    received = 0L
+                                    expected = null
+                                } else failure = "Modelo não pôde ser validado após o download."
                             } catch (_: CancellationException) {
                                 stage = "Download cancelado."
                             } catch (e: Exception) {
@@ -169,11 +180,17 @@ internal fun SpeechModelSettingsScreen(back: () -> Unit) {
 
         if (failure.isNotBlank()) Text(failure, color = MaterialTheme.colorScheme.error,
             style = MaterialTheme.typography.bodySmall)
-        if (!busy && stage.isNotBlank() && failure.isBlank()) Text(stage,
-            style = MaterialTheme.typography.bodySmall)
-        Text("Se o servidor travar em 0%, use o navegador e depois importe o arquivo ZIP. " +
-            "Não é necessário descompactá-lo manualmente.",
-            style = MaterialTheme.typography.bodySmall)
+        SpeechInstallUiPolicy.idleStage(installed, busy, stage, failure)?.let { visibleStage ->
+            Text(visibleStage, style = MaterialTheme.typography.bodySmall)
+        }
+        if (installed && !busy) {
+            Text("Instalação reconhecida. Para confirmar o funcionamento, teste uma fala curta " +
+                "em Legendas automáticas.", style = MaterialTheme.typography.bodySmall)
+        } else if (!installed) {
+            Text("Se o servidor travar em 0%, use o navegador e depois importe o arquivo ZIP. " +
+                "Não é necessário descompactá-lo manualmente.",
+                style = MaterialTheme.typography.bodySmall)
+        }
     }
 }
 

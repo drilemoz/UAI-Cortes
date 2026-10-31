@@ -170,3 +170,5 @@
 - v0.1.69: suporte à instalação de Vosk de ZIP via SAF após baixar do endereço oficial no navegador. Usar mesmo validador de ZIP das transferências internas, limitar bytes compactados/extraídos e rejeitar path traversal. Nunca instalar sem os arquivos essenciais exigidos pelo layout detectado (legado ou moderno). Preservar reconhecimento offline e não enviar áudio. Progresso deve apresentar bytes reais mesmo em 0% ou tamanho desconhecido; não afirmar rede validada sem testes.
 
 - v0.1.70: `vosk-model-small-pt-0.3` oficial usa layout legado plano (`final.mdl`, `mfcc.conf`, `HCLr.fst`, `Gr.fst`), que o Vosk nativo suporta. Não voltar a exigir exclusivamente `am/final.mdl` e `conf/model.conf`; continuar aceitando também o layout moderno. Verificar integridade e caminhos seguros no ZIP. Três botões de instalação devem permanecer lado a lado em uma linha e funcionar em largura pequena.
+
+- v0.1.71: não exibir `stage` antiga se `installed=true`; limpar `stage` quando importação/download confirmam instalação, manter botão tríplice, ZIP legado/moderno e testes de status. Detecção de arquivos não equivale a reconhecimento de fala testado.
