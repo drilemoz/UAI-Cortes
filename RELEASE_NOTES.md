@@ -1,3 +1,8 @@
+## v0.1.75 (versionCode 76) · 31/10/2026
+
+- Áudio do clipe: toque em um trecho e escolha Adicionar áudio somente a este clipe. Importe uma narração, escute, configure o volume e aplique. O áudio segue o clipe durante alterações da timeline.
+- Preservados schemaVersion=4, trilhas antigas e arquivos originais. Build Android completo pendente.
+
 ## v0.1.74 (versionCode 75) · 31/10/2026
 
 - **Tela Áudio redesenhada:** três cartões com Mixagem do projeto, Adicionar áudio e Extrair áudio de vídeo, mantendo seleção SAF, volume original, trilhas, música legada, corte, confirmação de exclusão, pré-escuta e exportação M4A/MP4 AAC.

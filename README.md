@@ -1,3 +1,8 @@
+## v0.1.75 (versionCode 76) · 31/10/2026
+
+- O menu Editar clipe agora abre Áudio do clipe: importar, ouvir, volume e aplicar; preserva vínculos nos cortes, divisões, duplicações e reordenação.
+- Preservados schemaVersion=4, trilhas antigas e arquivos originais. Build Android completo pendente.
+
 ## v0.1.74 (versionCode 75) · 31/10/2026
 
 - **Tela Áudio redesenhada:** três cartões com Mixagem do projeto, Adicionar áudio e Extrair áudio de vídeo, mantendo seleção SAF, volume original, trilhas, música legada, corte, confirmação de exclusão, pré-escuta e exportação M4A/MP4 AAC.

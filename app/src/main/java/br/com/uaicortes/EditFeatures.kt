@@ -59,10 +59,10 @@ object EditFeatures {
         return ((hh * 3600 + mm * 60 + ss) * 1000 + ms).takeIf { it in 0L..86_400_000L }
     }
 
-    fun repositionAfterDelete(old: VideoProject, newClips: List<Clip>) = old.copy(
+    fun repositionAfterDelete(old: VideoProject, newClips: List<Clip>) = ClipAudioBindings.pruneDeleted(old.copy(
         clips = newClips,
         transitions = old.transitions.filter { t ->
             newClips.zipWithNext().any { (a,b) -> a.id == t.fromId && b.id == t.toId }
         }
-    )
+    ))
 }

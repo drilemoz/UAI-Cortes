@@ -1,3 +1,8 @@
+## v0.1.75 (versionCode 76) · 31/10/2026
+
+- Adicionada tela Áudio do clipe (importar via SAF, pré-escuta, volume, aplicar/remover). Vínculo opcional por ID e âncora na fonte; prévia e MP4 usam a posição resolvida dinamicamente.
+- Preservados schemaVersion=4, trilhas antigas e arquivos originais. Build Android completo pendente.
+
 ## v0.1.74 (versionCode 75) · 31/10/2026
 
 - **Tela Áudio redesenhada:** três cartões com Mixagem do projeto, Adicionar áudio e Extrair áudio de vídeo, mantendo seleção SAF, volume original, trilhas, música legada, corte, confirmação de exclusão, pré-escuta e exportação M4A/MP4 AAC.

@@ -139,7 +139,7 @@ fun UaiApp() {
         surface = if(theme=="AMOLED") Color.Black else Color(0xFF202124))
     else lightColorScheme(primary = Blue, background = LightBg, surface = Color.White)
     fun write(p: VideoProject): Boolean = try {
-        projectSession.save(p)
+        projectSession.save(ClipAudioBindings.pruneDeleted(p))
         DiagnosticRecorder.action(screen, "project_saved")
         true
     } catch (failure: Exception) {
@@ -394,16 +394,32 @@ fun UaiApp() {
                         screen = "pip"
                     },
                     onAudio = { audioPicker.launch(arrayOf("audio/*")) },
-                    onSelectAudio = { id -> selectedAudioTrackId = id; navTo("audio") },
+                    onSelectAudio = { id ->
+                        val bound = project?.audioTracks?.firstOrNull { it.id == id }?.clipId
+                        if (bound != null) { selectedClip = bound; navTo("clip_audio") }
+                        else { selectedAudioTrackId = id; navTo("audio") }
+                    },
                     onSelectSubtitle = { id -> selectedSubtitleId = id; navTo("subtitles") },
                     onSelectOverlay = { selectedOverlayId = it },
                     onTransition = { index -> selectedBoundary = index; screen = "transition" },
-                    onSaveHome = { if (write(p)) screen = "home" }) }
+                    onSaveHome = { if (write(p)) screen = "home" },
+                    onClipAudio = { id -> selectedClip=id; navTo("clip_audio") }) }
                 "watermark" -> project?.let { current -> TextWatermarkScreen(current, ::back) { changed ->
                     if (write(changed)) screen = "editor"
                 } }
                 "trim" -> project?.let { TrimScreen(it, selectedClip, positionMs, ::back, { write(it) },
                     { selectedClip = it }, onSaveHome = { saved -> if (write(saved)) screen = "home" }) }
+                "clip_audio" -> project?.let { current ->
+                    ClipAudioScreen(current, selectedClip, ::back,
+                        onApply = { track ->
+                            val changed = ClipAudioBindings.attach(current, selectedClip, track)
+                            if (changed != null && write(changed)) { screen="editor"; true } else false
+                        },
+                        onRemove = {
+                            if (write(current.copy(audioTracks=current.audioTracks.filterNot {
+                                it.clipId == selectedClip }))) { screen="editor"; true } else false
+                        })
+                }
                 "audio" -> project?.let { AudioScreen(it, ::back, { write(it) },
                     { audioPicker.launch(arrayOf("audio/*")) }, selectedAudioTrackId,
                     onSelectionConsumed = { selectedAudioTrackId = null },

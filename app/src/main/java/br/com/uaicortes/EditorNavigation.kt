@@ -4,11 +4,11 @@ package br.com.uaicortes
 internal object EditorNavigation {
     private val routes = setOf(
         "home", "projects", "settings", "general", "appearance", "about", "whats_new", "diagnostics", "speech_model",
-        "editor", "media", "animate", "pip", "audio", "trim", "transition", "subtitles",
+        "editor", "media", "animate", "pip", "audio", "clip_audio", "trim", "transition", "subtitles",
         "watermark", "export", "autosubtitle"
     )
     private val projectRoutes = setOf(
-        "editor", "pip", "audio", "trim", "transition", "subtitles", "watermark",
+        "editor", "pip", "audio", "clip_audio", "trim", "transition", "subtitles", "watermark",
         "export", "autosubtitle"
     )
 
@@ -29,7 +29,7 @@ internal object EditorNavigation {
         "general", "appearance", "about", "diagnostics" -> "settings"
         "whats_new" -> if (previous == "settings" || previous == "about") previous else "home"
         "speech_model" -> if (previous == "autosubtitle") "autosubtitle" else "settings"
-        "pip", "audio", "trim", "transition", "subtitles", "watermark", "export" -> "editor"
+        "pip", "audio", "clip_audio", "trim", "transition", "subtitles", "watermark", "export" -> "editor"
         "autosubtitle" -> "subtitles"
         else -> knownRoute(previous)
     }

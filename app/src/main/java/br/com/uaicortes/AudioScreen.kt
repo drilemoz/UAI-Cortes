@@ -104,7 +104,9 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
     // A seleção feita na timeline do editor abre diretamente esta faixa para edição.
     LaunchedEffect(requestedTrackId, p.id) {
         val track = p.audioTracks.firstOrNull { it.id == requestedTrackId }
-        if (track != null) {
+        if (track?.clipId != null) {
+            message = "Esta narração acompanha um clipe. Abra Áudio do clipe para editar ou trocar."
+        } else if (track != null) {
             val duration = mediaDuration(context, Uri.parse(track.uri))
             val range = AudioTrackTiming.initialRange(track.sourceStartMs, track.durationMs,
                 duration, track.startMs, p.durationMs)

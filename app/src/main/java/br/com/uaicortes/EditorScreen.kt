@@ -41,7 +41,8 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     onSelected:(String)->Unit,onPosition:(Long)->Unit,onBack:()->Unit,onEdit:(String)->Unit,
     onUpdate:(VideoProject)->Unit,onAddVideo:()->Unit,onPiP:()->Unit,onAudio:()->Unit,
     onSelectOverlay:(String)->Unit,onTransition:(Int)->Unit,onSaveHome:()->Unit,
-    onSelectAudio:(String)->Unit,onSelectSubtitle:(String)->Unit) {
+    onSelectAudio:(String)->Unit,onSelectSubtitle:(String)->Unit,
+    onClipAudio:(String)->Unit) {
     val context=LocalContext.current
     val captureScope = rememberCoroutineScope()
     var savingFrame by remember { mutableStateOf(false) }
@@ -120,7 +121,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             TrackAudioPreview(music.uri, 0L, p.durationMs, music.volume, currentMs,
                 isPlaying, playbackSpeed, true)
         }
-        p.audioTracks.forEach { audio ->
+        ClipAudioBindings.resolved(p).forEach { audio ->
             key(audio.id) {
                 TrackAudioPreview(audio.uri, audio.startMs, audio.durationMs, audio.volume,
                     currentMs, isPlaying, playbackSpeed, false, audio.sourceStartMs)
@@ -317,8 +318,12 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                     ClipSheetAction("Cortar",Icons.Default.ContentCut) {clipMenuId=null;onEdit("trim")}
                     ClipSheetAction("Duplicar",Icons.Default.ContentCopy) {
-                        val list=p.clips.toMutableList();list.add(idx+1,active.copy(id=UUID.randomUUID().toString()))
-                        commit(list,"Clipe duplicado")
+                        val newId = UUID.randomUUID().toString()
+                        val list=p.clips.toMutableList();list.add(idx+1,active.copy(id=newId))
+                        onUpdate(ClipAudioBindings.cloneAttached(
+                            EditFeatures.repositionAfterDelete(p,list), active.id,newId))
+                        feedback="Clipe e áudio vinculados duplicados"
+                        clipMenuId=null
                     }
                     ClipSheetAction("Antes",Icons.Default.ArrowBack,idx>0) {
                         val list=p.clips.toMutableList(); java.util.Collections.swap(list,idx,idx-1)
@@ -331,6 +336,13 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                     ClipSheetAction("Excluir",Icons.Default.Delete) {
                         deletionRequested = active.id
                     }
+                }
+                OutlinedButton(onClick={ clipMenuId=null; onClipAudio(active.id) },
+                    modifier=Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.Mic, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (p.audioTracks.any { it.clipId == active.id })
+                        "Editar áudio deste clipe" else "Adicionar áudio somente a este clipe")
                 }
                 Text("Volume apenas deste clipe: ${(active.volume*100).toInt()}%")
                 Slider(value=active.volume.coerceIn(0f,1f), onValueChange={ v ->

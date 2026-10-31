@@ -125,7 +125,7 @@ class ExportEngine(private val context: Context) {
         project.overlays.forEachIndexed { index, overlay ->
             checkReadable(overlay.uri, "PiP ${index + 1}")
         }
-        project.audioTracks.forEachIndexed { index, audio ->
+        ClipAudioBindings.resolved(project).forEachIndexed { index, audio ->
             if (audio.volume > 0f) checkReadable(audio.uri, "Áudio ${index + 1}")
         }
         project.music?.takeIf { it.volume > 0f }?.let { checkReadable(it.uri, "Música") }
@@ -252,7 +252,7 @@ class ExportEngine(private val context: Context) {
                 .setEffects(Effects(listOf(GainProcessor(pip.volume)), emptyList())).build())
             sequences += audioTrack.build()
         }
-        project.audioTracks.forEach { audio ->
+        ClipAudioBindings.resolved(project).forEach { audio ->
             val start = audio.startMs.coerceIn(0L, project.durationMs)
             val sourceDuration = mediaDuration(context, Uri.parse(audio.uri))
             val sourceStart = audio.sourceStartMs.coerceIn(0L, sourceDuration)

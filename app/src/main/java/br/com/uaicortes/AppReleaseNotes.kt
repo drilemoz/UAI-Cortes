@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.74"
-    const val VERSION_CODE = 75
+    const val VERSION_NAME = "0.1.75"
+    const val VERSION_CODE = 76
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.75", listOf(
+            ReleaseFeature("audio-clip-vinculo", "Narração somente no clipe escolhido",
+                "Importe áudio, ouça, ajuste o volume e aplique apenas ao trecho selecionado.", "music"),
+            ReleaseFeature("audio-clip-sincronismo", "Narração acompanha edições do clipe",
+                "Áudio vinculado acompanha a ordem, cortes, divisão e duplicação do vídeo.", "music")
+        )),
         ReleaseSummary("0.1.74", listOf(
             ReleaseFeature("audio-layout-cards", "Áudio organizado em três áreas",
                 "Mixagem, adição de áudio e extração agora têm cartões próprios, com ações mais compactas.", "music"),

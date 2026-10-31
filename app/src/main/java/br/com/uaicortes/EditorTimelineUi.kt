@@ -186,7 +186,7 @@ internal fun InteractiveAudioTimeline(p: VideoProject,
                         fontSize=9.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
                 }
             }
-            p.audioTracks.forEach { audio ->
+            ClipAudioBindings.resolved(p).forEach { audio ->
                 key(audio.id) {
                     var candidateStart by remember(audio.id, audio.startMs) { mutableLongStateOf(audio.startMs) }
                     var changed by remember(audio.id, audio.startMs) { mutableStateOf(false) }
@@ -199,12 +199,14 @@ internal fun InteractiveAudioTimeline(p: VideoProject,
                     AudioDragSurface(
                         modifier=Modifier.offset(x=drawnX).width(drawnWidth).fillMaxHeight()
                             .background(Green.copy(alpha=.72f),RoundedCornerShape(3.dp))
-                            .semantics { contentDescription = "${audio.title}: arrastar para mover; tocar para editar" },
+                            .semantics { contentDescription = if (audio.clipId != null) "${audio.title}: vinculado ao clipe; toque para editar" else "${audio.title}: arrastar para mover; tocar para editar" },
                         totalMs=totalMs, widthPx=timelineWidthPx,
                         onStep={ delta ->
-                            candidateStart = AudioTimelineEdit.move(
-                                range.copy(timelineStartMs=candidateStart), delta, totalMs).timelineStartMs
-                            changed = changed || candidateStart != audio.startMs
+                            if (audio.clipId == null) {
+                                candidateStart = AudioTimelineEdit.move(
+                                    range.copy(timelineStartMs=candidateStart), delta, totalMs).timelineStartMs
+                                changed = changed || candidateStart != audio.startMs
+                            }
                         },
                         onFinish={
                             if (changed && candidateStart != audio.startMs) onMoveTrack(audio.id, candidateStart)

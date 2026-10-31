@@ -179,3 +179,5 @@
 - v0.1.73: velocidade da prévia com -/+/toque no valor, 14 passos 0,1×–6×, restaurar 1×; não alterar MP4. Substituir ajustes finos por buscas aproximadas de quadro via FPS nominal quando disponível; não prometer frame stepping exato em arquivos de FPS variável. Manter captura PNG. Verificar Media3 no aparelho antes de declarar velocidades extremas validadas.
 
 - v0.1.74: preservar organização da tela Áudio em três cartões com UI em `AudioSectionUi.kt`. Não substituir seletor SAF por URI efêmera sem persistência; áudio escolhido já entra no projeto. Manter controles de volume por clipe e trilha, corte com rascunho, confirmação de exclusão, pré-escuta e extração M4A/MP4. `schemaVersion=4` inalterado.
+
+- v0.1.75: faixa de áudio com `clipId` e `clipSourceAnchorMs` opcionais mantém JSON esquema 4. Resolver posição/recorte da faixa ancorada dinamicamente na prévia, timeline e exportação; após dividir/duplicar preservar fragmentos com novos IDs. Na remoção ou desfazer de divisão, limpar trilhas órfãs. O controle de volume no editor e Áudio do clipe nunca alteram a origem. Não alegar build Android sem CI.

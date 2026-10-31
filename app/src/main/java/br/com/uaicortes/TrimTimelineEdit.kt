@@ -24,8 +24,8 @@ object TrimTimelineEdit {
             if (transition.fromId == clip.id && transition.toId == followingId)
                 transition.copy(fromId = newId) else transition
         }
-        return Result(project.copy(clips = clips, transitions = transitions,
-            lastTrimCutClipId = newId, lastTrimCutSourceMs = sourceMs), newId)
+        return Result(ClipAudioBindings.cloneAttached(project.copy(clips = clips, transitions = transitions,
+            lastTrimCutClipId = newId, lastTrimCutSourceMs = sourceMs), clip.id, newId), newId)
     }
 
     /** Posição inicial da régua para o clipe, priorizando o último ponto dividido. */
