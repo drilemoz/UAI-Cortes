@@ -118,6 +118,7 @@ fun UaiApp() {
     var pendingOverlap by remember { mutableStateOf<OverlapConfirmation?>(null) }
     var pendingSequential by remember { mutableStateOf<SequentialConfirmation?>(null) }
     var pendingProjectDelete by remember { mutableStateOf<VideoProject?>(null) }
+    var catalogAlertDismissed by rememberSaveable { mutableStateOf(false) }
     val dark = when (theme) {
         "Claro" -> false
         "Escuro", "AMOLED" -> true
@@ -126,9 +127,16 @@ fun UaiApp() {
     val palette = if (dark) darkColorScheme(primary = Color(0xFF72A5FF), background = if(theme=="AMOLED") Color.Black else Ink,
         surface = if(theme=="AMOLED") Color.Black else Color(0xFF202124))
     else lightColorScheme(primary = Blue, background = LightBg, surface = Color.White)
-    fun write(p: VideoProject) {
+    fun write(p: VideoProject): Boolean = try {
         projectSession.save(p)
         DiagnosticRecorder.action(screen, "project_saved")
+        true
+    } catch (failure: Exception) {
+        DiagnosticRecorder.exception("project_save_failure", failure)
+        android.widget.Toast.makeText(context,
+            "Não foi possível salvar. O projeto anterior foi preservado.",
+            android.widget.Toast.LENGTH_LONG).show()
+        false
     }
     fun openProject(id: String) {
         val opened = projectSession.open(id)
@@ -212,7 +220,7 @@ fun UaiApp() {
                 return@startMediaTask
             }
             val updated = projectSession.append(project, imported.clips, createNew = request.createNew)
-            write(updated)
+            if (!write(updated)) return@startMediaTask
             if (selectedClip.isBlank()) selectedClip = imported.clips.first().id
             screen = "editor"
             if (imported.rejected > 0) android.widget.Toast.makeText(context,
@@ -339,8 +347,9 @@ fun UaiApp() {
                             val clip = Clip(uri=uri.toString(),title="Vídeo animado",sourceDurationMs=duration)
                             val target=if(animationDestination=="append") project ?: VideoProject()
                                 else VideoProject()
-                            write(target.copy(clips=target.clips+clip))
-                            selectedClip=clip.id; screen="editor"
+                            if (write(target.copy(clips=target.clips+clip))) {
+                                selectedClip=clip.id; screen="editor"
+                            }
                         } else android.widget.Toast.makeText(context,"MP4 ainda não está disponível",android.widget.Toast.LENGTH_LONG).show()
                     })
                 "projects" -> ProjectsScreen(projects, { back() }, { openProject(it.id) },
@@ -370,13 +379,12 @@ fun UaiApp() {
                     onSelectSubtitle = { id -> selectedSubtitleId = id; navTo("subtitles") },
                     onSelectOverlay = { selectedOverlayId = it },
                     onTransition = { index -> selectedBoundary = index; screen = "transition" },
-                    onSaveHome = { write(p); screen = "home" }) }
+                    onSaveHome = { if (write(p)) screen = "home" }) }
                 "watermark" -> project?.let { current -> TextWatermarkScreen(current, ::back) { changed ->
-                    write(changed)
-                    screen = "editor"
+                    if (write(changed)) screen = "editor"
                 } }
                 "trim" -> project?.let { TrimScreen(it, selectedClip, positionMs, ::back, { write(it) },
-                    { selectedClip = it }, onSaveHome = { saved -> write(saved); screen = "home" }) }
+                    { selectedClip = it }, onSaveHome = { saved -> if (write(saved)) screen = "home" }) }
                 "audio" -> project?.let { AudioScreen(it, ::back, { write(it) },
                     { audioPicker.launch(arrayOf("audio/*")) }, selectedAudioTrackId,
                     onSelectionConsumed = { selectedAudioTrackId = null },
@@ -441,15 +449,26 @@ fun UaiApp() {
                 "transition" -> project?.let { TransitionScreen(it, ::back, { write(it) }, selectedBoundary) }
                 "autosubtitle" -> project?.let { current -> AutoSubtitleScreen(current, ::back, onApply = { cues, replace ->
                     val existing = if (replace) emptyList() else current.subtitles
-                    write(current.copy(subtitles = existing + cues))
-                    selectedSubtitleId = cues.firstOrNull()?.id
-                    screen = "subtitles"
+                    if (write(current.copy(subtitles = existing + cues))) {
+                        selectedSubtitleId = cues.firstOrNull()?.id
+                        screen = "subtitles"
+                    }
                 }) }
                 "subtitles" -> project?.let { SubtitleScreen(it, ::back, { write(it) }, selectedSubtitleId,
-                    onSaveHome = { write(it); screen = "home" },
+                    onSaveHome = { if (write(it)) screen = "home" },
                     onAutoSubtitles = { screen = "autosubtitle" }) }
                 "export" -> project?.let { ExportScreen(it, store.quality(), ::back) }
             }
+        }
+        if (projectSession.storageWarning != null && !catalogAlertDismissed) {
+            AlertDialog(
+                onDismissRequest = { catalogAlertDismissed = true },
+                title = { Text("Atenção ao armazenamento de projetos") },
+                text = { Text(projectSession.storageWarning.orEmpty()) },
+                confirmButton = { TextButton(onClick = { catalogAlertDismissed = true }) {
+                    Text("Entendi")
+                } }
+            )
         }
         if (activeMediaTask != null) {
             AlertDialog(onDismissRequest = {},
@@ -470,9 +489,17 @@ fun UaiApp() {
                 text = { Text("O projeto \"${target.title}\" e suas edições salvas serão removidos. Os vídeos e fotos originais não serão apagados. Esta ação não pode ser desfeita.") },
                 confirmButton = { TextButton(onClick = {
                     val wasActive = project?.id == target.id
-                    projectSession.delete(target.id)
-                    if (wasActive) workspace.reconcile(null)
-                    pendingProjectDelete = null
+                    try {
+                        projectSession.delete(target.id)
+                        if (wasActive) workspace.reconcile(null)
+                        pendingProjectDelete = null
+                    } catch (failure: Exception) {
+                        DiagnosticRecorder.exception("project_delete_failure", failure)
+                        android.widget.Toast.makeText(context,
+                            "Não foi possível excluir o projeto. Os dados foram preservados.",
+                            android.widget.Toast.LENGTH_LONG).show()
+                        pendingProjectDelete = null
+                    }
                 }) { Text("Excluir projeto", color = MaterialTheme.colorScheme.error) } },
                 dismissButton = { TextButton(onClick = { pendingProjectDelete = null }) { Text("Cancelar") } })
         }

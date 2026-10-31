@@ -22,6 +22,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.PlaybackParameters
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.delay
@@ -38,8 +39,14 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     onSelectOverlay:(String)->Unit,onTransition:(Int)->Unit,onSaveHome:()->Unit,
     onSelectAudio:(String)->Unit,onSelectSubtitle:(String)->Unit) {
     val context=LocalContext.current
-    val player=remember { diagnosticPlayer(context).apply { repeatMode = Player.REPEAT_MODE_ALL } }
-    var playbackSpeed by remember(p.id) { mutableFloatStateOf(1f) }
+    val playbackVm: EditorPlaybackViewModel = viewModel()
+    LaunchedEffect(p.id) { playbackVm.selectProject(p.id) }
+    val playbackSpeed = playbackVm.speed
+    val player=remember(p.id) { diagnosticPlayer(context).apply { repeatMode = Player.REPEAT_MODE_ALL } }
+    var isPlaying by remember(player) { mutableStateOf(player.isPlaying) }
+    var restoringMedia by remember(player) { mutableStateOf(true) }
+    var scrubbing by remember(player) { mutableStateOf(false) }
+    val latestPosition by rememberUpdatedState(currentMs)
     var clipMenuId by remember(p.id) { mutableStateOf<String?>(null) }
     var deletionRequested by remember(p.id) { mutableStateOf<String?>(null) }
     var feedback by remember(p.id) { mutableStateOf("") }
@@ -50,22 +57,39 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         }
     }
     LaunchedEffect(player, playbackSpeed) { player.setPlaybackParameters(PlaybackParameters(playbackSpeed)) }
-    DisposableEffect(player) { onDispose { player.release() } }
-    LaunchedEffect(p.clips.map { Triple(it.uri, it.startMs, it.endMs) }) {
+    DisposableEffect(player) {
+        val listener = object : Player.Listener {
+            override fun onIsPlayingChanged(playing: Boolean) { isPlaying = playing }
+        }
+        player.addListener(listener)
+        onDispose { player.removeListener(listener); player.release() }
+    }
+    LaunchedEffect(player, p.clips.map { Triple(it.uri, it.startMs, it.endMs) }) {
+        restoringMedia = true
         player.setMediaItems(p.clips.map { clip ->
             MediaItem.Builder().setUri(clip.uri).setClippingConfiguration(
                 MediaItem.ClippingConfiguration.Builder().setStartPositionMs(clip.startMs)
                     .setEndPositionMs(clip.endMs).build()).build()
         })
         player.prepare()
+        // Restaura o playhead após reconfiguração/retorno à tela; não sobrescrever
+        // o tempo salvo com o zero inicial do player durante o prepare().
+        seekProjectPosition(player, p.clips, latestPosition)
+        restoringMedia = false
     }
-    LaunchedEffect(player,p.clips) {
-        while(true) {
-            val index=player.currentMediaItemIndex.coerceIn(0,(p.clips.size-1).coerceAtLeast(0))
-            val before=p.clips.take(index).sumOf {it.durationMs}
-            onPosition((before+player.currentPosition).coerceIn(0,p.durationMs))
+    LaunchedEffect(player, p.clips.map { it.id to it.durationMs }) {
+        while (true) {
+            if (!restoringMedia && !scrubbing && p.clips.isNotEmpty()) {
+                val next = projectPosition(player, p.clips, p.durationMs)
+                if (next != latestPosition) onPosition(next)
+            }
             delay(200)
         }
+    }
+    fun seekGlobal(ms: Long) {
+        val target = ms.coerceIn(0L, p.durationMs.coerceAtLeast(0L))
+        seekProjectPosition(player, p.clips, target)
+        onPosition(target)
     }
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().height(66.dp).padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically) {
@@ -80,12 +104,12 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         // Separate audio players track the editor playhead without modifying source media.
         p.music?.let { music ->
             TrackAudioPreview(music.uri, 0L, p.durationMs, music.volume, currentMs,
-                player.isPlaying, playbackSpeed, true)
+                isPlaying, playbackSpeed, true)
         }
         p.audioTracks.forEach { audio ->
             key(audio.id) {
                 TrackAudioPreview(audio.uri, audio.startMs, audio.durationMs, audio.volume,
-                    currentMs, player.isPlaying, playbackSpeed, false, audio.sourceStartMs)
+                    currentMs, isPlaying, playbackSpeed, false, audio.sourceStartMs)
             }
         }
         BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)
@@ -123,7 +147,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 p.overlays.forEach { pip ->
                     if (currentMs >= pip.startAtMs && currentMs < pip.startAtMs + pip.durationMs) {
                         key(pip.id) {
-                            PipLayer(pip, currentMs - pip.startAtMs, player.isPlaying,
+                            PipLayer(pip, currentMs - pip.startAtMs, isPlaying,
                                 speed = playbackSpeed, editable = false) { }
                         }
                     }
@@ -138,20 +162,19 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         }
         Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),horizontalArrangement=Arrangement.Center,
             verticalAlignment=Alignment.CenterVertically) {
-            IconButton(onClick={player.seekTo((player.currentPosition-5000).coerceAtLeast(0))}) { Icon(Icons.Default.SkipPrevious,"Voltar cinco segundos") }
-            IconButton(onClick={if(player.isPlaying)player.pause() else player.play()}) {
-                Icon(if(player.isPlaying) Icons.Default.PauseCircle else Icons.Default.PlayCircle, "Reproduzir / pausar",
+            IconButton(onClick={seekGlobal(TimelinePrecision.step(currentMs, -5000L, p.durationMs))}) { Icon(Icons.Default.SkipPrevious,"Voltar cinco segundos") }
+            IconButton(onClick={if(isPlaying)player.pause() else player.play()}) {
+                Icon(if(isPlaying) Icons.Default.PauseCircle else Icons.Default.PlayCircle, "Reproduzir / pausar",
                     modifier=Modifier.size(35.dp))
             }
-            IconButton(onClick={player.seekTo(player.currentPosition+5000)}) { Icon(Icons.Default.SkipNext,"Avançar cinco segundos") }
-            PlaybackSpeedButton(playbackSpeed, onSelect = { playbackSpeed = it })
+            IconButton(onClick={seekGlobal(TimelinePrecision.step(currentMs, 5000L, p.durationMs))}) { Icon(Icons.Default.SkipNext,"Avançar cinco segundos") }
+            PlaybackSpeedButton(playbackSpeed, onSelect = playbackVm::updateSpeed)
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Text("Vídeo:", style = MaterialTheme.typography.bodySmall)
             EditableSeekTime(currentMs, p.durationMs, onSeek = { ms ->
-                seekProjectPosition(player, p.clips, ms)
-                onPosition(ms)
+                seekGlobal(ms)
             }, modifier = Modifier.weight(1f))
         }
         // Passos temporais explícitos evitam tentar acertar um quadro em uma barra curta.
@@ -163,8 +186,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 100L to "+0,1s", 1000L to "+1s").forEach { (delta,label) ->
                 OutlinedButton(onClick={
                     val dest=TimelinePrecision.step(currentMs,delta,p.durationMs)
-                    seekProjectPosition(player,p.clips,dest)
-                    onPosition(dest)
+                    seekGlobal(dest)
                 },contentPadding=PaddingValues(horizontal=7.dp,vertical=2.dp),
                     modifier=Modifier.height(32.dp),enabled=p.durationMs>0) {
                     Text(label,fontSize=11.sp)
@@ -173,12 +195,11 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         }
         if(p.durationMs>0) Slider(value=currentMs.toFloat().coerceIn(0f,p.durationMs.toFloat()),
             onValueChange={global ->
-                var t=global.toLong()
-                for ((i,c) in p.clips.withIndex()) {
-                    if(t <= c.durationMs || i==p.clips.lastIndex) { player.seekTo(i,t.coerceIn(0,c.durationMs)); break }
-                    t -= c.durationMs
-                }
-            },valueRange=0f..p.durationMs.toFloat(),modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp))
+                scrubbing = true
+                seekGlobal(global.toLong())
+            },
+            onValueChangeFinished = { scrubbing = false },
+            valueRange=0f..p.durationMs.toFloat(),modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp))
         TimelineRow("Vídeo",Blue,p.clips.map{ it.title to it.durationMs },p.durationMs,currentMs,selectedId,
             onClip={ id -> onSelected(p.clips[id].id); clipMenuId = p.clips[id].id },
             onBoundary=onTransition)

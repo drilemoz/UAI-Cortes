@@ -31,11 +31,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.util.UnstableApi
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.listSaver
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
@@ -50,7 +51,10 @@ internal fun AnimateImagesScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val engine = remember { ImageAnimationEngine(context.applicationContext) }
+    val animationVm: ImageAnimationTaskViewModel = viewModel()
+    val task = animationVm.task
+    val busy = task.working
+    val progress = task.progress
     val images = remember { mutableStateListOf<Uri>() }
     val listState=rememberLazyListState()
     LaunchedEffect(selected) {
@@ -59,50 +63,48 @@ internal fun AnimateImagesScreen(
             images.clear(); images.addAll(selected)
         }
     }
-    val originalDraft = remember { ImageAnimationDraftStore(context).load() }
-    var options by remember { mutableStateOf(originalDraft?.options ?: ImageAnimationOptions()) }
-    var lastSavedImages by remember { mutableStateOf(selected.toList()) }
-    var lastSavedOptions by remember { mutableStateOf(options) }
+    val draftStore = remember(context) { ImageAnimationDraftStore(context.applicationContext) }
+    val originalDraft = remember(draftStore) { draftStore.load() }
+    var draftStatus by remember { mutableStateOf(draftStore.inspect().status) }
+    var requestDraftReset by remember { mutableStateOf(false) }
+    val imageKeys = images.map(Uri::toString)
+    val unavailableImages by produceState<List<String>?>(initialValue = null, imageKeys) {
+        value = null
+        value = ImageDraftMediaAccess(context).inaccessible(imageKeys.map(Uri::parse))
+    }
+    val allImagesReadable = unavailableImages?.isEmpty() == true
+    var options by rememberSaveable(stateSaver = listSaver<ImageAnimationOptions, Any>(
+        save = { listOf(it.intensity, it.secondsPerImage, it.aspect, it.quality, it.fps, it.transition) },
+        restore = { ImageAnimationOptions(it[0] as String, it[1] as Int, it[2] as String,
+            it[3] as Int, it[4] as Int, it[5] as String) }
+    )) { mutableStateOf(originalDraft?.options ?: ImageAnimationOptions()) }
+    var lastSavedImages by remember { mutableStateOf(originalDraft?.images.orEmpty()) }
+    var lastSavedOptions by remember { mutableStateOf(originalDraft?.options ?: ImageAnimationOptions()) }
     var confirmExit by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf(false) }
     var advanced by remember { mutableStateOf(false) }
     var animated by remember { mutableStateOf(false) }
     var playing by remember { mutableStateOf(true) }
     var previewMs by remember { mutableLongStateOf(0L) }
-    var busy by remember { mutableStateOf(false) }
-    var stage by remember { mutableStateOf("") }
-    var progress by remember { mutableStateOf<Int?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var saved by remember { mutableStateOf<Uri?>(null) }
     var confirmCancel by remember { mutableStateOf(false) }
-    var job by remember { mutableStateOf<Job?>(null) }
     val total = ImageAnimationPlan.totalDuration(images.size,options)
     LaunchedEffect(animated, playing, busy, images.size, options) {
         if (animated && playing && !busy && total > 0L) {
             while (true) { delay(33); previewMs = (previewMs + 33) % total }
         }
     }
-    LaunchedEffect(busy,stage) {
-        if (!busy) progress=null
-        else while (true) {
-            progress=if(stage=="Exportando vídeo") runCatching { engine.progress() }.getOrNull() else null
-            delay(250)
-        }
-    }
-    DisposableEffect(Unit) {
-        onDispose { if (!engine.isSaving) engine.cancel() }
-    }
     fun saveDraftAndReturn() {
         if (onSaveDraft(images.toList(), options)) {
             lastSavedImages = images.toList()
             lastSavedOptions = options
             saveError = false
+            draftStatus = draftStore.inspect().status
             onBack()
         } else saveError = true
     }
     fun goBack() {
         if (busy) {
-            if (!engine.isSaving) confirmCancel=true
+            if (animationVm.canCancel()) confirmCancel=true
             else android.widget.Toast.makeText(context,"O Uai Cortes está finalizando o vídeo.",
                 android.widget.Toast.LENGTH_SHORT).show()
         } else if (ImageAnimationDraftRules.changed(lastSavedImages.map(Uri::toString),
@@ -118,10 +120,24 @@ internal fun AnimateImagesScreen(
             TextButton(onClick={confirmExit=false;onBack()}) {Text("Descartar alterações")}
             TextButton(onClick={confirmExit=false}) {Text("Continuar")}
         }})
+    if (requestDraftReset) AlertDialog(onDismissRequest={requestDraftReset=false},
+        title={Text("Descartar cadastro de rascunho danificado?")},
+        text={Text("Não foi possível ler o rascunho nem o backup. Esta ação reinicia somente o cadastro " +
+            "do Animar Imagens; as fotos originais não serão excluídas.")},
+        confirmButton={TextButton(onClick={
+            requestDraftReset=false
+            if (draftStore.resetDamaged()) {
+                draftStatus = ImageDraftStatus.EMPTY
+                lastSavedImages = emptyList()
+                lastSavedOptions = ImageAnimationOptions()
+                saveError = false
+            } else saveError = true
+        }) {Text("Reiniciar cadastro")} },
+        dismissButton={TextButton(onClick={requestDraftReset=false}) {Text("Cancelar")} })
     if (confirmCancel) AlertDialog(onDismissRequest={confirmCancel=false},
         title={Text("Cancelar a animação?")},
         text={Text("O vídeo parcial será removido. As imagens selecionadas permanecem intactas.")},
-        confirmButton={TextButton(onClick={confirmCancel=false;job?.cancel();engine.cancel();busy=false;stage=""}) {Text("Cancelar exportação")} },
+        confirmButton={TextButton(onClick={confirmCancel=false;animationVm.cancel()}) {Text("Cancelar exportação")} },
         dismissButton={TextButton(onClick={confirmCancel=false}) {Text("Continuar")} })
 
     val currentIndex = if (images.isEmpty()) 0 else
@@ -165,7 +181,7 @@ internal fun AnimateImagesScreen(
                 horizontalAlignment=Alignment.CenterHorizontally) {
                 Icon(Icons.Default.MovieCreation,null,Modifier.size(50.dp))
                 Spacer(Modifier.height(16.dp))
-                Text(AnimationProgressUi.title(stage),style=MaterialTheme.typography.titleLarge)
+                Text(AnimationProgressUi.title(task.phase),style=MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(12.dp))
                 val fixedProgress=AnimationProgressUi.fraction(progress)
                 if(fixedProgress==null) LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
@@ -176,8 +192,8 @@ internal fun AnimateImagesScreen(
                 Text("O Uai Cortes está preparando seu vídeo. Progresso real quando disponível.",
                     style=MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(18.dp))
-                OutlinedButton(onClick={confirmCancel=true},enabled=!engine.isSaving) {
-                    Text(if (engine.isSaving) "Salvando…" else "Cancelar")
+                OutlinedButton(onClick={confirmCancel=true},enabled=animationVm.canCancel()) {
+                    Text(if (animationVm.canCancel()) "Cancelar" else "Salvando…")
                 }
             }
         } else {
@@ -306,6 +322,28 @@ internal fun AnimateImagesScreen(
                         }
                     }
                 }
+                if (draftStatus == ImageDraftStatus.DAMAGED) {
+                    Text("O rascunho salvo está ilegível e não há backup válido. " +
+                        "A gravação foi bloqueada para não sobrescrever dados.",
+                        color=MaterialTheme.colorScheme.error)
+                    OutlinedButton(onClick={requestDraftReset=true}) {Text("Reiniciar cadastro danificado")}
+                } else if (draftStatus == ImageDraftStatus.BACKUP) {
+                    Text("Rascunho recuperado da cópia de segurança. Salve para confirmar a recuperação.",
+                        color=MaterialTheme.colorScheme.primary)
+                }
+                if (unavailableImages == null && images.isNotEmpty()) {
+                    Text("Verificando acesso às fotos selecionadas…",
+                        style=MaterialTheme.typography.labelSmall)
+                } else if (!unavailableImages.isNullOrEmpty()) {
+                    val missing = unavailableImages.orEmpty()
+                    Text("${missing.size} foto(s) sem permissão de leitura. " +
+                        "O rascunho foi mantido; selecione novamente as fotos pelo seletor Android ou remova os itens inacessíveis.",
+                        color=MaterialTheme.colorScheme.error)
+                    OutlinedButton(onClick={
+                        images.removeAll { it.toString() in missing }
+                        onOrderChanged(images.toList());animated=false;previewMs=0
+                    }) {Text("Remover somente fotos inacessíveis")}
+                }
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick={advanced=!advanced},modifier=Modifier.weight(1f)) {
                         Icon(Icons.Default.Tune,null,Modifier.size(18.dp)); Spacer(Modifier.width(4.dp))
@@ -333,22 +371,15 @@ internal fun AnimateImagesScreen(
                 }
                 if(animated) {
                     Button(onClick={
-                        error=null
                         if (!onSaveDraft(images.toList(),options)) saveError=true
                         else {
                             saveError=false
                             lastSavedImages = images.toList();lastSavedOptions = options
-                            saved=null;busy=true;stage="Preparando imagens";progress=null
-                            val snapshot=images.toList()
-                            job=scope.launch {
-                                try {engine.start(snapshot,options,{stage=it},{uri->saved=uri;busy=false},
-                                    {reason->error=reason;busy=false})}
-                                catch(e:CancellationException){engine.cancel();busy=false}
-                                catch(e:Exception){DiagnosticRecorder.exception("image_animation",e)
-                                    error=e.message ?: "Erro ao gerar animação";busy=false;engine.cancel()}
-                            }
+                            draftStatus = draftStore.inspect().status
+                            animationVm.start(images.toList(),options)
                         }
-                    },modifier=Modifier.fillMaxWidth(),enabled=images.isNotEmpty()) {
+                    },modifier=Modifier.fillMaxWidth(),enabled=images.isNotEmpty() && allImagesReadable &&
+                        draftStatus != ImageDraftStatus.DAMAGED) {
                         Icon(Icons.Default.Save,null);Spacer(Modifier.width(8.dp));Text("Salvar MP4")
                     }
                 }
@@ -356,13 +387,14 @@ internal fun AnimateImagesScreen(
                     style=MaterialTheme.typography.labelSmall)
                 if(saveError) Text("Não foi possível salvar a edição. Verifique o armazenamento.",
                     color=MaterialTheme.colorScheme.error)
-                error?.let {Text("Erro: $it",color=MaterialTheme.colorScheme.error)}
+                if (task.message.isNotBlank()) Text(task.message,color=MaterialTheme.colorScheme.error)
             }
         }
     }
-    saved?.let { uri ->
+    animationVm.savedVideo?.let { uri ->
         VideoSavedDialog(uri=uri,name="",editLabel="Editar com áudio, legendas e PiP",
-            onEdit={ onUseInEditor(uri) }, onClose={ saved=null })
+            onEdit={ animationVm.dismissSaved(); onUseInEditor(uri) },
+            onClose={ animationVm.dismissSaved() })
     }
 }
 

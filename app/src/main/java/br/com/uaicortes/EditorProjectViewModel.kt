@@ -23,6 +23,9 @@ internal class EditorProjectViewModel(
         onActiveIdChanged = { state[ACTIVE_ID] = it }
     )
 
+    var storageWarning by mutableStateOf(store.lastReadIssue)
+        private set
+
     var projects by mutableStateOf(session.snapshot.projects)
         private set
     var project by mutableStateOf(session.snapshot.active)
@@ -34,6 +37,7 @@ internal class EditorProjectViewModel(
         projects = snapshot.projects
         project = snapshot.active
         activeProjectId = snapshot.activeId
+        storageWarning = store.lastReadIssue
     }
 
     fun save(edited: VideoProject) = publish(session.save(edited))

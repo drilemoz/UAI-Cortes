@@ -1,3 +1,38 @@
+## v0.1.66 (versionCode 67) · 30/10/2026
+
+- **Rascunhos seguros do Animar Imagens:** codec separado valida URIs e opções e distingue primeira execução, rascunho íntegro, backup recuperável e cadastro danificado.
+- **Backup consistente:** antes de salvar, a última versão JSON válida permanece como backup; se ambas as cópias estiverem danificadas, a gravação é bloqueada até o usuário confirmar um reinício explícito. Não apaga imagens originais.
+- **Permissões e fotos indisponíveis:** verificação de leitura local em `Dispatchers.IO` antes da exportação; referências sem acesso permanecem no rascunho, são comunicadas na tela e só são removidas por ação explícita.
+- **Testes de regressão:** novos casos para formato anterior, JSON inválido, ordem, preservação do backup e acesso a fotos. Acessos persistentes do SAF continuam solicitados pelo seletor Android.
+- `schemaVersion=4` preservado, sem mudanças no Media3, bitrate ou no catálogo de projetos. Build Android completo, testes JUnit Gradle e testes reais de permissão no aparelho ainda pendentes.
+
+## v0.1.65 (versionCode 66) · 30/10/2026
+
+- **Persistência e recuperação de projetos:** o cadastro de projetos agora distingue uma instalação nova de uma chave principal ausente/corrompida. A cópia de segurança é examinada antes de assumir que não há projetos.
+- **Escrita protegida:** o backup recebe somente o último JSON previamente validado; IDs em branco ou duplicados não podem ser persistidos. Dados ilegíveis continuam bloqueando gravações destrutivas.
+- **Aviso de armazenamento:** o aplicativo informa quando recuperou o backup ou quando ambas as cópias estão ilegíveis. Não apresenta um erro de leitura silenciosamente como se os projetos tivessem sido excluídos.
+- **Falhas de salvamento:** a interface informa o erro e não executa automaticamente o comando de voltar para a tela inicial quando a gravação falha; a exclusão também informa erro sem esconder a falha do usuário.
+- `schemaVersion=4` preservado. Nenhuma migração de projetos nem alteração nos motores de exportação. Compilação Android completa e testes físicos permanecem pendentes.
+
+## v0.1.64 (versionCode 65) · 30/10/2026
+
+### Refatoração de reprodução e timeline
+- Introduzido `TimelinePlaybackCoordinator` com coordenadas globais e locais reutilizáveis.
+- Centralizados os caminhos de seek do editor e da prévia, com avanço/retrocesso entre clipes.
+- Arrasto do slider protegido contra a atualização periódica que causava saltos no cursor.
+- `EditorPlaybackViewModel` retém apenas velocidade da prévia e ID do projeto; player permanece sob ciclo de vida da tela.
+- `Player.Listener` notifica imediatamente play/pause; a posição recuperada é aplicada após preparar a fila de mídias.
+- Novos testes JVM para bordas e restauração de estado.
+- Build Android, CI integral e testes reais pendentes.
+
+## v0.1.63 (versionCode 64) · 30/10/2026
+- **Animar Imagens modularizado:** `ImageAnimationTaskViewModel` assume o motor Media3, progresso, cancelamento e confirmação do MP4; a interface só apresenta estados e opções.
+- **Reaproveitamento:** mesmo `ExportTaskCoordinator` do exportador principal com tickets de tentativas, fases PREPARING/RENDERING/SAVING e progresso numérico somente quando o Transformer o informa.
+- **Concorrência:** instância própria de `ImageAnimationEngine` para cada tentativa, para impedir que a limpeza de um preparo cancelado remova arquivos de outra tentativa. A limpeza durante decodificação é adiada até terminar a operação atual.
+- **Rotação:** ViewModel mantém a exportação durante recriação da Activity e as opções visuais são salváveis com valores simples; não recupera trabalho após morte do processo.
+- **Compatibilidade:** animação continua offline, PNG temporário sem perdas, H.264 720p/1080p, limite de 80 imagens, formato `schemaVersion=4`, integração com editor e cinco APKs por ABI preservados.
+- **Pendente:** build Android Gradle/CI, testes de rotação, cancelamento, salvamento e qualidade MP4 em dispositivo físico. Testes unitários da máquina de estados não provam processamento real.
+
 ## v0.1.62 (versionCode 63) · 30/10/2026
 - Extraiu estado e motor de exportação da composição para `ExportTaskViewModel` com `viewModelScope`.
 - Criou `ExportTaskCoordinator` puro para andamento, sucesso, falha, cancelamento, identificação de tentativa, tempo e progresso.

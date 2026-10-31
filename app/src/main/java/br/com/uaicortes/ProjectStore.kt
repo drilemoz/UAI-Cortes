@@ -183,26 +183,58 @@ data class VideoProject(
     }
 }
 
-/** Codec reutilizável para armazenamento e importação futura de projetos (schema 4). */
+/** Resultado explícito: um cadastro realmente novo não é o mesmo que uma leitura corrompida. */
+internal data class ProjectCatalogRead(
+    val projects: List<VideoProject>,
+    val lastGoodRaw: String,
+    val usedBackup: Boolean
+)
+
+/** Codec e regras de recuperação puras; o esquema de cada projeto permanece na versão 4. */
 internal object ProjectCollectionCodec {
     fun decode(raw: String): List<VideoProject> {
         val entries = JSONArray(raw)
-        return (0 until entries.length()).map { VideoProject.read(entries.getJSONObject(it)) }
-            .sortedByDescending { it.updated }
+        val projects = (0 until entries.length()).map { VideoProject.read(entries.getJSONObject(it)) }
+        require(projects.all { it.id.isNotBlank() }) { "Há um projeto sem identificador." }
+        require(projects.map { it.id }.distinct().size == projects.size) {
+            "Há identificadores de projeto duplicados."
+        }
+        return projects.sortedByDescending { it.updated }
     }
 
-    fun encode(projects: List<VideoProject>): String =
-        JSONArray().apply { projects.forEach { put(it.json()) } }.toString()
-
-    /** Não transforma um JSON inválido em lista vazia ao decidir salvar/excluir. */
-    fun recover(primary: String, backup: String?): List<VideoProject> =
-        runCatching { decode(primary) }.getOrElse { invalid ->
-            if (backup == null) throw IllegalStateException(
-                "O cadastro de projetos está ilegível e não há cópia recuperável.", invalid)
-            runCatching { decode(backup) }.getOrElse { invalidBackup ->
-                throw IllegalStateException("O cadastro e sua cópia de segurança estão ilegíveis.", invalidBackup)
-            }
+    fun encode(projects: List<VideoProject>): String {
+        require(projects.all { it.id.isNotBlank() } &&
+            projects.map { it.id }.distinct().size == projects.size) {
+            "O cadastro contém projetos sem ID ou com ID duplicado."
         }
+        return JSONArray().apply { projects.forEach { put(it.json()) } }.toString()
+    }
+
+    /** Ausência das duas chaves indica primeira execução. Se houver backup, nunca
+     * converter uma chave primária ausente em lista vazia sem examinar esse backup. */
+    fun inspect(primary: String?, backup: String?): ProjectCatalogRead {
+        if (primary == null && backup == null) return ProjectCatalogRead(emptyList(), "[]", false)
+        if (primary != null) {
+            val current = runCatching { decode(primary) }.getOrNull()
+            if (current != null) return ProjectCatalogRead(current, primary, false)
+        }
+        if (backup != null) {
+            val recovered = runCatching { decode(backup) }.getOrNull()
+            if (recovered != null) return ProjectCatalogRead(recovered, backup, true)
+        }
+        throw IllegalStateException("Cadastro de projetos ilegível e sem cópia recuperável. Nenhuma alteração será gravada.")
+    }
+
+    /** Mantido para consumidores existentes da versão anterior. */
+    fun recover(primary: String, backup: String?): List<VideoProject> =
+        inspect(primary, backup).projects
+
+    /** Backup recebe exclusivamente dados previamente validados, nunca um JSON corrompido. */
+    fun prepareWrite(primary: String?, backup: String?, projects: List<VideoProject>): Pair<String, String> {
+        val previous = inspect(primary, backup).lastGoodRaw
+        val next = encode(projects)
+        return previous to next
+    }
 }
 
 class ProjectStore(private val context: Context) {
@@ -210,27 +242,36 @@ class ProjectStore(private val context: Context) {
     private val currentKey = "projects"
     private val backupKey = "projects_backup"
 
-    private fun rawPrimary(): String = prefs.getString(currentKey, "[]") ?: "[]"
-    private fun readForMutation(): List<VideoProject> = ProjectCollectionCodec.recover(
-        rawPrimary(), prefs.getString(backupKey, null))
+    /** Leitura problemática fica visível à interface, sem expor caminhos ou mídias no diagnóstico. */
+    @Volatile var lastReadIssue: String? = null
+        private set
+
+    private fun inspect(): ProjectCatalogRead {
+        val result = ProjectCollectionCodec.inspect(
+            prefs.getString(currentKey, null), prefs.getString(backupKey, null))
+        lastReadIssue = if (result.usedBackup)
+            "O cadastro principal está ausente ou ilegível. Foi recuperada a cópia de segurança; confira seus projetos antes de editar."
+        else null
+        return result
+    }
+
+    private fun readForMutation(): List<VideoProject> = inspect().projects
 
     fun load(): List<VideoProject> = try {
         readForMutation()
     } catch (failure: Exception) {
+        lastReadIssue = "Não foi possível ler os projetos ou sua cópia de segurança. O salvamento está bloqueado para proteger os dados."
         DiagnosticRecorder.exception("project_store_read", failure)
-        // A UI pode mostrar zero projetos, mas save/delete NÃO podem sobrescrever dados ilegíveis.
+        // A tela recebe um aviso explícito; operações de escrita continuam proibidas.
         emptyList()
     }
 
     private fun persist(projects: List<VideoProject>) {
-        val primary = rawPrimary()
-        // Se o primário foi corrompido, conservar o último backup válido.
-        val safePrevious = runCatching { ProjectCollectionCodec.decode(primary); primary }
-            .getOrElse { prefs.getString(backupKey, null) ?: throw IllegalStateException(
-                "Não é seguro sobrescrever projetos ilegíveis.") }
+        val (safePrevious, updated) = ProjectCollectionCodec.prepareWrite(
+            prefs.getString(currentKey, null), prefs.getString(backupKey, null), projects)
         check(prefs.edit()
             .putString(backupKey, safePrevious)
-            .putString(currentKey, ProjectCollectionCodec.encode(projects))
+            .putString(currentKey, updated)
             .commit()) { "Falha ao persistir projetos no armazenamento local" }
     }
 

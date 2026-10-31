@@ -1,3 +1,37 @@
+## v0.1.66 (versionCode 67) · 30/10/2026
+
+- **Rascunhos seguros do Animar Imagens:** codec separado valida URIs e opções e distingue primeira execução, rascunho íntegro, backup recuperável e cadastro danificado.
+- **Backup consistente:** antes de salvar, a última versão JSON válida permanece como backup; se ambas as cópias estiverem danificadas, a gravação é bloqueada até o usuário confirmar um reinício explícito. Não apaga imagens originais.
+- **Permissões e fotos indisponíveis:** verificação de leitura local em `Dispatchers.IO` antes da exportação; referências sem acesso permanecem no rascunho, são comunicadas na tela e só são removidas por ação explícita.
+- **Testes de regressão:** novos casos para formato anterior, JSON inválido, ordem, preservação do backup e acesso a fotos. Acessos persistentes do SAF continuam solicitados pelo seletor Android.
+- `schemaVersion=4` preservado, sem mudanças no Media3, bitrate ou no catálogo de projetos. Build Android completo, testes JUnit Gradle e testes reais de permissão no aparelho ainda pendentes.
+
+## v0.1.65 (versionCode 66) · 30/10/2026
+
+- **Persistência e recuperação de projetos:** o cadastro de projetos agora distingue uma instalação nova de uma chave principal ausente/corrompida. A cópia de segurança é examinada antes de assumir que não há projetos.
+- **Escrita protegida:** o backup recebe somente o último JSON previamente validado; IDs em branco ou duplicados não podem ser persistidos. Dados ilegíveis continuam bloqueando gravações destrutivas.
+- **Aviso de armazenamento:** o aplicativo informa quando recuperou o backup ou quando ambas as cópias estão ilegíveis. Não apresenta um erro de leitura silenciosamente como se os projetos tivessem sido excluídos.
+- **Falhas de salvamento:** a interface informa o erro e não executa automaticamente o comando de voltar para a tela inicial quando a gravação falha; a exclusão também informa erro sem esconder a falha do usuário.
+- `schemaVersion=4` preservado. Nenhuma migração de projetos nem alteração nos motores de exportação. Compilação Android completa e testes físicos permanecem pendentes.
+
+## v0.1.64 (versionCode 65) · 30/10/2026
+
+- **Timeline do editor:** criado `TimelinePlaybackCoordinator` independente de Media3/Compose, compartilhando o mapeamento entre tempo global do projeto e posição de cada clipe.
+- **Busca consistente:** botões ±5 segundos, ajuste fino, entrada numérica e barra de progresso usam `seekProjectPosition`, inclusive atravessando as fronteiras entre clipes.
+- **Arrasto previsível:** o cursor muda imediatamente durante o gesto e a leitura periódica do player não o substitui até o fim do arrasto.
+- **Prévia e reprodução:** restaurar posição salva ao preparar mídia após recriação, publicar `isPlaying` pelo listener do Media3 e soltar o player ao sair da tela.
+- **Estado pequeno no ViewModel:** `EditorPlaybackViewModel` mantém apenas projeto ativo e velocidade da prévia (0,25×–2×). Não persiste ExoPlayer/arquivos no `SavedStateHandle`, não altera FPS ou velocidade do MP4.
+- **Testes:** mapeamento de clipes, limites, overflow e velocidade; build Android/CI e validação no aparelho continuam pendentes.
+- **Compatibilidade:** preservados `schemaVersion=4`, opções de exportação 720p/1080p e componentes das versões anteriores.
+
+## v0.1.63 (versionCode 64) · 30/10/2026
+- **Animar Imagens modularizado:** `ImageAnimationTaskViewModel` assume o motor Media3, progresso, cancelamento e confirmação do MP4; a interface só apresenta estados e opções.
+- **Reaproveitamento:** mesmo `ExportTaskCoordinator` do exportador principal com tickets de tentativas, fases PREPARING/RENDERING/SAVING e progresso numérico somente quando o Transformer o informa.
+- **Concorrência:** instância própria de `ImageAnimationEngine` para cada tentativa, para impedir que a limpeza de um preparo cancelado remova arquivos de outra tentativa. A limpeza durante decodificação é adiada até terminar a operação atual.
+- **Rotação:** ViewModel mantém a exportação durante recriação da Activity e as opções visuais são salváveis com valores simples; não recupera trabalho após morte do processo.
+- **Compatibilidade:** animação continua offline, PNG temporário sem perdas, H.264 720p/1080p, limite de 80 imagens, formato `schemaVersion=4`, integração com editor e cinco APKs por ABI preservados.
+- **Pendente:** build Android Gradle/CI, testes de rotação, cancelamento, salvamento e qualidade MP4 em dispositivo físico. Testes unitários da máquina de estados não provam processamento real.
+
 ## v0.1.62 (versionCode 63) · 30/10/2026
 - **Exportação com ViewModel:** `ExportTaskViewModel` mantém o estado e o motor Media3 durante recriação da tela; a UI apenas exibe progresso e solicita início/cancelamento.
 - **Máquina de estados testável:** `ExportTaskCoordinator` controla preparação, renderização e salvamento; tickets por tentativa ignoram callbacks atrasados, e o progresso só aparece quando informado pelo Media3.

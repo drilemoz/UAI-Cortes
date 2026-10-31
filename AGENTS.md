@@ -150,3 +150,15 @@
 
 - v0.1.62: estado do MP4 principal pertence a `ExportTaskViewModel`, não a `remember` do ExportScreen; não serializar `ExportEngine`/Uri/frames/arquivos no SavedStateHandle. Progresso desconhecido deve permanecer indeterminado.
 - v0.1.62: manter tickets de `ExportTaskCoordinator` para ignorar callbacks atrasados; não cancelar o Transformer durante a cópia de arquivo final ao MediaStore; finalizar e limpar na thread principal. Testar rotação, cancelar, sair e falha de espaço no Android antes de afirmar fidelidade.
+
+- v0.1.63: `ImageAnimationTaskViewModel` gerencia o motor e progresso do Animar Imagens, reutilizando `ExportTaskCoordinator` sem gravar URIs/bitmaps/jobs no SavedStateHandle. Não reintroduzir `ImageAnimationEngine` ou `Job` em remember da tela.
+- v0.1.63: cada tentativa de animação usa motor independente; cancelamento durante preparo não remove arquivos em escrita nem afeta nova tentativa. Não cancelar a cópia final MediaStore; rejeitar callbacks de tickets antigos. Rotação pode preservar a tarefa se ViewModel sobreviver; morte de processo não retoma exportação.
+
+- v0.1.64: `TimelinePlaybackCoordinator` é a fonte única da conversão entre tempo global e clipe, inclusive para ±5 s; não voltar a duplicar laços de seek na UI. Fronteira exata mantém o clipe anterior por compatibilidade com projetos antigos.
+- v0.1.64: `EditorPlaybackViewModel` conserva somente ID de projeto e velocidade da prévia no SavedStateHandle. Nunca guardar ExoPlayer/MediaItem/Uri de tarefa; o player continua com release no DisposableEffect da tela.
+- v0.1.64: durante scrubbing, não sobrescrever o cursor com polling; restaurar posição saveable após setMediaItems/prepare; comunicar isPlaying pelo Player.Listener. Preservar velocidades exclusivamente de prévia e schemaVersion 4. Validar em CI e aparelho real antes de alegar estabilidade.
+
+- v0.1.65: `ProjectCollectionCodec.inspect()` deve distinguir instalação nova, primário válido, recuperação por backup e corrupção de ambas as cópias. Nunca tratar uma chave primária ausente como `[]` quando existir backup. `prepareWrite()` só permite backup de um JSON validado, nunca texto corrompido. IDs duplicados/vazios são inválidos. Falha de gravação não pode navegar para Home como se tivesse sido salva; UI deve mostrar aviso e manter o estado atual. Preservar `schemaVersion=4`, compilar e testar em Android real antes de declarar estabilidade.
+
+- v0.1.66: `ImageAnimationDraftCodec` deve manter compatibilidade com JSON antigo sem `fps`; nunca tratar rascunho corrompido como lista vazia e sobrescrever sem confirmação. Preservar somente o JSON anterior validado em `backup`, incluindo recuperação quando a chave principal está ausente.
+- v0.1.66: verificar acesso real às URIs antes de renderizar, fora da thread UI; não apagar imagens de rascunhos automaticamente quando a permissão for revogada. SAF `OpenMultipleDocuments` mantém tentativa de concessão persistente; MediaStore depende das permissões do Android e deve ser revalidado ao reabrir. `schemaVersion=4` e qualidade de exportação inalterados.

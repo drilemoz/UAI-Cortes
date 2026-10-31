@@ -66,6 +66,7 @@ internal class ImageAnimationEngine(private val context: Context) {
     private var workDir: File? = null
     private val cancelled = AtomicBoolean(false)
     @Volatile private var saving = false
+    @Volatile private var preparing = false
 
     val isSaving: Boolean get() = saving
     fun progress(): Int? = transformer?.let {
@@ -78,7 +79,7 @@ internal class ImageAnimationEngine(private val context: Context) {
         cancelled.set(true)
         transformer?.cancel()
         transformer = null
-        cleanup()
+        if (!preparing) cleanup()
     }
     private fun cleanup() {
         outputFile?.delete()
@@ -104,6 +105,7 @@ internal class ImageAnimationEngine(private val context: Context) {
         val folder = File(context.cacheDir, "animated-${System.nanoTime()}").also { it.mkdirs() }
         workDir = folder
         onStage("Preparando imagens")
+        preparing = true
         val prepared = try {
             withContext(Dispatchers.IO) {
                 images.mapIndexed { index, uri ->
@@ -121,6 +123,8 @@ internal class ImageAnimationEngine(private val context: Context) {
         } catch (e: Throwable) {
             cleanup()
             throw e
+        } finally {
+            preparing = false
         }
         if (cancelled.get()) { cleanup(); return }
         onStage("Exportando vídeo")
@@ -183,6 +187,8 @@ internal class ImageAnimationEngine(private val context: Context) {
                     cleanup()
                 }
             }).build()
+        coroutineContext.ensureActive()
+        if (cancelled.get()) { transformer = null; cleanup(); return }
         try { transformer?.start(composition,target.absolutePath) }
         catch (e: Exception) { transformer=null;cleanup();throw e }
     }

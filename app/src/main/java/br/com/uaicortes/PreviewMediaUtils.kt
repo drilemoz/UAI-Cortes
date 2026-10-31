@@ -43,22 +43,14 @@ internal fun mediaAspect(context: android.content.Context, uri: String, isImage:
     }.getOrDefault(16f / 9f).coerceIn(0.1f, 10f)
 }
 
-internal fun projectPosition(player: ExoPlayer, clips: List<Clip>, total: Long): Long {
-    if (clips.isEmpty()) return 0L
-    val index = player.currentMediaItemIndex.coerceIn(0, clips.lastIndex)
-    return (clips.take(index).sumOf { it.durationMs } + player.currentPosition).coerceIn(0L, total)
-}
+internal fun projectPosition(player: ExoPlayer, clips: List<Clip>, total: Long): Long =
+    TimelinePlaybackCoordinator.projectPosition(
+        clips.map { it.durationMs }, player.currentMediaItemIndex, player.currentPosition
+    ).coerceIn(0L, total.coerceAtLeast(0L))
 
 internal fun seekProjectPosition(player: ExoPlayer, clips: List<Clip>, position: Long) {
-    if (clips.isEmpty()) return
-    var remaining = position.coerceIn(0, clips.sumOf { it.durationMs })
-    clips.forEachIndexed { index, clip ->
-        if (remaining <= clip.durationMs || index == clips.lastIndex) {
-            player.seekTo(index, remaining.coerceIn(0L, clip.durationMs))
-            return
-        }
-        remaining -= clip.durationMs
-    }
+    val dest = TimelinePlaybackCoordinator.target(clips.map { it.durationMs }, position) ?: return
+    player.seekTo(dest.clipIndex, dest.localMs)
 }
 
 /**
