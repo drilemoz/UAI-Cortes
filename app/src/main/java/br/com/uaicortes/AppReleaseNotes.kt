@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.68"
-    const val VERSION_CODE = 69
+    const val VERSION_NAME = "0.1.69"
+    const val VERSION_CODE = 70
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.69", listOf(
+            ReleaseFeature("vosk-zip-manual", "Legendas offline sem depender do download interno",
+                "Baixe o modelo no navegador e importe o ZIP diretamente no aplicativo.", "captions"),
+            ReleaseFeature("vosk-progresso-recebido", "Download com diagnóstico",
+                "Confira bytes recebidos, porcentagem quando disponível e mensagens de conexão mais claras.", "download")
+        )),
         ReleaseSummary("0.1.68", listOf(
             ReleaseFeature("novidades-unificadas", "Novidades em destaque",
                 "Uma tela especial apresenta as mudanças apenas uma vez. Você pode revisitá-la em Configurações ou Sobre.", "sparkles"),
@@ -36,10 +42,6 @@ internal object AppReleaseNotes {
                 "Aplique uma sobreposição a um clipe ou ao projeto inteiro usando campos compactos.", "layers"),
             ReleaseFeature("vosk-opcoes", "Legendas offline nas Configurações",
                 "Gerencie o modelo de voz e acompanhe as etapas do download.", "captions")
-        )),
-        ReleaseSummary("0.1.66", listOf(
-            ReleaseFeature("rascunhos-seguros", "Rascunhos mais seguros",
-                "Recuperação de cópia de segurança e alertas quando imagens ficam inacessíveis.", "shield")
         ))
     )
 

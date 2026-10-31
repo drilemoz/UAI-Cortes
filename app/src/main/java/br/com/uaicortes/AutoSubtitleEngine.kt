@@ -6,6 +6,8 @@ import android.media.MediaCodec
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.net.Uri
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -15,6 +17,8 @@ import org.vosk.Model
 import org.vosk.Recognizer
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
+import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.ByteOrder
@@ -30,6 +34,7 @@ object AutoSubtitleEngine {
     private const val MAX_EXTRACTED = 300L * 1024 * 1024
     private const val MAX_DURATION_MS = 10L * 60 * 1000
     private const val RATE = 16000
+    private val installationMutex = Mutex()
 
     fun modelFolder(context: Context): File = File(context.filesDir, "speech-models/$MODEL_NAME")
     fun installed(context: Context): Boolean {
@@ -37,93 +42,171 @@ object AutoSubtitleEngine {
         return File(root, "am/final.mdl").isFile && File(root, "conf/model.conf").isFile
     }
 
-    suspend fun install(context: Context, onProgress: suspend (Int?) -> Unit,
-        onStage: suspend (String) -> Unit = {}) = withContext(Dispatchers.IO) {
-        if (installed(context)) return@withContext
-        val base = File(context.filesDir, "speech-models").apply { mkdirs() }
+    /** O download permanece opcional. Relata bytes reais mesmo antes de completar 1%. */
+    suspend fun install(
+        context: Context,
+        onProgress: suspend (Int?) -> Unit,
+        onStage: suspend (String) -> Unit = {},
+        onTransfer: suspend (Long, Long?) -> Unit = { _, _ -> }
+    ) = installationMutex.withLock {
+        withContext(Dispatchers.IO) {
+            if (installed(context)) return@withContext
+            withStaging(context) { zip, unpack, target ->
+                onStage("Conectando ao servidor oficial…")
+                val conn = (URL(MODEL_URL).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "GET"
+                    connectTimeout = 15000
+                    readTimeout = 30000
+                    instanceFollowRedirects = true
+                    setRequestProperty("Accept-Encoding", "identity")
+                }
+                try {
+                    conn.connect()
+                    if (conn.url.protocol != "https") error("Redirecionamento inseguro do download")
+                    if (conn.responseCode !in 200..299)
+                        error("Servidor retornou HTTP ${conn.responseCode}")
+                    val total = conn.contentLengthLong.takeIf { it > 0 }
+                    if (total != null && total > MAX_DOWNLOAD) error("Modelo ultrapassa o limite permitido")
+                    onStage("Baixando modelo Vosk…")
+                    conn.inputStream.use { input ->
+                        copyArchive(input, zip, total, onProgress, onTransfer)
+                    }
+                } catch (e: java.net.SocketTimeoutException) {
+                    throw IOException("Servidor demorou a responder. Tente baixar no navegador e importar o ZIP.", e)
+                } catch (e: java.net.UnknownHostException) {
+                    throw IOException("Não foi possível localizar o servidor. Verifique DNS e conexão.", e)
+                } finally {
+                    conn.disconnect()
+                }
+                extractAndInstall(zip, unpack, target, onStage)
+                onProgress(100)
+            }
+        }
+    }
+
+    /** Alternativa offline: importa ZIP oficial previamente baixado via seletor SAF. */
+    suspend fun importZip(
+        context: Context,
+        uri: Uri,
+        onProgress: suspend (Int?) -> Unit,
+        onStage: suspend (String) -> Unit = {},
+        onTransfer: suspend (Long, Long?) -> Unit = { _, _ -> }
+    ) = installationMutex.withLock {
+        withContext(Dispatchers.IO) {
+            if (installed(context)) return@withContext
+            withStaging(context) { zip, unpack, target ->
+                onStage("Copiando arquivo selecionado…")
+                val input = context.contentResolver.openInputStream(uri)
+                    ?: throw IOException("Não foi possível abrir o arquivo selecionado")
+                input.use { copyArchive(it, zip, null, onProgress, onTransfer) }
+                extractAndInstall(zip, unpack, target, onStage)
+                onProgress(100)
+            }
+        }
+    }
+
+    private suspend fun withStaging(
+        context: Context,
+        action: suspend (File, File, File) -> Unit
+    ) {
+        val base = File(context.filesDir, "speech-models")
+        if (!base.isDirectory && !base.mkdirs()) error("Não foi possível criar pasta do modelo")
         val zip = File(base, "$MODEL_NAME.tmp.zip")
         val unpack = File(base, "$MODEL_NAME.unpack")
-        val target = modelFolder(context)
-        try {
-            onStage("Conectando ao servidor do modelo…")
-            val conn = (URL(MODEL_URL).openConnection() as HttpURLConnection).apply {
-                connectTimeout = 15000; readTimeout = 30000
-                instanceFollowRedirects = true
+        try { action(zip, unpack, modelFolder(context)) }
+        finally { zip.delete(); unpack.deleteRecursively() }
+    }
+
+    private suspend fun copyArchive(
+        input: InputStream,
+        destination: File,
+        expected: Long?,
+        onProgress: suspend (Int?) -> Unit,
+        onTransfer: suspend (Long, Long?) -> Unit
+    ) {
+        var count = 0L
+        var lastReport = -1L
+        var lastPercent = -2
+        onProgress(null)
+        onTransfer(0L, expected)
+        FileOutputStream(destination).use { output ->
+            val buffer = ByteArray(32 * 1024)
+            while (true) {
+                currentCoroutineContext().ensureActive()
+                val n = input.read(buffer)
+                if (n < 0) break
+                if (n == 0) continue
+                count += n
+                if (count > MAX_DOWNLOAD) error("ZIP maior que o limite permitido (90 MiB)")
+                output.write(buffer, 0, n)
+                val percent = ModelTransferProgress.percent(count, expected)
+                if (percent != lastPercent) {
+                    onProgress(percent)
+                    lastPercent = percent ?: -1
+                }
+                if (count - lastReport >= 256 * 1024 || lastReport < 0L) {
+                    onTransfer(count, expected)
+                    lastReport = count
+                }
             }
-            try {
-                conn.connect()
-                if (conn.responseCode !in 200..299) error("Download HTTP ${conn.responseCode}")
-                val total = conn.contentLengthLong
-                if (total > MAX_DOWNLOAD) error("Modelo ultrapassa o limite permitido")
-                onStage("Baixando modelo Vosk…")
-                conn.inputStream.use { input ->
-                    FileOutputStream(zip).use { output ->
-                        val bytes = ByteArray(32 * 1024)
-                        var count = 0L
-                        var previous = -1
+        }
+        onTransfer(count, expected)
+        if (expected != null && count != expected)
+            error("Download incompleto: recebidos $count de $expected bytes")
+        if (count < 1024L) error("Arquivo ZIP vazio ou incompleto")
+    }
+
+    private suspend fun extractAndInstall(
+        zip: File,
+        unpack: File,
+        target: File,
+        onStage: suspend (String) -> Unit
+    ) {
+        onStage("Descompactando e verificando o modelo…")
+        unpack.deleteRecursively()
+        if (!unpack.mkdirs()) error("Não foi possível preparar pasta temporária")
+        val safeRoot = unpack.canonicalFile
+        var extracted = 0L
+        var entries = 0
+        ZipInputStream(zip.inputStream().buffered()).use { input ->
+            while (true) {
+                currentCoroutineContext().ensureActive()
+                val entry = input.nextEntry ?: break
+                entries++
+                if (entries > 4000) error("Muitos arquivos no ZIP")
+                val relative = entry.name.removePrefix("$MODEL_NAME/")
+                if (relative == entry.name || relative.isBlank()) {
+                    input.closeEntry()
+                    continue
+                }
+                val destination = File(safeRoot, relative).canonicalFile
+                if (!destination.path.startsWith(safeRoot.path + File.separator))
+                    error("Caminho inseguro dentro do ZIP")
+                if (entry.isDirectory) destination.mkdirs() else {
+                    destination.parentFile?.mkdirs()
+                    FileOutputStream(destination).use { output ->
+                        val buffer = ByteArray(32 * 1024)
                         while (true) {
                             currentCoroutineContext().ensureActive()
-                            val got = input.read(bytes)
-                            if (got < 0) break
-                            count += got
-                            if (count > MAX_DOWNLOAD) error("Download maior do que o esperado")
-                            output.write(bytes, 0, got)
-                            val percent = if (total > 0) ((count * 100 / total).coerceIn(0, 100)).toInt() else -1
-                            if (percent != previous) { onProgress(percent.takeIf { it >= 0 }); previous = percent }
+                            val n = input.read(buffer)
+                            if (n < 0) break
+                            if (n == 0) continue
+                            extracted += n
+                            if (extracted > MAX_EXTRACTED) error("Modelo descompactado grande demais")
+                            output.write(buffer, 0, n)
                         }
                     }
                 }
-                if (total > 0 && zip.length() != total)
-                    error("Download incompleto: tamanho recebido diferente do informado")
-                if (zip.length() < 1024L)
-                    error("Arquivo do modelo vazio ou incompleto")
-            } finally { conn.disconnect() }
-            onStage("Descompactando e verificando o modelo…")
-            unpack.deleteRecursively()
-            unpack.mkdirs()
-            val safeRoot = unpack.canonicalFile
-            var extracted = 0L
-            var entries = 0
-            ZipInputStream(zip.inputStream().buffered()).use { input ->
-                while (true) {
-                    currentCoroutineContext().ensureActive()
-                    val entry = input.nextEntry ?: break
-                    entries++
-                    if (entries > 4000) error("Muitos arquivos no modelo")
-                    val relative = entry.name.removePrefix("$MODEL_NAME/")
-                    if (relative == entry.name || relative.isBlank()) {
-                        input.closeEntry(); continue
-                    }
-                    val destination = File(safeRoot, relative).canonicalFile
-                    if (!destination.path.startsWith(safeRoot.path + File.separator)) error("Caminho inseguro no ZIP")
-                    if (entry.isDirectory) destination.mkdirs() else {
-                        destination.parentFile?.mkdirs()
-                        FileOutputStream(destination).use { output ->
-                            val buffer = ByteArray(32 * 1024)
-                            while (true) {
-                                currentCoroutineContext().ensureActive()
-                                val size = input.read(buffer)
-                                if (size < 0) break
-                                extracted += size
-                                if (extracted > MAX_EXTRACTED) error("Modelo descompactado grande demais")
-                                output.write(buffer, 0, size)
-                            }
-                        }
-                    }
-                    input.closeEntry()
-                }
+                input.closeEntry()
             }
-            if (!File(unpack, "am/final.mdl").isFile || !File(unpack, "conf/model.conf").isFile)
-                error("O download não contém um modelo Vosk válido")
-            // Não apagar uma instalação válida antes de confirmar o novo pacote.
-            if (installed(context)) return@withContext
-            target.deleteRecursively()
-            if (!unpack.renameTo(target)) error("Não foi possível instalar o modelo")
-            onProgress(100)
-        } finally {
-            zip.delete()
-            unpack.deleteRecursively()
         }
+        if (entries == 0 || !File(unpack, "am/final.mdl").isFile ||
+            !File(unpack, "conf/model.conf").isFile)
+            error("ZIP não contém o modelo oficial $MODEL_NAME. Selecione o arquivo correto.")
+        if (File(target, "am/final.mdl").isFile && File(target, "conf/model.conf").isFile) return
+        // Só troca instalação antiga quando o pacote novo foi validado.
+        if (target.exists() && !target.deleteRecursively()) error("Falha ao remover instalação incompleta")
+        if (!unpack.renameTo(target)) error("Não foi possível instalar o modelo")
     }
 
     private data class Word(val text: String, val startMs: Long, val endMs: Long)
