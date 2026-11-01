@@ -246,7 +246,9 @@ class TimedSubtitleOverlay(
                 typeface = Typeface.create(family, if(active.bold) Typeface.BOLD else Typeface.NORMAL)
             }
             val longestWord = rendered.split(Regex("\\s+")).maxOfOrNull { fontPaint.measureText(it) } ?: 0f
-            val relativeFontSize = SubtitleExportSizing.relativeFontSize(active.sizeSp, videoWidth, longestWord)
+            val totalWidth = rendered.lines().sumOf { fontPaint.measureText(it).toDouble() }.toFloat()
+            val relativeFontSize = SubtitleExportSizing.relativeFontSize(active.sizeSp, videoWidth,
+                longestWord, totalWidth)
             text.setSpan(RelativeSizeSpan(relativeFontSize), 0, text.length, 0)
             val layoutAlign = when (SubtitleStyles.normalizeAlignment(active.textAlignment)) {
                 SubtitleStyles.ALIGN_LEFT -> Layout.Alignment.ALIGN_NORMAL

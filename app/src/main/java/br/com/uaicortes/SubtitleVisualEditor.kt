@@ -69,6 +69,12 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
                 } })
             SubtitleValueSlider("Tamanho", "${draft.sizeSp} sp",draft.sizeSp.toFloat(),12f..48f,
                 onChange={onChange(draft.copy(sizeSp=it.toInt().coerceIn(12,48)))})
+            Row(verticalAlignment=Alignment.CenterVertically) {
+                Text("Altura da legenda",fontWeight=FontWeight.Medium,modifier=Modifier.weight(1f))
+                TextButton(onClick={onChange(draft.copy(y=.92f))}) { Text("Rodapé · 8%") }
+            }
+            SubtitleValueSlider("Posição vertical", "${(draft.y*100).toInt()}%",draft.y,.1f.. .95f,
+                onChange={onChange(draft.copy(y=it))})
             OutlinedButton(onClick={advanced=!advanced},modifier=Modifier.fillMaxWidth()) {
                 Text(if(advanced) "Ocultar ajustes avançados ▲" else "Ajustes avançados ▼")
             }
@@ -103,11 +109,9 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
                 }
                 SubtitleValueSlider("Posição horizontal", "${(draft.x*100).toInt()}%",draft.x,.1f.. .9f,
                     onChange={onChange(draft.copy(x=it))})
-                SubtitleValueSlider("Posição vertical", "${(draft.y*100).toInt()}%",draft.y,.1f.. .9f,
-                    onChange={onChange(draft.copy(y=it))})
-                SubtitleTwoColumnChoices(listOf("Cima","Centro","Baixo"),
-                    selected={label->kotlin.math.abs(draft.y-when(label){"Cima"->.15f;"Centro"->.5f;else->.85f})<.02f},
-                    choose={label->onChange(draft.copy(y=when(label){"Cima"->.15f;"Centro"->.5f;else->.85f}))})
+                Text("Posição vertical fica acima dos ajustes avançados para facilitar a edição individual e em lote.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
             Text("Efeitos de entrada e revelação",fontWeight=FontWeight.SemiBold)

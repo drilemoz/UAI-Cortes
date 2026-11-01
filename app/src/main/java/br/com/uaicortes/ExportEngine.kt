@@ -86,7 +86,8 @@ class PipCompositor(private val overlays: List<Overlay>) : VideoCompositorSettin
             .setOverlayFrameAnchor(0f, 0f)
             .setBackgroundFrameAnchor(placement.x * 2f - 1f, 1f - placement.y * 2f)
             .setAlphaScale(if (presentationTimeUs >= pip.startAtMs * 1000L &&
-                presentationTimeUs < (pip.startAtMs + pip.durationMs) * 1000L) 1f else 0f)
+                presentationTimeUs < (pip.startAtMs + pip.durationMs) * 1000L)
+                pip.opacity.coerceIn(0f, 1f) else 0f)
             .build()
     }
 }

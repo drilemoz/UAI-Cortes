@@ -193,3 +193,7 @@
 - v0.1.78: salvar na tela Legendas retorna ao editor do mesmo projeto somente após persistência bem-sucedida. Não usar Home no callback `onSaveEditor`.
 - v0.1.78: `Editar todas` copia somente propriedades visuais selecionadas (Estilo/Animação/Posição) e nunca texto, IDs ou horários; confirmar e permitir desfazer condicionado ao snapshot. Edição individual preservada.
 - v0.1.78: progresso Vosk baseado no áudio decodificado por `MediaCodec`, e não em timer; carga do modelo indeterminada, cronômetro apenas elapsed. Preservar cancelamento/recursos offline e `schemaVersion=4`.
+
+- v0.1.79: defaults de legendas novas em `y=.92f` e gesto vertical até 0.95, sem reposicionar legendas já persistidas (`y` explícito). Prévia e exportação devem usar escala de texto adaptativa comum, sem truncar frases, sob validação de pixels no aparelho.
+- v0.1.79: PiP opcional `opacity` 0–1 como campo adicional ao esquema 4 (default 1f em projetos antigos); aplicar a propriedade no Compose/TextureView e `PipCompositor.getOverlaySettings`, sem alterá-la no áudio nem mascarar os controles de edição.
+- v0.1.79: ao fotografar quadro, pausar player antes de obter posição efetiva e manter pausado; salvar PNG original sem sobreposições, sem repetir captura, e continuar em dispatcher IO. Não confundir feedback de salvamento com processamento percentual real.

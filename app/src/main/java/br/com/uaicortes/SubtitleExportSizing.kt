@@ -21,10 +21,11 @@ object SubtitleExportSizing {
         return x.coerceIn(normalizedHalf, 1f - normalizedHalf)
     }
 
-    fun relativeFontSize(sizeSp: Int, frameWidth: Int, longestWordPxAt100: Float): Float {
+    fun relativeFontSize(sizeSp: Int, frameWidth: Int, longestWordPxAt100: Float,
+                         fullTextPxAt100: Float = 0f): Float {
         val base = (sizeSp.coerceIn(12, 48) / 380f) * safeFrameWidth(frameWidth) / 100f
-        val longest = (longestWordPxAt100 * base).coerceAtLeast(0f)
-        val shrink = if (longest > textBoxWidth(frameWidth)) textBoxWidth(frameWidth) / longest else 1f
-        return (base * shrink).coerceAtLeast(0.01f)
+        val factor = SubtitleAutoFit.factor(longestWordPxAt100 * base,
+            fullTextPxAt100 * base, textBoxWidth(frameWidth).toFloat())
+        return (base * factor).coerceAtLeast(0.01f)
     }
 }

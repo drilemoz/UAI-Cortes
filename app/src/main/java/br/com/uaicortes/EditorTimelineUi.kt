@@ -29,6 +29,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
@@ -589,11 +590,16 @@ internal fun PipLayer(pip: Overlay, timeMs: Long, playing: Boolean,
                 }
                 // FIT + proporção original evita cortar letras ou bordas de logotipos.
                 if (bitmap != null) Image(bitmap.asImageBitmap(), "Imagem sobreposta",
-                    Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                    Modifier.fillMaxSize().graphicsLayer { alpha = pip.opacity.coerceIn(0f, 1f) },
+                    contentScale = ContentScale.Fit)
             } else {
                 AndroidView(factory = { previewPlayer(it, transparentShutter = true).apply {
                     player = pipPlayer; useController = false
-                } }, modifier = Modifier.fillMaxSize(), update = { it.player = pipPlayer })
+                } }, modifier = Modifier.fillMaxSize(), update = {
+                    it.player = pipPlayer
+                    // TextureView: alpha da View efetivamente altera a transparência do vídeo.
+                    it.alpha = pip.opacity.coerceIn(0f, 1f)
+                })
             }
         }
     }

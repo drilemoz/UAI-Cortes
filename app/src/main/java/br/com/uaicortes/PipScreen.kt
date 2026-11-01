@@ -223,6 +223,30 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                         }
                     }
                 }
+                // Opacidade é independente do volume e persiste na prévia e no compositor MP4.
+                if (pip != null) {
+                    Surface(color=MaterialTheme.colorScheme.surfaceVariant,
+                        shape=RoundedCornerShape(14.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),
+                            verticalArrangement=Arrangement.spacedBy(2.dp)) {
+                            Row(verticalAlignment=Alignment.CenterVertically) {
+                                Icon(Icons.Default.Opacity,"Transparência do PiP",
+                                    modifier=Modifier.size(20.dp),
+                                    tint=MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(9.dp))
+                                Text("Opacidade do PiP",modifier=Modifier.weight(1f),fontSize=13.sp)
+                                Text("${(pip.opacity.coerceIn(0f,1f)*100).toInt()}%",
+                                    fontSize=12.sp,fontWeight=FontWeight.SemiBold)
+                            }
+                            Slider(value=pip.opacity.coerceIn(0f,1f),
+                                onValueChange={ value -> onChange(pip.copy(opacity=value)) },
+                                valueRange=0f..1f,
+                                modifier=Modifier.fillMaxWidth().padding(horizontal=8.dp))
+                            Text("0% invisível · 100% totalmente visível (inclusive no MP4)",
+                                fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
                 // Som é independente dos demais controles e das demais sobreposições.
                 if (pip != null && !pip.isImage) {
                     Surface(color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp)) {

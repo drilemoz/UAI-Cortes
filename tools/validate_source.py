@@ -19,10 +19,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*79',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.78"',gradle)
+assert re.search(r'versionCode\s*=\s*80',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.79"',gradle)
 assert 'AppReleaseNotes.VERSION_NAME' in (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
-for label in ["VERSION: '0.1.78'", "VERSION_CODE: '79'", 'TAG="v$VERSION"',
+for label in ["VERSION: '0.1.79'", "VERSION_CODE: '80'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -215,8 +215,8 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.78'" in package_script and 'VERSION_CODE = 79' in package_script
-assert 'versionCode 79' in gradle and 'isUniversalApk = true' in gradle
+assert "VERSION = '0.1.79'" in package_script and 'VERSION_CODE = 80' in package_script
+assert 'versionCode = 80' in gradle and 'isUniversalApk = true' in gradle
 print('OK: versão atual 0.1.64 / versionCode 74, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
@@ -790,7 +790,7 @@ news=(app_files/'WhatsNewScreen.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
-assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 79'])
+assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 80'])
 assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
@@ -961,3 +961,23 @@ assert 'if(progress==null) LinearProgressIndicator' in transcription_ui
 assert (root/'app/src/test/java/br/com/uaicortes/TranscriptionStageProgressTest.kt').exists()
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleBatchVisualTest.kt').exists()
 print('OK: v0.1.78: navegação Salvar->editor, edição em lote/undo e transcrição com progresso real')
+
+# v0.1.79: legenda inferior, autoajuste real, transparência PiP e pausa na captura.
+full_ui = "\n".join((root/"app/src/main/java/br/com/uaicortes"/name).read_text() for name in ui_files)
+assert 'val opacity: Float = 1f' in model
+assert '.put("opacity", opacity.coerceIn(0f, 1f).toDouble())' in model
+assert 'j.optDouble("opacity", 1.0)' in model
+assert 'val y: Float = .92f' in model and 'j.optDouble("y", .92)' in model
+assert 'it.alpha = pip.opacity.coerceIn(0f, 1f)' in full_ui
+assert 'alpha = pip.opacity.coerceIn(0f, 1f)' in full_ui
+assert 'pip.opacity.coerceIn(0f, 1f) else 0f' in source
+assert 'Opacidade do PiP' in full_ui
+assert 'Rodapé · 8%' in full_ui and 'SubtitleAutoFit.factor(' in full_ui
+assert 'SubtitleAutoFit.factor(' in (root/'app/src/main/java/br/com/uaicortes/SubtitleExportSizing.kt').read_text()
+assert 'val frozenMs = projectPosition(player, p.clips, p.durationMs)' in full_ui
+assert 'player.pause()\n                val frozenMs' in full_ui
+assert 'Capturando quadro em' in full_ui
+assert 'Clipe ${index+1}' in full_ui
+assert (root/'app/src/test/java/br/com/uaicortes/SubtitleAutoFitTest.kt').exists()
+assert (root/'app/src/test/java/br/com/uaicortes/PipOpacityPersistenceTest.kt').exists()
+print('OK: v0.1.79 posição inferior, ajuste de texto, PiP alpha e captura pausada')

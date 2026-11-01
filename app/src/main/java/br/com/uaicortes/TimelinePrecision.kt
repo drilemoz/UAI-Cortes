@@ -41,5 +41,5 @@ object SubtitlePlacement {
     }
 
     fun nudge(x:Float,y:Float,deltaX:Float,deltaY:Float):Pair<Float,Float> =
-        (x+deltaX).coerceIn(.1f,.9f) to (y+deltaY).coerceIn(.1f,.9f)
+        (x+deltaX).coerceIn(.1f,.9f) to (y+deltaY).coerceIn(.1f,.95f)
 }

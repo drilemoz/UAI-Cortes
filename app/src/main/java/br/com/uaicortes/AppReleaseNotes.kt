@@ -16,11 +16,21 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.78"
-    const val VERSION_CODE = 79
+    const val VERSION_NAME = "0.1.79"
+    const val VERSION_CODE = 80
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.79", listOf(
+            ReleaseFeature("subtitle-bottom", "Legendas mais próximas do rodapé",
+                "Novas legendas usam margem inferior de 8%; posição pode ser ajustada individualmente ou em lote.", "captions"),
+            ReleaseFeature("subtitle-long-fit", "Ajuste automático de textos longos",
+                "Reduz moderadamente a fonte de legendas extensas na prévia e exportação, sem cortar palavras.", "captions"),
+            ReleaseFeature("pip-opacity", "Transparência de cada PiP",
+                "Controle de opacidade independente para cada PiP, com persistência e exportação no Media3.", "film"),
+            ReleaseFeature("capture-pauses", "Captura de quadro com pausa automática",
+                "Pausa a reprodução no instante selecionado e mostra a posição durante o salvamento PNG.", "film")
+        )),
         ReleaseSummary("0.1.78", listOf(
             ReleaseFeature("subtitle-save-editor", "Salvar legendas volta ao editor",
                 "Salvar mantém o projeto ativo e retorna à edição; falha na gravação impede a navegação.", "check"),

@@ -46,6 +46,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     val context=LocalContext.current
     val captureScope = rememberCoroutineScope()
     var savingFrame by remember { mutableStateOf(false) }
+    var captureAtMs by remember { mutableLongStateOf(0L) }
     val playbackVm: EditorPlaybackViewModel = viewModel()
     LaunchedEffect(p.id) { playbackVm.selectProject(p.id) }
     val playbackSpeed = playbackVm.speed
@@ -196,13 +197,19 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             PlaybackSpeedButton(playbackSpeed, onSelect = playbackVm::updateSpeed)
             // Fotografa o quadro original no cursor; PiP/legendas não entram no PNG.
             IconButton(onClick = {
+                // Pausar antes de escolher o instante: não use currentMs defasado pelo polling.
+                player.pause()
+                val frozenMs = projectPosition(player, p.clips, p.durationMs)
+                    .coerceIn(0L, p.durationMs.coerceAtLeast(0L))
+                onPosition(frozenMs)
                 val selection = FrameCapturePlan.locate(p.clips.map {
                     FrameCaptureClip(it.uri, it.startMs, it.endMs)
-                }, currentMs)
+                }, frozenMs)
                 if (selection == null) {
                     Toast.makeText(context, "Nenhum quadro disponível para capturar.", Toast.LENGTH_SHORT).show()
                 } else if (!savingFrame) {
                     val title = p.title
+                    captureAtMs = frozenMs
                     savingFrame = true
                     captureScope.launch {
                         try {
@@ -224,6 +231,9 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 else Icon(Icons.Default.PhotoCamera, "Capturar quadro e salvar na galeria")
             }
         }
+        if (savingFrame) Text("Capturando quadro em ${formatPipMs(captureAtMs)}… Vídeo pausado.",
+            modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp),
+            style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary)
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Text("Vídeo:", style = MaterialTheme.typography.bodySmall)
@@ -240,7 +250,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             },
             onValueChangeFinished = { scrubbing = false },
             valueRange=0f..p.durationMs.toFloat(),modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp))
-        TimelineRow("Vídeo",Blue,p.clips.map{ it.title to it.durationMs },p.durationMs,currentMs,selectedId,
+        TimelineRow("Vídeo",Blue,p.clips.mapIndexed{ index, clip -> "Clipe ${index+1}" to clip.durationMs },p.durationMs,currentMs,selectedId,
             onClip={ id -> onSelected(p.clips[id].id); clipMenuId = p.clips[id].id },
             onBoundary=onTransition)
         OverlayTimeline(p.overlays, p.durationMs, onClick = { id -> onSelectOverlay(id); onEdit("pip") })

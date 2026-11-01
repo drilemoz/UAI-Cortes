@@ -32,12 +32,15 @@ data class Overlay(
     val scale: Float = 0.36f, val volume: Float = 0.5f,
     val muted: Boolean = false,
     val overlapWith: List<String> = emptyList(),
-    val id: String = UUID.randomUUID().toString()
+    val id: String = UUID.randomUUID().toString(),
+    /** 0 = invisível, 1 = opaco. Legado mantém 100% por padrão. */
+    val opacity: Float = 1f
 ) {
     fun json() = JSONObject().put("uri", uri).put("isImage", isImage)
         .put("durationMs", durationMs).put("startAtMs", startAtMs)
         .put("x", x.toDouble()).put("y", y.toDouble()).put("scale", scale.toDouble())
         .put("volume", volume.toDouble()).put("muted", muted)
+        .put("opacity", opacity.coerceIn(0f, 1f).toDouble())
         .put("overlapWith", JSONArray().apply { overlapWith.forEach { put(it) } }).put("id", id)
     companion object {
         fun read(j: JSONObject) = Overlay(j.getString("uri"), j.optBoolean("isImage"),
@@ -50,7 +53,8 @@ data class Overlay(
                     array.optString(index).takeIf { it.isNotBlank() }
                 }.distinct()
             } ?: emptyList(),
-            j.optString("id").ifBlank { UUID.randomUUID().toString() })
+            j.optString("id").ifBlank { UUID.randomUUID().toString() },
+            j.optDouble("opacity", 1.0).toFloat().let { if (it.isFinite()) it.coerceIn(0f, 1f) else 1f })
     }
 }
 
@@ -63,7 +67,7 @@ data class Music(val uri: String, val title: String, val volume: Float = 0.35f) 
 data class SubtitleCue(
     val id: String = UUID.randomUUID().toString(),
     val text: String, val startMs: Long, val endMs: Long,
-    val color: Int = -1, val sizeSp: Int = 12, val y: Float = .85f, val x: Float = .5f,
+    val color: Int = -1, val sizeSp: Int = 12, val y: Float = .92f, val x: Float = .5f,
     val backgroundColor: Int = SubtitleStyles.DEFAULT_BACKGROUND, val bold: Boolean = true,
     val fontFamily: String = SubtitleStyles.FONT_SANS,
     val outlineWidth: Int = 0, val outlineColor: Int = 0xFF000000.toInt(),
@@ -84,7 +88,7 @@ data class SubtitleCue(
         fun read(j: JSONObject) = SubtitleCue(j.optString("id").ifBlank { UUID.randomUUID().toString() },
             j.optString("text"), j.optLong("startMs"), j.optLong("endMs"),
             j.optInt("color", -1), j.optInt("sizeSp", 22).coerceIn(12, 48),
-            j.optDouble("y", .85).toFloat().coerceIn(.1f, .95f),
+            j.optDouble("y", .92).toFloat().coerceIn(.1f, .95f),
             j.optDouble("x", .5).toFloat().coerceIn(.1f, .9f),
             j.optInt("backgroundColor", SubtitleStyles.DEFAULT_BACKGROUND),
             j.optBoolean("bold", true),

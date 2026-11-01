@@ -83,9 +83,9 @@ internal fun previewSubtitleScale(cue: SubtitleCue, widthPx: Int, textSizePx: Fl
         }, if (cue.bold) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
     }
     val longest = cue.text.split(Regex("\\s+")).maxOfOrNull { paint.measureText(it) } ?: 0f
-    if (longest <= 0f) return 1f
+    val total = cue.text.lines().sumOf { paint.measureText(it).toDouble() }.toFloat()
     val available = (widthPx * .90f - textSizePx * .65f).coerceAtLeast(1f)
-    return (available / longest).coerceIn(.35f, 1f)
+    return SubtitleAutoFit.factor(longest, total, available)
 }
 
 /** A mesma coordenada x/y usada pelo exportador Media3: centro na horizontal,
