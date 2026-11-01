@@ -19,10 +19,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*92',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.91"',gradle)
+assert re.search(r'versionCode\s*=\s*93',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.92"',gradle)
 assert 'AppReleaseNotes.VERSION_NAME' in (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
-for label in ["VERSION: '0.1.91'", "VERSION_CODE: '92'", 'TAG="v$VERSION"',
+for label in ["VERSION: '0.1.92'", "VERSION_CODE: '93'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -215,8 +215,8 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.91'" in package_script and 'VERSION_CODE = 92' in package_script
-assert 'versionCode = 92' in gradle and 'isUniversalApk = true' in gradle
+assert "VERSION = '0.1.92'" in package_script and 'VERSION_CODE = 93' in package_script
+assert 'versionCode = 93' in gradle and 'isUniversalApk = true' in gradle
 print('OK: versão atual 0.1.64 / versionCode 74, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
@@ -791,7 +791,7 @@ news=(app_files/'WhatsNewScreen.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
-assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 92'])
+assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 93'])
 assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
@@ -1138,3 +1138,12 @@ assert 'SubtitleAudioFingerprintTest.kt' in {p.name for p in (root/'app/src/test
 assert (root/'docs/VALIDATION_0.1.91.md').exists()
 assert 'ReleaseSummary("0.1.91", listOf(' in notes
 print('OK: v0.1.91 faixas horizontais, modelos animados, cache WAV e tamanhos pré-aplicação')
+
+# v0.1.92: regressão do CI 77: índice de Cursor ausente ou nulo no cache ASR.
+cache=(app_files/'SubtitleAudioCache.kt').read_text()
+assert 'val index = c.getColumnIndex(name)' in cache
+assert 'if (index >= 0 && !c.isNull(index)) c.getLong(index) else -1L' in cache
+assert 'c.getLong(c.getColumnIndex(' not in cache
+assert (root/'docs/VALIDATION_0.1.92.md').exists()
+assert 'ReleaseSummary("0.1.92", listOf(' in notes
+print('OK: v0.1.92, CI77 — leitura de Cursor com índice validado, sem suprimir lint')

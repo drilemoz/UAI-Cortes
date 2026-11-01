@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.91"
-    const val VERSION_CODE = 92
+    const val VERSION_NAME = "0.1.92"
+    const val VERSION_CODE = 93
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.92", listOf(
+            ReleaseFeature("subtitle-cache-cursor-safe", "Correção da validação Android Lint",
+                "Cache de áudio agora ignora colunas de data ausentes ou nulas, evitando índice inválido.", "check")
+        )),
         ReleaseSummary("0.1.91", listOf(
             ReleaseFeature("subtitle-horizontal-strips", "Estilos e opções em faixas horizontais",
                 "Seleção finita de modelos, fontes, animações e cores em cartões compactos.", "film"),

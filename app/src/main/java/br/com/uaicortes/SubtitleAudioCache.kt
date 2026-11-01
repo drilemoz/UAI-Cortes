@@ -54,7 +54,12 @@ internal object SubtitleAudioCache {
                 val size=if(sizeColumn>=0 && !c.isNull(sizeColumn)) c.getLong(sizeColumn) else -1L
                 val modifiedColumn= listOf("last_modified",MediaStore.MediaColumns.DATE_MODIFIED)
                     .firstOrNull { c.getColumnIndex(it) >= 0 }
-                val stamp=modifiedColumn?.let {c.getLong(c.getColumnIndex(it))} ?: -1L
+                // O provedor pode omitir ou retornar nula a coluna de data.
+                // getColumnIndex() devolve -1 nesses casos: nunca passar -1 a getLong().
+                val stamp = modifiedColumn?.let { name ->
+                    val index = c.getColumnIndex(name)
+                    if (index >= 0 && !c.isNull(index)) c.getLong(index) else -1L
+                } ?: -1L
                 "$size:$stamp"
             } ?: "fonte_sem_revisao"
         }.getOrDefault("fonte_sem_revisao")
