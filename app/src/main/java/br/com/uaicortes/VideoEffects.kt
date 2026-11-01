@@ -16,6 +16,7 @@ import android.text.style.AlignmentSpan
 import android.text.style.LineHeightSpan
 import android.text.StaticLayout
 import androidx.media3.common.util.Size
+import androidx.annotation.OptIn
 import android.text.Layout
 import android.text.TextPaint
 import android.graphics.Paint.FontMetricsInt
@@ -31,6 +32,7 @@ import kotlin.math.min
 
 /** Desenha o contorno antes do preenchimento, linha a linha, preservando quebras
  * e o layout principal do TextOverlay. Não altera a string nem seus tempos. */
+@OptIn(UnstableApi::class)
 class SubtitleOutlineSpan(
     private val outlineColor: Int,
     private val widthDp: Int,
@@ -74,6 +76,7 @@ class SubtitleOutlineSpan(
 /** Draw a sharp offset shadow behind a Media3 TextOverlay line.
  * Uses the same font and baseline as the outline span. No network/font assets.
  */
+@OptIn(UnstableApi::class)
 class SubtitleShadowSpan(
     private val shadowColor: Int, private val offsetDp: Int,
     private val family: String, private val bold: Boolean,

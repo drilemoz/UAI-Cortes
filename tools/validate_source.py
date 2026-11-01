@@ -19,10 +19,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*86',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.85"',gradle)
+assert re.search(r'versionCode\s*=\s*87',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.86"',gradle)
 assert 'AppReleaseNotes.VERSION_NAME' in (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
-for label in ["VERSION: '0.1.85'", "VERSION_CODE: '86'", 'TAG="v$VERSION"',
+for label in ["VERSION: '0.1.86'", "VERSION_CODE: '87'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -215,8 +215,8 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.85'" in package_script and 'VERSION_CODE = 86' in package_script
-assert 'versionCode = 86' in gradle and 'isUniversalApk = true' in gradle
+assert "VERSION = '0.1.86'" in package_script and 'VERSION_CODE = 87' in package_script
+assert 'versionCode = 87' in gradle and 'isUniversalApk = true' in gradle
 print('OK: versão atual 0.1.64 / versionCode 74, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
@@ -791,7 +791,7 @@ news=(app_files/'WhatsNewScreen.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
-assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 86'])
+assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 87'])
 assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
@@ -1051,3 +1051,9 @@ assert 'aSingleFeatureHasNoOrderChangeButItsContentStillChangesFingerprint' in n
 assert 'AppReleaseNotes.fingerprintFor(features.reversed())' not in notes_test
 assert 'ReleaseSummary("0.1.85", listOf(' in notes
 print('OK: v0.1.85 CI71: teste de ordem robusto a release com apenas uma novidade')
+
+# CI 72 / v0.1.86: duas utilizações experimentais no contorno/sombra requerem opt-in AndroidX.
+import runpy
+runpy.run_path(str(root/'tools/ci72_media3_optin_test.py'), run_name='__main__')
+assert 'ReleaseSummary("0.1.86", listOf(' in notes
+print('OK: v0.1.86 CI72: lint Media3 com opt-in local nos spans de legendas')

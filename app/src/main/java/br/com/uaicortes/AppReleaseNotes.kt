@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.85"
-    const val VERSION_CODE = 86
+    const val VERSION_NAME = "0.1.86"
+    const val VERSION_CODE = 87
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.86", listOf(
+            ReleaseFeature("ci72-media3-subtitle-optin", "Correção do Lint das legendas",
+                "Contorno e sombra agora declaram o uso controlado da API Media3, sem alterar a aparência e sem desativar o Lint.", "check")
+        )),
         ReleaseSummary("0.1.85", listOf(
             ReleaseFeature("ci71-whatsnew-singleton-test", "Correção do teste de novidades",
                 "Ajustado o teste de ordem das novidades para versões com apenas uma mudança, sem modificar a regra de exibição.", "check")
