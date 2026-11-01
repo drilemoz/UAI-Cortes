@@ -3,6 +3,8 @@ package br.com.uaicortes
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Share
@@ -22,6 +24,7 @@ import androidx.compose.ui.window.DialogProperties
 @Composable
 internal fun VideoSavedDialog(
     uri: Uri, name: String, editLabel: String,
+    exportDetails: List<String> = emptyList(),
     onEdit: () -> Unit, onClose: () -> Unit
 ) {
     val context = LocalContext.current
@@ -36,7 +39,8 @@ internal fun VideoSavedDialog(
     }
     Dialog(onDismissRequest=onClose, properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Surface(Modifier.fillMaxSize(), color=MaterialTheme.colorScheme.background) {
-            Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(24.dp),
+            Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
+                .verticalScroll(rememberScrollState()).padding(24.dp),
                 horizontalAlignment=Alignment.CenterHorizontally,
                 verticalArrangement=Arrangement.Center) {
                 Icon(Icons.Default.CheckCircle, null, Modifier.size(90.dp),
@@ -50,6 +54,17 @@ internal fun VideoSavedDialog(
                 Spacer(Modifier.height(8.dp))
                 Text("Salvo na galeria em Filmes/UaiCortes",textAlign=TextAlign.Center,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
+                if (exportDetails.isNotEmpty()) {
+                    Spacer(Modifier.height(14.dp))
+                    Column(verticalArrangement=Arrangement.spacedBy(3.dp)) {
+                        Text("Qualidade do MP4",style=MaterialTheme.typography.titleSmall,
+                            fontWeight=FontWeight.SemiBold)
+                        exportDetails.forEach { line ->
+                            Text(line,style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
                 Spacer(Modifier.height(24.dp))
                 Button(onClick={
                     runCatching {context.startActivity(Intent(Intent.ACTION_VIEW).apply {

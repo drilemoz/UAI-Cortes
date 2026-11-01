@@ -51,7 +51,9 @@ class SubtitleOutlineSpan(
         outline.style = Paint.Style.STROKE
         outline.strokeJoin = Paint.Join.ROUND
         outline.strokeWidth = widthDp * ((paint as? android.text.TextPaint)?.density ?: 1f) * 2f
-        outline.textSize = paint.textSize * relativeSize
+        // Tamanho efetivo aplicado ao texto (base 100 px + RelativeSizeSpan).
+        // Não multiplicar duas vezes quando StaticLayout passa paint já dimensionado.
+        outline.textSize = TextOverlay.TEXT_SIZE_PIXELS * relativeSize
         val systemFamily = when (SubtitleStyles.normalizeFont(family)) {
             SubtitleStyles.FONT_SERIF -> "serif"
             SubtitleStyles.FONT_MONO -> "monospace"
@@ -89,7 +91,7 @@ class SubtitleShadowSpan(
         textPaint.color = shadowColor
         textPaint.style = Paint.Style.FILL
         val density = (paint as? TextPaint)?.density ?: 1f
-        textPaint.textSize = paint.textSize * relativeSize
+        textPaint.textSize = TextOverlay.TEXT_SIZE_PIXELS * relativeSize
         textPaint.typeface = Typeface.create(when (SubtitleStyles.normalizeFont(family)) {
             SubtitleStyles.FONT_SERIF -> "serif"
             SubtitleStyles.FONT_MONO -> "monospace"

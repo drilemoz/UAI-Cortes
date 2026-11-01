@@ -39,6 +39,7 @@ internal fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
     val result = exportState.message
     val savedVideo = exportVm.savedVideo
     val savedName = exportVm.savedName
+    val qualityReport = exportVm.qualityReport
     LaunchedEffect(p.id) { exportVm.setProject(p.id) }
     val previewPlayer=remember { diagnosticPlayer(context) }
     var previewPlaying by remember { mutableStateOf(false) }
@@ -140,7 +141,7 @@ internal fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
         }
         Text("Bitrate de vídeo solicitado. O aparelho pode ajustar o valor. " +
             "Espaço estimado: ~${VideoExportQuality.estimatedMiBPerMinute(quality, true)} MiB/min; " +
-            "a origem limita a nitidez final.",
+            "a origem limita a nitidez final. 720p/1080p se referem ao lado menor (vertical 9:16: 720×1280 ou 1080×1920). As legendas serão desenhadas na resolução de saída.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(18.dp))
@@ -153,7 +154,17 @@ internal fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
         },modifier=Modifier.fillMaxWidth(),enabled=!working && name.isNotBlank()&&p.clips.isNotEmpty())
         if(result.isNotBlank()) Text(result,modifier=Modifier.padding(vertical=15.dp),
             color=if(result.startsWith("Erro"))MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
-        Spacer(Modifier.height(14.dp));Text("MP4 · H.264/AAC · Qualidade alta · Salvamento local.",
+        qualityReport?.let { report ->
+            Spacer(Modifier.height(14.dp))
+            Text("Diagnóstico da última exportação",fontWeight=FontWeight.SemiBold,
+                style=MaterialTheme.typography.titleMedium)
+            report.lines().forEach { line ->
+                Text(line, style=MaterialTheme.typography.bodySmall,
+                    color=if(report.fellBackInResolution && line.startsWith("Aviso:"))
+                        MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Spacer(Modifier.height(14.dp));Text("MP4 · H.264/AAC solicitados · Salvamento local.",
             color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
     }
     // Enquanto o Media3 processa, a tela de exportação fica inteira visível.
@@ -227,6 +238,7 @@ internal fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
     // Confirmação compartilhada com Animar Imagens, somente após MediaStore concluir.
     savedVideo?.let { savedUri ->
         VideoSavedDialog(uri=savedUri,name=savedName,editLabel="Voltar ao editor",
+            exportDetails=qualityReport?.lines().orEmpty(),
             onEdit={exportVm.dismissSaved();back()},onClose={exportVm.dismissSaved()})
     }
 

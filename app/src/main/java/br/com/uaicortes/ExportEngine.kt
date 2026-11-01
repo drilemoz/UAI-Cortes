@@ -175,7 +175,7 @@ class ExportEngine(private val context: Context) {
 
     fun start(project: VideoProject, height: Int, fileName: String,
               onSaving: () -> Unit = {},
-              onSuccess: (Uri) -> Unit, onError: (String) -> Unit) {
+              onSuccess: (Uri, ExportQualityReport) -> Unit, onError: (String) -> Unit) {
         require(!isSavingToGallery) { "Aguarde a conclusão do salvamento anterior." }
         require(project.clips.isNotEmpty()) { "Projeto sem vídeos" }
         val bitrateBps = VideoExportQuality.videoBitrateBps(height)
@@ -198,7 +198,16 @@ class ExportEngine(private val context: Context) {
                 project.clips.getOrElse(index - 1) { clip }.durationMs, clip.durationMs)
             val fadeOut = EditFeatures.transitionMs(next, clip.durationMs,
                 project.clips.getOrElse(index + 1) { clip }.durationMs)
-            val videoEffects = mutableListOf<androidx.media3.common.Effect>()
+            // 720p/1080p significam o LADO MENOR, também para vídeos 9:16.
+            // Antes createForHeight(1080) convertia 9:16 para aproximadamente 608×1080,
+            // em vez de 1080×1920; isso prejudicava detalhes e legendas no Reels.
+            // Reescale a fonte ANTES de rasterizar legendas/marca d'água.
+            // Quando a composição era reescalada por último, textos nascidos de uma
+            // fonte 480p/720p também eram ampliados como bitmap até a saída 1080p.
+            // A ordem é relevante: vídeo -> dimensão final -> transições -> texto.
+            val videoEffects = mutableListOf<androidx.media3.common.Effect>(
+                Presentation.createForShortSide(height)
+            )
             if (fadeIn > 0 || fadeOut > 0) {
                 val entering = previous?.kind ?: TransitionEffects.CUT
                 val leaving = next?.kind ?: TransitionEffects.CUT
@@ -278,9 +287,10 @@ class ExportEngine(private val context: Context) {
             sequences += EditedMediaItemSequence.withAudioFrom(listOf(track))
                 .buildUpon().setIsLooping(true).build()
         }
+        // A transformação da resolução acontece no clipe principal, antes da
+        // renderização do texto, e NÃO após a composição final dos PiPs/legendas.
         val composition = Composition.Builder(sequences).apply {
             if (project.overlays.isNotEmpty()) setVideoCompositorSettings(PipCompositor(project.overlays.take(4)))
-            setEffects(Effects(emptyList(), listOf(Presentation.createForHeight(height))))
         }.build()
         val target = File(context.cacheDir, "uai-export-${System.currentTimeMillis()}.mp4")
         tempFile = target
@@ -304,6 +314,19 @@ class ExportEngine(private val context: Context) {
                     Log.i("UaiCortesExport", "MP4: ${exportResult.width}x${exportResult.height}, " +
                         "bitrate de vídeo medido=${exportResult.averageVideoBitrate} bps, " +
                         "solicitado=$bitrateBps bps, quadros=${exportResult.videoFrameCount}")
+                    // Dados medidos pelo Transformer; indisponíveis ficam como "não informado".
+                    val report = ExportQualityReport(
+                        requestedShortSide = height,
+                        width = exportResult.width,
+                        height = exportResult.height,
+                        videoBitrateBps = exportResult.averageVideoBitrate,
+                        audioBitrateBps = exportResult.averageAudioBitrate,
+                        durationMs = exportResult.approximateDurationMs,
+                        frames = exportResult.videoFrameCount,
+                        fileBytes = exportResult.fileSizeBytes.takeIf { it > 0 } ?: target.length(),
+                        videoMimeType = exportResult.videoMimeType,
+                        encoderName = exportResult.videoEncoderName
+                    )
                     // Transformer terminou a renderização, mas a cópia MediaStore ainda não.
                     isSavingToGallery = true
                     onSaving()
@@ -322,7 +345,7 @@ class ExportEngine(private val context: Context) {
                                 transformer = null
                                 isSavingToGallery = false
                                 if (saveError != null) onError(saveError?.message ?: "Falha ao salvar vídeo")
-                                else savedUri?.let(onSuccess)
+                                else savedUri?.let { onSuccess(it, report) }
                                     ?: onError("Não foi possível confirmar o vídeo salvo.")
                             }
                         }

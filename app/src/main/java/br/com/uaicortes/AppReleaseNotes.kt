@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.80"
-    const val VERSION_CODE = 81
+    const val VERSION_NAME = "0.1.81"
+    const val VERSION_CODE = 82
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.81", listOf(
+            ReleaseFeature("export-text-resolution", "Legendas renderizadas após dimensionamento",
+                "Vídeos verticais passam a usar 1080×1920 em 1080p; dimensionamento ocorre antes de renderizar legendas e marca d'água.", "captions"),
+            ReleaseFeature("export-measurements", "Diagnóstico real do MP4",
+                "Exibe resolução, bitrate, quadros e tamanho informados pelo Media3 após salvar; distingue resolução pedida da obtida.", "film")
+        )),
         ReleaseSummary("0.1.80", listOf(
             ReleaseFeature("subtitle-word-wrap-guard", "Legendas sem cortes em palavras extensas",
                 "Ajustada a redução da fonte para respeitar a largura do quadro mesmo com palavras excepcionalmente longas, na prévia e exportação.", "captions"),

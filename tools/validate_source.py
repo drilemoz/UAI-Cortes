@@ -19,10 +19,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*81',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.80"',gradle)
+assert re.search(r'versionCode\s*=\s*82',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.81"',gradle)
 assert 'AppReleaseNotes.VERSION_NAME' in (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
-for label in ["VERSION: '0.1.80'", "VERSION_CODE: '81'", 'TAG="v$VERSION"',
+for label in ["VERSION: '0.1.81'", "VERSION_CODE: '82'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -215,8 +215,8 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.80'" in package_script and 'VERSION_CODE = 81' in package_script
-assert 'versionCode = 81' in gradle and 'isUniversalApk = true' in gradle
+assert "VERSION = '0.1.81'" in package_script and 'VERSION_CODE = 82' in package_script
+assert 'versionCode = 82' in gradle and 'isUniversalApk = true' in gradle
 print('OK: versão atual 0.1.64 / versionCode 74, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
@@ -396,7 +396,7 @@ assert 'SubtitleExportSizing.textBoxWidth(videoWidth)' in fx
 assert 'setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE)' in fx
 assert 'RelativeSizeSpan(relativeFontSize)' in fx
 assert 'VideoSavedDialog(uri=savedUri' in export
-assert 'savedVideo = uri' in (root/'app/src/main/java/br/com/uaicortes/ExportTaskViewModel.kt').read_text() and 'onSuccess = { uri ->' in (root/'app/src/main/java/br/com/uaicortes/ExportTaskViewModel.kt').read_text()
+assert 'savedVideo = uri' in (root/'app/src/main/java/br/com/uaicortes/ExportTaskViewModel.kt').read_text() and 'onSuccess = { uri, report ->' in (root/'app/src/main/java/br/com/uaicortes/ExportTaskViewModel.kt').read_text()
 assert all(t in (root/'app/src/main/java/br/com/uaicortes/VideoSavedDialog.kt').read_text() for t in ['Vídeo salvo!', 'Abrir vídeo', 'Compartilhar'])
 assert 'Voltar ao editor' in export and 'Filmes/UaiCortes' in (root/'app/src/main/java/br/com/uaicortes/VideoSavedDialog.kt').read_text()
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleExportSizingTest.kt').exists()
@@ -407,7 +407,7 @@ print('OK: v0.1.52, legenda limitada ao quadro e confirmação em tela cheia ap�
 export_vm_source=(root/'app/src/main/java/br/com/uaicortes/ExportTaskViewModel.kt').read_text()
 assert 'var savedName by mutableStateOf("")' in export_vm_source
 assert 'var savedVideo by mutableStateOf<Uri?>(null)' in export_vm_source
-assert export_vm_source.index('var savedVideo by') < export_vm_source.index('onSuccess = { uri ->')
+assert export_vm_source.index('var savedVideo by') < export_vm_source.index('onSuccess = { uri, report ->')
 assert export_vm_source.count('savedVideo = uri') == 1
 assert 'val savedVideo = exportVm.savedVideo' in export
 assert 'savedVideo?.let { savedUri ->' in export
@@ -790,7 +790,7 @@ news=(app_files/'WhatsNewScreen.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
-assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 81'])
+assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 82'])
 assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
@@ -992,3 +992,14 @@ assert '(base * factor).coerceAtLeast(0.01f)' not in sizing_code
 assert 'unusuallyLongSingleWordMayShrinkBelowNormalFloor' in (root/'app/src/test/java/br/com/uaicortes/SubtitleAutoFitTest.kt').read_text()
 assert 'extremeWordWidthStillFitsWithoutInvalidScale' in (root/'app/src/test/java/br/com/uaicortes/SubtitleExportSizingTest.kt').read_text()
 print('OK: v0.1.80 regressão CI 67: palavra longa respeita a largura na prévia/exportação')
+
+# v0.1.81: dimensionamento por clipe antes do bitmap da legenda e diagnóstico real.
+export=(root/'app/src/main/java/br/com/uaicortes/ExportEngine.kt').read_text()
+assert export.index('Presentation.createForShortSide(height)') < export.index('TimedSubtitleOverlay(project.subtitles')
+assert 'setEffects(Effects(emptyList(), listOf(Presentation.createForHeight(height))))' not in export
+assert 'onSuccess: (Uri, ExportQualityReport) -> Unit' in export
+report=(root/'app/src/main/java/br/com/uaicortes/ExportQualityReport.kt').read_text()
+assert 'averageFps' in report and 'fellBackInResolution' in report
+assert (root/'app/src/test/java/br/com/uaicortes/ExportQualityReportTest.kt').exists()
+assert 'exportDetails=qualityReport?.lines().orEmpty()' in (root/'app/src/main/java/br/com/uaicortes/ExportScreen.kt').read_text()
+print('OK: v0.1.81: texto dimensionado antes do overlay e relatório pós-MediaStore')

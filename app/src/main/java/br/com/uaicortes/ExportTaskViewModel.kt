@@ -28,6 +28,8 @@ internal class ExportTaskViewModel(application: Application) : AndroidViewModel(
         private set
     var savedName by mutableStateOf("")
         private set
+    var qualityReport by mutableStateOf<ExportQualityReport?>(null)
+        private set
 
     /** Se o usuário selecionar outro projeto, impede aproveitar confirmação da exportação anterior. */
     fun setProject(id: String) {
@@ -39,6 +41,7 @@ internal class ExportTaskViewModel(application: Application) : AndroidViewModel(
         projectId = id
         savedVideo = null
         savedName = ""
+        qualityReport = null
         coordinator.reset()
         publish()
     }
@@ -51,6 +54,7 @@ internal class ExportTaskViewModel(application: Application) : AndroidViewModel(
         val id = coordinator.start(requestedName, quality, SystemClock.elapsedRealtime()) ?: return
         savedVideo = null
         savedName = ""
+        qualityReport = null
         publish()
         DiagnosticRecorder.action("export", "export_start_${quality}p")
         try {
@@ -58,11 +62,12 @@ internal class ExportTaskViewModel(application: Application) : AndroidViewModel(
                 onSaving = {
                     if (coordinator.saving(id)) publish()
                 },
-                onSuccess = { uri ->
+                onSuccess = { uri, report ->
                     if (coordinator.success(id)) {
                         polling?.cancel()
                         savedVideo = uri
                         savedName = requestedName
+                        qualityReport = report
                         DiagnosticRecorder.action("export", "export_success")
                         publish()
                     }
