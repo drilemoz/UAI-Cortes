@@ -43,7 +43,8 @@ private val narrationStyles = linkedMapOf(
 
 @Composable
 internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: Long,
-    update: (VideoProject) -> Unit, openSettings: () -> Unit) {
+    update: (VideoProject) -> Unit, openSettings: () -> Unit,
+    modifier: Modifier = Modifier.fillMaxWidth()) {
     val ctx = LocalContext.current
     val creds = remember(ctx) { GeminiCredentialStore(ctx) }
     val api = remember { GeminiTtsClient() }
@@ -116,14 +117,10 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
         }
     }
     // O gerador fica fora da rolagem do editor: somente o botão de abertura aparece na tela Áudio.
-    OutlinedButton(onClick = {
+    AudioQuickAction("Gerar por IA",Icons.Default.AutoAwesome,onClick={
         expanded = true
         if (creds.hasKey() && voices.isEmpty()) loadVoices()
-    }, modifier = Modifier.fillMaxWidth()) {
-        Icon(Icons.Default.AutoAwesome, null, Modifier.size(18.dp))
-        Spacer(Modifier.width(8.dp))
-        Text("Gerar por IA")
-    }
+    },modifier=modifier)
     if (expanded) Dialog(
         onDismissRequest = {
             if (!working) {

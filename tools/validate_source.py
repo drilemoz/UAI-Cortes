@@ -19,10 +19,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*94',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.93"',gradle)
+assert re.search(r'versionCode\s*=\s*95',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.94"',gradle)
 assert 'AppReleaseNotes.VERSION_NAME' in (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
-for label in ["VERSION: '0.1.93'", "VERSION_CODE: '94'", 'TAG="v$VERSION"',
+for label in ["VERSION: '0.1.94'", "VERSION_CODE: '95'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -215,8 +215,8 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.93'" in package_script and 'VERSION_CODE = 94' in package_script
-assert 'versionCode = 94' in gradle and 'isUniversalApk = true' in gradle
+assert "VERSION = '0.1.94'" in package_script and 'VERSION_CODE = 95' in package_script
+assert 'versionCode = 95' in gradle and 'isUniversalApk = true' in gradle
 print('OK: versão atual 0.1.64 / versionCode 74, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
@@ -791,7 +791,7 @@ news=(app_files/'WhatsNewScreen.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
-assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 94'])
+assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 95'])
 assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
@@ -916,7 +916,7 @@ assert all(x in credentials for x in ['AndroidKeyStore', 'AES/GCM/NoPadding', 'G
 assert all(x in gemini_core for x in ['v1beta/$path', 'speech_metadata', 'audio/wav', 'GeminiWaveParser.duration', 'RIFF', 'WAVE', 'GeminiModels'])
 assert all(x in gemini_settings for x in ['GeminiKeyParser.masked', 'ActivityResultContracts.OpenDocument()', 'ActivityResultContracts.CreateDocument(', 'ClipDescription.EXTRA_IS_SENSITIVE'])
 assert all(x in gemini_ui for x in ['GeminiAudioFiles.save', 'AudioTrack(', 'project.copy(audioTracks', 'Cancelar', 'GeminiModels.supported'])
-assert 'GeminiNarrationSection(p, timelinePositionMs, update, onOpenGeminiSettings)' in (app_files/'AudioScreen.kt').read_text()
+assert 'GeminiNarrationSection(p, timelinePositionMs, update, onOpenGeminiSettings,' in (app_files/'AudioScreen.kt').read_text()
 assert 'onClick("gemini_settings")' in home
 assert 'android:allowBackup="false"' in (root/'app/src/main/AndroidManifest.xml').read_text()
 assert (root/'app/src/test/java/br/com/uaicortes/GeminiTtsCoreTest.kt').exists()
@@ -1162,3 +1162,24 @@ assert 'SubtitleWordColorEditor(draft,onChange)' in visual and 'SubtitleValueSli
 assert (root/'docs/VALIDATION_0.1.93.md').exists()
 assert 'ReleaseSummary("0.1.93", listOf(' in notes
 print('OK: v0.1.93 prévia fixa, controles básicos e editor em lote compacto')
+
+# v0.1.94: player não pode terminar ao alcançar a legenda selecionada.
+subtitle=(app_files/'SubtitleScreen.kt').read_text()
+audio=(app_files/'AudioScreen.kt').read_text()
+narration=(app_files/'GeminiNarrationUi.kt').read_text()
+policy=(app_files/'SubtitlePreviewPolicy.kt').read_text()
+assert 'projectPosition(player,p.clips,p.durationMs)>=cue.endMs' not in subtitle
+assert 'if(player.playbackState==Player.STATE_ENDED)' in subtitle
+assert 'SubtitlePreviewPolicy.activeAt(p.subtitles,previewMs)' in subtitle
+assert 'visibleCues.forEach' in subtitle and 'key(visible.id)' in subtitle
+assert 'playbackMs=previewMs' in subtitle
+assert 'seekProjectPosition(player,p.clips,0L)' in subtitle
+assert 'AudioQuickAction("Extrair"' not in audio
+assert 'GeminiNarrationSection(p, timelinePositionMs, update, onOpenGeminiSettings,' in audio
+assert 'AudioQuickAction("Gerar por IA",Icons.Default.AutoAwesome' in narration
+assert 'Text("Extrair áudio de vídeo"' in audio
+assert 'projectMs < it.endMs' in policy
+assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePreviewPolicyTest.kt').exists()
+assert (root/'docs/VALIDATION_0.1.94.md').exists()
+assert 'ReleaseSummary("0.1.94", listOf(' in notes
+print('OK: v0.1.94 player contínuo, legendas sincronizadas e botão Gerar por IA na linha')

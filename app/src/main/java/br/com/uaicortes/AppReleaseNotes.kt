@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.93"
-    const val VERSION_CODE = 94
+    const val VERSION_NAME = "0.1.94"
+    const val VERSION_CODE = 95
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.94", listOf(
+            ReleaseFeature("subtitle-full-playback", "Play contínuo na tela Legendas",
+                "A prévia continua da legenda escolhida até o fim do projeto, passando pelos demais clipes sem pausar em cada legenda.", "film"),
+            ReleaseFeature("subtitle-timed-overlay", "Legendas sincronizadas na reprodução",
+                "A prévia mostra as legendas de cada instante durante o Play, inclusive nos intervalos sobrepostos e sem texto nas lacunas.", "check"),
+            ReleaseFeature("audio-quick-ai", "Gerar por IA ao lado de Escolher áudio",
+                "O atalho Extrair foi removido da primeira seção; a extração continua disponível no painel independente.", "check")
+        )),
         ReleaseSummary("0.1.93", listOf(
             ReleaseFeature("subtitle-sticky-preview", "Prévia fixa durante os ajustes",
                 "Nos diálogos de edição individual e em lote, a prévia animada continua visível durante a rolagem.", "film"),

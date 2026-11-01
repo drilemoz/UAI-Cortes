@@ -12,7 +12,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
-import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -176,7 +175,6 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
     }
     DisposableEffect(engine) { onDispose { engine.cancel() } }
     val pageScroll = rememberScrollState()
-    val pageScope = rememberCoroutineScope()
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(pageScroll)
         .padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
         Heading("Áudio",back)
@@ -393,11 +391,9 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                 AudioQuickAction("Escolher áudio",Icons.Default.LibraryMusic,{
                     chooseMusic()
                 },Modifier.weight(1f))
-                AudioQuickAction("Extrair",Icons.Default.VideoLibrary,{
-                    pageScope.launch { pageScroll.animateScrollTo(pageScroll.maxValue) }
-                },Modifier.weight(1f))
+                GeminiNarrationSection(p, timelinePositionMs, update, onOpenGeminiSettings,
+                    modifier=Modifier.weight(1f))
             }
-            GeminiNarrationSection(p, timelinePositionMs, update, onOpenGeminiSettings)
             Text("Os áudios selecionados são adicionados diretamente ao projeto pelo seletor de arquivos do Android.",
                 style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }

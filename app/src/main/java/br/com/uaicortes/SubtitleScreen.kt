@@ -185,9 +185,10 @@ internal fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
     }
 }
 
-/** Prévia fixa e reproduzível: seleciona o quadro da legenda usando os
- * cortes reais do projeto. O texto pode ser arrastado sem tocar no MP4 original.
- * A reprodução para no fim da legenda selecionada; não substitui a exportação.
+/** Prévia da timeline completa: selecionar uma legenda posiciona o vídeo no
+ * início dela, mas Play continua pelos demais clipes até o fim do projeto.
+ * Enquanto toca, exibe as legendas do instante real (inclusive sobrepostas).
+ * Pausado, permite editar a posição da legenda selecionada sem alterar o vídeo.
  */
 @Composable
 internal fun SubtitlePositionPreview(p:VideoProject,cue:SubtitleCue,
@@ -215,19 +216,20 @@ internal fun SubtitlePositionPreview(p:VideoProject,cue:SubtitleCue,
         player.pause()
         seekProjectPosition(player,p.clips,cue.startMs)
     }
-    LaunchedEffect(playing,cue.id,cue.endMs) {
+    LaunchedEffect(playing,player,p.clips,p.durationMs) {
         while(playing) {
             previewMs=projectPosition(player,p.clips,p.durationMs)
-            if(player.playbackState==Player.STATE_ENDED ||
-                projectPosition(player,p.clips,p.durationMs)>=cue.endMs) {
-                player.pause()
+            if(player.playbackState==Player.STATE_ENDED) {
                 playing=false
+                break
             }
             delay(120)
         }
     }
-    val source=remember(p.clips,cue.startMs) {
-        TimelinePrecision.sourceAt(p.clips.map { it.uri to it.durationMs },cue.startMs)
+    val visibleCues = if(playing) SubtitlePreviewPolicy.activeAt(p.subtitles,previewMs)
+        else listOf(cue)
+    val source=remember(p.clips,previewMs) {
+        TimelinePrecision.sourceAt(p.clips.map { it.uri to it.durationMs },previewMs)
     }
     val clip=p.clips.getOrNull(source?.first ?: -1)
     val aspect=remember(clip?.uri) {
@@ -239,8 +241,12 @@ internal fun SubtitlePositionPreview(p:VideoProject,cue:SubtitleCue,
                 this.player=player
                 useController=false
             }},update={it.player=player},modifier=Modifier.fillMaxSize())
-            SubtitleOverlayOnFrame(cue,editable=true,playbackMs=previewMs,
-                onPositionCommit=onPositionCommit)
+            visibleCues.forEach { visible ->
+                key(visible.id) {
+                    SubtitleOverlayOnFrame(visible,editable=!playing && visible.id==cue.id,
+                        playbackMs=previewMs,onPositionCommit=onPositionCommit)
+                }
+            }
         }
         Row(Modifier.fillMaxWidth().height(38.dp),verticalAlignment=Alignment.CenterVertically,
             horizontalArrangement=Arrangement.Center) {
@@ -257,8 +263,12 @@ internal fun SubtitlePositionPreview(p:VideoProject,cue:SubtitleCue,
             IconButton(enabled=p.clips.isNotEmpty(),onClick={
                 if(playing) {player.pause();playing=false}
                 else {
-                    if(projectPosition(player,p.clips,p.durationMs)>=cue.endMs)
-                        seekProjectPosition(player,p.clips,cue.startMs)
+                    if(player.playbackState==Player.STATE_ENDED ||
+                        projectPosition(player,p.clips,p.durationMs)>=p.durationMs) {
+                        // Depois do fim, novo Play reproduz o projeto desde o início.
+                        seekProjectPosition(player,p.clips,0L)
+                        previewMs=0L
+                    }
                     player.play();playing=true
                 }
             },modifier=Modifier.size(36.dp)) {
