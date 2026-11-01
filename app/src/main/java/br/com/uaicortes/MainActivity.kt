@@ -485,7 +485,9 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 }, allowMultiple = mediaAction == "new" || mediaAction == "append" || mediaAction == "animate_images")
                 "transition" -> project?.let { TransitionScreen(it, ::back, { write(it) }, selectedBoundary) }
                 "autosubtitle" -> project?.let { current -> AutoSubtitleScreen(current, ::back,
-                    onManageModel = { previous = "autosubtitle"; screen = "speech_model" }, onApply = { cues, replace ->
+                    onManageModel = { previous = "autosubtitle"; screen = "speech_model" },
+                    onManageGemini = { previous = "autosubtitle"; screen = "gemini_settings" },
+                    onApply = { cues, replace ->
                     val existing = if (replace) emptyList() else current.subtitles
                     if (write(current.copy(subtitles = existing + cues))) {
                         selectedSubtitleId = cues.firstOrNull()?.id

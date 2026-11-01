@@ -6,7 +6,7 @@ package br.com.uaicortes
 data class SubtitleStylePreset(
     val name: String, val foreground: Int, val background: Int, val bold: Boolean = true,
     val outlineWidth: Int = 0, val outlineColor: Int = 0xFF000000.toInt(),
-    val shadowOffsetDp: Int = 0, val fontFamily: String = "sans", val italic: Boolean = false,
+    val shadowOffsetDp: Int? = null, val fontFamily: String = "sans", val italic: Boolean = false,
     val highlightColor: Int = SubtitleWordEffects.DEFAULT_HIGHLIGHT
 )
 
@@ -65,14 +65,15 @@ object SubtitleStyles {
     fun matches(cue: SubtitleCue, preset: SubtitleStylePreset): Boolean =
         cue.color == preset.foreground && cue.backgroundColor == preset.background &&
         cue.bold == preset.bold && cue.outlineWidth == preset.outlineWidth &&
-        cue.outlineColor == preset.outlineColor && cue.shadowOffsetDp == preset.shadowOffsetDp &&
+        cue.outlineColor == preset.outlineColor &&
+        (preset.shadowOffsetDp == null || cue.shadowOffsetDp == preset.shadowOffsetDp) &&
         cue.fontFamily == preset.fontFamily && cue.italic == preset.italic &&
         cue.highlightColor == preset.highlightColor
 
     fun applyToCue(cue: SubtitleCue, preset: SubtitleStylePreset): SubtitleCue =
         cue.copy(color=preset.foreground,backgroundColor=preset.background,bold=preset.bold,
             outlineWidth=preset.outlineWidth,outlineColor=preset.outlineColor,
-            shadowOffsetDp=preset.shadowOffsetDp,fontFamily=preset.fontFamily,
+            shadowOffsetDp=preset.shadowOffsetDp ?: cue.shadowOffsetDp,fontFamily=preset.fontFamily,
             italic=preset.italic,highlightColor=preset.highlightColor)
 
     data class CopyOptions(val appearance: Boolean = true, val position: Boolean = false,

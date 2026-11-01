@@ -21,6 +21,10 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.ui.graphics.vector.ImageVector
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
@@ -281,6 +285,30 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
     var status by remember { mutableStateOf("") }
     var batchOpen by remember(p.id) { mutableStateOf(false) }
     var batchUndo by remember(p.id) { mutableStateOf<SubtitleBatchUndo?>(null) }
+    var deleteAllConfirm by remember(p.id) { mutableStateOf(false) }
+    var deletedSnapshot by remember(p.id) { mutableStateOf<List<SubtitleCue>?>(null) }
+    var exportMenu by remember(p.id) { mutableStateOf(false) }
+    var exportFormat by remember(p.id) { mutableStateOf(SubtitleFileExport.Format.SRT) }
+    val scope = rememberCoroutineScope()
+    val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+        if (uri != null) scope.launch {
+            try {
+                val snapshot = p.subtitles.toList()
+                val selectedFormat = exportFormat
+                withContext(Dispatchers.IO) {
+                    val content = SubtitleFileExport.render(snapshot, selectedFormat)
+                    context.contentResolver.openOutputStream(uri, "wt")?.use { output ->
+                        output.write(content.toByteArray(Charsets.UTF_8))
+                        output.flush()
+                    } ?: throw java.io.IOException("Destino de exportação indisponível")
+                }
+                status = "${snapshot.size} legendas exportadas (${selectedFormat.name})"
+            } catch (e: Exception) {
+                DiagnosticRecorder.exception("subtitle_export", e)
+                status = "Falha ao exportar legendas: ${e.message?.take(100) ?: "erro de arquivo"}"
+            }
+        }
+    }
     // Deve preceder o callback do importador, que limpa a busca após importar SRT.
     var searchQuery by remember(p.id) { mutableStateOf("") }
     val importer=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -375,42 +403,58 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                 Spacer(Modifier.width(3.dp))
                 Text("Salvar",fontSize=12.sp)
             }
+            IconButton(onClick={deleteAllConfirm=true},enabled=p.subtitles.isNotEmpty(),
+                modifier=Modifier.size(40.dp)) {
+                Icon(Icons.Default.DeleteSweep,"Apagar todas as legendas",
+                    tint=if(p.subtitles.isNotEmpty()) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.size(21.dp))
+            }
             IconButton(onClick={searchOpen=!searchOpen; if(!searchOpen) searchQuery=""},
                 modifier=Modifier.size(40.dp)) {
                 Icon(if(searchOpen) Icons.Default.SearchOff else Icons.Default.Search,
                     if(searchOpen) "Fechar busca" else "Buscar legendas",modifier=Modifier.size(21.dp))
             }
         }
-        Row(Modifier.fillMaxWidth().padding(vertical=2.dp),
-            verticalAlignment=Alignment.CenterVertically,
-            horizontalArrangement=Arrangement.spacedBy(5.dp)) {
-            TextButton(enabled=p.durationMs>0, modifier=Modifier.weight(1f),onClick={
-                SubtitleListNavigation.newInterval(p.durationMs,selected?.endMs)?.let { (start,end) ->
-                    val cue=SubtitleCue(text="Nova legenda",startMs=start,endMs=end)
-                    if(update(p.copy(subtitles=p.subtitles+cue))) {
-                        batchUndo=null
-                        searchQuery="";selectedId=cue.id;editorOpen=true;showAdvanced=false
+        Column(Modifier.fillMaxWidth().padding(vertical=2.dp),
+            verticalArrangement=Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                SubtitleToolButton(Icons.Default.Add,"Nova",p.durationMs>0,
+                    Modifier.weight(1f)) {
+                    SubtitleListNavigation.newInterval(p.durationMs,selected?.endMs)?.let { (start,end) ->
+                        val cue=SubtitleCue(text="Nova legenda",startMs=start,endMs=end)
+                        if(update(p.copy(subtitles=p.subtitles+cue))) {
+                            batchUndo=null;deletedSnapshot=null
+                            searchQuery="";selectedId=cue.id;editorOpen=true;showAdvanced=false
+                        }
                     }
                 }
-            },contentPadding=PaddingValues(horizontal=1.dp,vertical=3.dp)) {
-                Icon(Icons.Default.Add,"Nova legenda",Modifier.size(16.dp))
-                Text("Nova",fontSize=11.sp,maxLines=1)
+                SubtitleToolButton(Icons.Default.RecordVoiceOver,"Offline",true,
+                    Modifier.weight(1f),onAutoSubtitles)
+                SubtitleToolButton(Icons.Default.AutoAwesome,"Gemini IA",true,
+                    Modifier.weight(1f),onAutoSubtitles)
             }
-            OutlinedButton(onClick=onAutoSubtitles,modifier=Modifier.weight(1f),
-                contentPadding=PaddingValues(horizontal=1.dp,vertical=3.dp)) {
-                Icon(Icons.Default.AutoAwesome,"Gerar legendas automáticas",Modifier.size(16.dp))
-                Text("Auto",fontSize=11.sp,maxLines=1)
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                SubtitleToolButton(Icons.Default.FileOpen,"Importar",true,
+                    Modifier.weight(1f)) {
+                    importer.launch(arrayOf("text/*","application/x-subrip","*/*"))
+                }
+                SubtitleToolButton(Icons.Default.FileUpload,"Exportar",p.subtitles.isNotEmpty(),
+                    Modifier.weight(1f)) { exportMenu=true }
+                SubtitleToolButton(Icons.Default.Tune,"Editar todas",p.subtitles.isNotEmpty(),
+                    Modifier.weight(1f)) { batchOpen=true }
             }
-            OutlinedButton(onClick={importer.launch(arrayOf("text/*","application/x-subrip","*/*"))},
-                modifier=Modifier.weight(1f),contentPadding=PaddingValues(horizontal=1.dp,vertical=3.dp)) {
-                Icon(Icons.Default.FileOpen,"Importar SRT",Modifier.size(16.dp))
-                Text("SRT",fontSize=11.sp,maxLines=1)
-            }
-            OutlinedButton(onClick={batchOpen=true}, enabled=p.subtitles.isNotEmpty(),
-                modifier=Modifier.weight(1.45f),contentPadding=PaddingValues(horizontal=1.dp,vertical=3.dp)) {
-                Icon(Icons.Default.Tune,"Editar estilos e animações de todas as legendas",Modifier.size(16.dp))
-                Spacer(Modifier.width(2.dp))
-                Text("Editar todas",fontSize=10.sp,maxLines=1)
+        }
+        if (deletedSnapshot != null && p.subtitles.isEmpty()) {
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                Text("Legendas removidas",fontSize=11.sp,modifier=Modifier.weight(1f))
+                TextButton(onClick={
+                    val restore=deletedSnapshot
+                    if(restore!=null && update(p.copy(subtitles=restore))) {
+                        selectedId=restore.firstOrNull()?.id.orEmpty()
+                        deletedSnapshot=null
+                        status="Legendas restauradas"
+                    }
+                }) { Text("Desfazer") }
             }
         }
         if(batchUndo != null && batchUndo?.updated == p.subtitles) {
@@ -505,6 +549,37 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                 }
             })
     }
+    if(exportMenu) AlertDialog(onDismissRequest={exportMenu=false},
+        title={Text("Exportar legendas")},
+        text={Text("Escolha SRT (com horários) ou TXT (somente o texto). " +
+            "Animações e cores não são incluídas nesses formatos.")},
+        confirmButton={TextButton(onClick={
+            exportMenu=false
+            exportFormat=SubtitleFileExport.Format.SRT
+            exporter.launch("UaiCortes-legendas.srt")
+        }) { Text("SRT") }},
+        dismissButton={Row {
+            TextButton(onClick={
+                exportMenu=false
+                exportFormat=SubtitleFileExport.Format.TXT
+                exporter.launch("UaiCortes-legendas.txt")
+            }) { Text("TXT") }
+            TextButton(onClick={exportMenu=false}) { Text("Cancelar") }
+        }})
+    if(deleteAllConfirm) AlertDialog(onDismissRequest={deleteAllConfirm=false},
+        title={Text("Apagar todas as legendas?")},
+        text={Text("${p.subtitles.size} legendas serão removidas do projeto. " +
+            "O vídeo original e os arquivos externos não serão apagados. " +
+            "É possível desfazer até a próxima edição.")},
+        confirmButton={TextButton(onClick={
+            val snapshot=p.subtitles.toList()
+            if(update(p.copy(subtitles=emptyList()))) {
+                deletedSnapshot=snapshot;batchUndo=null
+                selectedId="";editorOpen=false;showAdvanced=false
+                deleteAllConfirm=false;status="${snapshot.size} legendas removidas"
+            }
+        }) { Text("Apagar todas",color=MaterialTheme.colorScheme.error) }},
+        dismissButton={TextButton(onClick={deleteAllConfirm=false}) { Text("Cancelar") }})
     pendingDeleteId?.let { id ->
         val toDelete=p.subtitles.firstOrNull { it.id==id }
         if(toDelete!=null) AlertDialog(onDismissRequest={pendingDeleteId=null},
@@ -577,5 +652,17 @@ internal fun SubtitleEditDialog(cue: SubtitleCue,totalMs: Long,number: Int,
                 }
             }
         }
+    }
+}
+
+/** Botões compactos e consistentes em celulares estreitos, sem formato de cápsula. */
+@Composable
+private fun SubtitleToolButton(icon: ImageVector, label: String, enabled: Boolean,
+    modifier: Modifier = Modifier, onClick: () -> Unit) {
+    OutlinedButton(onClick=onClick,enabled=enabled,modifier=modifier.heightIn(min=46.dp),
+        shape=RoundedCornerShape(8.dp),contentPadding=PaddingValues(horizontal=3.dp,vertical=5.dp)) {
+        Icon(icon,label,modifier=Modifier.size(16.dp))
+        Spacer(Modifier.width(3.dp))
+        Text(label,fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
     }
 }

@@ -26,12 +26,19 @@ import kotlinx.coroutines.withContext
  */
 @Composable
 fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
-    onManageModel: () -> Unit, onApply: (List<SubtitleCue>, Boolean) -> Unit) {
+    onManageModel: () -> Unit, onManageGemini: () -> Unit,
+    onApply: (List<SubtitleCue>, Boolean) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val geminiStore = remember(context) { GeminiCredentialStore(context) }
+    val geminiClient = remember { GeminiSubtitleClient() }
+    var geminiConfirm by remember { mutableStateOf(false) }
+    val geminiConfigured = geminiStore.hasKey()
+    DisposableEffect(geminiClient) { onDispose {geminiClient.cancel()} }
     val installed = AutoSubtitleEngine.installed(context)
     var busy by remember { mutableStateOf(false) }
     var progress by remember { mutableStateOf<Int?>(null) }
+    var runningCloud by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     var task by remember { mutableStateOf<Job?>(null) }
     var startedAt by remember { mutableLongStateOf(0L) }
@@ -64,8 +71,8 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
             }
             HorizontalDivider()
             Text("Passo 2 · Gerar legendas", fontWeight=FontWeight.SemiBold)
-            Text("O app extrai somente o áudio dos vídeos deste projeto, respeitando " +
-                "cortes e posições na linha do tempo. Não usa microfone nem envia o áudio.",
+            Text("O modo offline extrai áudio dos vídeos, respeitando cortes e posições " +
+                "na linha do tempo. Não usa microfone nem envia áudio para a internet.",
                 style=MaterialTheme.typography.bodySmall)
             Text("Duração do projeto: ${formatMs(project.durationMs)} · limite desta versão: 10 minutos",
                 style=MaterialTheme.typography.bodySmall)
@@ -73,7 +80,8 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                 task=scope.launch {
                     startedAt=SystemClock.elapsedRealtime()
                     elapsedSeconds=0L
-                    busy=true;progress=null;message="Preparando transcrição offline…"
+                    busy=true;runningCloud=false;progress=null;results=emptyList();replace=false
+                    message="Preparando transcrição offline…"
                     try {
                         val generated = AutoSubtitleEngine.transcribe(context, project) { pct, step ->
                             withContext(Dispatchers.Main) { progress=pct;message=step }
@@ -95,6 +103,23 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                 Spacer(Modifier.width(8.dp))
                 Text("Transcrever fala (offline)")
             }
+            HorizontalDivider()
+            Text("Transcrição por IA · Gemini", fontWeight=FontWeight.SemiBold)
+            Text("Usa a chave da API em Configurações. Requer internet e pode consumir sua " +
+                "cota ou gerar cobrança. O áudio será enviado ao Google somente após confirmação.",
+                style=MaterialTheme.typography.bodySmall)
+            if(!geminiConfigured) OutlinedButton(onClick=onManageGemini,
+                modifier=Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Settings,null)
+                Spacer(Modifier.width(8.dp))
+                Text("Configurar chave Gemini")
+            }
+            Button(onClick={geminiConfirm=true},enabled=geminiConfigured && !busy &&
+                project.durationMs in 1..600000L,modifier=Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.AutoAwesome,null)
+                Spacer(Modifier.width(8.dp))
+                Text("Transcrever com Gemini (online)")
+            }
             if(busy) {
                 Surface(shape=RoundedCornerShape(14.dp),
                     color=MaterialTheme.colorScheme.surfaceVariant) {
@@ -111,12 +136,15 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                             Text(progress?.let { "$it% do processamento" } ?: "Etapa sem porcentagem",
                                 style=MaterialTheme.typography.labelSmall)
                         }
-                        Text("O tempo de reconhecimento pode superar a duração do vídeo. " +
-                            "O progresso acompanha o áudio realmente decodificado.",
+                        Text(if(runningCloud)
+                            "Extração e envio têm progresso por etapa; processamento no servidor " +
+                                "não informa porcentagem. O tempo pode superar a duração do vídeo."
+                            else "O tempo de reconhecimento pode superar a duração do vídeo. " +
+                                "O progresso acompanha o áudio realmente decodificado.",
                             style=MaterialTheme.typography.bodySmall)
                     }
                 }
-                OutlinedButton(onClick={task?.cancel()},modifier=Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick={geminiClient.cancel();task?.cancel()},modifier=Modifier.fillMaxWidth()) {
                     Text("Cancelar transcrição")
                 }
             } else if(message.isNotBlank()) Text(message,style=MaterialTheme.typography.bodySmall)
@@ -161,6 +189,39 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
             Text("Aplicar ${results.size} legendas ao projeto")
         }
     }
+    if(geminiConfirm) AlertDialog(onDismissRequest={geminiConfirm=false},
+        title={Text("Enviar áudio ao Google Gemini?")},
+        text={Text("O Uai Cortes extrairá o áudio dos clipes deste projeto (até 10 minutos) " +
+            "e enviará à API Gemini, usando a chave salva neste celular. " +
+            "O processamento depende de internet e pode consumir cota ou gerar custos. " +
+            "O vídeo original não será enviado. Confirmar não substitui legendas existentes.")},
+        confirmButton={TextButton(onClick={
+            geminiConfirm=false
+            task=scope.launch {
+                startedAt=SystemClock.elapsedRealtime()
+                elapsedSeconds=0L
+                busy=true;runningCloud=true;progress=null;results=emptyList();replace=false
+                message="Preparando áudio para IA…"
+                try {
+                    val apiKey=withContext(Dispatchers.IO) {
+                        geminiStore.read() ?: throw IllegalStateException("Configure sua chave Gemini.")
+                    }
+                    val generated=geminiClient.transcribe(context,project,apiKey) { pct,step ->
+                        withContext(Dispatchers.Main) { progress=pct; message=step }
+                    }
+                    results=generated
+                    message=if(generated.isEmpty()) "Nenhuma palavra reconhecida."
+                        else "${generated.size} legendas geradas por Gemini. Revise antes de aplicar."
+                    progress=100
+                } catch(_: CancellationException) {
+                    message="Envio/transcrição cancelados. Nenhuma legenda foi aplicada."
+                } catch(e: Exception) {
+                    // Não registrar chave, áudio ou corpo da resposta da API.
+                    message="Não foi possível transcrever: ${e.message?.take(160) ?: "falha na API"}"
+                } finally {busy=false;task=null}
+            }
+        }) { Text("Enviar e transcrever") }},
+        dismissButton={TextButton(onClick={geminiConfirm=false}) { Text("Cancelar") }})
     editIndex?.let { index ->
         AlertDialog(onDismissRequest={editIndex=null},
             title={Text("Revisar legenda ${index+1}")},

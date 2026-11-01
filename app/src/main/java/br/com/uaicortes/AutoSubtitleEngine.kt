@@ -258,6 +258,64 @@ object AutoSubtitleEngine {
         return result.take(600)
     }
 
+    /** WAV PCM16 16 kHz mono fiel à ordem e aos recortes do projeto.
+     * Arquivo temporário apagado pelo chamador; silêncio preenche fontes sem faixa sonora.
+     * Limite explícito de 10 minutos impede alocação/upload descontrolado.
+     */
+    suspend fun prepareWav(context: Context, project: VideoProject,
+        onProgress: suspend (Int?, String) -> Unit): File = withContext(Dispatchers.IO) {
+        require(project.clips.isNotEmpty() && project.durationMs in 1..MAX_DURATION_MS) {
+            "A transcrição aceita vídeos de até 10 minutos."
+        }
+        val file = File.createTempFile("uai-asr-", ".wav", context.cacheDir)
+        try {
+            java.io.FileOutputStream(file).use { output ->
+                output.write(ByteArray(44))
+                var writtenTotal = 0L
+                project.clips.forEachIndexed { index, clip ->
+                    currentCoroutineContext().ensureActive()
+                    val target = clip.durationMs * RATE / 1000L * 2L
+                    val limiter = object : java.io.OutputStream() {
+                        var count = 0L
+                        override fun write(b: Int) {
+                            if(count < target) {output.write(b);count++}
+                        }
+                        override fun write(b: ByteArray, off: Int, len: Int) {
+                            val permitted = minOf(len.toLong(), target - count).toInt()
+                            if(permitted > 0) {output.write(b, off, permitted);count += permitted}
+                        }
+                    }
+                    onProgress(index * 50 / project.clips.size,
+                        "Extraindo áudio do clipe ${index+1} de ${project.clips.size}…")
+                    readClip(context, clip, writtenTotal / 32L, null, limiter) { fraction ->
+                        onProgress(((index+fraction)*50/project.clips.size).toInt().coerceIn(0,50),
+                            "Preparando áudio do clipe ${index+1}…")
+                    }
+                    // Preencher a duração do clipe mantém as posições dos próximos cortes.
+                    val buffer = ByteArray(8192)
+                    while(limiter.count < target) {
+                        currentCoroutineContext().ensureActive()
+                        val take = minOf(buffer.size.toLong(),target-limiter.count).toInt()
+                        limiter.write(buffer,0,take)
+                    }
+                    writtenTotal += target
+                }
+                require(writtenTotal > 0L && writtenTotal <= 22_000_000L) { "Áudio fora do limite." }
+            }
+            java.io.RandomAccessFile(file,"rw").use { wav ->
+                val samples = file.length() - 44L
+                fun short(v: Int) { wav.write(v and 255);wav.write((v ushr 8) and 255) }
+                fun int(v: Long) { repeat(4) { wav.write(((v ushr (it*8)) and 255).toInt()) } }
+                wav.seek(0)
+                wav.write("RIFF".toByteArray(Charsets.US_ASCII));int(samples+36)
+                wav.write("WAVEfmt ".toByteArray(Charsets.US_ASCII));int(16)
+                short(1);short(1);int(RATE.toLong());int((RATE*2).toLong());short(2);short(16)
+                wav.write("data".toByteArray(Charsets.US_ASCII));int(samples)
+            }
+            file
+        } catch(e: Exception) { file.delete(); throw e }
+    }
+
     /** MediaCodec decodifica áudio embutido no vídeo, sem abrir microfone.
      * Usa mono 16k PCM para Vosk, com reamostragem simples e sem rede.
      * Cada clipe recebe horários próprios para respeitar cortes e junções.
@@ -296,7 +354,8 @@ object AutoSubtitleEngine {
         } finally { model.close() }
     }
 
-    private suspend fun readClip(context: Context, clip: Clip, timeline: Long, model: Model,
+    private suspend fun readClip(context: Context, clip: Clip, timeline: Long, model: Model?,
+        pcmSink: java.io.OutputStream? = null,
         onDecoded: suspend (Float) -> Unit): List<Word> {
         val extractor = MediaExtractor()
         var codec: MediaCodec? = null
@@ -324,9 +383,9 @@ object AutoSubtitleEngine {
             val startUs = clip.startMs * 1000L
             val endUs = clip.endMs * 1000L
             val info = MediaCodec.BufferInfo()
-            val recognizer = Recognizer(model, RATE.toFloat())
+            val recognizer = model?.let { Recognizer(it, RATE.toFloat()) }
             try {
-                recognizer.setWords(true)
+                recognizer?.setWords(true)
                 fun absorbResult(text: String) {
                     parsedWords(text).forEach { (word, start, end) ->
                         results += Word(word, timeline + start, timeline + end)
@@ -335,7 +394,8 @@ object AutoSubtitleEngine {
                 fun feed() {
                     if (outputChunk.size() == 0) return
                     val bytes = outputChunk.toByteArray()
-                    if (recognizer.acceptWaveForm(bytes, bytes.size)) absorbResult(recognizer.result)
+                    pcmSink?.write(bytes)
+                    recognizer?.let { if (it.acceptWaveForm(bytes, bytes.size)) absorbResult(it.result) }
                     outputChunk.reset()
                 }
                 var inputEnded = false
@@ -416,9 +476,9 @@ object AutoSubtitleEngine {
                     }
                 }
                 feed()
-                absorbResult(recognizer.finalResult)
+                recognizer?.let { absorbResult(it.finalResult) }
                 return results
-            } finally { recognizer.close() }
+            } finally { recognizer?.close() }
         } finally {
             runCatching { codec?.stop() }
             runCatching { codec?.release() }

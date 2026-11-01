@@ -45,7 +45,7 @@ internal fun SubtitleStyleGallery(current: SubtitleCue, onChange: (SubtitleCue) 
                                     color=preset.foreground,backgroundColor=preset.background,
                                     bold=preset.bold,italic=preset.italic,fontFamily=preset.fontFamily,
                                     outlineWidth=preset.outlineWidth,outlineColor=preset.outlineColor,
-                                    shadowOffsetDp=preset.shadowOffsetDp,
+                                    shadowOffsetDp=preset.shadowOffsetDp ?: 0,
                                     highlightColor=preset.highlightColor,
                                     wordColors=listOf(SubtitleWordColor(1,preset.highlightColor)))
                                 SubtitleStyledSample(example,SubtitleAnimations.Frame(example.text),compact=true)

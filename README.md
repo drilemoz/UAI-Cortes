@@ -1,3 +1,11 @@
+## v0.1.90 — Ferramentas e IA nas legendas
+
+- Corrigida regressão do `SubtitlePresentationTest`: presets sem configuração explícita de sombra preservam o valor personalizado.
+- Barra de ferramentas compacta, cantos de 8 dp, exportação SRT/TXT, e exclusão em lote com confirmação e desfazer.
+- Reconhecimento Gemini 3.5 Transcribe opt-in, usando chave já cadastrada; extrai somente áudio temporário dos recortes do projeto, recebe horários por palavra, revisão antes de aplicar.
+- Modo offline Vosk preservado; sem envio automático, respeitando limites/cota e `schemaVersion=4`.
+- Build completo e testes de aparelho pendentes.
+
 ## v0.1.89 — Legendas expressivas e navegação
 
 - Galeria de 12 presets com miniaturas, contorno, sombra, fontes nativas, itálico e cores de destaque.

@@ -19,10 +19,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*90',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.89"',gradle)
+assert re.search(r'versionCode\s*=\s*91',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.90"',gradle)
 assert 'AppReleaseNotes.VERSION_NAME' in (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
-for label in ["VERSION: '0.1.89'", "VERSION_CODE: '90'", 'TAG="v$VERSION"',
+for label in ["VERSION: '0.1.90'", "VERSION_CODE: '91'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -215,8 +215,8 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.89'" in package_script and 'VERSION_CODE = 90' in package_script
-assert 'versionCode = 90' in gradle and 'isUniversalApk = true' in gradle
+assert "VERSION = '0.1.90'" in package_script and 'VERSION_CODE = 91' in package_script
+assert 'versionCode = 91' in gradle and 'isUniversalApk = true' in gradle
 print('OK: versão atual 0.1.64 / versionCode 74, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
@@ -500,7 +500,7 @@ motion=(root/'app/src/main/java/br/com/uaicortes/ClipMotionTransitionEffect.kt')
 assert 'com.alphacephei:vosk-android:0.3.75' in gradle
 assert 'android.permission.INTERNET' in (root/'app/src/main/AndroidManifest.xml').read_text()
 assert 'MediaExtractor()' in auto and 'MediaCodec.createDecoderByType' in auto
-assert 'Recognizer(model, RATE.toFloat())' in auto and 'currentCoroutineContext().ensureActive()' in auto
+assert 'Recognizer(it, RATE.toFloat())' in auto and 'currentCoroutineContext().ensureActive()' in auto
 assert 'vosk-model-small-pt-0.3.zip' in auto and 'MAX_EXTRACTED' in auto
 assert 'Modelo de reconhecimento de voz' in auto_ui and 'Passo 2' in auto_ui and 'Passo 3' in auto_ui
 assert 'SpeechModelSettingsScreen' in (root/'app/src/main/java/br/com/uaicortes/SpeechModelSettingsScreen.kt').read_text()
@@ -791,7 +791,7 @@ news=(app_files/'WhatsNewScreen.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
-assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 90'])
+assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 91'])
 assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
@@ -1106,3 +1106,21 @@ assert 'fun goBack()' in (app_files/'AnimateImagesScreen.kt').read_text()
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleWordEffectsTest.kt').is_file()
 assert (root/'docs/VALIDATION_0.1.89.md').is_file()
 print('OK: v0.1.89 galeria de legendas, Vosk por palavra, estilos no MP4 e Voltar para Home')
+
+# v0.1.90: correção de teste, exportação e transcrição cloud opcional.
+screen=(app_files/'SubtitleScreen.kt').read_text()
+remote=(app_files/'GeminiSubtitleClient.kt').read_text()
+parser=(app_files/'GeminiSubtitleParser.kt').read_text()
+auto_ui=(app_files/'AutoSubtitleScreen.kt').read_text()
+assert 'preset.shadowOffsetDp ?: cue.shadowOffsetDp' in styles
+assert 'SubtitleFileExport.Format.SRT' in screen and 'SubtitleFileExport.Format.TXT' in screen
+assert 'deleteAllConfirm' in screen and 'deletedSnapshot' in screen
+assert 'RoundedCornerShape(8.dp)' in screen and 'SubtitleToolButton' in screen
+assert 'gemini-3.5-transcribe' in remote and 'timestamp_granularities' in remote
+assert 'geminiConfirm' in auto_ui and 'GeminiCredentialStore(context)' in auto_ui
+assert 'word_info' in parser and 'GeminiSubtitleParser.parse' in remote
+assert 'onManageGemini' in main
+assert all((root/'app/src/test/java/br/com/uaicortes'/name).exists() for name in ['GeminiSubtitleParserTest.kt','SubtitleFileExportTest.kt','SubtitlePresentationTest.kt'])
+assert (root/'docs/VALIDATION_0.1.90.md').exists()
+assert 'ReleaseSummary("0.1.90", listOf(' in notes
+print('OK: v0.1.90 presets, exportação SAF, exclusão total, Gemini consentido e versionamento')

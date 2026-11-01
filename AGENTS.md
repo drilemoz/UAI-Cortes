@@ -226,3 +226,7 @@
 
 - v0.1.89: preserve `SubtitleCue.wordTimings` only for synchronized Vosk captions; if text or timings are manually edited, clear outdated timing rather than pretend precise synchronization. `wordColors` indices refer to `Regex("\\S+")` and survive only if text unchanged. The highlight color and italic are optional JSON fields with legacy defaults.
 - v0.1.89: `SubtitleWordEffects.colors` must be used identically by preview and export. `schemaVersion=4` unchanged. Animation screen Back returns Home regardless of entry route, but must honor unsaved drafts and active export. No claim of Android UI/pixel validation without a device build.
+
+- v0.1.90: presets com `shadowOffsetDp=null` não sobrescrevem sombra previamente configurada; aqueles com sombra explícita aplicam seu valor. Manter `SubtitlePresentationTest` e novos testes de exportação/ASR.
+- v0.1.90: tela Legendas exibe ações em grade compacta 2×3 (8 dp); exportar SRT/TXT via SAF não altera projeto nem inclui efeitos visuais; apagar todas exige confirmação e disponibiliza desfazer apenas quando lista segue vazia.
+- v0.1.90: Gemini ASR deve usar apenas a chave do Keystore já existente, após consentimento explícito. Enviar WAV temporário até 10 min respeitando cortes da timeline e excluir arquivo local e remoto ao terminar. Nunca logar chave, conteúdo de áudio, transcrição bruta ou URL do upload. Vosk offline continua sem upload; `schemaVersion=4`.

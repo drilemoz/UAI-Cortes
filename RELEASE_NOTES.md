@@ -1,3 +1,11 @@
+## v0.1.90 (versionCode 91) · 01/11/2026
+
+- Corrigido o teste de presets: o deslocamento de sombra personalizado é preservado quando um modelo não define sombra; modelos com sombra explícita continuam aplicando seu próprio valor.
+- Barra da tela Legendas em grade 2×3 com cantos 8 dp; importar SRT, exportar SRT/TXT (SAF) e apagar todas as legendas após confirmação, com opção Desfazer.
+- Gemini ASR opcional pela chave protegida já salva nas Configurações: extrai WAV temporário da ordem de clipes/cortes, pede consentimento antes do envio, usa Interactions API Gemini 3.5 Transcribe com tempos por palavra e permite revisar antes de aplicar. Requer internet e pode consumir cota/cobrança.
+- Limite de 10 min; o modo Vosk offline segue independente, e projetos existentes continuam com schemaVersion=4.
+- Verificar compilação/limites de API, sincronismo e exportação no Android físico antes de declarar funcionamento confirmado.
+
 ## v0.1.89 (versionCode 90) · 01/11/2026
 
 - **Legendas:** 12 modelos visuais com miniaturas, contornos, sombras e estilos; destaque de cores por palavra, paleta do karaokê e itálico.
