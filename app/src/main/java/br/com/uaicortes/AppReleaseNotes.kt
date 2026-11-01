@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.79"
-    const val VERSION_CODE = 80
+    const val VERSION_NAME = "0.1.80"
+    const val VERSION_CODE = 81
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.80", listOf(
+            ReleaseFeature("subtitle-word-wrap-guard", "Legendas sem cortes em palavras extensas",
+                "Ajustada a redução da fonte para respeitar a largura do quadro mesmo com palavras excepcionalmente longas, na prévia e exportação.", "captions"),
+            ReleaseFeature("subtitle-ci-fix", "Correção dos testes do exportador",
+                "Corrigida a regressão identificada no workflow Gerar APK 67; versões, metadados e testes sincronizados.", "check")
+        )),
         ReleaseSummary("0.1.79", listOf(
             ReleaseFeature("subtitle-bottom", "Legendas mais próximas do rodapé",
                 "Novas legendas usam margem inferior de 8%; posição pode ser ajustada individualmente ou em lote.", "captions"),

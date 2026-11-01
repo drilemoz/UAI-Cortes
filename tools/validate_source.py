@@ -19,10 +19,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*80',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.79"',gradle)
+assert re.search(r'versionCode\s*=\s*81',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.80"',gradle)
 assert 'AppReleaseNotes.VERSION_NAME' in (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
-for label in ["VERSION: '0.1.79'", "VERSION_CODE: '80'", 'TAG="v$VERSION"',
+for label in ["VERSION: '0.1.80'", "VERSION_CODE: '81'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -215,8 +215,8 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.79'" in package_script and 'VERSION_CODE = 80' in package_script
-assert 'versionCode = 80' in gradle and 'isUniversalApk = true' in gradle
+assert "VERSION = '0.1.80'" in package_script and 'VERSION_CODE = 81' in package_script
+assert 'versionCode = 81' in gradle and 'isUniversalApk = true' in gradle
 print('OK: versão atual 0.1.64 / versionCode 74, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
@@ -790,7 +790,7 @@ news=(app_files/'WhatsNewScreen.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
-assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 80'])
+assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 81'])
 assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
@@ -981,3 +981,14 @@ assert 'Clipe ${index+1}' in full_ui
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleAutoFitTest.kt').exists()
 assert (root/'app/src/test/java/br/com/uaicortes/PipOpacityPersistenceTest.kt').exists()
 print('OK: v0.1.79 posição inferior, ajuste de texto, PiP alpha e captura pausada')
+
+# v0.1.80: regressão do CI 67 — palavras excepcionalmente longas não podem
+# extrapolar a largura do quadro nem ser forçadas ao mínimo de 48%.
+fit_code = (root/'app/src/main/java/br/com/uaicortes/SubtitleAutoFit.kt').read_text()
+sizing_code = (root/'app/src/main/java/br/com/uaicortes/SubtitleExportSizing.kt').read_text()
+assert 'minOf(1f, wordFactor, linesFactor.coerceAtLeast(.48f))' in fit_code
+assert '(base * factor).coerceAtLeast(Float.MIN_VALUE)' in sizing_code
+assert '(base * factor).coerceAtLeast(0.01f)' not in sizing_code
+assert 'unusuallyLongSingleWordMayShrinkBelowNormalFloor' in (root/'app/src/test/java/br/com/uaicortes/SubtitleAutoFitTest.kt').read_text()
+assert 'extremeWordWidthStillFitsWithoutInvalidScale' in (root/'app/src/test/java/br/com/uaicortes/SubtitleExportSizingTest.kt').read_text()
+print('OK: v0.1.80 regressão CI 67: palavra longa respeita a largura na prévia/exportação')

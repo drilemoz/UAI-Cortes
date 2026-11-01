@@ -24,6 +24,14 @@ class SubtitleExportSizingTest {
         assertEquals(.55f, SubtitleExportSizing.centerX(.9f, 972, 1080, 1f), .0001f)
         assertEquals(.2f, SubtitleExportSizing.centerX(.2f, 100, 1080, 1f), .0001f)
     }
+    @Test fun extremeWordWidthStillFitsWithoutInvalidScale() {
+        for (wordWidth in listOf(1_000f, 5_000f, 100_000f, 1_000_000f, Float.MAX_VALUE)) {
+            val scale = SubtitleExportSizing.relativeFontSize(48, 405, wordWidth)
+            assertTrue("Escala não finita para $wordWidth", scale.isFinite() && scale > 0f)
+            assertTrue("Palavra ultrapassou quadro para $wordWidth",
+                wordWidth * scale <= SubtitleExportSizing.textBoxWidth(405) + .01f)
+        }
+    }
     @Test fun longWordNeverExceedsFrameAndNoNaN() {
         for (width in listOf(405, 720, 1080, 1920)) {
             for (font in listOf(12, 22, 48)) {

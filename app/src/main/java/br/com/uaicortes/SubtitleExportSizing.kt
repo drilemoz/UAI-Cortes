@@ -26,6 +26,8 @@ object SubtitleExportSizing {
         val base = (sizeSp.coerceIn(12, 48) / 380f) * safeFrameWidth(frameWidth) / 100f
         val factor = SubtitleAutoFit.factor(longestWordPxAt100 * base,
             fullTextPxAt100 * base, textBoxWidth(frameWidth).toFloat())
-        return (base * factor).coerceAtLeast(0.01f)
+        // Não impor piso visual de 0,01: em palavras sem espaços muito extensas,
+        // esse piso poderia fazer o texto ultrapassar o quadro mesmo após ajustar.
+        return (base * factor).coerceAtLeast(Float.MIN_VALUE)
     }
 }

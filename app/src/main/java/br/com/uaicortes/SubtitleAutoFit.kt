@@ -1,8 +1,11 @@
 package br.com.uaicortes
 
-/** Reduz tipografia somente quando texto total não cabe em até ~3 linhas.
- * Não trunca a frase: se for muito grande, a quebra continua livre para mais linhas.
- * Recebe medidas reais (px) produzidas pelas fontes de cada renderer. */
+/** Ajuste visual compartilhado entre prévia e exportação.
+ * Frases extensas param de encolher a partir de 48% e podem ocupar mais linhas.
+ * PALAVRAS isoladas são uma exceção: precisam caber na largura disponível, mesmo
+ * quando isso requer fator menor que 48%, para não cortar bordas no vídeo.
+ * As medidas são de fonte/renderizador e não alteram texto nem tempos da legenda.
+ */
 internal object SubtitleAutoFit {
     fun factor(longestWordPx: Float, fullTextPx: Float, availableWidthPx: Float,
                targetLines: Int = 3): Float {
@@ -13,6 +16,10 @@ internal object SubtitleAutoFit {
         // Margem de 10% para que a divisão por palavras não produza uma quarta linha.
         val linesFactor = if (safeFull == 0f) 1f else
             (availableWidthPx * targetLines.coerceIn(1, 5) * .90f) / safeFull
-        return minOf(1f, wordFactor, linesFactor).coerceIn(.48f, 1f)
+        // O limite de legibilidade (.48f) aplica-se APENAS ao comprimento da frase.
+        // Aplicá-lo à largura de uma palavra isolada causa corte no MP4 e falha
+        // SubtitleExportSizingTest.longWordNeverExceedsFrameAndNoNaN.
+        return minOf(1f, wordFactor, linesFactor.coerceAtLeast(.48f))
+            .coerceAtLeast(Float.MIN_VALUE)
     }
 }
