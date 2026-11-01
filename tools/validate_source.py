@@ -19,10 +19,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*84',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.83"',gradle)
+assert re.search(r'versionCode\s*=\s*85',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.84"',gradle)
 assert 'AppReleaseNotes.VERSION_NAME' in (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
-for label in ["VERSION: '0.1.83'", "VERSION_CODE: '84'", 'TAG="v$VERSION"',
+for label in ["VERSION: '0.1.84'", "VERSION_CODE: '85'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -215,8 +215,8 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.83'" in package_script and 'VERSION_CODE = 84' in package_script
-assert 'versionCode = 84' in gradle and 'isUniversalApk = true' in gradle
+assert "VERSION = '0.1.84'" in package_script and 'VERSION_CODE = 85' in package_script
+assert 'versionCode = 85' in gradle and 'isUniversalApk = true' in gradle
 print('OK: versão atual 0.1.64 / versionCode 74, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
@@ -791,7 +791,7 @@ news=(app_files/'WhatsNewScreen.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
-assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 84'])
+assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 85'])
 assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
@@ -1035,3 +1035,10 @@ assert 'coerceAtMost(86_400_000L)' not in quality
 assert 'private fun estimatedBytes(' in quality and 'Long.MAX_VALUE' in quality
 assert 'no perfil ${preset.label}' in export
 print('OK: v0.1.83 estimativas sem teto artificial de 24h e aviso de perfil correto')
+
+# CI 70 / v0.1.84: função pública não pode expor parâmetros ou callbacks de tipos internal.
+assert re.search(r'\binternal\s+fun\s+start\s*\(\s*project:\s*VideoProject', export), (
+    'ExportEngine.start deve ser internal: ExportBitratePreset/ExportQualityReport são internal')
+assert 'internal enum class ExportBitratePreset' in quality
+assert 'internal data class ExportQualityReport' in report_export
+print('OK: v0.1.84 correção de visibilidade da API de exportação (CI 70)')

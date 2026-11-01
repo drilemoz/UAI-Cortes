@@ -173,7 +173,7 @@ class ExportEngine(private val context: Context) {
         tempFile = null
     }
 
-    fun start(project: VideoProject, height: Int, fileName: String,
+    internal fun start(project: VideoProject, height: Int, fileName: String,
               preset: ExportBitratePreset = ExportBitratePreset.HIGH,
               onSaving: () -> Unit = {},
               onSuccess: (Uri, ExportQualityReport) -> Unit, onError: (String) -> Unit) {

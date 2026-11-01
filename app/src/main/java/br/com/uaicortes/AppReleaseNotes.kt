@@ -16,18 +16,22 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.83"
-    const val VERSION_CODE = 84
+    const val VERSION_NAME = "0.1.84"
+    const val VERSION_CODE = 85
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.84", listOf(
+            ReleaseFeature("ci70-kotlin-visibility", "Exportação compatível com o compilador Kotlin",
+                "Corrigida a visibilidade da função de início de exportação que impedia a compilação Debug e Release no workflow 70.", "check")
+        )),
         ReleaseSummary("0.1.83", listOf(
             ReleaseFeature("export-storage-review", "Estimativa de espaço para projetos longos",
                 "Corrigido o limite de 24 horas e prevenido transbordamento em reservas e estimativas de exportação.", "film"),
             ReleaseFeature("export-storage-message", "Avisos de espaço específicos",
                 "O aviso de falta de armazenamento agora identifica o perfil escolhido e sugere reduzir a configuração.", "check")
         )),
-        ReleaseSummary("0.1.83", listOf(
+        ReleaseSummary("0.1.82", listOf(
             ReleaseFeature("export-bitrate-presets", "Três perfis de qualidade do MP4",
                 "Escolha Compacta, Alta ou Máxima em 720p/1080p, com estimativa de espaço específica para cada perfil.", "film"),
             ReleaseFeature("export-gop-request", "Quadros-chave solicitados a cada 2 segundos",
