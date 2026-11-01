@@ -247,3 +247,6 @@
 
 - v0.1.96: 16 estilos de narração mantêm os cinco da v0.1.95 sem mudanças de instrução por padrão; ritmo, expressividade e entonação são orientações textuais em `speech_metadata.style`, nunca valores exatos de velocidade/frequência/volume. Não contaminar texto verbatim com instruções.
 - v0.1.96: usar a mesma composição de estilo tanto em Ouvir amostra quanto em Gerar áudio, incluindo todas as dimensões na chave de cache derivada. Mudanças de ajuste exigem nova confirmação de síntese se não houver amostra idêntica. Preservar chave, consentimento, vozes, schemaVersion 4, cinco APKs, versionCode 97.
+
+- v0.1.97: reutilização de legendas existentes (manuais/offline/Gemini) é somente leitura até confirmação; nenhum upload/ASR ou solicitação TTS no ato da importação. Mostrar trechos, seleção, horário e limite 4000 caracteres, sem truncar silenciosamente. Texto da narração é cópia editável separada das legendas originais.
+- v0.1.97: abertura do gerador não consulta vozes nem escolhe automaticamente. Consulta explícita via botão; seleção da voz confirmada separadamente; gerar amostra/áudio exige consentimento de cota; inserir WAV na timeline exige confirmação adicional. Não adicionar faixa automaticamente. Preservar `schemaVersion=4`, versionCode 98, 5 APKs. Validar via Gradle/Android antes de declarar build pronto.

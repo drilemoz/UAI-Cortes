@@ -45,6 +45,15 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
     val previewCache = remember(ctx) { GeminiVoicePreviewCache(ctx) }
     val scope = rememberCoroutineScope()
     var expanded by remember(project.id) { mutableStateOf(false) }
+    var reuseDialogOpen by remember(project.id) { mutableStateOf(false) }
+    var reuseSnapshot by remember(project.id) { mutableStateOf<List<NarrationSubtitleLine>>(emptyList()) }
+    var reuseSelectedIds by remember(project.id) { mutableStateOf<Set<String>>(emptySet()) }
+    var addTimelineConfirm by remember(project.id) { mutableStateOf(false) }
+    val availableSubtitleLines = remember(project.subtitles) {
+        SubtitleNarrationReuse.eligible(project.subtitles.map {
+            NarrationSubtitleLine(it.id, it.text, it.startMs, it.endMs)
+        })
+    }
     var text by remember(project.id) { mutableStateOf("") }
     var model by remember { mutableStateOf(GeminiModels.LITE) }
     var selectedVoice by remember { mutableStateOf<GeminiVoice?>(null) }
@@ -63,6 +72,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
     var addedUri by remember { mutableStateOf<String?>(null) }
     var confirmation by remember { mutableStateOf("") }
     var voicePicker by remember { mutableStateOf(false) }
+    var draftVoiceId by remember { mutableStateOf<String?>(null) }
     var voiceSearch by remember { mutableStateOf("") }
     var modelMenu by remember { mutableStateOf(false) }
     var styleMenu by remember { mutableStateOf(false) }
@@ -105,7 +115,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                     ?: throw IllegalStateException("Configure sua chave Gemini.")
                 val available = api.voices(key)
                 voices = available
-                selectedVoice = available.firstOrNull { it.id == selectedVoice?.id } ?: available.firstOrNull()
+                selectedVoice = available.firstOrNull { it.id == selectedVoice?.id }
                 status = if (available.isEmpty()) "Nenhuma voz em português brasileiro foi retornada para esta chave."
                     else "${available.size} vozes retornadas pelo catálogo oficial da sua chave."
             } catch (e: CancellationException) { throw e }
@@ -117,7 +127,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
     // O gerador fica fora da rolagem do editor: somente o botão de abertura aparece na tela Áudio.
     AudioQuickAction("Gerar por IA",Icons.Default.AutoAwesome,onClick={
         expanded = true
-        if (creds.hasKey() && voices.isEmpty()) loadVoices()
+        // Abrir a janela nunca faz chamadas de rede ou escolhe uma voz automaticamente.
     },modifier=modifier)
     if (expanded) Dialog(
         onDismissRequest = {
@@ -150,22 +160,43 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                 HorizontalDivider()
                 Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())
                     .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedButton(onClick = {
+                            reuseSnapshot = availableSubtitleLines.toList()
+                            reuseSelectedIds = reuseSnapshot.map { it.id }.toSet()
+                            reuseDialogOpen = true
+                        }, modifier = Modifier.fillMaxWidth(),
+                            enabled = availableSubtitleLines.isNotEmpty() && !working && !loading) {
+                            Icon(Icons.Default.ClosedCaption, contentDescription = null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Reutilizar legendas")
+                        }
+                        Text(if (availableSubtitleLines.isEmpty())
+                            "Nenhuma legenda com texto está salva neste projeto. Gere ou edite as legendas primeiro."
+                            else "${availableSubtitleLines.size} legendas disponíveis no projeto (offline, online ou manuais). " +
+                                "Toque para revisar e confirmar os trechos; nenhuma nova transcrição será feita.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    OutlinedTextField(value = text, onValueChange = {
+                        text = it.take(SubtitleNarrationReuse.MAX_CHARACTERS)
+                        generated = null; duration = 0L; addedUri = null
+                    }, modifier = Modifier.fillMaxWidth(), minLines = 3, maxLines = 7,
+                        enabled = !working,
+                        label = { Text("Texto da narração") },
+                        supportingText = {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("${text.length}/${SubtitleNarrationReuse.MAX_CHARACTERS} caracteres")
+                                Text("Português (Brasil)")
+                            }
+                        })
                     if (!creds.hasKey()) {
-                        Text("Configure uma chave Gemini para gerar narrações.",
-                            style = MaterialTheme.typography.bodyMedium)
+                        Text("O texto pode ser preparado offline. Para consultar vozes e gerar a narração, " +
+                            "configure uma chave Gemini.", style = MaterialTheme.typography.bodyMedium)
                         Button(onClick = { player.pause(); expanded = false; openSettings() }) {
                             Text("Configurar Google Gemini")
                         }
                     } else {
-                        OutlinedTextField(value = text, onValueChange = { text = it.take(4000) },
-                            modifier = Modifier.fillMaxWidth(), minLines = 3, maxLines = 7,
-                            label = { Text("Texto da narração") },
-                            supportingText = {
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                    Text("${text.length}/4000 caracteres")
-                                    Text("Português (Brasil)")
-                                }
-                            })
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("Modelo de IA", style = MaterialTheme.typography.labelMedium)
                             Box {
@@ -187,7 +218,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("Voz", style = MaterialTheme.typography.labelMedium)
-                            OutlinedButton(onClick = { voiceSearch = ""; voicePicker = true },
+                            OutlinedButton(onClick = { voiceSearch = ""; draftVoiceId = selectedVoice?.id; voicePicker = true },
                                 modifier = Modifier.fillMaxWidth(),
                                 enabled = !working && !loading && voices.isNotEmpty()) {
                                 Icon(Icons.Default.RecordVoiceOver, null, Modifier.size(18.dp))
@@ -199,11 +230,12 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                             }
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("${voices.size} vozes da API", style = MaterialTheme.typography.bodySmall,
+                                Text(if (voices.isEmpty()) "Consulte o catálogo e escolha uma voz" else
+                                    "${voices.size} vozes da API · escolha manualmente", style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 TextButton(onClick = { loadVoices() }, enabled = !working && !loading) {
                                     Icon(Icons.Default.Refresh, null, Modifier.size(17.dp))
-                                    Spacer(Modifier.width(4.dp)); Text("Atualizar")
+                                    Spacer(Modifier.width(4.dp)); Text(if (voices.isEmpty()) "Consultar" else "Atualizar")
                                 }
                             }
                             selectedVoice?.let { voice ->
@@ -341,25 +373,10 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                                         Text("Salvar áudio", fontSize = 12.sp)
                                     }
                                 }
-                                Button(onClick = {
-                                    val available = (project.durationMs -
-                                        timelinePositionMs.coerceIn(0L, project.durationMs)).coerceAtLeast(0L)
-                                    val usable = minOf(duration, available)
-                                    if (usable < 250L) status = "Posicione o cursor antes do fim do projeto."
-                                    else {
-                                        val uri = GeminiAudioFiles.uri(file)
-                                        if (addedUri != uri && project.audioTracks.none { it.uri == uri }) {
-                                            val track = AudioTrack(uri = uri, title = "Narração Gemini",
-                                                startMs = timelinePositionMs.coerceIn(0L, project.durationMs),
-                                                durationMs = usable, volume = 1f)
-                                            update(project.copy(audioTracks = project.audioTracks + track))
-                                            addedUri = uri
-                                            status = if (usable < duration) "Narração adicionada. Final cortado no limite do vídeo."
-                                                else "Narração adicionada à timeline. Edite pela faixa de áudio."
-                                        } else status = "Esta narração já foi adicionada ao projeto."
-                                    }
-                                }, modifier = Modifier.fillMaxWidth(),
-                                    enabled = !working && addedUri != GeminiAudioFiles.uri(file)) {
+                                Button(onClick = { addTimelineConfirm = true },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    enabled = !working && addedUri != GeminiAudioFiles.uri(file) &&
+                                        (project.durationMs - timelinePositionMs.coerceIn(0L, project.durationMs)) >= 250L) {
                                     Text("Adicionar à timeline")
                                 }
                             }
@@ -400,7 +417,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 LazyColumn(Modifier.weight(1f)) {
                     items(filtered, key = { it.id }) { voice ->
-                        TextButton(onClick = { selectedVoice = voice; voicePicker = false },
+                        TextButton(onClick = { draftVoiceId = voice.id },
                             modifier = Modifier.fillMaxWidth(),
                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)) {
                             Column(Modifier.weight(1f)) {
@@ -422,14 +439,140 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 2, overflow = TextOverflow.Ellipsis)
                             }
-                            if (selectedVoice?.id == voice.id) Icon(Icons.Default.Check,
-                                "Voz selecionada", tint = MaterialTheme.colorScheme.primary)
+                            if (draftVoiceId == voice.id) Icon(Icons.Default.Check,
+                                "Voz marcada para confirmação", tint = MaterialTheme.colorScheme.primary)
                         }
                         HorizontalDivider()
                     }
                 }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { voicePicker = false }, modifier = Modifier.weight(1f)) {
+                        Text("Cancelar")
+                    }
+                    Button(onClick = {
+                        selectedVoice = voices.firstOrNull { it.id == draftVoiceId }
+                        voicePicker = false
+                        generated = null; duration = 0L; addedUri = null
+                    }, modifier = Modifier.weight(1f), enabled = draftVoiceId != null &&
+                        voices.any { it.id == draftVoiceId } && !working) {
+                        Text("Confirmar voz")
+                    }
+                }
             }
         }
+    }
+    if (reuseDialogOpen && expanded) {
+        val selectedText = SubtitleNarrationReuse.assembled(reuseSnapshot, reuseSelectedIds)
+        val selectedCount = reuseSnapshot.count { it.id in reuseSelectedIds }
+        val limitExceeded = selectedText.length > SubtitleNarrationReuse.MAX_CHARACTERS
+        val sourceChanged = availableSubtitleLines != reuseSnapshot
+        Dialog(onDismissRequest = { reuseDialogOpen = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Surface(modifier = Modifier.fillMaxWidth(0.94f).fillMaxHeight(0.82f),
+                shape = RoundedCornerShape(22.dp), color = MaterialTheme.colorScheme.surface) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Reutilizar legendas do projeto", style = MaterialTheme.typography.titleMedium)
+                    Text("Revise os trechos. A importação apenas copia o texto para um rascunho de narração: " +
+                        "não altera legendas, não escolhe voz e não utiliza a API.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { reuseSelectedIds = reuseSnapshot.map { it.id }.toSet() },
+                            modifier = Modifier.weight(1f)) { Text("Marcar todas") }
+                        OutlinedButton(onClick = { reuseSelectedIds = emptySet() },
+                            modifier = Modifier.weight(1f)) { Text("Desmarcar") }
+                    }
+                    Text("$selectedCount de ${reuseSnapshot.size} trechos · " +
+                        "${selectedText.length}/${SubtitleNarrationReuse.MAX_CHARACTERS} caracteres",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (limitExceeded) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.onSurface)
+                    if (limitExceeded) Text("Limite excedido. Desmarque trechos para continuar; " +
+                        "nenhuma frase será cortada automaticamente.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall)
+                    if (sourceChanged) Text("As legendas mudaram enquanto esta janela estava aberta. " +
+                        "Feche e reabra para atualizar a seleção.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall)
+                    if (text.isNotBlank()) Text("Atenção: ao confirmar, o rascunho atual será substituído. " +
+                        "As legendas originais permanecerão intactas.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    HorizontalDivider()
+                    LazyColumn(Modifier.weight(1f)) {
+                        items(reuseSnapshot, key = { it.id }) { line ->
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(checked = line.id in reuseSelectedIds,
+                                    onCheckedChange = { checked ->
+                                        reuseSelectedIds = if (checked) reuseSelectedIds + line.id
+                                            else reuseSelectedIds - line.id
+                                    })
+                                Column(Modifier.weight(1f)) {
+                                    Text("${formatMs(line.startMs)} – ${formatMs(line.endMs)}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(line.text, style = MaterialTheme.typography.bodySmall,
+                                        maxLines = 3, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
+                            HorizontalDivider()
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { reuseDialogOpen = false }, modifier = Modifier.weight(1f)) {
+                            Text("Cancelar")
+                        }
+                        Button(onClick = {
+                            // Fonte e seleção só são lidas novamente após confirmação expressa.
+                            if (availableSubtitleLines != reuseSnapshot) {
+                                status = "Legendas alteradas. Reabra a importação para revisar."
+                            } else if (SubtitleNarrationReuse.canImport(selectedText)) {
+                                player.pause()
+                                text = selectedText
+                                generated = null; duration = 0L; addedUri = null
+                                status = "$selectedCount trechos reutilizados localmente. " +
+                                    "Agora consulte as vozes, escolha uma e confirme a geração quando quiser."
+                            }
+                            reuseDialogOpen = false
+                        }, modifier = Modifier.weight(1f),
+                            enabled = SubtitleNarrationReuse.canImport(selectedText) && !sourceChanged &&
+                                !working && !loading) {
+                            Text("Confirmar uso")
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (addTimelineConfirm) {
+        val available = (project.durationMs -
+            timelinePositionMs.coerceIn(0L, project.durationMs)).coerceAtLeast(0L)
+        val playable = minOf(duration, available)
+        AlertDialog(onDismissRequest = { addTimelineConfirm = false },
+            title = { Text("Adicionar narração à timeline?") },
+            text = { Text("O áudio gerado será adicionado como nova faixa em " +
+                "${formatMs(timelinePositionMs.coerceIn(0L, project.durationMs))}. " +
+                "Duração disponível: ${formatMs(playable)}. " +
+                "O áudio original e as legendas não serão apagados." +
+                (if (playable < duration) " O final da narração será cortado ao fim do vídeo." else "")) },
+            confirmButton = { TextButton(onClick = {
+                addTimelineConfirm = false
+                val file = generated
+                if (file != null && file.exists() && playable >= 250L) {
+                    val uri = GeminiAudioFiles.uri(file)
+                    if (addedUri != uri && project.audioTracks.none { it.uri == uri }) {
+                        val track = AudioTrack(uri = uri, title = "Narração Gemini",
+                            startMs = timelinePositionMs.coerceIn(0L, project.durationMs),
+                            durationMs = playable, volume = 1f)
+                        update(project.copy(audioTracks = project.audioTracks + track))
+                        addedUri = uri
+                        status = "Narração adicionada à timeline após confirmação."
+                    } else status = "Esta narração já foi adicionada ao projeto."
+                } else status = "Áudio indisponível ou cursor no final do projeto."
+            }) { Text("Adicionar") } },
+            dismissButton = { TextButton(onClick = { addTimelineConfirm = false }) {
+                Text("Cancelar")
+            } })
     }
     if (confirmation.isNotBlank()) AlertDialog(onDismissRequest = { confirmation = "" },
         title = { Text("Confirmar solicitação Gemini") },

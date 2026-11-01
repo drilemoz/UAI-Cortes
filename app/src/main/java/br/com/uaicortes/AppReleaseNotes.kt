@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.96"
-    const val VERSION_CODE = 97
+    const val VERSION_NAME = "0.1.97"
+    const val VERSION_CODE = 98
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.97", listOf(
+            ReleaseFeature("subtitle-reuse-for-tts", "Reutilizar legendas na narração",
+                "Importe localmente legendas manuais, offline ou Gemini para o texto da voz; escolha trechos e confirme antes de substituir o rascunho.", "captions"),
+            ReleaseFeature("tts-voice-confirm", "Escolha de voz sob controle",
+                "O catálogo só é consultado quando solicitado e a voz só é aplicada após confirmação, sem seleção automática.", "check"),
+            ReleaseFeature("tts-timeline-confirm", "Confirmar inclusão de áudio",
+                "Antes de adicionar a faixa, veja o início e a duração disponível e confirme a operação.", "film")
+        )),
         ReleaseSummary("0.1.96", listOf(
             ReleaseFeature("tts-style-presets", "Mais estilos para narração com IA",
                 "São 16 estilos de interpretação, incluindo humor, suspense, conversa e drama, usando a mesma API Gemini.", "check"),

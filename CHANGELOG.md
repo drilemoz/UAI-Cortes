@@ -1,3 +1,11 @@
+## v0.1.97 (versionCode 98) · 01/11/2026
+
+- **Áudio → Gerar por IA → Reutilizar legendas**: permite reaproveitar exclusivamente os textos de legendas já salvas no projeto, independentemente da origem offline, Gemini ou manual. Nenhuma nova transcrição, upload ou chamada à API é feita ao importar.
+- **Revisão obrigatória**: lista os trechos com horários, permite marcar/desmarcar, mostra quantidade e caracteres. Texto acima de 4.000 caracteres bloqueia a importação, sem cortes silenciosos. A confirmação informa se substituirá o texto editável atual; legendas originais permanecem intactas.
+- **Voz manual**: abrir narração não busca catálogo automaticamente; “Consultar” faz a consulta após ação explícita. A lista não escolhe automaticamente a primeira voz; escolher voz exige “Confirmar voz”. Gerar áudio conserva a confirmação de possível consumo da API.
+- **Confirmação da timeline**: adicionar o WAV gerado abre diálogo com horário inicial, duração e eventual corte no fim do projeto. A faixa só é incluída depois de confirmar; mídia/legendas originais não são modificadas.
+- **Limites**: nesta fase o texto é agrupado em um rascunho de narração; geração e sincronização por trecho/múltiplos falantes continuam planejadas, não implementadas. `schemaVersion=4`; versão `0.1.97`, `versionCode=98`, cinco APKs no CI. Build e teste Android real pendentes.
+
 ## v0.1.96 (versionCode 97) · 01/11/2026
 
 - Narração Gemini: 16 estilos de interpretação, mantendo os cinco anteriores, com rótulos em português e instruções em `speech_metadata.style`.
