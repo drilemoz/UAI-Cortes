@@ -1,6 +1,8 @@
 package br.com.uaicortes
 
 import androidx.compose.foundation.layout.*
+import android.os.SystemClock
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -32,6 +34,14 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
     var progress by remember { mutableStateOf<Int?>(null) }
     var message by remember { mutableStateOf("") }
     var task by remember { mutableStateOf<Job?>(null) }
+    var startedAt by remember { mutableLongStateOf(0L) }
+    var elapsedSeconds by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(busy) {
+        while(busy) {
+            elapsedSeconds=((SystemClock.elapsedRealtime()-startedAt).coerceAtLeast(0L))/1000L
+            kotlinx.coroutines.delay(1000L)
+        }
+    }
     var results by remember(project.id) { mutableStateOf<List<SubtitleCue>>(emptyList()) }
     var replace by remember(project.id) { mutableStateOf(false) }
     var editIndex by remember { mutableStateOf<Int?>(null) }
@@ -61,7 +71,9 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                 style=MaterialTheme.typography.bodySmall)
             Button(onClick={
                 task=scope.launch {
-                    busy=true;progress=0;message="Preparando decodificação de áudio…"
+                    startedAt=SystemClock.elapsedRealtime()
+                    elapsedSeconds=0L
+                    busy=true;progress=null;message="Preparando transcrição offline…"
                     try {
                         val generated = AutoSubtitleEngine.transcribe(context, project) { pct, step ->
                             withContext(Dispatchers.Main) { progress=pct;message=step }
@@ -83,15 +95,31 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                 Spacer(Modifier.width(8.dp))
                 Text("Transcrever fala (offline)")
             }
-            if (busy) {
-                if (progress != null) LinearProgressIndicator(progress={ (progress ?: 0)/100f },
-                    modifier=Modifier.fillMaxWidth())
-                else LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
-                OutlinedButton(onClick={task?.cancel()},modifier=Modifier.fillMaxWidth()) {
-                    Text("Cancelar operação")
+            if(busy) {
+                Surface(shape=RoundedCornerShape(14.dp),
+                    color=MaterialTheme.colorScheme.surfaceVariant) {
+                    Column(Modifier.fillMaxWidth().padding(14.dp),
+                        verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                        Text("Processamento da transcrição",fontWeight=FontWeight.SemiBold)
+                        Text(message,style=MaterialTheme.typography.bodyMedium)
+                        if(progress==null) LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
+                        else LinearProgressIndicator(progress={ (progress ?: 0)/100f },
+                            modifier=Modifier.fillMaxWidth())
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+                            Text("Tempo decorrido: ${formatMs(elapsedSeconds*1000L)}",
+                                style=MaterialTheme.typography.labelSmall)
+                            Text(progress?.let { "$it% do processamento" } ?: "Etapa sem porcentagem",
+                                style=MaterialTheme.typography.labelSmall)
+                        }
+                        Text("O tempo de reconhecimento pode superar a duração do vídeo. " +
+                            "O progresso acompanha o áudio realmente decodificado.",
+                            style=MaterialTheme.typography.bodySmall)
+                    }
                 }
-            }
-            if(message.isNotBlank()) Text(message, style=MaterialTheme.typography.bodySmall)
+                OutlinedButton(onClick={task?.cancel()},modifier=Modifier.fillMaxWidth()) {
+                    Text("Cancelar transcrição")
+                }
+            } else if(message.isNotBlank()) Text(message,style=MaterialTheme.typography.bodySmall)
             HorizontalDivider()
             Text("Passo 3 · Revisar e aplicar", fontWeight=FontWeight.SemiBold)
             Text("Reconhecimento automático pode errar palavras, pontuação e nomes. " +

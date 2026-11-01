@@ -189,3 +189,7 @@
 - v0.1.77: Gemini aparece em Configurações como `ItemCard` navegável para `gemini_settings`. Back retorna a Áudio se originado em Áudio, senão a Configurações; não inserir o formulário diretamente na listagem.
 - v0.1.77: Áudio mostra somente `Gerar por IA`; modal de narração usa rolagem interna, escolha de vozes pesquisável por nome/ID oficial sem inventar descrição ou código. Não descartar o rascunho de texto ao fechar durante a sessão, não fechar durante geração e preservar confirmação de cota.
 - v0.1.77: preservar Keystore, SAF, API Interactions, WAV, schemaVersion 4, CI de cinco APKs e assinatura. Testar UX real/teclado/back e build Gradle antes de afirmar funcionalidade Android validada.
+
+- v0.1.78: salvar na tela Legendas retorna ao editor do mesmo projeto somente após persistência bem-sucedida. Não usar Home no callback `onSaveEditor`.
+- v0.1.78: `Editar todas` copia somente propriedades visuais selecionadas (Estilo/Animação/Posição) e nunca texto, IDs ou horários; confirmar e permitir desfazer condicionado ao snapshot. Edição individual preservada.
+- v0.1.78: progresso Vosk baseado no áudio decodificado por `MediaCodec`, e não em timer; carga do modelo indeterminada, cronômetro apenas elapsed. Preservar cancelamento/recursos offline e `schemaVersion=4`.

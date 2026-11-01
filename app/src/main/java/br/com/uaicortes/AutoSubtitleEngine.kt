@@ -245,30 +245,41 @@ object AutoSubtitleEngine {
      * Cada clipe recebe horários próprios para respeitar cortes e junções.
      */
     suspend fun transcribe(context: Context, project: VideoProject,
-        onProgress: suspend (Int, String) -> Unit): List<SubtitleCue> = withContext(Dispatchers.IO) {
+        onProgress: suspend (Int?, String) -> Unit): List<SubtitleCue> = withContext(Dispatchers.IO) {
         require(installed(context)) { "Baixe o modelo de português primeiro" }
         require(project.clips.isNotEmpty()) { "Projeto sem vídeo" }
         require(project.durationMs in 1..MAX_DURATION_MS) {
             "A transcrição offline aceita até 10 minutos por operação; divida vídeos maiores."
         }
+        // A carga do modelo Vosk pode levar tempo: não fabricar porcentagem.
+        onProgress(null, "Carregando o modelo offline de português…")
         val all = mutableListOf<Word>()
+        currentCoroutineContext().ensureActive()
         val model = Model(modelFolder(context).absolutePath)
         try {
             var timeline = 0L
             project.clips.forEachIndexed { index, clip ->
                 currentCoroutineContext().ensureActive()
-                onProgress(index * 100 / project.clips.size,
-                    "Reconhecendo áudio do clipe ${index+1} de ${project.clips.size}")
-                all += readClip(context, clip, timeline, model)
+                onProgress(TranscriptionStageProgress.decoding(index,project.clips.size,0f),
+                    "Preparando áudio do clipe ${index+1} de ${project.clips.size}…")
+                all += readClip(context, clip, timeline, model) { fraction ->
+                    onProgress(TranscriptionStageProgress.decoding(index,project.clips.size,fraction),
+                        "Reconhecendo fala do clipe ${index+1} de ${project.clips.size}…")
+                }
                 timeline += clip.durationMs
-                onProgress((index + 1) * 100 / project.clips.size,
+                onProgress(TranscriptionStageProgress.decoding(index,project.clips.size,1f),
                     "Clipe ${index+1} de ${project.clips.size} analisado")
             }
-            segment(all, project.durationMs)
+            onProgress(98,"Organizando palavras e horários das legendas…")
+            val cues = segment(all, project.durationMs)
+            currentCoroutineContext().ensureActive()
+            onProgress(100,"Transcrição concluída")
+            cues
         } finally { model.close() }
     }
 
-    private suspend fun readClip(context: Context, clip: Clip, timeline: Long, model: Model): List<Word> {
+    private suspend fun readClip(context: Context, clip: Clip, timeline: Long, model: Model,
+        onDecoded: suspend (Float) -> Unit): List<Word> {
         val extractor = MediaExtractor()
         var codec: MediaCodec? = null
         try {
@@ -311,6 +322,8 @@ object AutoSubtitleEngine {
                 }
                 var inputEnded = false
                 var outputEnded = false
+                var lastReportedFraction = -1f
+                var lastReportElapsed = 0L
                 while (!outputEnded) {
                     currentCoroutineContext().ensureActive()
                     if (!inputEnded) {
@@ -369,6 +382,17 @@ object AutoSubtitleEngine {
                                 }
                             }
                             decoder.releaseOutputBuffer(index, false)
+                            // Relata avanço pelos timestamps efetivamente decodificados,
+                            // sem confundir tempo de processamento com tempo de vídeo.
+                            if(info.size > 0 && info.presentationTimeUs >= startUs) {
+                                val fraction = ((info.presentationTimeUs-startUs).toDouble() /
+                                    (endUs-startUs).coerceAtLeast(1L)).toFloat().coerceIn(0f,1f)
+                                val now=android.os.SystemClock.elapsedRealtime()
+                                if(fraction-lastReportedFraction>=.035f || now-lastReportElapsed>=900L) {
+                                    lastReportedFraction=fraction;lastReportElapsed=now
+                                    onDecoded(fraction)
+                                }
+                            }
                             if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) outputEnded = true
                         }
                     }

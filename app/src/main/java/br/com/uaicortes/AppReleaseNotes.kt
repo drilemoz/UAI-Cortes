@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.77"
-    const val VERSION_CODE = 78
+    const val VERSION_NAME = "0.1.78"
+    const val VERSION_CODE = 79
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.78", listOf(
+            ReleaseFeature("subtitle-save-editor", "Salvar legendas volta ao editor",
+                "Salvar mantém o projeto ativo e retorna à edição; falha na gravação impede a navegação.", "check"),
+            ReleaseFeature("subtitle-batch", "Editar todas as legendas",
+                "Configure Estilo e Animação em abas, aplique em lote com confirmação e desfaça o último lote.", "captions"),
+            ReleaseFeature("subtitle-progress", "Transcrição offline com progresso real",
+                "Veja etapa, clipe, avanço baseado no áudio decodificado e tempo decorrido da operação.", "speed")
+        )),
         ReleaseSummary("0.1.77", listOf(
             ReleaseFeature("gemini-menu", "Gemini organizado nas Configurações",
                 "Agora a chave e as seis ações ficam em uma página própria, acessada pelo menu das Configurações.", "check"),

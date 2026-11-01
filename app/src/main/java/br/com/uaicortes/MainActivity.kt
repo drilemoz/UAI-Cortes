@@ -494,7 +494,7 @@ fun UaiApp() {
                     }
                 }) }
                 "subtitles" -> project?.let { SubtitleScreen(it, ::back, { write(it) }, selectedSubtitleId,
-                    onSaveHome = { if (write(it)) screen = "home" },
+                    onSaveEditor = { if (write(it)) screen = "editor" },
                     onAutoSubtitles = { screen = "autosubtitle" }) }
                 "export" -> project?.let { ExportScreen(it, store.quality(), ::back) }
             }

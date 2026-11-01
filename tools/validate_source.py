@@ -8,7 +8,7 @@ source=(root/'app/src/main/java/br/com/uaicortes/ExportEngine.kt').read_text()
 ui_files = [
     'MainActivity.kt', 'HomeScreens.kt', 'TextWatermarkScreen.kt', 'EditorScreen.kt',
     'EditorTimelineUi.kt', 'TrimScreen.kt', 'AudioScreen.kt', 'PipScreen.kt',
-    'TransitionScreen.kt', 'SubtitleScreen.kt', 'ExportScreen.kt', 'PreviewMediaUtils.kt'
+    'TransitionScreen.kt', 'SubtitleScreen.kt', 'SubtitleVisualEditor.kt', 'ExportScreen.kt', 'PreviewMediaUtils.kt'
 ]
 ui='\n'.join((root/'app/src/main/java/br/com/uaicortes'/name).read_text() for name in ui_files)
 assert all((root/'app/src/main/java/br/com/uaicortes'/name).exists() for name in ui_files)
@@ -19,10 +19,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*78',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.77"',gradle)
+assert re.search(r'versionCode\s*=\s*79',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.78"',gradle)
 assert 'AppReleaseNotes.VERSION_NAME' in (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
-for label in ["VERSION: '0.1.77'", "VERSION_CODE: '78'", 'TAG="v$VERSION"',
+for label in ["VERSION: '0.1.78'", "VERSION_CODE: '79'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -47,7 +47,7 @@ assert 'ModalBottomSheet(' in ui and 'rememberModalBottomSheetState(skipPartiall
 assert 'dragHandle = null' in ui and 'onDismissRequest = { expanded = null }' in ui
 assert 'scrimColor = Color.Black.copy(alpha = 0.12f)' in ui
 assert 'Modifier.weight(1f).aspectRatio(1f)' in ui
-assert 'options.chunked(2)' not in ui and 'AnimatedVisibility(' not in ui
+assert 'options.chunked(2)' not in (root/'app/src/main/java/br/com/uaicortes/PipScreen.kt').read_text() and 'AnimatedVisibility(' not in ui
 assert 'PipPopup(' not in ui and 'AlertDialog(' in ui
 assert 'onChange(pip.copy(scale = ' in ui and 'onChange(pip.copy(muted = ' in ui
 assert 'MediaBrowser' in ui and 'insertOverlay(' in ui
@@ -177,7 +177,7 @@ assert 'val backgroundColor: Int = SubtitleStyles.DEFAULT_BACKGROUND' in model
 assert '.put("backgroundColor", backgroundColor).put("bold", bold)' in model
 assert 'j.optBoolean("bold", true)' in model
 assert 'Color(cue.backgroundColor)' in ui and 'if (cue.bold) FontWeight.Bold' in ui
-assert 'SubtitleStyles.presets.forEach' in ui and 'SubtitleStyles.applySelectedToAll(' in ui
+assert 'SubtitleStyles.presets.map' in ui and 'SubtitleStyles.applySelectedToAll(' in ui
 assert 'BackgroundColorSpan(active.backgroundColor)' in fx and 'StyleSpan(Typeface.BOLD)' in fx
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleStylesTest.kt').exists()
 print('OK: v0.1.27 / versionCode 28, estilos das legendas com prévia/exportação e compatibilidade legado')
@@ -188,7 +188,7 @@ assert 'val outlineWidth: Int = 0' in model
 assert '.put("fontFamily", fontFamily)' in model and '.put("outlineColor", outlineColor)' in model
 assert 'SubtitleStyles.normalizeFont(j.optString(' in model
 assert 'j.optInt("outlineWidth", 0).coerceIn(0, 4)' in model
-assert 'SubtitleStyles.fonts.forEach' in ui and 'Contorno:' in ui
+assert 'SubtitleStyles.fonts.map' in ui and 'SubtitleValueSlider("Contorno"' in ui
 assert 'subtitleFont(cue.fontFamily)' in ui and 'drawStyle=Stroke(' in ui
 assert 'TypefaceSpan(family)' in fx and 'SubtitleOutlineSpan(' in fx
 assert 'fontFamily = source.fontFamily' in styles and 'outlineWidth = source.outlineWidth' in styles
@@ -204,8 +204,8 @@ assert 'SubtitleStyles.normalizeAlignment(j.optString(' in model
 assert 'j.optInt("shadowOffsetDp", 0).coerceIn(0, 6)' in model
 assert 'SubtitleStyles.normalizeLineSpacing(j.optInt(' in model
 assert all(x in ui for x in [
-    'Sombra: ${draft.shadowOffsetDp}', 'Espaçamento:',
-    'SubtitleStyles.alignments.forEach', 'Shadow(', 'lineHeight=textLineHeight',
+    'SubtitleValueSlider("Sombra"', 'SubtitleValueSlider("Espaçamento"',
+    'SubtitleStyles.alignments.map', 'Shadow(', 'lineHeight=textLineHeight',
     'textAlign=alignment'
 ])
 assert all(x in fx for x in ['class SubtitleShadowSpan(', 'class SubtitleLineSpacingSpan(',
@@ -215,8 +215,8 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.77'" in package_script and 'VERSION_CODE = 78' in package_script
-assert 'versionCode 78' in gradle and 'isUniversalApk = true' in gradle
+assert "VERSION = '0.1.78'" in package_script and 'VERSION_CODE = 79' in package_script
+assert 'versionCode 79' in gradle and 'isUniversalApk = true' in gradle
 print('OK: versão atual 0.1.64 / versionCode 74, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
@@ -310,27 +310,26 @@ assert '.put("animation", animation)' in model
 assert 'SubtitleAnimations.normalize(j.optString(' in model
 assert 'SubtitleStyles.applySelectedToAll(updated,draft,copyOptions)' in ui
 assert 'Dialog(onDismissRequest=onDismiss' in ui
-assert 'if(confirmAll) AlertDialog(' in ui
+assert 'if(confirm) AlertDialog(' in ui
 assert 'TimeDigitsField("Fim",draft.endMs,totalMs' in ui
 assert 'SubtitleAnimations.frame(cue,playbackMs)' in ui
 assert 'SubtitleAnimations.frame(it,' in fx
 assert 'setScale(frame?.scale' in fx and 'setAlphaScale(if (active == null' in fx
-assert 'internal fun SubtitleEditDialog(' in ui and 'onSave(draft,options)' in ui
+assert 'internal fun SubtitleEditDialog(' in ui and 'onSave(draft,null)' in ui
 assert 'fun splitPhrases(' in animations and 'KARAOKE' in animations
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleAnimationsTest.kt').exists()
 print('OK: 0.1.52 / 50, editor modal, rascunho, cópia seletiva e animações no Compose/Media3')
 
-# v0.1.39: Salvar/Home em Legendas, efeitos circulares e áudio compacto com confirmação.
-assert 'onSaveHome = { if (write(it)) screen = "home" }' in ui
-assert 'Text("Salvar",fontSize=11.sp,maxLines=1)' in ui
-assert 'internal fun SubtitleScreen(p:VideoProject' in ui and 'onSaveHome: () -> Unit, onAutoSubtitles: () -> Unit)' in ui
-assert 'val carouselStart=CircularCarousel.startIndex(choices.size)' in ui
-assert 'items(count=Int.MAX_VALUE)' in ui and 'CircularCarousel.optionIndex(index,choices.size)' in ui
+# v0.1.78: salvar Legendas retorna ao Editor; visual organizado e áudio existente preservado.
+assert 'onSaveEditor = { if (write(it)) screen = "editor" }' in ui
+assert 'Salvar legendas e voltar ao editor' in ui
+assert 'internal fun SubtitleScreen(p:VideoProject' in ui and 'onSaveEditor: () -> Unit, onAutoSubtitles: () -> Unit)' in ui
+assert 'SubtitleTwoColumnChoices(' in ui and 'options.chunked(2)' in ui
 assert 'Faixas adicionais (${p.audioTracks.size})' in ui
 assert 'if(volumesExpanded)' in ui and 'if(trackVolumeExpandedId==track.id)' in ui
 assert 'Remover faixa de áudio?' in ui and 'pendingAudioDeleteId=track.id' in ui
 assert 'if(editingAudioId==id) editingAudioId=null' in ui
-print('OK: v0.1.52 / 50, Salvar/Home em legendas, efeitos circulares, mixagem compacta e exclusão confirmada')
+print('OK: v0.1.78, salvar para editor, visual compacto, mixagem e exclusão confirmada')
 
 assert (root/'app/src/test/java/br/com/uaicortes/CircularCarouselTest.kt').exists()
 print('OK: helper de índice circular e teste de limites incluídos')
@@ -791,7 +790,7 @@ news=(app_files/'WhatsNewScreen.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
-assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 78'])
+assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 79'])
 assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
@@ -922,7 +921,7 @@ assert 'android:allowBackup="false"' in (root/'app/src/main/AndroidManifest.xml'
 assert (root/'app/src/test/java/br/com/uaicortes/GeminiTtsCoreTest.kt').exists()
 print('OK: v0.1.76: infraestrutura Gemini, Keystore, UI, WAV, metadados e testes presentes (não substitui build)')
 
-# v0.1.77: menus compactos, diálogos e seleção de vozes reais.
+# v0.1.78: menus compactos, diálogos e seleção de vozes reais.
 settings=(app_files/'GeminiSettingsUi.kt').read_text()
 voice_ui=(app_files/'GeminiNarrationUi.kt').read_text()
 voice_filter=(app_files/'GeminiVoiceSearch.kt').read_text()
@@ -940,4 +939,25 @@ assert 'Gerar por IA' in voice_ui and 'Selecionar voz' not in voice_ui
 assert 'voice.id' in voice_ui and 'voice.name' in voice_ui
 assert 'java.text.Normalizer' in voice_filter and 'folded(it.id)' in voice_filter
 assert (root/'app/src/test/java/br/com/uaicortes/GeminiVoiceSearchTest.kt').exists()
-print('OK: v0.1.77 menus navegáveis, narração modal e pesquisa de vozes por ID/nome')
+print('OK: v0.1.77 menus Gemini mantidos, narração modal e pesquisa de vozes por ID/nome')
+
+# v0.1.78: fluxo de salvar, edição global e avanço Vosk de áudio real.
+visual=(root/'app/src/main/java/br/com/uaicortes/SubtitleVisualEditor.kt').read_text()
+subtitle_ui=(root/'app/src/main/java/br/com/uaicortes/SubtitleScreen.kt').read_text()
+transcription=(root/'app/src/main/java/br/com/uaicortes/AutoSubtitleEngine.kt').read_text()
+transcription_ui=(root/'app/src/main/java/br/com/uaicortes/AutoSubtitleScreen.kt').read_text()
+assert 'onSaveEditor = { if (write(it)) screen = "editor" }' in main
+assert 'onSaveHome = { if (write(it)) screen = "home" }' not in main
+assert 'Editar todas' in subtitle_ui and 'SubtitleBatchEditDialog(' in subtitle_ui
+assert 'SubtitleBatchUndo(updated,all)' in subtitle_ui and 'batchUndo?.restoreIfCurrent(p.subtitles)' in subtitle_ui
+assert 'SubtitleStyles.applySelectedToAll(updated,draft,copyOptions)' in subtitle_ui
+assert 'SubtitleVisualControls(' in visual and 'Ajustes avançados' in visual
+assert 'padding(horizontal=12.dp)' in visual and 'items(count=Int.MAX_VALUE)' not in visual
+assert 'onDecoded(fraction)' in transcription and 'lastReportedFraction' in transcription
+assert 'onProgress(null, "Carregando o modelo' in transcription
+assert 'TranscriptionStageProgress.decoding(' in transcription
+assert 'SystemClock.elapsedRealtime()' in transcription_ui
+assert 'if(progress==null) LinearProgressIndicator' in transcription_ui
+assert (root/'app/src/test/java/br/com/uaicortes/TranscriptionStageProgressTest.kt').exists()
+assert (root/'app/src/test/java/br/com/uaicortes/SubtitleBatchVisualTest.kt').exists()
+print('OK: v0.1.78: navegação Salvar->editor, edição em lote/undo e transcrição com progresso real')
