@@ -57,7 +57,11 @@ internal object GeminiModels {
     }
 }
 
-internal data class GeminiVoice(val id: String, val name: String, val description: String)
+internal data class GeminiVoice(
+    val id: String, val name: String, val description: String,
+    val languageCode: String = "", val accent: String = "", val persona: String = "",
+    val context: String = "", val gender: String = "", val pitch: String = ""
+)
 internal data class GeminiWave(val bytes: ByteArray, val durationMs: Long)
 
 /** Valida RIFF/WAVE PCM mono 16-bit; não cria outro cabeçalho. */
@@ -183,7 +187,11 @@ internal class GeminiTtsClient {
                 val row = list.optJSONObject(index) ?: continue
                 val id = row.optString("id")
                 if (id.isNotBlank() && id.length <= 150) result += GeminiVoice(id,
-                    row.optString("display_name", id).ifBlank { id }, row.optString("description").take(160))
+                    row.optString("display_name", id).ifBlank { id }.take(120),
+                    row.optString("description").take(300), row.optString("language_code").take(30),
+                    row.optString("accent").take(80), row.optString("persona").take(100),
+                    row.optString("context").take(80), row.optString("gender").take(30),
+                    row.optString("pitch").take(30))
             }
             token = response.optString("next_page_token")
             if (token.isBlank()) return result.distinctBy { it.id }

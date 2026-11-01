@@ -19,10 +19,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*95',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.94"',gradle)
+assert re.search(r'versionCode\s*=\s*96',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.95"',gradle)
 assert 'AppReleaseNotes.VERSION_NAME' in (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
-for label in ["VERSION: '0.1.94'", "VERSION_CODE: '95'", 'TAG="v$VERSION"',
+for label in ["VERSION: '0.1.95'", "VERSION_CODE: '96'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -215,8 +215,8 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.94'" in package_script and 'VERSION_CODE = 95' in package_script
-assert 'versionCode = 95' in gradle and 'isUniversalApk = true' in gradle
+assert "VERSION = '0.1.95'" in package_script and 'VERSION_CODE = 96' in package_script
+assert 'versionCode = 96' in gradle and 'isUniversalApk = true' in gradle
 print('OK: versão atual 0.1.64 / versionCode 74, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
@@ -791,7 +791,7 @@ news=(app_files/'WhatsNewScreen.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
-assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 95'])
+assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 96'])
 assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
@@ -938,7 +938,7 @@ assert 'Dialog(' in voice_ui and 'LazyColumn(' in voice_ui
 assert 'GeminiVoiceSearch.filter(voices, voiceSearch)' in voice_ui
 assert 'Gerar por IA' in voice_ui and 'Selecionar voz' not in voice_ui
 assert 'voice.id' in voice_ui and 'voice.name' in voice_ui
-assert 'java.text.Normalizer' in voice_filter and 'folded(it.id)' in voice_filter
+assert 'GeminiVoicePresentation.fold' in voice_filter and 'GeminiVoicePresentation.searchableText(it)' in voice_filter
 assert (root/'app/src/test/java/br/com/uaicortes/GeminiVoiceSearchTest.kt').exists()
 print('OK: v0.1.77 menus Gemini mantidos, narração modal e pesquisa de vozes por ID/nome')
 
@@ -1183,3 +1183,22 @@ assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePreviewPolicyTest.kt').
 assert (root/'docs/VALIDATION_0.1.94.md').exists()
 assert 'ReleaseSummary("0.1.94", listOf(' in notes
 print('OK: v0.1.94 player contínuo, legendas sincronizadas e botão Gerar por IA na linha')
+
+# v0.1.95: nomes originais/IDs preservados, metadados exibidos e cache sem nova síntese.
+voice_core=(app_files/'GeminiTtsCore.kt').read_text()
+labels=(app_files/'GeminiVoicePresentation.kt').read_text()
+voice_search=(app_files/'GeminiVoiceSearch.kt').read_text()
+preview=(app_files/'GeminiVoicePreviewCache.kt').read_text()
+identity=(app_files/'GeminiPreviewIdentity.kt').read_text()
+assert 'row.optString("language_code")' in voice_core and 'row.optString("gender")' in voice_core
+assert 'GeminiVoicePresentation.label(voice)' in narration
+assert 'GeminiVoicePresentation.searchableText(it)' in voice_search
+assert 'previewCache.find(sampleId)' in narration and 'previewCache.save(sampleId, wave.bytes)' in narration
+assert 'GeminiPreviewIdentity.TEXT' in narration and 'GeminiPreviewIdentity.id(' in narration
+assert 'lastPreview?.delete()' not in narration and 'preview?.delete()' not in narration
+assert '30L * 24 * 60 * 60 * 1000' in preview and '12L * 1024 * 1024' in preview
+assert 'MessageDigest.getInstance("SHA-256")' in identity
+assert (root/'app/src/test/java/br/com/uaicortes/GeminiVoicePresentationTest.kt').exists()
+assert (root/'docs/VALIDATION_0.1.95.md').exists()
+assert 'ReleaseSummary("0.1.95", listOf(' in notes
+print('OK: v0.1.95 catálogo de vozes, nomes localizados sem alteração do ID e cache privado de amostras')

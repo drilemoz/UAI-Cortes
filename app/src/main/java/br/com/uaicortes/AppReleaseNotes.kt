@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.94"
-    const val VERSION_CODE = 95
+    const val VERSION_NAME = "0.1.95"
+    const val VERSION_CODE = 96
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.95", listOf(
+            ReleaseFeature("voice-local-labels", "Vozes com nomes mais claros",
+                "O seletor usa rótulos traduzidos para expressões reconhecidas e mantém o nome original e o ID da API.", "check"),
+            ReleaseFeature("voice-catalog-details", "Características das vozes",
+                "Idioma, apresentação vocal, altura, sotaque, perfil e contexto são exibidos quando enviados pelo catálogo Gemini.", "check"),
+            ReleaseFeature("voice-preview-cache", "Reutilização de amostras no aparelho",
+                "A primeira amostra pode consumir cota; repetições da mesma voz, modelo e estilo usam cache local sem nova geração.", "film")
+        )),
         ReleaseSummary("0.1.94", listOf(
             ReleaseFeature("subtitle-full-playback", "Play contínuo na tela Legendas",
                 "A prévia continua da legenda escolhida até o fim do projeto, passando pelos demais clipes sem pausar em cada legenda.", "film"),
