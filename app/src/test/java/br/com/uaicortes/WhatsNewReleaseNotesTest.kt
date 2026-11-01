@@ -31,10 +31,24 @@ class WhatsNewReleaseNotesTest {
     @Test fun reorderingOrChangingACaptionChangesTheFingerprint() {
         val features = AppReleaseNotes.current.features
         assertEquals(AppReleaseNotes.currentFingerprint, AppReleaseNotes.fingerprintFor(features.toList()))
-        assertNotEquals(AppReleaseNotes.currentFingerprint, AppReleaseNotes.fingerprintFor(features.reversed()))
+        // A versão atual pode registrar uma única novidade; nesse caso, reversed() não muda a ordem.
+        // Testar reordenação com um par independente das notas publicadas no app.
+        val second = ReleaseFeature("teste-ordem-ci71", "Segunda novidade", "Descrição para teste", "check")
+        val pair = listOf(features.first(), second)
+        assertNotEquals(AppReleaseNotes.fingerprintFor(pair), AppReleaseNotes.fingerprintFor(pair.reversed()))
         assertNotEquals(AppReleaseNotes.currentFingerprint,
-            AppReleaseNotes.fingerprintFor(features.drop(1) + features.first().copy(title = "Novo título")))
+            AppReleaseNotes.fingerprintFor(features.mapIndexed { index, feature ->
+                if (index == 0) feature.copy(title = "Novo título") else feature
+            }))
         assertFalse(WhatsNewPolicy.shouldOpen(emptySet(), ""))
+    }
+
+    @Test fun aSingleFeatureHasNoOrderChangeButItsContentStillChangesFingerprint() {
+        val original = ReleaseFeature("unico", "Título", "Descrição", "check")
+        val singleton = listOf(original)
+        assertEquals(AppReleaseNotes.fingerprintFor(singleton), AppReleaseNotes.fingerprintFor(singleton.reversed()))
+        assertNotEquals(AppReleaseNotes.fingerprintFor(singleton),
+            AppReleaseNotes.fingerprintFor(listOf(original.copy(description = "Outra descrição"))))
     }
 
     @Test fun whatsNewReturnPathIsSafeForAutomaticAndManualEntry() {

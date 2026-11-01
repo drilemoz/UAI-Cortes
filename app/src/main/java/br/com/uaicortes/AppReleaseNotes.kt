@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.84"
-    const val VERSION_CODE = 85
+    const val VERSION_NAME = "0.1.85"
+    const val VERSION_CODE = 86
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.85", listOf(
+            ReleaseFeature("ci71-whatsnew-singleton-test", "Correção do teste de novidades",
+                "Ajustado o teste de ordem das novidades para versões com apenas uma mudança, sem modificar a regra de exibição.", "check")
+        )),
         ReleaseSummary("0.1.84", listOf(
             ReleaseFeature("ci70-kotlin-visibility", "Exportação compatível com o compilador Kotlin",
                 "Corrigida a visibilidade da função de início de exportação que impedia a compilação Debug e Release no workflow 70.", "check")
