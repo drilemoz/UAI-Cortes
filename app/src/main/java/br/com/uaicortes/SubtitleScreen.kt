@@ -632,8 +632,9 @@ internal fun SubtitleEditDialog(cue: SubtitleCue,totalMs: Long,number: Int,
                     }
                     IconButton(onClick=onDismiss) { Icon(Icons.Default.Close,"Fechar") }
                 }
+                SubtitleVisualPreview(draft)
                 Column(Modifier.weight(1f,fill=false).verticalScroll(rememberScrollState()),
-                    verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(value=draft.text,
                         onValueChange={
                             val updatedText=it.take(500)

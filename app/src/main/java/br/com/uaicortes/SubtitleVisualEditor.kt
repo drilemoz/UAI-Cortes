@@ -7,6 +7,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
@@ -25,49 +28,106 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.delay
 
-/** Alterações visuais em duas abas; nada nesta UI altera o texto ou os tempos. */
+/** Prévia sempre visível no topo do diálogo, independente da rolagem das opções. */
 @Composable
-internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)->Unit) {
-    var tab by remember { mutableStateOf(0) }
-    var advanced by remember { mutableStateOf(false) }
-    var sampleMs by remember { mutableLongStateOf(0L) }
-    LaunchedEffect(draft.animation,draft.animationSpeed,draft.text) {
+internal fun SubtitleVisualPreview(draft: SubtitleCue) {
+    var sampleMs by remember(draft.id) { mutableLongStateOf(0L) }
+    LaunchedEffect(draft.id,draft.animation,draft.animationSpeed,draft.text) {
         sampleMs=0L
-        while(true) { delay(90L); sampleMs=(sampleMs+90L)%3000L }
+        while (true) { delay(90L);sampleMs=(sampleMs+90L)%3000L }
     }
     val sample=SubtitleAnimations.frame(draft.copy(startMs=0L,endMs=3000L),sampleMs)
-    Column(Modifier.fillMaxWidth().padding(horizontal=2.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
-        Box(Modifier.fillMaxWidth().heightIn(min=76.dp)
-            .background(Color(0xFF13151A),RoundedCornerShape(10.dp)).padding(12.dp),
-            contentAlignment=Alignment.Center) {
-            Box(Modifier.graphicsLayer {
-                alpha=sample.alpha
-                scaleX=sample.scale;scaleY=sample.scale
-                translationY=sample.slideY*110f
-            }) { SubtitleStyledSample(draft,sample) }
+    // Miniatura adaptativa: não extrapola a área fixa com frases grandes.
+    // O tamanho verdadeiro fica salvo no draft e é visto sobre o vídeo principal.
+    val thumbnail=draft.copy(sizeSp=(12+(draft.sizeSp-12)/3).coerceIn(12,24))
+    Box(Modifier.fillMaxWidth().height(90.dp)
+        .background(Color(0xFF13151A),RoundedCornerShape(10.dp))
+        .padding(horizontal=10.dp,vertical=4.dp),contentAlignment=Alignment.Center) {
+        Box(Modifier.graphicsLayer {
+            alpha=sample.alpha
+            scaleX=sample.scale;scaleY=sample.scale
+            translationY=sample.slideY*92f
+        }) { SubtitleStyledSample(thumbnail,sample) }
+    }
+}
+
+/** Negrito/itálico/tamanho são controles básicos de toque único, não sliders longos. */
+@Composable
+internal fun SubtitleTypographyBar(draft: SubtitleCue, onChange:(SubtitleCue)->Unit) {
+    Row(Modifier.fillMaxWidth()
+        .background(MaterialTheme.colorScheme.surfaceVariant,RoundedCornerShape(9.dp))
+        .padding(horizontal=7.dp,vertical=3.dp),
+        verticalAlignment=Alignment.CenterVertically,
+        horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+        FilterChip(selected=draft.bold,onClick={onChange(draft.copy(bold=!draft.bold))},
+            label={Text("B",fontWeight=FontWeight.Bold,fontSize=14.sp)},
+            modifier=Modifier.semantics { contentDescription="Alternar negrito" },
+            shape=RoundedCornerShape(8.dp))
+        FilterChip(selected=draft.italic,onClick={onChange(draft.copy(italic=!draft.italic))},
+            label={Text("I",fontStyle=FontStyle.Italic,fontSize=14.sp)},
+            modifier=Modifier.semantics { contentDescription="Alternar itálico" },
+            shape=RoundedCornerShape(8.dp))
+        Spacer(Modifier.weight(1f))
+        IconButton(onClick={onChange(draft.copy(sizeSp=(draft.sizeSp-2).coerceAtLeast(12)))},
+            enabled=draft.sizeSp>12,modifier=Modifier.size(34.dp)) {
+            Text("−",fontSize=21.sp)
         }
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+        Text("${draft.sizeSp} sp",style=MaterialTheme.typography.labelMedium,maxLines=1)
+        IconButton(onClick={onChange(draft.copy(sizeSp=(draft.sizeSp+2).coerceAtMost(48)))},
+            enabled=draft.sizeSp<48,modifier=Modifier.size(34.dp)) {
+            Text("+",fontSize=21.sp)
+        }
+    }
+}
+
+/** Alterações visuais em duas abas; prévia fixa pertence ao diálogo pai. */
+@Composable
+internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)->Unit) {
+    var tab by remember { mutableIntStateOf(0) }
+    var advanced by remember { mutableStateOf(false) }
+    var wordColorsOpen by remember { mutableStateOf(false) }
+    var positionOpen by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().padding(horizontal=2.dp),
+        verticalArrangement=Arrangement.spacedBy(7.dp)) {
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(7.dp)) {
             listOf("Estilo","Animação").forEachIndexed { i,name ->
-                if (tab==i) Button(onClick={tab=i},shape=RoundedCornerShape(8.dp),modifier=Modifier.weight(1f),
-                    contentPadding=PaddingValues(vertical=9.dp)) {Text(name)}
-                else OutlinedButton(onClick={tab=i},shape=RoundedCornerShape(8.dp),modifier=Modifier.weight(1f),
-                    contentPadding=PaddingValues(vertical=9.dp)) {Text(name)}
+                if (tab==i) Button(onClick={tab=i},shape=RoundedCornerShape(8.dp),
+                    modifier=Modifier.weight(1f),contentPadding=PaddingValues(vertical=7.dp)) {
+                    Text(name,fontSize=13.sp)
+                } else OutlinedButton(onClick={tab=i},shape=RoundedCornerShape(8.dp),
+                    modifier=Modifier.weight(1f),contentPadding=PaddingValues(vertical=7.dp)) {
+                    Text(name,fontSize=13.sp)
+                }
             }
         }
         if(tab==0) {
-            Text("Modelos de estilo e animação",fontWeight=FontWeight.SemiBold)
             SubtitleStyleGallery(draft,onChange)
-            SubtitleWordColorEditor(draft,onChange)
-            SubtitleValueSlider("Tamanho", "${draft.sizeSp} sp",draft.sizeSp.toFloat(),12f..48f,
-                onChange={onChange(draft.copy(sizeSp=it.toInt().coerceIn(12,48)))})
-            Row(verticalAlignment=Alignment.CenterVertically) {
-                Text("Altura da legenda",fontWeight=FontWeight.Medium,modifier=Modifier.weight(1f))
-                TextButton(onClick={onChange(draft.copy(y=.92f))}) { Text("Rodapé · 8%") }
+            SubtitleTypographyBar(draft,onChange)
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)) {
+                listOf(
+                    Triple("Palavras",wordColorsOpen,{wordColorsOpen=!wordColorsOpen}),
+                    Triple("Posição",positionOpen,{positionOpen=!positionOpen}),
+                    Triple("Avançado",advanced,{advanced=!advanced})
+                ).forEach { (label,open,toggle) ->
+                    OutlinedButton(onClick=toggle,shape=RoundedCornerShape(8.dp),
+                        modifier=Modifier.weight(1f),
+                        contentPadding=PaddingValues(horizontal=2.dp,vertical=7.dp)) {
+                        Text(label+(if(open) " ▲" else " ▼"),fontSize=11.sp,maxLines=1)
+                    }
+                }
             }
-            SubtitleValueSlider("Posição vertical", "${(draft.y*100).toInt()}%",draft.y,.1f.. .95f,
-                onChange={onChange(draft.copy(y=it))})
-            OutlinedButton(onClick={advanced=!advanced},shape=RoundedCornerShape(9.dp),modifier=Modifier.fillMaxWidth()) {
-                Text(if(advanced) "Ocultar ajustes avançados ▲" else "Ajustes avançados ▼")
+            if(wordColorsOpen) {
+                SubtitleWordColorEditor(draft,onChange)
+            }
+            if(positionOpen) {
+                Row(verticalAlignment=Alignment.CenterVertically) {
+                    Text("Altura da legenda",fontWeight=FontWeight.Medium,modifier=Modifier.weight(1f))
+                    TextButton(onClick={onChange(draft.copy(y=.92f))}) { Text("Rodapé · 8%") }
+                }
+                SubtitleValueSlider("Vertical", "${(draft.y*100).toInt()}%",draft.y,.1f.. .95f,
+                    onChange={onChange(draft.copy(y=it))})
+                SubtitleValueSlider("Horizontal", "${(draft.x*100).toInt()}%",draft.x,.1f.. .9f,
+                    onChange={onChange(draft.copy(x=it))})
             }
             if(advanced) {
                 Text("Fonte",fontWeight=FontWeight.Medium)
@@ -75,6 +135,12 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
                     selected={ name -> SubtitleStyles.fonts.any { it.second==name && it.first==draft.fontFamily } },
                     choose={name-> SubtitleStyles.fonts.firstOrNull {it.second==name}?.let {
                         onChange(draft.copy(fontFamily=it.first))
+                    }})
+                Text("Alinhamento",fontWeight=FontWeight.Medium)
+                SubtitleTwoColumnChoices(SubtitleStyles.alignments.map{it.second},
+                    selected={label->SubtitleStyles.alignments.any{it.second==label && it.first==draft.textAlignment}},
+                    choose={label->SubtitleStyles.alignments.firstOrNull{it.second==label}?.let{
+                        onChange(draft.copy(textAlignment=it.first))
                     }})
                 SubtitleValueSlider("Contorno", "${draft.outlineWidth} dp",draft.outlineWidth.toFloat(),0f..4f,
                     3,onChange={onChange(draft.copy(outlineWidth=it.toInt()))})
@@ -88,28 +154,9 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
                     choose={onChange(draft.copy(shadowColor=if(it=="Branca") -1 else 0xFF000000.toInt()))})
                 SubtitleValueSlider("Espaçamento", "${draft.lineSpacingPercent}%",draft.lineSpacingPercent.toFloat(),100f..160f,
                     5,onChange={onChange(draft.copy(lineSpacingPercent=it.toInt()))})
-                Text("Alinhamento",fontWeight=FontWeight.Medium)
-                SubtitleTwoColumnChoices(SubtitleStyles.alignments.map{it.second},
-                    selected={label->SubtitleStyles.alignments.any{it.second==label && it.first==draft.textAlignment}},
-                    choose={label->SubtitleStyles.alignments.firstOrNull{it.second==label}?.let{
-                        onChange(draft.copy(textAlignment=it.first))
-                    }})
-                Row(verticalAlignment=Alignment.CenterVertically) {
-                    Text("Itálico",modifier=Modifier.weight(1f))
-                    Switch(checked=draft.italic,onCheckedChange={onChange(draft.copy(italic=it))})
-                }
-                Row(verticalAlignment=Alignment.CenterVertically) {
-                    Text("Negrito",modifier=Modifier.weight(1f))
-                    Switch(checked=draft.bold,onCheckedChange={onChange(draft.copy(bold=it))})
-                }
-                SubtitleValueSlider("Posição horizontal", "${(draft.x*100).toInt()}%",draft.x,.1f.. .9f,
-                    onChange={onChange(draft.copy(x=it))})
-                Text("Posição vertical fica acima dos ajustes avançados para facilitar a edição individual e em lote.",
-                    style=MaterialTheme.typography.bodySmall,
-                    color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
-            Text("Efeitos de entrada e revelação · deslize para o lado",fontWeight=FontWeight.SemiBold)
+            Text("Animações · deslize para o lado",fontWeight=FontWeight.SemiBold)
             SubtitleTwoColumnChoices(SubtitleAnimations.choices.map{it.second},
                 selected={label->SubtitleAnimations.choices.any{it.second==label && draft.animation==it.first}},
                 choose={label->SubtitleAnimations.choices.firstOrNull{it.second==label}?.let{
@@ -119,7 +166,7 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
                 SubtitleValueSlider("Velocidade", "${"%.1f".format(java.util.Locale.US,draft.animationSpeed)}×",
                     draft.animationSpeed,.5f..2f,5,onChange={onChange(draft.copy(animationSpeed=it))})
                 Text(if(draft.animation==SubtitleAnimations.KARAOKE && draft.wordTimings.isNotEmpty())
-                    "Destaque sincronizado pelos horários reconhecidos pelo Vosk."
+                    "Destaque sincronizado pelos horários reconhecidos."
                     else "Sem horários individuais, a animação distribui as palavras pelo intervalo.",
                     color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
             }
@@ -175,22 +222,27 @@ internal fun SubtitleBatchEditDialog(source:SubtitleCue,count:Int,onDismiss:()->
                         style=MaterialTheme.typography.titleMedium,modifier=Modifier.weight(1f))
                     IconButton(onClick=onDismiss) {Icon(Icons.Default.Close,"Fechar")}
                 }
+                SubtitleVisualPreview(draft)
                 Column(Modifier.weight(1f,fill=false).verticalScroll(rememberScrollState()),
-                    verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     SubtitleVisualControls(draft,onChange={draft=it})
                     HorizontalDivider()
-                    Text("O que aplicar às $count legendas?",fontWeight=FontWeight.SemiBold)
-                    Row(verticalAlignment=Alignment.CenterVertically) {
-                        Checkbox(applyStyle,onCheckedChange={applyStyle=it})
-                        Text("Estilo (fonte, cores, tamanho e alinhamento)",fontSize=12.sp)
-                    }
-                    Row(verticalAlignment=Alignment.CenterVertically) {
-                        Checkbox(applyAnimation,onCheckedChange={applyAnimation=it})
-                        Text("Animação e velocidade",fontSize=12.sp)
-                    }
-                    Row(verticalAlignment=Alignment.CenterVertically) {
-                        Checkbox(applyPosition,onCheckedChange={applyPosition=it})
-                        Text("Posição na imagem",fontSize=12.sp)
+                    Text("Aplicar em $count legendas · escolha os grupos",fontWeight=FontWeight.SemiBold,
+                        style=MaterialTheme.typography.bodyMedium)
+                    LazyRow(horizontalArrangement=Arrangement.spacedBy(7.dp),
+                        contentPadding=PaddingValues(end=12.dp)) {
+                        item {
+                            FilterChip(selected=applyStyle,onClick={applyStyle=!applyStyle},
+                                label={Text("Estilo",fontSize=12.sp)},shape=RoundedCornerShape(8.dp))
+                        }
+                        item {
+                            FilterChip(selected=applyAnimation,onClick={applyAnimation=!applyAnimation},
+                                label={Text("Animação",fontSize=12.sp)},shape=RoundedCornerShape(8.dp))
+                        }
+                        item {
+                            FilterChip(selected=applyPosition,onClick={applyPosition=!applyPosition},
+                                label={Text("Posição",fontSize=12.sp)},shape=RoundedCornerShape(8.dp))
+                        }
                     }
                     Text("Texto, início, fim e identificação de cada legenda serão preservados.",
                         style=MaterialTheme.typography.bodySmall,

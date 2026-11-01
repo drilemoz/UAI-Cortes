@@ -53,7 +53,7 @@ internal fun SubtitleStyleGallery(current: SubtitleCue, onChange: (SubtitleCue) 
                 }
                 val frame=SubtitleAnimations.frame(example,sampleMs)
                 Surface(onClick={onChange(SubtitleStyles.applyToCue(current,preset))},
-                    modifier=Modifier.width(158.dp),
+                    modifier=Modifier.width(142.dp),
                     shape=RoundedCornerShape(12.dp),
                     color=if(selected)MaterialTheme.colorScheme.primaryContainer
                         else MaterialTheme.colorScheme.surfaceVariant,
@@ -61,8 +61,8 @@ internal fun SubtitleStyleGallery(current: SubtitleCue, onChange: (SubtitleCue) 
                         if(selected)MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.outlineVariant)) {
                     Column(Modifier.padding(6.dp),horizontalAlignment=Alignment.CenterHorizontally,
-                        verticalArrangement=Arrangement.spacedBy(4.dp)) {
-                        Box(Modifier.fillMaxWidth().height(73.dp)
+                        verticalArrangement=Arrangement.spacedBy(3.dp)) {
+                        Box(Modifier.fillMaxWidth().height(64.dp)
                             .background(Color(0xFF222428),RoundedCornerShape(7.dp)),
                             contentAlignment=Alignment.Center) {
                             Box(Modifier.graphicsLayer {
@@ -134,7 +134,7 @@ internal fun SubtitleWordColorEditor(draft: SubtitleCue, onChange:(SubtitleCue)-
         "Verde" to 0xFF65FF60.toInt()
     )
     Text("Cores por palavra",fontWeight=FontWeight.SemiBold)
-    Text("Toque na palavra e escolha uma cor. A cor fica fixa; o karaokê destaca a palavra falada.",
+    Text("Selecione a palavra e depois a cor.",
         style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     LazyRow(horizontalArrangement=Arrangement.spacedBy(6.dp),
         contentPadding=PaddingValues(end=12.dp)) {
