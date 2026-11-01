@@ -16,11 +16,21 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.90"
-    const val VERSION_CODE = 91
+    const val VERSION_NAME = "0.1.91"
+    const val VERSION_CODE = 92
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.91", listOf(
+            ReleaseFeature("subtitle-horizontal-strips", "Estilos e opções em faixas horizontais",
+                "Seleção finita de modelos, fontes, animações e cores em cartões compactos.", "film"),
+            ReleaseFeature("subtitle-animated-presets", "Modelos com animação incluída",
+                "Doze estilos com efeito próprio e três novos movimentos leves.", "check"),
+            ReleaseFeature("subtitle-audio-reuse", "Reutilizar extração de áudio",
+                "Cache WAV privado para clipes e cortes equivalentes na transcrição Gemini.", "check"),
+            ReleaseFeature("subtitle-generated-size", "Tamanho ajustável antes de aplicar",
+                "Novas legendas em 20 sp com controle de tamanho e ajuda compacta.", "check")
+        )),
         ReleaseSummary("0.1.90", listOf(
             ReleaseFeature("subtitle-exports", "Exportar legendas SRT e TXT",
                 "Exportação local pelo seletor Android com tempos preservados em SRT.", "film"),

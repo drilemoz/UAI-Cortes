@@ -51,6 +51,7 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
     }
     var results by remember(project.id) { mutableStateOf<List<SubtitleCue>>(emptyList()) }
     var replace by remember(project.id) { mutableStateOf(false) }
+    var generatedSize by remember(project.id) { mutableIntStateOf(20) }
     var editIndex by remember { mutableStateOf<Int?>(null) }
     var editText by remember { mutableStateOf("") }
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal=16.dp)) {
@@ -106,7 +107,9 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
             HorizontalDivider()
             Text("Transcrição por IA · Gemini", fontWeight=FontWeight.SemiBold)
             Text("Usa a chave da API em Configurações. Requer internet e pode consumir sua " +
-                "cota ou gerar cobrança. O áudio será enviado ao Google somente após confirmação.",
+                "cota ou gerar cobrança. O áudio será enviado ao Google somente após confirmação. " +
+                "Se os clipes e cortes não mudaram, o áudio extraído pode ser reaproveitado " +
+                "do cache privado por até 3 horas.",
                 style=MaterialTheme.typography.bodySmall)
             if(!geminiConfigured) OutlinedButton(onClick=onManageGemini,
                 modifier=Modifier.fillMaxWidth()) {
@@ -167,6 +170,22 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                     }
                 }
             }
+            if(results.isNotEmpty()) {
+                Surface(shape=RoundedCornerShape(12.dp),
+                    color=MaterialTheme.colorScheme.surfaceVariant) {
+                    Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
+                            Text("Tamanho das legendas geradas",fontWeight=FontWeight.Medium)
+                            Text("$generatedSize sp")
+                        }
+                        Slider(value=generatedSize.toFloat(),onValueChange={
+                            generatedSize=it.toInt().coerceIn(12,30)
+                        },valueRange=12f..30f)
+                        Text("Ajuste antes de aplicar. Também é possível alterar todas depois.",
+                            style=MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
             if (project.subtitles.isNotEmpty() && results.isNotEmpty()) {
                 Row(verticalAlignment=Alignment.CenterVertically) {
                     Checkbox(checked=replace,onCheckedChange={replace=it})
@@ -181,7 +200,7 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                 style=MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(12.dp))
         }
-        Button(onClick={onApply(results,replace)},
+        Button(onClick={onApply(results.map {it.copy(sizeSp=generatedSize)},replace)},
             enabled=!busy && results.isNotEmpty(),
             modifier=Modifier.fillMaxWidth().navigationBarsPadding()) {
             Icon(Icons.Default.Check, null)
@@ -194,7 +213,9 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
         text={Text("O Uai Cortes extrairá o áudio dos clipes deste projeto (até 10 minutos) " +
             "e enviará à API Gemini, usando a chave salva neste celular. " +
             "O processamento depende de internet e pode consumir cota ou gerar custos. " +
-            "O vídeo original não será enviado. Confirmar não substitui legendas existentes.")},
+            "O vídeo original não será enviado. O WAV extraído poderá ficar no cache " +
+            "privado por até 3 horas para reutilização. " +
+            "Confirmar não substitui legendas existentes.")},
         confirmButton={TextButton(onClick={
             geminiConfirm=false
             task=scope.launch {

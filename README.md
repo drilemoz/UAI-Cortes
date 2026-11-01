@@ -1,3 +1,12 @@
+## v0.1.91 — Galeria horizontal, presets animados e cache de áudio
+
+- Opções visuais de legendas organizadas em rolagem horizontal finita, inclusive cores, fontes, alinhamentos e animações. Galeria de 12 cartões compactos animados.
+- Escolha de modelo também define uma animação real; adicionados Bounce, Pulsar e Zoom reverso à prévia e exportação baseadas em SubtitleAnimations.frame.
+- Novas transcrições Vosk/Gemini usam tamanho inicial de 20 sp em lugar de 30 sp. Controle 12–30 sp na revisão antes de aplicar; legendas antigas inalteradas.
+- Áudio WAV reutilizável em cache privado para chamadas Gemini equivalentes, com hash de clipes/cortes, verificação de comprimento, retenção máxima de 3 horas e limpeza limitada. Nova chamada de API continua necessária.
+- Ajuda de posicionamento movida para ícone na linha do tempo; menos texto persistente na tela.
+- Build Gradle/Android e testes de exportação e API em dispositivo pendentes.
+
 ## v0.1.90 — Ferramentas e IA nas legendas
 
 - Corrigida regressão do `SubtitlePresentationTest`: presets sem configuração explícita de sombra preservam o valor personalizado.

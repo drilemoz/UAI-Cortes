@@ -52,9 +52,21 @@ class SubtitleAnimationsTest {
             for (ms in 1000L..5000L step 101) {
                 val f=SubtitleAnimations.frame(item,ms)
                 assertTrue(f.alpha in 0f..1f)
-                assertTrue(f.scale in .7f..1f)
+                assertTrue(f.scale in .60f..1.31f)
                 assertTrue(f.slideY in 0f.. .2f)
             }
+        }
+    }
+
+    @Test fun presetsAlwaysHaveRealAnimationsAndPreserveTiming() {
+        val cue=SubtitleCue(text="Exemplo",startMs=150,endMs=900,animation=SubtitleAnimations.NONE)
+        for(preset in SubtitleStyles.presets) {
+            assertTrue(SubtitleAnimations.choices.any{ it.first == preset.animation })
+            val updated=SubtitleStyles.applyToCue(cue,preset)
+            assertEquals(preset.animation,updated.animation)
+            assertEquals(cue.text,updated.text)
+            assertEquals(cue.startMs,updated.startMs)
+            assertEquals(cue.endMs,updated.endMs)
         }
     }
 

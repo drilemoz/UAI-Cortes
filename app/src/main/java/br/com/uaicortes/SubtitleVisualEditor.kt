@@ -2,6 +2,8 @@ package br.com.uaicortes
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,7 +36,7 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
         while(true) { delay(90L); sampleMs=(sampleMs+90L)%3000L }
     }
     val sample=SubtitleAnimations.frame(draft.copy(startMs=0L,endMs=3000L),sampleMs)
-    Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal=2.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
         Box(Modifier.fillMaxWidth().heightIn(min=76.dp)
             .background(Color(0xFF13151A),RoundedCornerShape(10.dp)).padding(12.dp),
             contentAlignment=Alignment.Center) {
@@ -46,14 +48,14 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
         }
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             listOf("Estilo","Animação").forEachIndexed { i,name ->
-                if (tab==i) Button(onClick={tab=i},modifier=Modifier.weight(1f),
+                if (tab==i) Button(onClick={tab=i},shape=RoundedCornerShape(8.dp),modifier=Modifier.weight(1f),
                     contentPadding=PaddingValues(vertical=9.dp)) {Text(name)}
-                else OutlinedButton(onClick={tab=i},modifier=Modifier.weight(1f),
+                else OutlinedButton(onClick={tab=i},shape=RoundedCornerShape(8.dp),modifier=Modifier.weight(1f),
                     contentPadding=PaddingValues(vertical=9.dp)) {Text(name)}
             }
         }
         if(tab==0) {
-            Text("Estilos rápidos",fontWeight=FontWeight.SemiBold)
+            Text("Modelos de estilo e animação",fontWeight=FontWeight.SemiBold)
             SubtitleStyleGallery(draft,onChange)
             SubtitleWordColorEditor(draft,onChange)
             SubtitleValueSlider("Tamanho", "${draft.sizeSp} sp",draft.sizeSp.toFloat(),12f..48f,
@@ -64,7 +66,7 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
             }
             SubtitleValueSlider("Posição vertical", "${(draft.y*100).toInt()}%",draft.y,.1f.. .95f,
                 onChange={onChange(draft.copy(y=it))})
-            OutlinedButton(onClick={advanced=!advanced},modifier=Modifier.fillMaxWidth()) {
+            OutlinedButton(onClick={advanced=!advanced},shape=RoundedCornerShape(9.dp),modifier=Modifier.fillMaxWidth()) {
                 Text(if(advanced) "Ocultar ajustes avançados ▲" else "Ajustes avançados ▼")
             }
             if(advanced) {
@@ -107,7 +109,7 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
-            Text("Efeitos de entrada e revelação",fontWeight=FontWeight.SemiBold)
+            Text("Efeitos de entrada e revelação · deslize para o lado",fontWeight=FontWeight.SemiBold)
             SubtitleTwoColumnChoices(SubtitleAnimations.choices.map{it.second},
                 selected={label->SubtitleAnimations.choices.any{it.second==label && draft.animation==it.first}},
                 choose={label->SubtitleAnimations.choices.firstOrNull{it.second==label}?.let{
@@ -125,19 +127,16 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
     }
 }
 
+/** Faixa de escolhas horizontal, limitada à primeira e última opção. */
 @Composable
 private fun SubtitleTwoColumnChoices(options: List<String>,selected:(String)->Boolean,
     choose:(String)->Unit) {
-    Column(verticalArrangement=Arrangement.spacedBy(3.dp)) {
-        options.chunked(2).forEach { pair ->
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(7.dp)) {
-                pair.forEach { option ->
-                    FilterChip(selected=selected(option),onClick={choose(option)},
-                        label={Text(option,maxLines=2,fontSize=12.sp)},
-                        modifier=Modifier.weight(1f))
-                }
-                if(pair.size==1) Spacer(Modifier.weight(1f))
-            }
+    LazyRow(horizontalArrangement=Arrangement.spacedBy(7.dp),
+        contentPadding=PaddingValues(end=12.dp)) {
+        items(options) { option ->
+            FilterChip(selected=selected(option),onClick={choose(option)},
+                label={Text(option,maxLines=1,fontSize=12.sp)},
+                shape=RoundedCornerShape(9.dp))
         }
     }
 }

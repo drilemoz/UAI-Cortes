@@ -50,7 +50,7 @@ internal object GeminiSubtitleParser {
             val start=buffer.first().startMs
             val end=buffer.last().endMs
             if(end>start && visible.length<=170 && result.size<600) {
-                result+=SubtitleCue(text=visible,startMs=start,endMs=end,sizeSp=30,
+                result+=SubtitleCue(text=visible,startMs=start,endMs=end,sizeSp=20,
                     backgroundColor=SubtitleStyles.NO_BACKGROUND,outlineWidth=3,
                     shadowOffsetDp=2,animation=SubtitleAnimations.KARAOKE,
                     wordTimings=buffer.map { SubtitleWordTiming(it.startMs,it.endMs) })

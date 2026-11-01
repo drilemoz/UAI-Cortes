@@ -239,7 +239,7 @@ object AutoSubtitleEngine {
             val visibleEnd = selected.lastOrNull()?.endMs?.coerceIn((start+1).coerceAtMost(total),total) ?: end
             if (visibleEnd > start && visible.isNotBlank()) result += SubtitleCue(text = visible,
                 startMs = start, endMs = visibleEnd,
-                color = 0xFFFFFFFF.toInt(), sizeSp = 30,
+                color = 0xFFFFFFFF.toInt(), sizeSp = 20,
                 backgroundColor = SubtitleStyles.NO_BACKGROUND,
                 outlineWidth = 3, shadowOffsetDp = 2,
                 animation = SubtitleAnimations.KARAOKE,

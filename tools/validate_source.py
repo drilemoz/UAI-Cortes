@@ -19,10 +19,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*91',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.90"',gradle)
+assert re.search(r'versionCode\s*=\s*92',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.91"',gradle)
 assert 'AppReleaseNotes.VERSION_NAME' in (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
-for label in ["VERSION: '0.1.90'", "VERSION_CODE: '91'", 'TAG="v$VERSION"',
+for label in ["VERSION: '0.1.91'", "VERSION_CODE: '92'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -215,8 +215,8 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.90'" in package_script and 'VERSION_CODE = 91' in package_script
-assert 'versionCode = 91' in gradle and 'isUniversalApk = true' in gradle
+assert "VERSION = '0.1.91'" in package_script and 'VERSION_CODE = 92' in package_script
+assert 'versionCode = 92' in gradle and 'isUniversalApk = true' in gradle
 print('OK: versão atual 0.1.64 / versionCode 74, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
@@ -324,7 +324,7 @@ print('OK: 0.1.52 / 50, editor modal, rascunho, cópia seletiva e animações no
 assert 'onSaveEditor = { if (write(it)) screen = "editor" }' in ui
 assert 'Salvar legendas e voltar ao editor' in ui
 assert 'internal fun SubtitleScreen(p:VideoProject' in ui and 'onSaveEditor: () -> Unit, onAutoSubtitles: () -> Unit)' in ui
-assert 'SubtitleTwoColumnChoices(' in ui and 'options.chunked(2)' in ui
+assert 'SubtitleTwoColumnChoices(' in ui and 'LazyRow(' in ui and 'items(options)' in ui
 assert 'Faixas adicionais (${p.audioTracks.size})' in ui
 assert 'if(volumesExpanded)' in ui and 'if(trackVolumeExpandedId==track.id)' in ui
 assert 'Remover faixa de áudio?' in ui and 'pendingAudioDeleteId=track.id' in ui
@@ -791,7 +791,7 @@ news=(app_files/'WhatsNewScreen.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
-assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 91'])
+assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 92'])
 assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
@@ -1124,3 +1124,17 @@ assert all((root/'app/src/test/java/br/com/uaicortes'/name).exists() for name in
 assert (root/'docs/VALIDATION_0.1.90.md').exists()
 assert 'ReleaseSummary("0.1.90", listOf(' in notes
 print('OK: v0.1.90 presets, exportação SAF, exclusão total, Gemini consentido e versionamento')
+
+# v0.1.91: faixas horizontais finitas, animação junto ao preset, cache e fontes reduzidas.
+assert 'LazyRow(' in subtitle_gallery and 'itemsIndexed(SubtitleStyles.presets' in subtitle_gallery
+assert 'LazyRow(' in (app_files/'SubtitleVisualEditor.kt').read_text()
+assert 'animation=preset.animation ?: cue.animation' in styles
+assert all(x in sub_animation for x in ['BOUNCE', 'PULSE', 'ZOOM_OUT'])
+assert 'sizeSp = 20' in auto and 'sizeSp=20' in parser
+assert 'generatedSize' in auto_ui and 'helpPosition' in screen
+assert 'SubtitleAudioCache.getOrPrepare' in remote
+assert (app_files/'SubtitleAudioCache.kt').exists()
+assert 'SubtitleAudioFingerprintTest.kt' in {p.name for p in (root/'app/src/test/java/br/com/uaicortes').glob('*.kt')}
+assert (root/'docs/VALIDATION_0.1.91.md').exists()
+assert 'ReleaseSummary("0.1.91", listOf(' in notes
+print('OK: v0.1.91 faixas horizontais, modelos animados, cache WAV e tamanhos pré-aplicação')

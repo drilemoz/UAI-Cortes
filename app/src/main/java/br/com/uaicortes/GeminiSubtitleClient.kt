@@ -176,7 +176,7 @@ internal class GeminiSubtitleClient {
     suspend fun transcribe(context: Context, project: VideoProject, key: String,
         onProgress: suspend (Int?,String) -> Unit): List<SubtitleCue> = withContext(Dispatchers.IO) {
         val valid=GeminiKeyParser.validate(key)
-        val wav=AutoSubtitleEngine.prepareWav(context,project,onProgress)
+        val wav=SubtitleAudioCache.getOrPrepare(context,project,onProgress)
         var remote: String? = null
         try {
             onProgress(60,"Preparando envio do áudio ao Gemini…")
@@ -196,7 +196,7 @@ internal class GeminiSubtitleClient {
         } catch(e: UnknownHostException) {throw IOException("Sem conexão com a internet.")}
         catch(e: SocketTimeoutException) {throw IOException("O Gemini demorou a responder.")}
         finally {
-            wav.delete()
+            // O WAV permanece em cache privado por até 3 horas, sujeito à limpeza.
             remote?.let { runCatching { deleteUploaded(it,valid) } }
         }
     }

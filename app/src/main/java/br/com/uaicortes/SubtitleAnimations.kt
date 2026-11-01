@@ -1,6 +1,8 @@
 package br.com.uaicortes
 
 import kotlin.math.roundToInt
+import kotlin.math.sin
+import kotlin.math.PI
 
 /** Efeitos temporais determinísticos usados na prévia e na exportação offline.
  * A duração da legenda delimita cada efeito; não presume alinhamento com áudio.
@@ -13,10 +15,14 @@ object SubtitleAnimations {
     const val POP = "pop"
     const val FADE = "fade"
     const val SLIDE = "slide"
+    const val BOUNCE = "bounce"
+    const val PULSE = "pulse"
+    const val ZOOM_OUT = "zoom_out"
     val choices = listOf(
         NONE to "Sem efeito", TYPEWRITER to "Letra por letra",
         PHRASES to "Frase por frase", KARAOKE to "Palavra destacada",
-        POP to "Pop / zoom", FADE to "Aparecer / sumir", SLIDE to "Deslizar"
+        POP to "Pop / zoom", FADE to "Aparecer / sumir", SLIDE to "Deslizar",
+        BOUNCE to "Bounce", PULSE to "Pulsar", ZOOM_OUT to "Zoom reverso"
     )
     fun normalize(value: String): String = if (choices.any { it.first == value }) value else NONE
     fun speed(value: Float): Float = if (value.isFinite()) value.coerceIn(.5f, 2f) else 1f
@@ -57,6 +63,11 @@ object SubtitleAnimations {
                 Frame(text, alpha = minOf(enter, exit))
             }
             SLIDE -> Frame(text, slideY = .20f * (1f - enter))
+            BOUNCE -> Frame(text, scale = .65f + .35f*enter +
+                .18f * sin(enter * PI).toFloat())
+            PULSE -> Frame(text, scale = 1f + .06f *
+                sin(elapsed.toDouble() * 2.0 * PI / (650.0 / rate)).toFloat())
+            ZOOM_OUT -> Frame(text, scale = 1.3f - .3f * enter)
             else -> Frame(text)
         }
     }

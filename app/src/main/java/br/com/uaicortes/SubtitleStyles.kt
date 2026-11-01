@@ -7,7 +7,8 @@ data class SubtitleStylePreset(
     val name: String, val foreground: Int, val background: Int, val bold: Boolean = true,
     val outlineWidth: Int = 0, val outlineColor: Int = 0xFF000000.toInt(),
     val shadowOffsetDp: Int? = null, val fontFamily: String = "sans", val italic: Boolean = false,
-    val highlightColor: Int = SubtitleWordEffects.DEFAULT_HIGHLIGHT
+    val highlightColor: Int = SubtitleWordEffects.DEFAULT_HIGHLIGHT,
+    val animation: String? = null
 )
 
 object SubtitleStyles {
@@ -41,25 +42,25 @@ object SubtitleStyles {
 
     /** Aparências locais, sem serviço externo nem arquivos de fonte de terceiros. */
     val presets = listOf(
-        SubtitleStylePreset("Clássico", 0xFFFFFFFF.toInt(), DEFAULT_BACKGROUND),
-        SubtitleStylePreset("Destaque", 0xFFFFFF00.toInt(), DARK_BACKGROUND),
-        SubtitleStylePreset("Ciano", 0xFF00FFFF.toInt(), DARK_BACKGROUND),
-        SubtitleStylePreset("Limpo", 0xFFFFFFFF.toInt(), NO_BACKGROUND, false),
+        SubtitleStylePreset("Clássico", 0xFFFFFFFF.toInt(), DEFAULT_BACKGROUND, animation=SubtitleAnimations.FADE),
+        SubtitleStylePreset("Destaque", 0xFFFFFF00.toInt(), DARK_BACKGROUND, animation=SubtitleAnimations.POP),
+        SubtitleStylePreset("Ciano", 0xFF00FFFF.toInt(), DARK_BACKGROUND, animation=SubtitleAnimations.SLIDE),
+        SubtitleStylePreset("Limpo", 0xFFFFFFFF.toInt(), NO_BACKGROUND, false, animation=SubtitleAnimations.FADE),
         SubtitleStylePreset("Branco forte", -1, NO_BACKGROUND,
-            outlineWidth=4,shadowOffsetDp=2),
+            outlineWidth=4,shadowOffsetDp=2,animation=SubtitleAnimations.POP),
         SubtitleStylePreset("Amarelo pop", 0xFFFFFF00.toInt(),NO_BACKGROUND,
-            outlineWidth=4,shadowOffsetDp=3),
+            outlineWidth=4,shadowOffsetDp=3,animation=SubtitleAnimations.BOUNCE),
         SubtitleStylePreset("Karaokê azul", -1, NO_BACKGROUND,
-            outlineWidth=3,highlightColor=0xFF00CCFF.toInt()),
+            outlineWidth=3,highlightColor=0xFF00CCFF.toInt(),animation=SubtitleAnimations.KARAOKE),
         SubtitleStylePreset("Karaokê vermelho", -1,NO_BACKGROUND,
-            outlineWidth=3,highlightColor=0xFFFF2828.toInt()),
+            outlineWidth=3,highlightColor=0xFFFF2828.toInt(),animation=SubtitleAnimations.KARAOKE),
         SubtitleStylePreset("Energia roxa",0xFFFFFFFF.toInt(),0x990F0B25.toInt(),
-            outlineWidth=2,highlightColor=0xFFD549FF.toInt()),
+            outlineWidth=2,highlightColor=0xFFD549FF.toInt(),animation=SubtitleAnimations.PULSE),
         SubtitleStylePreset("Itálico amarelo",-1,NO_BACKGROUND,
-            outlineWidth=3,italic=true,highlightColor=0xFFFFFF00.toInt()),
+            outlineWidth=3,italic=true,highlightColor=0xFFFFFF00.toInt(),animation=SubtitleAnimations.ZOOM_OUT),
         SubtitleStylePreset("Cinemático",-1,NO_BACKGROUND,
-            outlineWidth=2,shadowOffsetDp=4,fontFamily=FONT_SERIF),
-        SubtitleStylePreset("Etiqueta", 0xFF000000.toInt(), LIGHT_BACKGROUND)
+            outlineWidth=2,shadowOffsetDp=4,fontFamily=FONT_SERIF,animation=SubtitleAnimations.FADE),
+        SubtitleStylePreset("Etiqueta", 0xFF000000.toInt(), LIGHT_BACKGROUND,animation=SubtitleAnimations.TYPEWRITER)
     )
 
     fun matches(cue: SubtitleCue, preset: SubtitleStylePreset): Boolean =
@@ -68,13 +69,15 @@ object SubtitleStyles {
         cue.outlineColor == preset.outlineColor &&
         (preset.shadowOffsetDp == null || cue.shadowOffsetDp == preset.shadowOffsetDp) &&
         cue.fontFamily == preset.fontFamily && cue.italic == preset.italic &&
-        cue.highlightColor == preset.highlightColor
+        cue.highlightColor == preset.highlightColor &&
+        (preset.animation == null || cue.animation == preset.animation)
 
     fun applyToCue(cue: SubtitleCue, preset: SubtitleStylePreset): SubtitleCue =
         cue.copy(color=preset.foreground,backgroundColor=preset.background,bold=preset.bold,
             outlineWidth=preset.outlineWidth,outlineColor=preset.outlineColor,
             shadowOffsetDp=preset.shadowOffsetDp ?: cue.shadowOffsetDp,fontFamily=preset.fontFamily,
-            italic=preset.italic,highlightColor=preset.highlightColor)
+            italic=preset.italic,highlightColor=preset.highlightColor,
+            animation=preset.animation ?: cue.animation)
 
     data class CopyOptions(val appearance: Boolean = true, val position: Boolean = false,
         val animation: Boolean = true)

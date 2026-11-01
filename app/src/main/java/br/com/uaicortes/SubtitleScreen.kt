@@ -287,6 +287,7 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
     var batchUndo by remember(p.id) { mutableStateOf<SubtitleBatchUndo?>(null) }
     var deleteAllConfirm by remember(p.id) { mutableStateOf(false) }
     var deletedSnapshot by remember(p.id) { mutableStateOf<List<SubtitleCue>?>(null) }
+    var helpPosition by remember(p.id) { mutableStateOf(false) }
     var exportMenu by remember(p.id) { mutableStateOf(false) }
     var exportFormat by remember(p.id) { mutableStateOf(SubtitleFileExport.Format.SRT) }
     val scope = rememberCoroutineScope()
@@ -381,12 +382,15 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
             contentAlignment=Alignment.Center) {
             Text("Adicione uma legenda para visualizar o quadro",color=Color.White,fontSize=12.sp)
         }
-        Text("Arraste a legenda sobre a prévia para posicionar",fontSize=11.sp,
-            color=MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier=Modifier.padding(top=4.dp,bottom=4.dp))
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,
             verticalAlignment=Alignment.CenterVertically) {
-            Text("Linha do tempo",fontSize=13.sp,fontWeight=FontWeight.SemiBold)
+            Row(verticalAlignment=Alignment.CenterVertically) {
+                Text("Linha do tempo",fontSize=13.sp,fontWeight=FontWeight.SemiBold)
+                IconButton(onClick={helpPosition=true},modifier=Modifier.size(32.dp)) {
+                    Icon(Icons.Default.HelpOutline,"Ajuda para posicionar legendas",
+                        modifier=Modifier.size(18.dp))
+                }
+            }
             Text(if(selected==null)"Sem seleção" else
                 "${formatPipMs(selected.startMs)} – ${formatPipMs(selected.endMs)}",
                 fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -549,6 +553,12 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                 }
             })
     }
+    if(helpPosition) AlertDialog(onDismissRequest={helpPosition=false},
+        title={Text("Posicionar legendas")},
+        text={Text("Toque em uma legenda na linha do tempo e arraste o texto " +
+            "diretamente sobre a prévia para mudar sua posição. " +
+            "Use Editar todas para aplicar a mesma posição às demais.")},
+        confirmButton={TextButton(onClick={helpPosition=false}) {Text("Entendi")}})
     if(exportMenu) AlertDialog(onDismissRequest={exportMenu=false},
         title={Text("Exportar legendas")},
         text={Text("Escolha SRT (com horários) ou TXT (somente o texto). " +
