@@ -4,7 +4,10 @@ package br.com.uaicortes
  * O estilo clássico reproduz o comportamento de projetos salvos antes da v0.1.27.
  */
 data class SubtitleStylePreset(
-    val name: String, val foreground: Int, val background: Int, val bold: Boolean = true
+    val name: String, val foreground: Int, val background: Int, val bold: Boolean = true,
+    val outlineWidth: Int = 0, val outlineColor: Int = 0xFF000000.toInt(),
+    val shadowOffsetDp: Int = 0, val fontFamily: String = "sans", val italic: Boolean = false,
+    val highlightColor: Int = SubtitleWordEffects.DEFAULT_HIGHLIGHT
 )
 
 object SubtitleStyles {
@@ -36,16 +39,41 @@ object SubtitleStyles {
     val LIGHT_BACKGROUND: Int = 0xE6FFFFFF.toInt()
     const val NO_BACKGROUND: Int = 0x00000000
 
+    /** Aparências locais, sem serviço externo nem arquivos de fonte de terceiros. */
     val presets = listOf(
         SubtitleStylePreset("Clássico", 0xFFFFFFFF.toInt(), DEFAULT_BACKGROUND),
         SubtitleStylePreset("Destaque", 0xFFFFFF00.toInt(), DARK_BACKGROUND),
         SubtitleStylePreset("Ciano", 0xFF00FFFF.toInt(), DARK_BACKGROUND),
         SubtitleStylePreset("Limpo", 0xFFFFFFFF.toInt(), NO_BACKGROUND, false),
+        SubtitleStylePreset("Branco forte", -1, NO_BACKGROUND,
+            outlineWidth=4,shadowOffsetDp=2),
+        SubtitleStylePreset("Amarelo pop", 0xFFFFFF00.toInt(),NO_BACKGROUND,
+            outlineWidth=4,shadowOffsetDp=3),
+        SubtitleStylePreset("Karaokê azul", -1, NO_BACKGROUND,
+            outlineWidth=3,highlightColor=0xFF00CCFF.toInt()),
+        SubtitleStylePreset("Karaokê vermelho", -1,NO_BACKGROUND,
+            outlineWidth=3,highlightColor=0xFFFF2828.toInt()),
+        SubtitleStylePreset("Energia roxa",0xFFFFFFFF.toInt(),0x990F0B25.toInt(),
+            outlineWidth=2,highlightColor=0xFFD549FF.toInt()),
+        SubtitleStylePreset("Itálico amarelo",-1,NO_BACKGROUND,
+            outlineWidth=3,italic=true,highlightColor=0xFFFFFF00.toInt()),
+        SubtitleStylePreset("Cinemático",-1,NO_BACKGROUND,
+            outlineWidth=2,shadowOffsetDp=4,fontFamily=FONT_SERIF),
         SubtitleStylePreset("Etiqueta", 0xFF000000.toInt(), LIGHT_BACKGROUND)
     )
 
+    fun matches(cue: SubtitleCue, preset: SubtitleStylePreset): Boolean =
+        cue.color == preset.foreground && cue.backgroundColor == preset.background &&
+        cue.bold == preset.bold && cue.outlineWidth == preset.outlineWidth &&
+        cue.outlineColor == preset.outlineColor && cue.shadowOffsetDp == preset.shadowOffsetDp &&
+        cue.fontFamily == preset.fontFamily && cue.italic == preset.italic &&
+        cue.highlightColor == preset.highlightColor
+
     fun applyToCue(cue: SubtitleCue, preset: SubtitleStylePreset): SubtitleCue =
-        cue.copy(color = preset.foreground, backgroundColor = preset.background, bold = preset.bold)
+        cue.copy(color=preset.foreground,backgroundColor=preset.background,bold=preset.bold,
+            outlineWidth=preset.outlineWidth,outlineColor=preset.outlineColor,
+            shadowOffsetDp=preset.shadowOffsetDp,fontFamily=preset.fontFamily,
+            italic=preset.italic,highlightColor=preset.highlightColor)
 
     data class CopyOptions(val appearance: Boolean = true, val position: Boolean = false,
         val animation: Boolean = true)
@@ -59,7 +87,9 @@ object SubtitleStyles {
             bold=source.bold, fontFamily=source.fontFamily,
             outlineWidth=source.outlineWidth,outlineColor=source.outlineColor,
             shadowOffsetDp=source.shadowOffsetDp,shadowColor=source.shadowColor,
-            lineSpacingPercent=source.lineSpacingPercent,textAlignment=source.textAlignment)
+            lineSpacingPercent=source.lineSpacingPercent,textAlignment=source.textAlignment,
+            italic=source.italic,highlightColor=source.highlightColor,
+            wordColors=cue.wordColors)
         if (options.position) result = result.copy(x=source.x,y=source.y)
         if (options.animation) result = result.copy(animation=source.animation,
             animationSpeed=source.animationSpeed)
@@ -73,6 +103,7 @@ object SubtitleStyles {
             fontFamily = source.fontFamily, outlineWidth = source.outlineWidth,
             outlineColor = source.outlineColor,
             shadowOffsetDp = source.shadowOffsetDp, shadowColor = source.shadowColor,
-            lineSpacingPercent = source.lineSpacingPercent, textAlignment = source.textAlignment)
+            lineSpacingPercent = source.lineSpacingPercent, textAlignment = source.textAlignment,
+            italic=source.italic,highlightColor=source.highlightColor)
     }
 }

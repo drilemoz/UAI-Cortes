@@ -42,13 +42,7 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
                 alpha=sample.alpha
                 scaleX=sample.scale;scaleY=sample.scale
                 translationY=sample.slideY*110f
-            }.background(Color(draft.backgroundColor),RoundedCornerShape(3.dp))
-                .padding(horizontal=7.dp,vertical=3.dp)) {
-                Text(sample.text.ifBlank { "Prévia da legenda" },color=Color(draft.color),
-                    fontSize=draft.sizeSp.sp,fontFamily=subtitleFont(draft.fontFamily),
-                    fontWeight=if(draft.bold) FontWeight.Bold else FontWeight.Normal,
-                    textAlign=TextAlign.Center)
-            }
+            }) { SubtitleStyledSample(draft,sample) }
         }
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             listOf("Estilo","Animação").forEachIndexed { i,name ->
@@ -60,13 +54,8 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
         }
         if(tab==0) {
             Text("Estilos rápidos",fontWeight=FontWeight.SemiBold)
-            SubtitleTwoColumnChoices(SubtitleStyles.presets.map { it.name },
-                selected={ name -> SubtitleStyles.presets.firstOrNull { it.name==name }?.let {
-                    draft.color==it.foreground && draft.backgroundColor==it.background
-                } ?: false },
-                choose={ name -> SubtitleStyles.presets.firstOrNull { it.name==name }?.let {
-                    onChange(SubtitleStyles.applyToCue(draft,it))
-                } })
+            SubtitleStyleGallery(draft,onChange)
+            SubtitleWordColorEditor(draft,onChange)
             SubtitleValueSlider("Tamanho", "${draft.sizeSp} sp",draft.sizeSp.toFloat(),12f..48f,
                 onChange={onChange(draft.copy(sizeSp=it.toInt().coerceIn(12,48)))})
             Row(verticalAlignment=Alignment.CenterVertically) {
@@ -104,6 +93,10 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
                         onChange(draft.copy(textAlignment=it.first))
                     }})
                 Row(verticalAlignment=Alignment.CenterVertically) {
+                    Text("Itálico",modifier=Modifier.weight(1f))
+                    Switch(checked=draft.italic,onCheckedChange={onChange(draft.copy(italic=it))})
+                }
+                Row(verticalAlignment=Alignment.CenterVertically) {
                     Text("Negrito",modifier=Modifier.weight(1f))
                     Switch(checked=draft.bold,onCheckedChange={onChange(draft.copy(bold=it))})
                 }
@@ -123,7 +116,9 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
             if(draft.animation!=SubtitleAnimations.NONE) {
                 SubtitleValueSlider("Velocidade", "${"%.1f".format(java.util.Locale.US,draft.animationSpeed)}×",
                     draft.animationSpeed,.5f..2f,5,onChange={onChange(draft.copy(animationSpeed=it))})
-                Text("A animação segue o intervalo da legenda, sem sincronização palavra a palavra com o áudio.",
+                Text(if(draft.animation==SubtitleAnimations.KARAOKE && draft.wordTimings.isNotEmpty())
+                    "Destaque sincronizado pelos horários reconhecidos pelo Vosk."
+                    else "Sem horários individuais, a animação distribui as palavras pelo intervalo.",
                     color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
             }
         }

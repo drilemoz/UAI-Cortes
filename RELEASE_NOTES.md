@@ -1,3 +1,10 @@
+## v0.1.89 (versionCode 90) · 01/11/2026
+
+- **Legendas:** 12 modelos visuais com miniaturas, contornos, sombras e estilos; destaque de cores por palavra, paleta do karaokê e itálico.
+- **Sincronização:** legendas automáticas guardam os horários individuais obtidos do Vosk; prévia e exportação usam o mesmo índice de palavra e cores.
+- **Navegação:** botão Voltar de Animar Imagens leva à tela inicial, independentemente da origem, com salvamento ou descarte explícito quando houver rascunho alterado.
+- **Compatibilidade:** projetos antigos preservados (`schemaVersion=4`); testes em APK real pendentes.
+
 ## v0.1.88 (versionCode 89) · 01/11/2026
 
 - Salvamento de projetos: histórico de cópias locais automáticas com intervalos de 15 s, 30 s, 1, 2 ou 5 minutos, sem duplicar conteúdo e com retenção de 3/5/10 versões.

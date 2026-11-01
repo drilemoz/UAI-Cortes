@@ -168,7 +168,11 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                 label={Text("Texto transcrito")},modifier=Modifier.fillMaxWidth(),minLines=2,maxLines=4)},
             confirmButton={TextButton(onClick={
                 if(editText.isNotBlank()) results=results.toMutableList().also {
-                    it[index]=it[index].copy(text=editText.trim())
+                    val corrected=editText.trim()
+                    if (corrected!=it[index].text) {
+                        it[index]=it[index].copy(text=corrected,
+                            wordTimings=emptyList(),wordColors=emptyList())
+                    }
                 }
                 editIndex=null
             }) {Text("Salvar correção")}},

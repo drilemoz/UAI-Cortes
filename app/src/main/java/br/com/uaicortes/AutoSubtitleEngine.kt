@@ -226,8 +226,26 @@ object AutoSubtitleEngine {
             if (segment.isEmpty()) return
             val start = segment.first().startMs.coerceIn(0, total)
             val end = segment.last().endMs.coerceIn((start + 250).coerceAtMost(total), total)
-            if (end > start) result += SubtitleCue(text = segment.joinToString(" ") { it.text }.take(170),
-                startMs = start, endMs = end)
+            // Limita sem cortar palavras no meio, preservando correspondência com os tempos Vosk.
+            val selected = mutableListOf<Word>()
+            var length = 0
+            for (word in segment) {
+                val token = word.text.take(170)
+                if (selected.isNotEmpty() && length + 1 + token.length > 170) break
+                selected += word.copy(text = token)
+                length += token.length + if (selected.size > 1) 1 else 0
+            }
+            val visible = selected.joinToString(" ") { it.text }
+            val visibleEnd = selected.lastOrNull()?.endMs?.coerceIn((start+1).coerceAtMost(total),total) ?: end
+            if (visibleEnd > start && visible.isNotBlank()) result += SubtitleCue(text = visible,
+                startMs = start, endMs = visibleEnd,
+                color = 0xFFFFFFFF.toInt(), sizeSp = 30,
+                backgroundColor = SubtitleStyles.NO_BACKGROUND,
+                outlineWidth = 3, shadowOffsetDp = 2,
+                animation = SubtitleAnimations.KARAOKE,
+                wordTimings = selected.map { SubtitleWordTiming(
+                    it.startMs.coerceIn(start,visibleEnd-1), it.endMs.coerceIn(start+1,visibleEnd)) }
+                    .takeIf { items -> items.all { it.endMs > it.startMs } }.orEmpty())
             segment = mutableListOf()
         }
         for (word in words) {

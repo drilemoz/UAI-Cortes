@@ -80,7 +80,10 @@ internal fun previewSubtitleScale(cue: SubtitleCue, widthPx: Int, textSizePx: Fl
             SubtitleStyles.FONT_SERIF -> "serif"
             SubtitleStyles.FONT_MONO -> "monospace"
             else -> "sans-serif"
-        }, if (cue.bold) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
+        }, when { cue.bold && cue.italic -> android.graphics.Typeface.BOLD_ITALIC
+            cue.italic -> android.graphics.Typeface.ITALIC
+            cue.bold -> android.graphics.Typeface.BOLD
+            else -> android.graphics.Typeface.NORMAL })
     }
     val longest = cue.text.split(Regex("\\s+")).maxOfOrNull { paint.measureText(it) } ?: 0f
     val total = cue.text.lines().sumOf { paint.measureText(it).toDouble() }.toFloat()
@@ -117,6 +120,8 @@ internal fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
             val previewFontSp=cue.sizeSp * fontScale
             val family = subtitleFont(cue.fontFamily)
             val textWeight = if (cue.bold) FontWeight.Bold else FontWeight.Normal
+            val fontStyle = if (cue.italic) androidx.compose.ui.text.font.FontStyle.Italic
+                else androidx.compose.ui.text.font.FontStyle.Normal
             val outlineWidthPx = with(density) { cue.outlineWidth.dp.toPx() } * fontScale
             val shadowPx = with(density) { cue.shadowOffsetDp.dp.toPx() } * fontScale
             val alignment = when (SubtitleStyles.normalizeAlignment(cue.textAlignment)) {
@@ -156,19 +161,20 @@ internal fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
                 .padding(horizontal=7.dp,vertical=2.dp)) {
                 if (cue.outlineWidth > 0) {
                     Text(animationFrame.text,color=Color(cue.outlineColor),fontSize=previewFontSp.sp,
-                        fontFamily=family,fontWeight=textWeight,textAlign=alignment,
+                        fontFamily=family,fontWeight=textWeight,fontStyle=fontStyle,textAlign=alignment,
                         style=TextStyle(lineHeight=textLineHeight,
                             drawStyle=Stroke(width=outlineWidthPx*2f,join=StrokeJoin.Round)))
                 }
                 val animatedText=buildAnnotatedString {
                     append(animationFrame.text)
-                    animationFrame.highlighted?.let { range ->
-                        if(range.first>=0 && range.last<animationFrame.text.length)
-                            addStyle(SpanStyle(color=Color(0xFFFFFF00)),range.first,range.last+1)
-                    }
+                    SubtitleWordEffects.colors(cue,animationFrame.text,animationFrame.highlighted)
+                        .forEach { colored ->
+                            addStyle(SpanStyle(color=Color(colored.color)),
+                                colored.range.first,colored.range.last+1)
+                        }
                 }
                 Text(animatedText,color=Color(cue.color),fontSize=previewFontSp.sp,
-                    fontFamily=family,fontWeight=textWeight,textAlign=alignment,
+                    fontFamily=family,fontWeight=textWeight,fontStyle=fontStyle,textAlign=alignment,
                     style=fillStyle)
             }
         }
@@ -544,16 +550,20 @@ internal fun SubtitleEditDialog(cue: SubtitleCue,totalMs: Long,number: Int,
                 Column(Modifier.weight(1f,fill=false).verticalScroll(rememberScrollState()),
                     verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(value=draft.text,
-                        onValueChange={draft=draft.copy(text=it.take(500))},
+                        onValueChange={
+                            val updatedText=it.take(500)
+                            draft=if(updatedText==draft.text) draft else draft.copy(
+                                text=updatedText,wordTimings=emptyList(),wordColors=emptyList())
+                        },
                         label={Text("Texto")},maxLines=3,modifier=Modifier.fillMaxWidth())
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.fillMaxWidth()) {
                         TimeDigitsField("Início",draft.startMs,totalMs,
                             valid={it>=0L && it<draft.endMs},
-                            onCommit={draft=draft.copy(startMs=it)},
+                            onCommit={draft=draft.copy(startMs=it,wordTimings=emptyList())},
                             modifier=Modifier.weight(1f),compact=true)
                         TimeDigitsField("Fim",draft.endMs,totalMs,
                             valid={it>draft.startMs && it<=totalMs},
-                            onCommit={draft=draft.copy(endMs=it)},
+                            onCommit={draft=draft.copy(endMs=it,wordTimings=emptyList())},
                             modifier=Modifier.weight(1f),compact=true)
                     }
                     SubtitleVisualControls(draft=draft,onChange={draft=it})

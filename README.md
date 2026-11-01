@@ -1,3 +1,12 @@
+## v0.1.89 — Legendas expressivas e navegação
+
+- Galeria de 12 presets com miniaturas, contorno, sombra, fontes nativas, itálico e cores de destaque.
+- Escolha de cor por palavra; texto e cores persistem sem rede e sem afetar mídias originais.
+- Novas legendas automáticas do Vosk preservam tempos reais das palavras para karaokê; legendas antigas continuam com aproximação temporal.
+- Prévia Compose e MP4 Media3 aplicam a mesma regra de seleção de palavra e as cores de cada trecho.
+- Voltar em Animar Imagens leva à Home, mesmo quando aberto pelo editor; mudanças não salvas continuam exigindo confirmação.
+- `schemaVersion` 4 inalterado. Compilação Android e fidelidade visual aguardam execução no GitHub Actions/dispositivo.
+
 ## v0.1.88 — Salvamento e segurança
 
 - Salvamento de projetos: histórico de cópias locais automáticas com intervalos de 15 s, 30 s, 1, 2 ou 5 minutos, sem duplicar conteúdo e com retenção de 3/5/10 versões.

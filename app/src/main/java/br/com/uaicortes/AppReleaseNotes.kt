@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.88"
-    const val VERSION_CODE = 89
+    const val VERSION_NAME = "0.1.89"
+    const val VERSION_CODE = 90
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.89", listOf(
+            ReleaseFeature("subtitle-styles-gallery", "Novos estilos de legendas",
+                "Galeria com 12 modelos, contornos, sombras, itálico e cores individuais por palavra.", "film"),
+            ReleaseFeature("subtitle-timing", "Destaque sincronizado por palavra",
+                "Preserva os horários reconhecidos pelo Vosk nas novas legendas e aplica as cores na prévia e exportação.", "check"),
+            ReleaseFeature("animate-back-home", "Voltar de Animar Imagens",
+                "Voltar retorna à tela inicial após confirmação de rascunho, inclusive ao entrar pelo editor.", "check")
+        )),
         ReleaseSummary("0.1.88", listOf(
             ReleaseFeature("project-autobackups", "Cópias automáticas de projetos",
                 "Histórico local por intervalo, restauração confirmada e retenção de versões nas Configurações.", "check"),

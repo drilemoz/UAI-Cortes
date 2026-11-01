@@ -39,7 +39,8 @@ class SubtitleOutlineSpan(
     private val family: String,
     private val bold: Boolean,
     private val relativeSize: Float,
-    private val alignment: String = SubtitleStyles.ALIGN_CENTER
+    private val alignment: String = SubtitleStyles.ALIGN_CENTER,
+    private val italic: Boolean = false
 ) : LineBackgroundSpan {
     override fun drawBackground(canvas: Canvas, paint: Paint, left: Int, right: Int,
         top: Int, baseline: Int, bottom: Int, text: CharSequence,
@@ -61,7 +62,12 @@ class SubtitleOutlineSpan(
             SubtitleStyles.FONT_MONO -> "monospace"
             else -> "sans-serif"
         }
-        outline.typeface = Typeface.create(systemFamily, if (bold) Typeface.BOLD else Typeface.NORMAL)
+        outline.typeface = Typeface.create(systemFamily, when {
+            bold && italic -> Typeface.BOLD_ITALIC
+            bold -> Typeface.BOLD
+            italic -> Typeface.ITALIC
+            else -> Typeface.NORMAL
+        })
         val width = outline.measureText(text, start, visibleEnd)
         val x = when (SubtitleStyles.normalizeAlignment(alignment)) {
             SubtitleStyles.ALIGN_LEFT -> left.toFloat()
@@ -80,7 +86,8 @@ class SubtitleOutlineSpan(
 class SubtitleShadowSpan(
     private val shadowColor: Int, private val offsetDp: Int,
     private val family: String, private val bold: Boolean,
-    private val relativeSize: Float, private val alignment: String
+    private val relativeSize: Float, private val alignment: String,
+    private val italic: Boolean = false
 ) : LineBackgroundSpan {
     override fun drawBackground(canvas: Canvas, paint: Paint, left: Int, right: Int,
         top: Int, baseline: Int, bottom: Int, text: CharSequence,
@@ -99,7 +106,12 @@ class SubtitleShadowSpan(
             SubtitleStyles.FONT_SERIF -> "serif"
             SubtitleStyles.FONT_MONO -> "monospace"
             else -> "sans-serif"
-        }, if (bold) Typeface.BOLD else Typeface.NORMAL)
+        }, when {
+            bold && italic -> Typeface.BOLD_ITALIC
+            bold -> Typeface.BOLD
+            italic -> Typeface.ITALIC
+            else -> Typeface.NORMAL
+        })
         val textWidth = textPaint.measureText(text, start, visibleEnd)
         val x = when (SubtitleStyles.normalizeAlignment(alignment)) {
             SubtitleStyles.ALIGN_LEFT -> left.toFloat()
@@ -184,7 +196,7 @@ class TimedSubtitleOverlay(
         val active = cue(presentationTimeUs)
         val frame = active?.let { SubtitleAnimations.frame(it, clipStartInProjectMs + presentationTimeUs / 1000L) }
         if (!SubtitleOverlayTextSafety.isVisible(frame?.text.orEmpty())) return emptyBitmap
-        val contentKey = "${active?.id}:${frame?.text}:${frame?.highlighted}:$videoWidth"
+        val contentKey = "${active?.id}:${frame?.text}:${frame?.highlighted}:${active?.wordColors}:${active?.highlightColor}:$videoWidth"
         if (cachedKey == contentKey) cachedBitmap?.let { return it }
         val styled = getText(presentationTimeUs)
         val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = TextOverlay.TEXT_SIZE_PIXELS.toFloat() }
@@ -232,14 +244,17 @@ class TimedSubtitleOverlay(
         }
         if (active != null && frame != null) {
             text.setSpan(ForegroundColorSpan(active.color), 0, text.length, 0)
-            frame.highlighted?.let { highlighted ->
-                if(highlighted.first>=0 && highlighted.last<text.length)
-                    text.setSpan(ForegroundColorSpan(Color.YELLOW),highlighted.first,
-                        highlighted.last+1,0)
+            SubtitleWordEffects.colors(active,rendered,frame.highlighted).forEach { colored ->
+                text.setSpan(ForegroundColorSpan(colored.color),colored.range.first,
+                    colored.range.last+1,0)
             }
             if (Color.alpha(active.backgroundColor) > 0)
                 text.setSpan(BackgroundColorSpan(active.backgroundColor), 0, text.length, 0)
-            if (active.bold) text.setSpan(StyleSpan(Typeface.BOLD), 0, text.length, 0)
+            if (active.bold || active.italic) text.setSpan(StyleSpan(when {
+                active.bold && active.italic -> Typeface.BOLD_ITALIC
+                active.bold -> Typeface.BOLD
+                else -> Typeface.ITALIC
+            }), 0, text.length, 0)
             val family = when (SubtitleStyles.normalizeFont(active.fontFamily)) {
                 SubtitleStyles.FONT_SERIF -> "serif"
                 SubtitleStyles.FONT_MONO -> "monospace"
@@ -248,7 +263,12 @@ class TimedSubtitleOverlay(
             text.setSpan(TypefaceSpan(family), 0, text.length, 0)
             val fontPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
                 textSize = TextOverlay.TEXT_SIZE_PIXELS.toFloat()
-                typeface = Typeface.create(family, if(active.bold) Typeface.BOLD else Typeface.NORMAL)
+                typeface = Typeface.create(family, when {
+                    active.bold && active.italic -> Typeface.BOLD_ITALIC
+                    active.bold -> Typeface.BOLD
+                    active.italic -> Typeface.ITALIC
+                    else -> Typeface.NORMAL
+                })
             }
             val longestWord = rendered.split(Regex("\\s+")).maxOfOrNull { fontPaint.measureText(it) } ?: 0f
             val totalWidth = rendered.lines().sumOf { fontPaint.measureText(it).toDouble() }.toFloat()
@@ -265,11 +285,12 @@ class TimedSubtitleOverlay(
                 text.setSpan(SubtitleLineSpacingSpan(active.lineSpacingPercent), 0, text.length, Spanned.SPAN_PARAGRAPH)
             if (active.shadowOffsetDp > 0)
                 text.setSpan(SubtitleShadowSpan(active.shadowColor, active.shadowOffsetDp,
-                    active.fontFamily, active.bold, relativeFontSize, active.textAlignment),0,text.length,0)
+                    active.fontFamily, active.bold, relativeFontSize, active.textAlignment,
+                    active.italic),0,text.length,0)
             if (active.outlineWidth > 0)
                 text.setSpan(SubtitleOutlineSpan(active.outlineColor,active.outlineWidth,
                     active.fontFamily,active.bold,relativeFontSize,
-                    active.textAlignment),0,text.length,0)
+                    active.textAlignment,active.italic),0,text.length,0)
         }
         return text
     }

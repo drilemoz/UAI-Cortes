@@ -352,7 +352,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     onTab = { if (it == "settings") previous = "home"; screen = it })
                 "animate" -> AnimateImagesScreen(animationImages.toList(),
                     onChoose = { openGallery("animate","animate_images") },
-                    onBack = { screen = if(animationDestination=="append") "editor" else "home" },
+                    onBack = ::back,
                     onOrderChanged = { reordered -> animationImages.clear();animationImages.addAll(reordered) },
                     onSaveDraft = { chosen, opts -> animationDraftStore.save(chosen,opts) },
                     onUseInEditor = { uri ->

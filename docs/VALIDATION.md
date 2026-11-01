@@ -1,3 +1,6 @@
+## v0.1.89 (versionCode 90): estilos de legenda e navegação
+- Ver `docs/VALIDATION_0.1.89.md` para alterações, verificações e testes Android ainda necessários.
+
 ## v0.1.55 (versionCode 56): controladores de projetos, PiP e importações
 
 - Ver `docs/VALIDATION_0.1.55.md` para o escopo, verificações e riscos pendentes.

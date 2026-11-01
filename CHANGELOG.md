@@ -1,3 +1,11 @@
+## [0.1.89] - 2026-11-01
+
+- Nova galeria visual com 12 estilos de legendas e recursos de personalização de cores por palavra.
+- Anotações de tempo por palavra do Vosk preservadas no JSON; karaokê usa tempos observados e mantém fallback para legendas sem tempos individuais.
+- Texto itálico e cores de palavra compartilhadas entre prévia e renderização MP4.
+- Corrigido o destino do botão Voltar da ferramenta Animar Imagens, com proteção de rascunhos não salvos.
+- Próximo versionCode = 90; testes Gradle e dispositivos ainda pendentes.
+
 ## [0.1.88] - 2026-11-01
 
 - Salvamento de projetos: histórico de cópias locais automáticas com intervalos de 15 s, 30 s, 1, 2 ou 5 minutos, sem duplicar conteúdo e com retenção de 3/5/10 versões.

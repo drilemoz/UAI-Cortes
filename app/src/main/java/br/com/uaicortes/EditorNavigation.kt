@@ -26,7 +26,7 @@ internal object EditorNavigation {
         "editor", "home", "projects" -> "home"
         "settings" -> if (previous == "audio") "audio" else "home"
         "media" -> knownRoute(mediaOrigin)
-        "animate" -> if (animationDestination == "append") "editor" else "home"
+        "animate" -> "home" // Voltar sempre leva à tela inicial; adicionar ao editor é outra ação.
         "gemini_settings" -> if (previous == "audio") "audio" else "settings"
         "general", "backup_settings", "appearance", "about", "diagnostics" -> "settings"
         "whats_new" -> if (previous == "settings" || previous == "about") previous else "home"

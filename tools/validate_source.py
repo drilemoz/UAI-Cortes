@@ -8,7 +8,7 @@ source=(root/'app/src/main/java/br/com/uaicortes/ExportEngine.kt').read_text()
 ui_files = [
     'MainActivity.kt', 'HomeScreens.kt', 'TextWatermarkScreen.kt', 'EditorScreen.kt',
     'EditorTimelineUi.kt', 'TrimScreen.kt', 'AudioScreen.kt', 'PipScreen.kt',
-    'TransitionScreen.kt', 'SubtitleScreen.kt', 'SubtitleVisualEditor.kt', 'ExportScreen.kt', 'PreviewMediaUtils.kt'
+    'TransitionScreen.kt', 'SubtitleScreen.kt', 'SubtitleVisualEditor.kt', 'SubtitleStyleGallery.kt', 'ExportScreen.kt', 'PreviewMediaUtils.kt'
 ]
 ui='\n'.join((root/'app/src/main/java/br/com/uaicortes'/name).read_text() for name in ui_files)
 assert all((root/'app/src/main/java/br/com/uaicortes'/name).exists() for name in ui_files)
@@ -19,10 +19,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*89',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.88"',gradle)
+assert re.search(r'versionCode\s*=\s*90',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.89"',gradle)
 assert 'AppReleaseNotes.VERSION_NAME' in (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
-for label in ["VERSION: '0.1.88'", "VERSION_CODE: '89'", 'TAG="v$VERSION"',
+for label in ["VERSION: '0.1.89'", "VERSION_CODE: '90'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -177,8 +177,8 @@ assert 'val backgroundColor: Int = SubtitleStyles.DEFAULT_BACKGROUND' in model
 assert '.put("backgroundColor", backgroundColor).put("bold", bold)' in model
 assert 'j.optBoolean("bold", true)' in model
 assert 'Color(cue.backgroundColor)' in ui and 'if (cue.bold) FontWeight.Bold' in ui
-assert 'SubtitleStyles.presets.map' in ui and 'SubtitleStyles.applySelectedToAll(' in ui
-assert 'BackgroundColorSpan(active.backgroundColor)' in fx and 'StyleSpan(Typeface.BOLD)' in fx
+assert 'SubtitleStyleGallery(draft,onChange)' in ui and 'SubtitleStyles.applySelectedToAll(' in ui
+assert 'BackgroundColorSpan(active.backgroundColor)' in fx and 'StyleSpan(when' in fx
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleStylesTest.kt').exists()
 print('OK: v0.1.27 / versionCode 28, estilos das legendas com prévia/exportação e compatibilidade legado')
 
@@ -210,13 +210,13 @@ assert all(x in ui for x in [
 ])
 assert all(x in fx for x in ['class SubtitleShadowSpan(', 'class SubtitleLineSpacingSpan(',
     'AlignmentSpan.Standard(layoutAlign)', 'SubtitleStyles.ALIGN_LEFT -> left.toFloat()',
-    'SubtitleStyles.ALIGN_RIGHT -> right - width', 'active.textAlignment),0,text.length,0)'])
+    'SubtitleStyles.ALIGN_RIGHT -> right - width', 'active.textAlignment,active.italic),0,text.length,0)'])
 assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.88'" in package_script and 'VERSION_CODE = 89' in package_script
-assert 'versionCode = 89' in gradle and 'isUniversalApk = true' in gradle
+assert "VERSION = '0.1.89'" in package_script and 'VERSION_CODE = 90' in package_script
+assert 'versionCode = 90' in gradle and 'isUniversalApk = true' in gradle
 print('OK: versão atual 0.1.64 / versionCode 74, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
@@ -545,7 +545,7 @@ saved_dialog=(root/'app/src/main/java/br/com/uaicortes/VideoSavedDialog.kt').rea
 assert 'SharedPreferences' not in draft or 'getSharedPreferences' in draft
 assert all(t in draft for t in ['fun load()', 'fun save(', 'ImageAnimationDraftCodec.prepareWrite(', 'editor.commit()'])
 assert all(t in (root/'app/src/main/java/br/com/uaicortes/ImageAnimationDraftCodec.kt').read_text() for t in ['images', 'secondsPerImage', 'transition'])
-assert all(t in anim for t in ['Salvar edição das imagens?', 'confirmExit', 'VideoSavedDialog(', 'onSaveDraft(', 'EditorOptionRow(', 'Text("Rascunho"'])
+assert all(t in anim for t in ['Voltar à tela inicial?', 'confirmExit', 'VideoSavedDialog(', 'onSaveDraft(', 'EditorOptionRow(', 'Text("Rascunho"'])
 assert 'progress!!' not in anim and 'onUseInEditor(uri)' in anim
 assert 'VideoSavedDialog(uri=savedUri' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/ImageAnimationDraftRulesTest.kt').is_file()
@@ -791,7 +791,7 @@ news=(app_files/'WhatsNewScreen.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
-assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 89'])
+assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 90'])
 assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
@@ -1072,7 +1072,7 @@ assert 'Gerar MP4' in anim_screen and 'Rascunho' in anim_screen
 assert 'ReleaseSummary("0.1.87", listOf(' in notes
 print('OK: v0.1.87 animação de imagens: controles, preview e rascunhos legados')
 
-# v0.1.88: persistência e recuperação configurável; não altera o esquema dos projetos.
+# v0.1.89: persistência e recuperação configurável; não altera o esquema dos projetos.
 backup=(root/'app/src/main/java/br/com/uaicortes/ProjectBackups.kt').read_text()
 backup_ui=(root/'app/src/main/java/br/com/uaicortes/ProjectBackupSettingsScreen.kt').read_text()
 backup_policy=(root/'app/src/main/java/br/com/uaicortes/ProjectBackupPolicy.kt').read_text()
@@ -1086,3 +1086,23 @@ assert 'Environment.DIRECTORY_MOVIES + "/UaiCortes"' in (root/'app/src/main/java
 assert '"backup_settings"' in nav
 assert 'ProjectBackupCodecTest.kt' in {p.name for p in (root/'app/src/test/java/br/com/uaicortes').glob('*.kt')}
 print('OK: v0.1.88 histórico de projetos, configurações, SAF e destino Filmes/UaiCortes')
+
+# v0.1.89: palette, authentic Vosk timing, editor/export colors, back-navigation.
+word_fx=(app_files/'SubtitleWordEffects.kt').read_text()
+subtitle_gallery=(app_files/'SubtitleStyleGallery.kt').read_text()
+sub_animation=(app_files/'SubtitleAnimations.kt').read_text()
+auto=(app_files/'AutoSubtitleEngine.kt').read_text()
+assert 'val wordTimings: List<SubtitleWordTiming>' in model and 'val wordColors: List<SubtitleWordColor>' in model
+assert 'j.optJSONArray("wordTimings")' in model and 'j.optJSONArray("wordColors")' in model
+assert 'val italic: Boolean = false' in model
+assert 'SubtitleWordEffects.activeWordIndex(cue, absoluteMs)' in sub_animation
+assert 'wordTimings = selected.map' in auto and 'animation = SubtitleAnimations.KARAOKE' in auto
+assert 'SubtitleWordEffects.colors(cue,animationFrame.text' in (app_files/'SubtitleScreen.kt').read_text()
+assert 'SubtitleWordEffects.colors(active,rendered,frame.highlighted)' in fx
+assert 'SubtitleStyleGallery(draft,onChange)' in (app_files/'SubtitleVisualEditor.kt').read_text() and 'SubtitleWordColorEditor(draft,onChange)' in (app_files/'SubtitleVisualEditor.kt').read_text()
+assert 'val presets = listOf(' in styles and 'Itálico amarelo' in styles
+assert '"animate" -> "home"' in nav and 'onBack = ::back,' in main
+assert 'fun goBack()' in (app_files/'AnimateImagesScreen.kt').read_text()
+assert (root/'app/src/test/java/br/com/uaicortes/SubtitleWordEffectsTest.kt').is_file()
+assert (root/'docs/VALIDATION_0.1.89.md').is_file()
+print('OK: v0.1.89 galeria de legendas, Vosk por palavra, estilos no MP4 e Voltar para Home')

@@ -46,8 +46,9 @@ object SubtitleAnimations {
             KARAOKE -> {
                 val words = Regex("\\S+").findAll(text).toList()
                 if (words.isEmpty()) Frame(text) else {
-                    val idx = ((ratio * rate).coerceIn(0f, .999999f) * words.size).toInt()
-                    Frame(text, words[idx].range)
+                    val exact = SubtitleWordEffects.activeWordIndex(cue, absoluteMs)
+                    val idx = exact ?: ((ratio * rate).coerceIn(0f, .999999f) * words.size).toInt()
+                    Frame(text, words[idx.coerceIn(0,words.lastIndex)].range)
                 }
             }
             POP -> Frame(text, scale = .75f + .25f * enter)

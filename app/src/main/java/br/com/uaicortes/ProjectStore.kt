@@ -73,7 +73,11 @@ data class SubtitleCue(
     val outlineWidth: Int = 0, val outlineColor: Int = 0xFF000000.toInt(),
     val shadowOffsetDp: Int = 0, val shadowColor: Int = 0xFF000000.toInt(),
     val lineSpacingPercent: Int = 100, val textAlignment: String = SubtitleStyles.ALIGN_CENTER,
-    val animation: String = SubtitleAnimations.NONE, val animationSpeed: Float = 1f
+    val animation: String = SubtitleAnimations.NONE, val animationSpeed: Float = 1f,
+    val wordTimings: List<SubtitleWordTiming> = emptyList(),
+    val wordColors: List<SubtitleWordColor> = emptyList(),
+    val highlightColor: Int = SubtitleWordEffects.DEFAULT_HIGHLIGHT,
+    val italic: Boolean = false
 ) {
     fun json() = JSONObject().put("id", id).put("text", text)
         .put("startMs", startMs).put("endMs", endMs).put("color", color)
@@ -84,6 +88,9 @@ data class SubtitleCue(
         .put("shadowOffsetDp", shadowOffsetDp).put("shadowColor", shadowColor)
         .put("lineSpacingPercent", lineSpacingPercent).put("textAlignment", textAlignment)
         .put("animation", animation).put("animationSpeed", animationSpeed.toDouble())
+        .put("wordTimings", JSONArray().also { array -> wordTimings.forEach { array.put(it.json()) } })
+        .put("wordColors", JSONArray().also { array -> wordColors.forEach { array.put(it.json()) } })
+        .put("highlightColor", highlightColor).put("italic", italic)
     companion object {
         fun read(j: JSONObject) = SubtitleCue(j.optString("id").ifBlank { UUID.randomUUID().toString() },
             j.optString("text"), j.optLong("startMs"), j.optLong("endMs"),
@@ -100,7 +107,13 @@ data class SubtitleCue(
             SubtitleStyles.normalizeLineSpacing(j.optInt("lineSpacingPercent", 100)),
             SubtitleStyles.normalizeAlignment(j.optString("textAlignment", SubtitleStyles.ALIGN_CENTER)),
             SubtitleAnimations.normalize(j.optString("animation", SubtitleAnimations.NONE)),
-            SubtitleAnimations.speed(j.optDouble("animationSpeed", 1.0).toFloat()))
+            SubtitleAnimations.speed(j.optDouble("animationSpeed", 1.0).toFloat()),
+            SubtitleWordEffects.safeTimings(j.optJSONArray("wordTimings"), j.optLong("startMs"),
+                j.optLong("endMs"), SubtitleWordEffects.wordRanges(j.optString("text")).size),
+            SubtitleWordEffects.safeColors(j.optJSONArray("wordColors"),
+                SubtitleWordEffects.wordRanges(j.optString("text")).size),
+            j.optInt("highlightColor", SubtitleWordEffects.DEFAULT_HIGHLIGHT),
+            j.optBoolean("italic", false))
     }
 }
 

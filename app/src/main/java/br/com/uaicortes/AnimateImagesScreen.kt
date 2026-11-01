@@ -121,8 +121,8 @@ internal fun AnimateImagesScreen(
     }
     BackHandler { goBack() }
     if (confirmExit) AlertDialog(onDismissRequest={confirmExit=false},
-        title={Text("Salvar edição das imagens?")},
-        text={Text("Guarde a sequência e os ajustes para continuar depois. Isso não exporta um MP4.")},
+        title={Text("Voltar à tela inicial?")},
+        text={Text("Há alterações no rascunho. Salve para continuar depois ou descarte para voltar à tela inicial. Isso não exporta um MP4.")},
         confirmButton={TextButton(onClick={confirmExit=false;saveDraftAndReturn()}) {Text("Salvar e voltar")} },
         dismissButton={Row {
             TextButton(onClick={confirmExit=false;onBack()}) {Text("Descartar alterações")}
@@ -172,7 +172,7 @@ internal fun AnimateImagesScreen(
     }
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
         Row(Modifier.fillMaxWidth().height(56.dp),verticalAlignment=Alignment.CenterVertically) {
-            IconButton(onClick={::goBack}) {Icon(Icons.Default.ArrowBack,"Voltar")}
+            IconButton(onClick={::goBack}) {Icon(Icons.Default.ArrowBack,"Voltar à tela inicial")}
             Text("Animar Imagens",style=MaterialTheme.typography.titleLarge,
                 modifier=Modifier.weight(1f))
             TextButton(onClick={::saveDraftAndReturn},enabled=!busy) {
