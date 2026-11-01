@@ -46,7 +46,8 @@ internal class ExportTaskViewModel(application: Application) : AndroidViewModel(
         publish()
     }
 
-    fun start(project: VideoProject, quality: Int, name: String) {
+    fun start(project: VideoProject, quality: Int, name: String,
+              preset: ExportBitratePreset = ExportBitratePreset.HIGH) {
         if (task.working) return
         setProject(project.id)
         if (name.isBlank() || project.clips.isEmpty()) return
@@ -58,7 +59,7 @@ internal class ExportTaskViewModel(application: Application) : AndroidViewModel(
         publish()
         DiagnosticRecorder.action("export", "export_start_${quality}p")
         try {
-            engine.start(project, quality, requestedName,
+            engine.start(project, quality, requestedName, preset = preset,
                 onSaving = {
                     if (coordinator.saving(id)) publish()
                 },

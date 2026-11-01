@@ -19,10 +19,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*82',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.81"',gradle)
+assert re.search(r'versionCode\s*=\s*84',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.83"',gradle)
 assert 'AppReleaseNotes.VERSION_NAME' in (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
-for label in ["VERSION: '0.1.81'", "VERSION_CODE: '82'", 'TAG="v$VERSION"',
+for label in ["VERSION: '0.1.83'", "VERSION_CODE: '84'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -215,8 +215,8 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.81'" in package_script and 'VERSION_CODE = 82' in package_script
-assert 'versionCode = 82' in gradle and 'isUniversalApk = true' in gradle
+assert "VERSION = '0.1.83'" in package_script and 'VERSION_CODE = 84' in package_script
+assert 'versionCode = 84' in gradle and 'isUniversalApk = true' in gradle
 print('OK: versão atual 0.1.64 / versionCode 74, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
@@ -618,7 +618,8 @@ print('OK: v0.1.64 / 65, controllers projetos/PiP/importação e testes')
 quality=(root/'app/src/main/java/br/com/uaicortes/VideoExportQuality.kt').read_text()
 animator=(root/'app/src/main/java/br/com/uaicortes/ImageAnimationEngine.kt').read_text()
 export_ui=(root/'app/src/main/java/br/com/uaicortes/ExportScreen.kt').read_text()
-assert '720 -> 8_000_000' in quality and '1080 -> 18_000_000' in quality
+assert '720 -> when (preset)' in quality and '1080 -> when (preset)' in quality
+assert 'ExportBitratePreset.HIGH -> 8_000_000' in quality and 'ExportBitratePreset.HIGH -> 18_000_000' in quality
 assert '.setRequestedVideoEncoderSettings(' in source and '.setEncoderFactory(encoderFactory)' in source
 assert '.setRequestedVideoEncoderSettings(' in animator and '.setEncoderFactory(encoderFactory)' in animator
 assert 'Bitmap.CompressFormat.PNG' in animator and 'image-%03d.png' in animator
@@ -688,7 +689,7 @@ export_vm = (app_files/'ExportTaskViewModel.kt').read_text()
 export_tasks = (app_files/'ExportTaskCoordinator.kt').read_text()
 engine = (app_files/'ExportEngine.kt').read_text()
 assert 'val exportVm: ExportTaskViewModel = viewModel()' in export_screen
-assert 'exportVm.start(p, quality, name)' in export_screen
+assert 'exportVm.start(p, quality, name, bitratePreset)' in export_screen
 assert 'exportVm.cancel()' in export_screen
 assert 'DisposableEffect(engine)' not in export_screen
 assert 'class ExportTaskViewModel(application: Application)' in export_vm
@@ -790,7 +791,7 @@ news=(app_files/'WhatsNewScreen.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
-assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 82'])
+assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 84'])
 assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
@@ -1003,3 +1004,34 @@ assert 'averageFps' in report and 'fellBackInResolution' in report
 assert (root/'app/src/test/java/br/com/uaicortes/ExportQualityReportTest.kt').exists()
 assert 'exportDetails=qualityReport?.lines().orEmpty()' in (root/'app/src/main/java/br/com/uaicortes/ExportScreen.kt').read_text()
 print('OK: v0.1.81: texto dimensionado antes do overlay e relatório pós-MediaStore')
+
+# v0.1.83: bitrate selecionado acompanha UI, VM, motor e reserva de espaço.
+quality = (root/'app/src/main/java/br/com/uaicortes/VideoExportQuality.kt').read_text()
+export_screen = (root/'app/src/main/java/br/com/uaicortes/ExportScreen.kt').read_text()
+viewmodel_export = (root/'app/src/main/java/br/com/uaicortes/ExportTaskViewModel.kt').read_text()
+report_export = (root/'app/src/main/java/br/com/uaicortes/ExportQualityReport.kt').read_text()
+assert 'enum class ExportBitratePreset' in quality and 'MAXIMUM' in quality and 'COMPACT' in quality
+assert 'videoBitrateBps(height, preset)' in export
+assert 'project.durationMs, height, true, preset' in export
+assert 'setiFrameIntervalSeconds(VideoExportQuality.REQUESTED_KEYFRAME_INTERVAL_SECONDS)' in export
+assert 'exportVm.start(p, quality, name, bitratePreset)' in export_screen
+assert 'estimatedMiBPerMinute(quality,true,bitratePreset)' in export_screen
+assert 'engine.start(project, quality, requestedName, preset = preset' in viewmodel_export
+assert 'requestedVideoBitrateBps' in report_export and 'bitrateWellBelowRequest' in report_export
+assert (root/'app/src/test/java/br/com/uaicortes/VideoExportQualityTest.kt').exists()
+assert (root/'app/src/test/java/br/com/uaicortes/ExportQualityReportTest.kt').exists()
+print('OK: v0.1.83 perfis de bitrate, reserva, GOP solicitado e relatório de taxa real')
+
+source_quality=(root/'app/src/main/java/br/com/uaicortes/ExportSourceQualityPolicy.kt').read_text()
+assert 'withContext(Dispatchers.IO)' in export_screen and 'MediaMetadataRetriever' in export_screen
+assert 'ExportSourceQualityPolicy.warning(sourceShortSide, quality)' in export_screen
+assert 'estimatedMiBForDuration(p.durationMs,quality,true,bitratePreset)' in export_screen
+assert 'fun warning(minSourceShortSide: Int?' in source_quality
+assert (root/'app/src/test/java/br/com/uaicortes/ExportSourceQualityPolicyTest.kt').exists()
+print('OK: v0.1.83 diagnóstico da fonte offline e estimativa do projeto')
+
+# v0.1.83: não voltar a truncar a duração a 24h nem a exibir perfil fixo.
+assert 'coerceAtMost(86_400_000L)' not in quality
+assert 'private fun estimatedBytes(' in quality and 'Long.MAX_VALUE' in quality
+assert 'no perfil ${preset.label}' in export
+print('OK: v0.1.83 estimativas sem teto artificial de 24h e aviso de perfil correto')

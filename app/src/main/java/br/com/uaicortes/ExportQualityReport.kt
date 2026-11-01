@@ -13,12 +13,20 @@ internal data class ExportQualityReport(
     val frames: Int,
     val fileBytes: Long,
     val videoMimeType: String?,
-    val encoderName: String?
+    val encoderName: String?,
+    val requestedVideoBitrateBps: Int = 0,
+    val presetLabel: String? = null
 ) {
     val resolution: String get() = if (width > 0 && height > 0) "${width} × ${height}" else "Não informada"
     val effectiveBitrate: String get() = if (videoBitrateBps > 0)
         String.format(Locale.forLanguageTag("pt-BR"), "%.1f Mb/s", videoBitrateBps / 1_000_000.0)
         else "Não informado"
+    val requestedBitrate: String get() = if (requestedVideoBitrateBps > 0)
+        String.format(Locale.forLanguageTag("pt-BR"), "%.1f Mb/s", requestedVideoBitrateBps / 1_000_000.0)
+        else "Não informado"
+    /** Taxa baixa não prova perda de qualidade: cenas estáticas comprimem melhor. */
+    val bitrateWellBelowRequest: Boolean get() = requestedVideoBitrateBps > 0 &&
+        videoBitrateBps > 0 && videoBitrateBps.toLong() * 2L < requestedVideoBitrateBps.toLong()
     val fileSize: String get() = if (fileBytes > 0L)
         String.format(Locale.forLanguageTag("pt-BR"), "%.1f MiB", fileBytes / (1024.0 * 1024.0))
         else "Não informado"
@@ -31,7 +39,13 @@ internal data class ExportQualityReport(
 
     fun lines(): List<String> = buildList {
         add("Resolução obtida: $resolution (lado menor solicitado: ${requestedShortSide}px)")
+        if (requestedVideoBitrateBps > 0) {
+            add("Bitrate solicitado: $requestedBitrate" +
+                (presetLabel?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""))
+        }
         add("Bitrate de vídeo medido: $effectiveBitrate")
+        if (bitrateWellBelowRequest)
+            add("Nota: bitrate medido abaixo de metade do solicitado. Cenas simples e ajustes do encoder podem explicar; compare visualmente o MP4.")
         add("Taxa de quadros: $averageFps")
         add("Tamanho do arquivo: $fileSize")
         add("Codec de vídeo: ${videoMimeType?.takeIf { it.isNotBlank() } ?: "Não informado"}")

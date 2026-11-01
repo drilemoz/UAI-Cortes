@@ -174,15 +174,16 @@ class ExportEngine(private val context: Context) {
     }
 
     fun start(project: VideoProject, height: Int, fileName: String,
+              preset: ExportBitratePreset = ExportBitratePreset.HIGH,
               onSaving: () -> Unit = {},
               onSuccess: (Uri, ExportQualityReport) -> Unit, onError: (String) -> Unit) {
         require(!isSavingToGallery) { "Aguarde a conclusão do salvamento anterior." }
         require(project.clips.isNotEmpty()) { "Projeto sem vídeos" }
-        val bitrateBps = VideoExportQuality.videoBitrateBps(height)
+        val bitrateBps = VideoExportQuality.videoBitrateBps(height, preset)
         require(context.cacheDir.usableSpace > VideoExportQuality.minimumFreeBytes(
-            project.durationMs, height, true)) {
-            "Espaço livre insuficiente para exportar em ${height}p com qualidade alta. " +
-                "Libere armazenamento ou escolha 720p."
+            project.durationMs, height, true, preset)) {
+            "Espaço livre insuficiente para exportar em ${height}p no perfil ${preset.label}. " +
+                "Libere armazenamento ou escolha um perfil/resolução menor."
         }
         require(project.overlays.size <= OverlayPlacement.MAX_PIPS) { "O limite é de 4 PiPs" }
         cancel()
@@ -300,7 +301,8 @@ class ExportEngine(private val context: Context) {
         // Deixar fallback do codificador habilitado para aparelhos que não suportem a solicitação.
         val encoderFactory = DefaultEncoderFactory.Builder(context)
             .setRequestedVideoEncoderSettings(VideoEncoderSettings.Builder()
-                .setBitrate(bitrateBps).build())
+                .setBitrate(bitrateBps)
+                .setiFrameIntervalSeconds(VideoExportQuality.REQUESTED_KEYFRAME_INTERVAL_SECONDS).build())
             .setRequestedAudioEncoderSettings(AudioEncoderSettings.Builder()
                 .setBitrate(VideoExportQuality.AUDIO_BITRATE_BPS).build())
             .setEnableFallback(true)
@@ -320,6 +322,8 @@ class ExportEngine(private val context: Context) {
                         width = exportResult.width,
                         height = exportResult.height,
                         videoBitrateBps = exportResult.averageVideoBitrate,
+                        requestedVideoBitrateBps = bitrateBps,
+                        presetLabel = preset.label,
                         audioBitrateBps = exportResult.averageAudioBitrate,
                         durationMs = exportResult.approximateDurationMs,
                         frames = exportResult.videoFrameCount,

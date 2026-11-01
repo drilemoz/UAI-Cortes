@@ -21,6 +21,10 @@ import androidx.compose.ui.unit.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
+import android.media.MediaMetadataRetriever
+import android.net.Uri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import androidx.lifecycle.viewmodel.compose.viewModel
 
@@ -70,6 +74,29 @@ internal fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
     }
     var name by rememberSaveable(p.id) { mutableStateOf(ProjectNaming.exportName(p.title)) }
     var quality by rememberSaveable(p.id) {mutableIntStateOf(defaultQuality.takeIf { it == 720 || it == 1080 } ?: 1080)}
+    var bitratePresetName by rememberSaveable(p.id) { mutableStateOf(ExportBitratePreset.HIGH.name) }
+    var qualityHelpExpanded by rememberSaveable(p.id) { mutableStateOf(false) }
+    val bitratePreset = ExportBitratePreset.fromId(bitratePresetName)
+    var sourceShortSide by remember(p.id, p.clips) { mutableStateOf<Int?>(null) }
+    // Só consulta metadados locais em IO: não bloqueia a tela e não faz upload da mídia.
+    LaunchedEffect(p.id, p.clips) {
+        sourceShortSide = withContext(Dispatchers.IO) {
+            p.clips.mapNotNull { clip ->
+                runCatching {
+                    val retriever = MediaMetadataRetriever()
+                    try {
+                        retriever.setDataSource(context, Uri.parse(clip.uri))
+                        val width = retriever.extractMetadata(
+                            MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull()
+                        val height = retriever.extractMetadata(
+                            MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull()
+                        if (width != null && height != null && width > 0 && height > 0)
+                            minOf(width, height) else null
+                    } finally { runCatching { retriever.release() } }
+                }.getOrNull()
+            }.minOrNull()
+        }
+    }
     var confirmCancelExport by remember {mutableStateOf(false)}
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal=20.dp)) {
         Heading("Exportar vídeo",{if(!working)back() else confirmCancelExport=true},
@@ -133,23 +160,59 @@ internal fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
                         if(q==quality)Blue else MaterialTheme.colorScheme.outlineVariant)) {
                     Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center) {
                         Text("${q}p",fontSize=19.sp)
-                        Text(if(q==720)"8 Mb/s" else "18 Mb/s",fontSize=13.sp,
+                        Text("${VideoExportQuality.videoBitrateBps(q,bitratePreset)/1_000_000} Mb/s",fontSize=13.sp,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
         }
-        Text("Bitrate de vídeo solicitado. O aparelho pode ajustar o valor. " +
-            "Espaço estimado: ~${VideoExportQuality.estimatedMiBPerMinute(quality, true)} MiB/min; " +
-            "a origem limita a nitidez final. 720p/1080p se referem ao lado menor (vertical 9:16: 720×1280 ou 1080×1920). As legendas serão desenhadas na resolução de saída.",
+        Spacer(Modifier.height(16.dp))
+        Text("Taxa de vídeo", fontWeight=FontWeight.SemiBold)
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp), modifier=Modifier.fillMaxWidth()) {
+            ExportBitratePreset.values().forEach { preset ->
+                val selected = bitratePreset == preset
+                Surface(onClick={bitratePresetName=preset.name},enabled=!working,
+                    modifier=Modifier.weight(1f).height(60.dp),
+                    shape=RoundedCornerShape(14.dp),
+                    border=BorderStroke(if(selected) 2.dp else 1.dp,
+                        if(selected) Blue else MaterialTheme.colorScheme.outlineVariant)) {
+                    Column(horizontalAlignment=Alignment.CenterHorizontally,
+                        verticalArrangement=Arrangement.Center) {
+                        Text(preset.label,style=MaterialTheme.typography.labelLarge)
+                        Text("${VideoExportQuality.videoBitrateBps(quality,preset)/1_000_000} Mb/s",
+                            style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+        Text("Estimativa: ~${VideoExportQuality.estimatedMiBForDuration(p.durationMs,quality,true,bitratePreset)} MiB " +
+            "para este projeto · ~${VideoExportQuality.estimatedMiBPerMinute(quality,true,bitratePreset)} MiB/min.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
+        TextButton(onClick={qualityHelpExpanded=!qualityHelpExpanded},enabled=!working) {
+            Text(if(qualityHelpExpanded) "Ocultar explicação" else "Entender qualidade e compatibilidade")
+        }
+        if(qualityHelpExpanded) {
+            Text("O bitrate, o intervalo de 2 s entre quadros-chave e a resolução são solicitações " +
+                "ao encoder. Os valores reais podem variar. Maior bitrate aumenta o arquivo, " +
+                "mas não recupera nitidez perdida na origem. 720p e 1080p representam o lado " +
+                "menor do vídeo. As legendas são renderizadas após o dimensionamento.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        ExportSourceQualityPolicy.warning(sourceShortSide, quality)?.let { notice ->
+            Spacer(Modifier.height(8.dp))
+            Text(notice, color=MaterialTheme.colorScheme.tertiary,
+                style=MaterialTheme.typography.bodySmall)
+        }
         Spacer(Modifier.height(18.dp))
         BlueButton("↓ Salvar vídeo",onClick={
             if(name.isNotBlank() && p.clips.isNotEmpty() && !working) {
                 previewPlayer.pause()
                 previewPlaying = false
-                exportVm.start(p, quality, name)
+                exportVm.start(p, quality, name, bitratePreset)
             }
         },modifier=Modifier.fillMaxWidth(),enabled=!working && name.isNotBlank()&&p.clips.isNotEmpty())
         if(result.isNotBlank()) Text(result,modifier=Modifier.padding(vertical=15.dp),
@@ -206,7 +269,7 @@ internal fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
                         Text("Tempo decorrido: ${ExportProgressUi.elapsedLabel(elapsedSeconds)}",
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(10.dp))
-                        Text("Qualidade: ${exportState.quality}p · MP4",style=MaterialTheme.typography.bodySmall,
+                        Text("Qualidade: ${exportState.quality}p · ${bitratePreset.label} · MP4",style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Column(horizontalAlignment=Alignment.CenterHorizontally,

@@ -16,11 +16,27 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.81"
-    const val VERSION_CODE = 82
+    const val VERSION_NAME = "0.1.83"
+    const val VERSION_CODE = 84
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.83", listOf(
+            ReleaseFeature("export-storage-review", "Estimativa de espaço para projetos longos",
+                "Corrigido o limite de 24 horas e prevenido transbordamento em reservas e estimativas de exportação.", "film"),
+            ReleaseFeature("export-storage-message", "Avisos de espaço específicos",
+                "O aviso de falta de armazenamento agora identifica o perfil escolhido e sugere reduzir a configuração.", "check")
+        )),
+        ReleaseSummary("0.1.83", listOf(
+            ReleaseFeature("export-bitrate-presets", "Três perfis de qualidade do MP4",
+                "Escolha Compacta, Alta ou Máxima em 720p/1080p, com estimativa de espaço específica para cada perfil.", "film"),
+            ReleaseFeature("export-gop-request", "Quadros-chave solicitados a cada 2 segundos",
+                "A exportação H.264 solicita GOP de 2 segundos, mantendo fallback para codecs que ajustam parâmetros.", "film"),
+            ReleaseFeature("export-target-versus-actual", "Comparação de bitrate solicitado e medido",
+                "O relatório diferencia a taxa selecionada da taxa real informada pelo Media3 e avisa quando houver grande diferença.", "check"),
+            ReleaseFeature("export-source-upscale", "Aviso sobre nitidez da origem",
+                "A exportação avisa quando algum clipe precisará ser ampliado e estima o tamanho do projeto na qualidade escolhida.", "film")
+        )),
         ReleaseSummary("0.1.81", listOf(
             ReleaseFeature("export-text-resolution", "Legendas renderizadas após dimensionamento",
                 "Vídeos verticais passam a usar 1080×1920 em 1080p; dimensionamento ocorre antes de renderizar legendas e marca d'água.", "captions"),
