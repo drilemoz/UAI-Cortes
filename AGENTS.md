@@ -185,3 +185,7 @@
 - v0.1.76: Gemini TTS opcional é exceção explícita à edição offline: somente texto e parâmetros TTS enviados após ação do usuário. Não enviar vídeos nem chaves em diagnósticos.
 - v0.1.76: credencial AES/GCM no Keystore e arquivo privado sem backup; importação SAF, cópia/exportação sob confirmação. Nunca embutir chaves. A versão pública com credencial administrada exige backend.
 - v0.1.76: usar apenas modelos reais `gemini-3.8-flash-tts` e `gemini-3.8-flash-lite-tts` pela Interactions API; WAV unary com RIFF intacto. Inserir áudio como AudioTrack global com URI durável mantendo schemaVersion=4; compilar e validar renderização final em dispositivo antes de declarar equivalência.
+
+- v0.1.77: Gemini aparece em Configurações como `ItemCard` navegável para `gemini_settings`. Back retorna a Áudio se originado em Áudio, senão a Configurações; não inserir o formulário diretamente na listagem.
+- v0.1.77: Áudio mostra somente `Gerar por IA`; modal de narração usa rolagem interna, escolha de vozes pesquisável por nome/ID oficial sem inventar descrição ou código. Não descartar o rascunho de texto ao fechar durante a sessão, não fechar durante geração e preservar confirmação de cota.
+- v0.1.77: preservar Keystore, SAF, API Interactions, WAV, schemaVersion 4, CI de cinco APKs e assinatura. Testar UX real/teclado/back e build Gradle antes de afirmar funcionalidade Android validada.

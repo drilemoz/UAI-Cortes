@@ -180,7 +180,8 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
         ItemCard(Icons.Default.Palette,"Tela","Sistema, claro, escuro e AMOLED") {onClick("appearance")}
         ItemCard(Icons.Default.RecordVoiceOver,"Reconhecimento de voz",
             "Instalar modelo offline de legendas em português") { onClick("speech_model") }
-        GeminiSettingsSection()
+        ItemCard(Icons.Default.AutoAwesome,"Google Gemini — API de IA",
+            "Chave, vozes e narrações") { onClick("gemini_settings") }
         ItemCard(Icons.Default.BugReport,"Diagnóstico","Capturar erros e toques, exportar relatório") {onClick("diagnostics")}
         ItemCard(Icons.Default.AutoAwesome,"Novidades","Veja o que mudou nas últimas versões") { onClick("whats_new") }
         ItemCard(Icons.Default.Info,"Sobre","Versão e informações do aplicativo") {onClick("about")}

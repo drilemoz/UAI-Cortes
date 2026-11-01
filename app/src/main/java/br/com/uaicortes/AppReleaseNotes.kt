@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.76"
-    const val VERSION_CODE = 77
+    const val VERSION_NAME = "0.1.77"
+    const val VERSION_CODE = 78
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.77", listOf(
+            ReleaseFeature("gemini-menu", "Gemini organizado nas Configurações",
+                "Agora a chave e as seis ações ficam em uma página própria, acessada pelo menu das Configurações.", "check"),
+            ReleaseFeature("gemini-popup", "Narração com IA em janela compacta",
+                "Gerador em pop-up com seletor pesquisável de vozes por nome e código real da API.", "music")
+        )),
         ReleaseSummary("0.1.76", listOf(
             ReleaseFeature("gemini-tts", "Narração por IA com Gemini TTS",
                 "Configure sua chave pessoal e gere áudio com vozes e estilos via API oficial, com salvamento e uso na timeline.", "music"),

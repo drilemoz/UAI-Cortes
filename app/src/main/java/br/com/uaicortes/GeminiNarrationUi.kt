@@ -4,6 +4,16 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.*
@@ -11,6 +21,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import kotlinx.coroutines.CancellationException
@@ -51,7 +62,8 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
     var addedUri by remember { mutableStateOf<String?>(null) }
     var preview by remember { mutableStateOf<File?>(null) }
     var confirmation by remember { mutableStateOf("") }
-    var voiceMenu by remember { mutableStateOf(false) }
+    var voicePicker by remember { mutableStateOf(false) }
+    var voiceSearch by remember { mutableStateOf("") }
     var modelMenu by remember { mutableStateOf(false) }
     var styleMenu by remember { mutableStateOf(false) }
     var job by remember { mutableStateOf<Job?>(null) }
@@ -103,121 +115,250 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
             finally { loading = false }
         }
     }
-    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Row { Icon(Icons.Default.AutoAwesome, null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(8.dp)); Text("Narração com IA", style = MaterialTheme.typography.titleMedium) }
-            TextButton(onClick = {
-                expanded = !expanded
-                if (expanded && creds.hasKey() && voices.isEmpty()) loadVoices()
-            }) { Text(if (expanded) "Recolher" else "Abrir") }
-        }
-        if (expanded) {
-            Text("A geração usa internet. Áudios salvos neste aplicativo funcionam offline.",
-                style = MaterialTheme.typography.bodySmall)
-            if (!creds.hasKey()) {
-                Text("Nenhuma chave Gemini configurada.")
-                Button(onClick = openSettings) { Text("Configurar Google Gemini") }
-            } else {
-                OutlinedTextField(value = text, onValueChange = { text = it.take(4000) },
-                    modifier = Modifier.fillMaxWidth(), minLines = 4, maxLines = 9,
-                    label = { Text("Texto da narração (pt-BR)") },
-                    supportingText = { Text("${text.length}/4000 caracteres. Somente este texto será enviado.") })
-                Box {
-                    OutlinedButton(onClick = { modelMenu = true }, enabled = !working && !loading) {
-                        Text(if (model == GeminiModels.LITE) "Gemini 3.8 Flash-Lite TTS" else "Gemini 3.8 Flash TTS")
-                    }
-                    DropdownMenu(expanded = modelMenu, onDismissRequest = { modelMenu = false }) {
-                        GeminiModels.supported.forEach { option -> DropdownMenuItem(
-                            text = { Text(if (option == GeminiModels.LITE) "Flash-Lite TTS" else "Flash TTS") },
-                            onClick = { model = option; modelMenu = false }) }
+    // O gerador fica fora da rolagem do editor: somente o botão de abertura aparece na tela Áudio.
+    OutlinedButton(onClick = {
+        expanded = true
+        if (creds.hasKey() && voices.isEmpty()) loadVoices()
+    }, modifier = Modifier.fillMaxWidth()) {
+        Icon(Icons.Default.AutoAwesome, null, Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text("Gerar por IA")
+    }
+    if (expanded) Dialog(
+        onDismissRequest = {
+            if (!working) {
+                if (loading) { job?.cancel(); api.cancel() }
+                player.pause(); expanded = false
+            }
+        }, properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(0.94f).fillMaxHeight(0.88f),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp
+        ) {
+            Column {
+                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.AutoAwesome, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(10.dp))
+                    Text("Narração com IA", modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleMedium)
+                    IconButton(onClick = {
+                        if (loading) { job?.cancel(); api.cancel() }
+                        player.pause(); expanded = false
+                    }, enabled = !working) {
+                        Icon(Icons.Default.Close, "Fechar janela de narração")
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        OutlinedButton(onClick = { voiceMenu = true }, enabled = !working && voices.isNotEmpty()) {
-                            Text(selectedVoice?.name ?: "Sem voz disponível", maxLines = 1)
+                HorizontalDivider()
+                Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())
+                    .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (!creds.hasKey()) {
+                        Text("Configure uma chave Gemini para gerar narrações.",
+                            style = MaterialTheme.typography.bodyMedium)
+                        Button(onClick = { player.pause(); expanded = false; openSettings() }) {
+                            Text("Configurar Google Gemini")
                         }
-                        DropdownMenu(expanded = voiceMenu, onDismissRequest = { voiceMenu = false }) {
-                            voices.forEach { voice -> DropdownMenuItem(
-                                text = { Text("${voice.name} (${voice.id})") },
-                                onClick = { selectedVoice = voice; voiceMenu = false }) }
-                        }
-                    }
-                    TextButton(onClick = { loadVoices() }, enabled = !working && !loading) { Text("Atualizar vozes") }
-                }
-                selectedVoice?.description?.takeIf { it.isNotBlank() }?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall)
-                }
-                Box {
-                    OutlinedButton(onClick = { styleMenu = true }, enabled = !working) { Text("Estilo: $style") }
-                    DropdownMenu(expanded = styleMenu, onDismissRequest = { styleMenu = false }) {
-                        narrationStyles.keys.forEach { label -> DropdownMenuItem(text = { Text(label) },
-                            onClick = { style = label; styleMenu = false }) }
-                    }
-                }
-                Text("Os estilos são enviados em speech_metadata.style. O resultado vocal pode variar conforme a voz.",
-                    style = MaterialTheme.typography.bodySmall)
-                if (loading || working) {
-                    LinearProgressIndicator(Modifier.fillMaxWidth())
-                    Text(if (loading) "Consultando vozes..." else "Processando solicitação...",
-                        style = MaterialTheme.typography.bodySmall)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { confirmation = "generate" },
-                        enabled = !working && !loading && text.isNotBlank() && selectedVoice != null) {
-                        Text("Gerar áudio")
-                    }
-                    OutlinedButton(onClick = { confirmation = "sample" },
-                        enabled = !working && !loading && selectedVoice != null) { Text("Prévia da voz") }
-                }
-                if (working) OutlinedButton(onClick = {
-                    job?.cancel(); api.cancel(); status = "Operação cancelada. A solicitação pode já ter consumido cota."
-                    working = false
-                }) { Text("Cancelar") }
-                generated?.let { file ->
-                    if (file.exists()) {
-                        Text("Narração gerada: ${duration / 1000}.${(duration % 1000) / 100} s")
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(onClick = {
-                                val thisAudioPlaying = playing &&
-                                    player.currentMediaItem?.localConfiguration?.uri == Uri.fromFile(file)
-                                if (thisAudioPlaying) player.pause() else {
-                                    if (player.currentMediaItem?.localConfiguration?.uri != Uri.fromFile(file) ||
-                                        player.playbackState == Player.STATE_ENDED) {
-                                        player.setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
-                                        player.prepare()
-                                    }
-                                    player.play()
+                    } else {
+                        OutlinedTextField(value = text, onValueChange = { text = it.take(4000) },
+                            modifier = Modifier.fillMaxWidth(), minLines = 3, maxLines = 7,
+                            label = { Text("Texto da narração") },
+                            supportingText = {
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("${text.length}/4000 caracteres")
+                                    Text("Português (Brasil)")
                                 }
-                            }, enabled = !working) { Text(if (playing && player.currentMediaItem?.localConfiguration?.uri == Uri.fromFile(file))
-                                "Pausar" else "Reproduzir") }
-                            OutlinedButton(onClick = { savePicker.launch("UaiCortes_narracao.wav") },
-                                enabled = !working) { Text("Salvar áudio") }
-                        }
-                        Button(onClick = {
-                            val available = (project.durationMs - timelinePositionMs.coerceIn(0L, project.durationMs))
-                                .coerceAtLeast(0L)
-                            val usable = minOf(duration, available)
-                            if (usable < 250L) status = "Posicione o cursor antes do fim do projeto."
-                            else {
-                                val uri = GeminiAudioFiles.uri(file)
-                                if (addedUri != uri && project.audioTracks.none { it.uri == uri }) {
-                                    val track = AudioTrack(uri = uri, title = "Narração Gemini",
-                                        startMs = timelinePositionMs.coerceIn(0L, project.durationMs),
-                                        durationMs = usable, volume = 1f)
-                                    update(project.copy(audioTracks = project.audioTracks + track))
-                                    addedUri = uri
-                                    status = if (usable < duration) "Narração adicionada. Final cortado no limite do vídeo."
-                                        else "Narração adicionada à timeline. Use os controles de áudio para editar."
-                                } else status = "Esta narração já foi adicionada ao projeto."
+                            })
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("Modelo de IA", style = MaterialTheme.typography.labelMedium)
+                            Box {
+                                OutlinedButton(onClick = { modelMenu = true },
+                                    modifier = Modifier.fillMaxWidth(), enabled = !working && !loading) {
+                                    Text(if (model == GeminiModels.LITE) "Gemini 3.8 Flash-Lite TTS"
+                                        else "Gemini 3.8 Flash TTS", modifier = Modifier.weight(1f),
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Icon(Icons.Default.ArrowDropDown, null)
+                                }
+                                DropdownMenu(expanded = modelMenu, onDismissRequest = { modelMenu = false }) {
+                                    GeminiModels.supported.forEach { option ->
+                                        DropdownMenuItem(text = { Text(if (option == GeminiModels.LITE)
+                                            "Gemini 3.8 Flash-Lite TTS" else "Gemini 3.8 Flash TTS") },
+                                            onClick = { model = option; modelMenu = false })
+                                    }
+                                }
                             }
-                        }, enabled = !working && (addedUri != GeminiAudioFiles.uri(file))) {
-                            Text("Adicionar à timeline")
                         }
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("Voz", style = MaterialTheme.typography.labelMedium)
+                            OutlinedButton(onClick = { voiceSearch = ""; voicePicker = true },
+                                modifier = Modifier.fillMaxWidth(),
+                                enabled = !working && !loading && voices.isNotEmpty()) {
+                                Icon(Icons.Default.RecordVoiceOver, null, Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(selectedVoice?.name ?: "Nenhuma voz disponível",
+                                    modifier = Modifier.weight(1f), maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis)
+                                Icon(Icons.Default.ArrowDropDown, null)
+                            }
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text("${voices.size} vozes da API", style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                TextButton(onClick = { loadVoices() }, enabled = !working && !loading) {
+                                    Icon(Icons.Default.Refresh, null, Modifier.size(17.dp))
+                                    Spacer(Modifier.width(4.dp)); Text("Atualizar")
+                                }
+                            }
+                            selectedVoice?.let { voice ->
+                                Text("Código da API: ${voice.id}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("Estilo de narração", style = MaterialTheme.typography.labelMedium)
+                            Box {
+                                OutlinedButton(onClick = { styleMenu = true }, modifier = Modifier.fillMaxWidth(),
+                                    enabled = !working) {
+                                    Text(style, modifier = Modifier.weight(1f))
+                                    Icon(Icons.Default.ArrowDropDown, null)
+                                }
+                                DropdownMenu(expanded = styleMenu, onDismissRequest = { styleMenu = false }) {
+                                    narrationStyles.keys.forEach { label ->
+                                        DropdownMenuItem(text = { Text(label) }, onClick = {
+                                            style = label; styleMenu = false
+                                        })
+                                    }
+                                }
+                            }
+                        }
+                        if (loading || working) {
+                            LinearProgressIndicator(Modifier.fillMaxWidth())
+                            Text(if (loading) "Consultando vozes..." else "Processando solicitação...",
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = { confirmation = "sample" },
+                                modifier = Modifier.weight(1f),
+                                enabled = !working && !loading && selectedVoice != null,
+                                contentPadding = PaddingValues(horizontal = 6.dp)) {
+                                Icon(Icons.Default.Headphones, null, Modifier.size(17.dp))
+                                Spacer(Modifier.width(4.dp)); Text("Ouvir prévia", fontSize = 12.sp, maxLines = 1)
+                            }
+                            Button(onClick = { confirmation = "generate" },
+                                modifier = Modifier.weight(1f),
+                                enabled = !working && !loading && text.isNotBlank() && selectedVoice != null,
+                                contentPadding = PaddingValues(horizontal = 6.dp)) {
+                                Icon(Icons.Default.GraphicEq, null, Modifier.size(17.dp))
+                                Spacer(Modifier.width(4.dp)); Text("Gerar áudio", fontSize = 12.sp, maxLines = 1)
+                            }
+                        }
+                        if (working) OutlinedButton(onClick = {
+                            job?.cancel(); api.cancel()
+                            status = "Operação cancelada. A solicitação pode já ter consumido cota."
+                        }) { Text("Cancelar geração") }
+                        generated?.let { file ->
+                            if (file.exists()) {
+                                HorizontalDivider()
+                                Text("Áudio gerado · ${duration / 1000}.${(duration % 1000) / 100} s",
+                                    style = MaterialTheme.typography.titleSmall)
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(onClick = {
+                                        val currentUri = Uri.fromFile(file)
+                                        val same = player.currentMediaItem?.localConfiguration?.uri == currentUri
+                                        if (same && playing) player.pause() else {
+                                            if (!same || player.playbackState == Player.STATE_ENDED) {
+                                                player.setMediaItem(MediaItem.fromUri(currentUri))
+                                                player.prepare()
+                                            }
+                                            player.play()
+                                        }
+                                    }, modifier = Modifier.weight(1f), enabled = !working) {
+                                        Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                            null, Modifier.size(18.dp))
+                                        Text(if (playing) "Pausar" else "Reproduzir", fontSize = 12.sp)
+                                    }
+                                    OutlinedButton(onClick = { savePicker.launch("UaiCortes_narracao.wav") },
+                                        modifier = Modifier.weight(1f), enabled = !working) {
+                                        Icon(Icons.Default.SaveAlt, null, Modifier.size(18.dp))
+                                        Text("Salvar áudio", fontSize = 12.sp)
+                                    }
+                                }
+                                Button(onClick = {
+                                    val available = (project.durationMs -
+                                        timelinePositionMs.coerceIn(0L, project.durationMs)).coerceAtLeast(0L)
+                                    val usable = minOf(duration, available)
+                                    if (usable < 250L) status = "Posicione o cursor antes do fim do projeto."
+                                    else {
+                                        val uri = GeminiAudioFiles.uri(file)
+                                        if (addedUri != uri && project.audioTracks.none { it.uri == uri }) {
+                                            val track = AudioTrack(uri = uri, title = "Narração Gemini",
+                                                startMs = timelinePositionMs.coerceIn(0L, project.durationMs),
+                                                durationMs = usable, volume = 1f)
+                                            update(project.copy(audioTracks = project.audioTracks + track))
+                                            addedUri = uri
+                                            status = if (usable < duration) "Narração adicionada. Final cortado no limite do vídeo."
+                                                else "Narração adicionada à timeline. Edite pela faixa de áudio."
+                                        } else status = "Esta narração já foi adicionada ao projeto."
+                                    }
+                                }, modifier = Modifier.fillMaxWidth(),
+                                    enabled = !working && addedUri != GeminiAudioFiles.uri(file)) {
+                                    Text("Adicionar à timeline")
+                                }
+                            }
+                        }
+                        if (status.isNotBlank()) Surface(color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+                            Text(status, Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
+                        }
+                        Text("Gerar e ouvir prévia exige internet e pode consumir cota. " +
+                            "Áudios já gerados continuam disponíveis offline.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                if (status.isNotBlank()) Text(status, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+    if (voicePicker && expanded) Dialog(onDismissRequest = { voicePicker = false },
+        properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(modifier = Modifier.fillMaxWidth(0.92f).fillMaxHeight(0.76f),
+            shape = RoundedCornerShape(22.dp), color = MaterialTheme.colorScheme.surface) {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Escolher voz", style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f))
+                    IconButton(onClick = { voicePicker = false }) {
+                        Icon(Icons.Default.Close, "Fechar seleção de voz")
+                    }
+                }
+                OutlinedTextField(voiceSearch, onValueChange = { voiceSearch = it },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    label = { Text("Buscar nome ou código") },
+                    leadingIcon = { Icon(Icons.Default.Search, null) })
+                val filtered = GeminiVoiceSearch.filter(voices, voiceSearch)
+                Text("${filtered.size} de ${voices.size} vozes", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                LazyColumn(Modifier.weight(1f)) {
+                    items(filtered, key = { it.id }) { voice ->
+                        TextButton(onClick = { selectedVoice = voice; voicePicker = false },
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)) {
+                            Column(Modifier.weight(1f)) {
+                                Text(voice.name, color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                Text("Código: ${voice.id}", style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            }
+                            if (selectedVoice?.id == voice.id) Icon(Icons.Default.Check,
+                                "Voz selecionada", tint = MaterialTheme.colorScheme.primary)
+                        }
+                        HorizontalDivider()
+                    }
+                }
             }
         }
     }
@@ -258,7 +399,10 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                     if (action == "sample") player.play()
                     status = if (action == "sample") "Prévia sintetizada pela API e reproduzida."
                         else "Áudio gerado e salvo internamente."
-                } catch (e: CancellationException) { status = "Solicitação cancelada."; throw e }
+                } catch (e: CancellationException) {
+                    status = "Solicitação cancelada. A API pode já ter consumido cota."
+                    throw e
+                }
                 catch (e: GeminiApiError) { status = e.message ?: "Falha na API Gemini." }
                 catch (e: java.io.IOException) { status = e.message ?: "Falha de conexão ou armazenamento." }
                 catch (_: Exception) { status = "Não foi possível gerar áudio ou acessar a chave." }

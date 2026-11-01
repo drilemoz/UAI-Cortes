@@ -13,6 +13,12 @@ class EditorNavigationTest {
         assertEquals("animate", EditorNavigation.back("media", "home", "animate", "new"))
     }
 
+    @Test fun geminiSettingsReturnToTheirOrigin() {
+        assertEquals("settings", EditorNavigation.back("gemini_settings", "settings", "home", "new"))
+        assertEquals("audio", EditorNavigation.back("gemini_settings", "audio", "home", "new"))
+        assertEquals("gemini_settings", EditorNavigation.knownRoute("gemini_settings"))
+    }
+
     @Test fun projectScreensCannotBeRestoredWithoutTheProject() {
         for (route in listOf("editor", "pip", "audio", "trim", "transition", "subtitles", "watermark", "export", "autosubtitle")) {
             assertEquals("home", EditorNavigation.restoreRoute(route, false, "home", "add"))

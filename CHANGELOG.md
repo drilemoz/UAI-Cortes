@@ -1,3 +1,11 @@
+## v0.1.77 (versionCode 78) · 31/10/2026
+
+- O gerenciamento Gemini passou do formulário embutido para Configurações > Google Gemini, com navegação de retorno a Configurações ou Áudio, botões organizados 2×3 e teste/Salvar separados.
+- A Narração com IA não expande mais a tela Áudio: diálogo modal adaptável com rolagem interna, fechamento impedido durante geração e seletor de vozes pesquisável por nome/código da API com LazyColumn.
+- Mantidos avisos de possível consumo de cota, confirmação, cancelamento, geração WAV, timeline e armazenamento existentes. A descrição original em inglês da voz não ocupa mais o formulário.
+- Adicionados testes de pesquisa de vozes e rotas. Não houve migração de projeto; `schemaVersion=4` mantido.
+- Verificações locais não substituem compilação Gradle, teste com Gemini real ou exame da aparência em dispositivo físico.
+
 ## v0.1.76 (versionCode 77) · 31/10/2026
 
 - Integração opcional do Gemini TTS via `/v1beta/interactions`: geração WAV, modelos Flash/Lite 3.8, vozes consultadas na conta, estilo estruturado e prévia gerada com aviso de cota.

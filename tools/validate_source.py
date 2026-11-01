@@ -19,10 +19,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*77',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.76"',gradle)
+assert re.search(r'versionCode\s*=\s*78',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.77"',gradle)
 assert 'AppReleaseNotes.VERSION_NAME' in (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
-for label in ["VERSION: '0.1.76'", "VERSION_CODE: '77'", 'TAG="v$VERSION"',
+for label in ["VERSION: '0.1.77'", "VERSION_CODE: '78'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -215,8 +215,8 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.76'" in package_script and 'VERSION_CODE = 77' in package_script
-assert 'versionCode 77' in gradle and 'isUniversalApk = true' in gradle
+assert "VERSION = '0.1.77'" in package_script and 'VERSION_CODE = 78' in package_script
+assert 'versionCode 78' in gradle and 'isUniversalApk = true' in gradle
 print('OK: versão atual 0.1.64 / versionCode 74, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
@@ -791,7 +791,7 @@ news=(app_files/'WhatsNewScreen.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
-assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 77'])
+assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 78'])
 assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
@@ -917,7 +917,27 @@ assert all(x in gemini_core for x in ['v1beta/$path', 'speech_metadata', 'audio/
 assert all(x in gemini_settings for x in ['GeminiKeyParser.masked', 'ActivityResultContracts.OpenDocument()', 'ActivityResultContracts.CreateDocument(', 'ClipDescription.EXTRA_IS_SENSITIVE'])
 assert all(x in gemini_ui for x in ['GeminiAudioFiles.save', 'AudioTrack(', 'project.copy(audioTracks', 'Cancelar', 'GeminiModels.supported'])
 assert 'GeminiNarrationSection(p, timelinePositionMs, update, onOpenGeminiSettings)' in (app_files/'AudioScreen.kt').read_text()
-assert 'GeminiSettingsSection()' in home
+assert 'onClick("gemini_settings")' in home
 assert 'android:allowBackup="false"' in (root/'app/src/main/AndroidManifest.xml').read_text()
 assert (root/'app/src/test/java/br/com/uaicortes/GeminiTtsCoreTest.kt').exists()
 print('OK: v0.1.76: infraestrutura Gemini, Keystore, UI, WAV, metadados e testes presentes (não substitui build)')
+
+# v0.1.77: menus compactos, diálogos e seleção de vozes reais.
+settings=(app_files/'GeminiSettingsUi.kt').read_text()
+voice_ui=(app_files/'GeminiNarrationUi.kt').read_text()
+voice_filter=(app_files/'GeminiVoiceSearch.kt').read_text()
+nav=(app_files/'EditorNavigation.kt').read_text()
+main=(app_files/'MainActivity.kt').read_text()
+home=(app_files/'HomeScreens.kt').read_text()
+assert 'GeminiSettingsSection()' not in home
+assert 'onClick("gemini_settings")' in home
+assert '"gemini_settings" -> GeminiSettingsScreen(::back)' in main
+assert '"gemini_settings" -> if (previous == "audio") "audio" else "settings"' in nav
+assert 'GeminiKeyAction(' in settings and settings.count('GeminiKeyAction(') >= 7
+assert 'Dialog(' in voice_ui and 'LazyColumn(' in voice_ui
+assert 'GeminiVoiceSearch.filter(voices, voiceSearch)' in voice_ui
+assert 'Gerar por IA' in voice_ui and 'Selecionar voz' not in voice_ui
+assert 'voice.id' in voice_ui and 'voice.name' in voice_ui
+assert 'java.text.Normalizer' in voice_filter and 'folded(it.id)' in voice_filter
+assert (root/'app/src/test/java/br/com/uaicortes/GeminiVoiceSearchTest.kt').exists()
+print('OK: v0.1.77 menus navegáveis, narração modal e pesquisa de vozes por ID/nome')

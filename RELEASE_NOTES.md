@@ -1,3 +1,10 @@
+## v0.1.77 (versionCode 78) · 31/10/2026
+
+- Configurações > Google Gemini agora abre um menu próprio, com ações em duas colunas e visual mais compacto.
+- Áudio > Gerar por IA abre uma janela de narração, com busca pelas vozes e códigos reais do Gemini.
+- Áudio gerado continua com reprodução, salvamento e inserção na timeline; manutenção dos recursos offline.
+- Ainda requer compilação Android e teste visual no aparelho antes de considerar o APK validado.
+
 ## v0.1.76 (versionCode 77) · 31/10/2026
 
 - Configurações > Google Gemini: configure sua chave pessoal, importe/exporte, teste acesso real e remova com confirmação.

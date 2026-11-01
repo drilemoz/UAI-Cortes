@@ -1,5 +1,4 @@
 package br.com.uaicortes
-
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -377,6 +376,7 @@ fun UaiApp() {
                 "diagnostics" -> DiagnosticScreen(::back, onEnabledChanged = { diagnosticsEnabled = it })
                 "general" -> GeneralScreen(store, ::back)
                 "speech_model" -> SpeechModelSettingsScreen(::back)
+                "gemini_settings" -> GeminiSettingsScreen(::back)
                 "appearance" -> AppearanceScreen(theme, { theme = it; store.setTheme(it) }, ::back)
                 "about" -> AboutScreen(::back, onShowWhatsNew = { previous = "about"; screen = "whats_new" })
                 "editor" -> project?.let { p -> EditorScreen(p, selectedClip, positionMs,
@@ -428,7 +428,7 @@ fun UaiApp() {
                     externalVideoUri = importedAudioSourceVideo,
                     onExternalVideoConsumed = { importedAudioSourceVideo = null },
                     timelinePositionMs = positionMs,
-                    onOpenGeminiSettings = { previous = "audio"; screen = "settings" }) }
+                    onOpenGeminiSettings = { previous = "audio"; screen = "gemini_settings" }) }
                 "pip" -> project?.let { current -> PipScreen(current, selectedOverlayId,
                     onSelect = { selectedOverlayId = it }, back = ::back,
                     onChange = { changed ->

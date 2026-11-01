@@ -1,3 +1,10 @@
+## v0.1.77 (versionCode 78) · 31/10/2026
+
+- **Configurações:** Gemini é um item clicável igual às demais categorias. Página dedicada para chave criptografada, seis ações em grade de duas colunas, campo com olho e painel de resultado do teste, sem expor a credencial salva.
+- **Editor > Áudio:** botão **Gerar por IA** abre um pop-up com editor de narração, modelo, voz, estilo, geração, prévia, player e adição à timeline. O formulário não ocupa mais a tela de áudio.
+- **Vozes:** catálogo retornado pela API pesquisável por nome ou ID, sem exibir descrições longas em inglês na tela principal. Os códigos reais seguem intactos na requisição; a prévia pode consumir cota.
+- **Compatibilidade:** backend TTS, SAF, Keystore, Media3, projetos `schemaVersion=4`, workflows e assinatura mantidos. Build Android e inspeção visual em aparelho ainda pendentes.
+
 ## v0.1.76 (versionCode 77) · 31/10/2026
 
 - **Gemini TTS opcional:** Configurações inclui chave pessoal criptografada via Android Keystore, importação `.env`/TXT/JSON, exportação confirmada, teste real de geração e link para AI Studio.
