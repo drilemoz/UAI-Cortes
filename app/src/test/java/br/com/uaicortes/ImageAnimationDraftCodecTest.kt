@@ -12,12 +12,27 @@ class ImageAnimationDraftCodecTest {
         val legacy = """{"images":["$first"],"options":{"intensity":"normal","secondsPerImage":5,"aspect":"9:16","quality":720,"transition":"auto"}}"""
         val parsed = ImageAnimationDraftCodec.decode(legacy)
         assertEquals(30, parsed.options.fps)
+        assertEquals("auto", parsed.options.motion)
         assertEquals(listOf(first), parsed.images)
     }
 
     @Test fun roundTripPreservesOrderAndOptions() {
         val next = ImageDraftSnapshot(listOf(second, first), ImageAnimationOptions(quality = 1080, transition = "preto"))
         assertEquals(next, ImageAnimationDraftCodec.decode(ImageAnimationDraftCodec.encode(next.images, next.options)))
+    }
+
+    @Test fun allMotionPresetsRoundTrip() {
+        for (motion in ImageMotionUi.choices) {
+            val opts=ImageAnimationOptions(motion=motion)
+            assertEquals(opts, ImageAnimationDraftCodec.decode(
+                ImageAnimationDraftCodec.encode(old.images, opts)).options)
+        }
+    }
+
+    @Test fun invalidMotionDraftIsRejected() {
+        val raw=ImageAnimationDraftCodec.encode(old.images, old.options)
+            .replace("\"motion\":\"auto\"", "\"motion\":\"unsupported\"")
+        assertEquals(ImageDraftStatus.DAMAGED, ImageAnimationDraftCodec.inspect(raw, null).status)
     }
 
     @Test fun missingPrimaryUsesValidBackup() {

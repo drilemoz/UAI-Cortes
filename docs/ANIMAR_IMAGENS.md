@@ -1,3 +1,13 @@
+## Atualização 0.1.87 — movimentos e painel de controles
+
+- Toque numa foto da sequência para inspecioná-la na prévia pausada; **Ver prévia** inicia a reprodução do começo.
+- **Personalizar** abre painel inferior com padrões: automático, aproximar, afastar, panorâmica horizontal e panorâmica vertical, além de intensidade, duração, formato, resolução e transição.
+- A função pura `ImageAnimationPlan.frame` governa a prévia e o renderizador; movimentos panorâmicos alternam direção entre fotos e mantêm limites conservadores.
+- A composição da prévia agora inclui fundo da própria foto, escurecimento e foto central íntegra, mas diferenças de decoder, escala, cor e transições podem persistir.
+- **Rascunho** no cabeçalho só guarda ordem e opções. **Gerar MP4** salva o rascunho e inicia a exportação, mesmo sem acionar a prévia antes.
+- Novo `motion` opcional no JSON do rascunho: rascunhos legados carregam `auto`; valor desconhecido é considerado inválido, acionando a proteção/backup existente.
+- Não houve implementação de IA generativa, movimento corporal, controle por foto, crossfade real ou áudio embutido neste motor; estes não devem ser anunciados como disponíveis.
+
 ## Melhorias v0.1.51
 
 - Prévia reduzida para 238 dp, imagens com cartões compactos; alça ☰ atualiza posição durante o gesto, com rolagem de borda; setas permanecem.
@@ -31,7 +41,7 @@
 - Se uma foto não corresponder ao formato, ela é ajustada sem deformação e sobre um fundo derivado da própria foto. A prévia leve é aproximada e pode divergir do fundo do MP4 gerado.
 - Nenhuma imagem é enviada à rede, e não há download de modelos, IA generativa ou API externa.
 - A ferramenta **não cria movimento corporal/expressões por IA** e não implementa paralaxe real 2.5D: faltam máscaras e profundidade local confiáveis.
-- Os JPEGs intermediários são temporários e removidos depois do êxito, cancelamento ou erro; as mídias originais nunca são alteradas.
+- Os PNGs intermediários são temporários e removidos depois do êxito, cancelamento ou erro; as mídias originais nunca são alteradas.
 - Cancelar interrompe o Media3. Durante a cópia para a galeria, o cancelamento fica desativado para evitar um arquivo parcialmente salvo. Erros de cópia removem a entrada pendente do MediaStore.
 - Se a permissão de fotos for revogada, pode ser necessário selecionar as imagens novamente.
 

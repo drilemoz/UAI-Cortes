@@ -16,11 +16,23 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.86"
-    const val VERSION_CODE = 87
+    const val VERSION_NAME = "0.1.88"
+    const val VERSION_CODE = 89
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.88", listOf(
+            ReleaseFeature("project-autobackups", "Cópias automáticas de projetos",
+                "Histórico local por intervalo, restauração confirmada e retenção de versões nas Configurações.", "check"),
+            ReleaseFeature("backup-saf-export", "Backup externo com pasta escolhida",
+                "Exporte, importe e recupere configurações do projeto; os MP4s permanecem em Filmes/UaiCortes.", "film")
+        )),
+        ReleaseSummary("0.1.87", listOf(
+            ReleaseFeature("animation-motion-presets", "Movimentos de câmera controláveis",
+                "Animar Imagens oferece zoom de aproximação, afastamento e panorâmica horizontal/vertical, além do modo automático.", "film"),
+            ReleaseFeature("animation-preview-settings", "Prévia e configurações mais claras",
+                "Prévia com fundo correspondente ao MP4, seleção direta de foto, controles em painel inferior e exportação sem etapa obrigatória de prévia.", "check")
+        )),
         ReleaseSummary("0.1.86", listOf(
             ReleaseFeature("ci72-media3-subtitle-optin", "Correção do Lint das legendas",
                 "Contorno e sombra agora declaram o uso controlado da API Media3, sem alterar a aparência e sem desativar o Lint.", "check")

@@ -43,10 +43,11 @@ import kotlin.math.roundToInt
 /** Efeito temporal com movimento real de câmera por quadro (sem deformar a imagem). */
 @UnstableApi
 internal class AnimatedImageMatrix(private val index: Int, private val durationMs: Long,
-                                   private val intensity: String) : MatrixTransformation {
+                                   private val intensity: String,
+                                   private val motion: String) : MatrixTransformation {
     override fun getMatrix(presentationTimeUs: Long): Matrix {
         val fraction = (presentationTimeUs / 1000f / durationMs.coerceAtLeast(1L)).coerceIn(0f,1f)
-        val f = ImageAnimationPlan.frame(index, fraction, intensity)
+        val f = ImageAnimationPlan.frame(index, fraction, intensity, motion)
         return Matrix().apply {
             setScale(f.scale, f.scale)
             postTranslate(f.panX, f.panY)
@@ -132,7 +133,7 @@ internal class ImageAnimationEngine(private val context: Context) {
             val image = MediaItem.Builder().setUri(Uri.fromFile(file))
                 .setImageDurationMs(options.durationMs).build()
             val videoEffects = mutableListOf<androidx.media3.common.Effect>(
-                AnimatedImageMatrix(index, options.durationMs, options.intensity))
+                AnimatedImageMatrix(index, options.durationMs, options.intensity, options.motion))
             val fade = ImageAnimationPlan.fadeMs(options)
             val incoming = if (index == 0) "Corte direto" else ImageAnimationPlan.transitionKind(options,index-1)
             val outgoing = if (index == prepared.lastIndex) "Corte direto"

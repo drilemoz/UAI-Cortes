@@ -29,6 +29,46 @@ class ImageAnimationPlanTest {
         }
     }
 
+    @Test fun motionPresetsStayWithinBoundsAndRespectDirection() {
+        val movements = listOf("auto", "zoom_in", "zoom_out", "horizontal", "vertical")
+        for (motion in movements) for (intensity in listOf("suave", "normal", "intensa"))
+            for (index in 0..8) for (step in 0..100) {
+                val frame = ImageAnimationPlan.frame(index, step / 100f, intensity, motion)
+                val margin = (frame.scale - 1f) / frame.scale
+                assertTrue(frame.scale >= 1f)
+                assertTrue(frame.scale <= 1.15f)
+                assertTrue(abs(frame.panX) <= margin * .75f + 1e-4f)
+                assertTrue(abs(frame.panY) <= margin * .75f + 1e-4f)
+                if (motion == "zoom_in" || motion == "zoom_out") {
+                    assertEquals(0f, frame.panX, 0f)
+                    assertEquals(0f, frame.panY, 0f)
+                }
+                if (motion == "horizontal") assertEquals(0f, frame.panY, 0f)
+                if (motion == "vertical") assertEquals(0f, frame.panX, 0f)
+            }
+        assertTrue(ImageAnimationPlan.frame(0, 0f, "normal", "zoom_in").scale <
+            ImageAnimationPlan.frame(0, 1f, "normal", "zoom_in").scale)
+        assertTrue(ImageAnimationPlan.frame(0, 0f, "normal", "zoom_out").scale >
+            ImageAnimationPlan.frame(0, 1f, "normal", "zoom_out").scale)
+    }
+
+    @Test fun selectionShowsPhotoOutsideFadeIntervals() {
+        for (duration in listOf(3,5,8)) {
+            val options=ImageAnimationOptions(secondsPerImage=duration)
+            val fade=ImageAnimationPlan.fadeMs(options)
+            for (index in 0 until ImageAnimationPlan.MAX_IMAGES) {
+                val local=ImageAnimationPlan.focusTimeMs(index,options)%options.durationMs
+                assertTrue(local>fade)
+                assertTrue(local<options.durationMs-fade)
+            }
+        }
+    }
+
+    @Test fun invalidPresetIsRejected() {
+        assertThrows(IllegalArgumentException::class.java) { ImageAnimationOptions(motion="falso").checked() }
+        assertEquals("auto", ImageAnimationOptions().motion)
+    }
+
     @Test fun automaticTransitionsAndDuration() {
         assertEquals("Fade branco",ImageAnimationPlan.transitionKind(ImageAnimationOptions(),3))
         assertEquals("Corte direto",ImageAnimationPlan.transitionKind(ImageAnimationOptions(transition="corte"),3))

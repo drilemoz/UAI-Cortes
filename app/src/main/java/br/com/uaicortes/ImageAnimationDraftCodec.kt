@@ -28,7 +28,8 @@ internal object ImageAnimationDraftCodec {
             aspect = opts.optString("aspect", "9:16"),
             quality = opts.optInt("quality", 720),
             fps = opts.optInt("fps", 30),
-            transition = opts.optString("transition", "auto")
+            transition = opts.optString("transition", "auto"),
+            motion = opts.optString("motion", "auto")
         ).checked()
         return ImageDraftSnapshot(images, options)
     }
@@ -44,7 +45,8 @@ internal object ImageAnimationDraftCodec {
             .put("aspect", options.aspect)
             .put("quality", options.quality)
             .put("fps", options.fps)
-            .put("transition", options.transition)).toString()
+            .put("transition", options.transition)
+            .put("motion", options.motion)).toString()
     }
 
     fun inspect(primary: String?, backup: String?): ImageDraftInspection {

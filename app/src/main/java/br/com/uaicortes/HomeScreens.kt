@@ -177,6 +177,8 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
         .padding(horizontal=18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Heading("Configurações",back)
         ItemCard(Icons.Default.Tune,"Geral","Qualidade e armazenamento") {onClick("general")}
+        ItemCard(Icons.Default.Backup,"Salvamento e segurança",
+            "Cópias automáticas, restauração e backup externo") { onClick("backup_settings") }
         ItemCard(Icons.Default.Palette,"Tela","Sistema, claro, escuro e AMOLED") {onClick("appearance")}
         ItemCard(Icons.Default.RecordVoiceOver,"Reconhecimento de voz",
             "Instalar modelo offline de legendas em português") { onClick("speech_model") }

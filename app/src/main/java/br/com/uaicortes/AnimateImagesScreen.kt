@@ -32,11 +32,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.withFrameNanos
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
@@ -74,9 +74,9 @@ internal fun AnimateImagesScreen(
     }
     val allImagesReadable = unavailableImages?.isEmpty() == true
     var options by rememberSaveable(stateSaver = listSaver<ImageAnimationOptions, Any>(
-        save = { listOf(it.intensity, it.secondsPerImage, it.aspect, it.quality, it.fps, it.transition) },
+        save = { listOf(it.intensity, it.secondsPerImage, it.aspect, it.quality, it.fps, it.transition, it.motion) },
         restore = { ImageAnimationOptions(it[0] as String, it[1] as Int, it[2] as String,
-            it[3] as Int, it[4] as Int, it[5] as String) }
+            it[3] as Int, it[4] as Int, it[5] as String, it.getOrNull(6) as? String ?: "auto") }
     )) { mutableStateOf(originalDraft?.options ?: ImageAnimationOptions()) }
     var lastSavedImages by remember { mutableStateOf(originalDraft?.images.orEmpty()) }
     var lastSavedOptions by remember { mutableStateOf(originalDraft?.options ?: ImageAnimationOptions()) }
@@ -90,7 +90,15 @@ internal fun AnimateImagesScreen(
     val total = ImageAnimationPlan.totalDuration(images.size,options)
     LaunchedEffect(animated, playing, busy, images.size, options) {
         if (animated && playing && !busy && total > 0L) {
-            while (true) { delay(33); previewMs = (previewMs + 33) % total }
+            var lastNs = 0L
+            while (true) {
+                val now = withFrameNanos { it }
+                if (lastNs != 0L) {
+                    val elapsed = ((now - lastNs) / 1_000_000L).coerceIn(0L, 250L)
+                    previewMs = (previewMs + elapsed) % total
+                }
+                lastNs = now
+            }
         }
     }
     fun saveDraftAndReturn() {
@@ -143,7 +151,7 @@ internal fun AnimateImagesScreen(
     val currentIndex = if (images.isEmpty()) 0 else
         (previewMs / options.durationMs).toInt().coerceIn(0,images.lastIndex)
     val localFraction = if (options.durationMs > 0) (previewMs % options.durationMs).toFloat()/options.durationMs else 0f
-    val frame = ImageAnimationPlan.frame(currentIndex,localFraction,options.intensity)
+    val frame = ImageAnimationPlan.frame(currentIndex,localFraction,options.intensity,options.motion)
     val fade=ImageAnimationPlan.fadeMs(options)
     val elapsed=previewMs % options.durationMs
     val fadeIn=if(currentIndex>0 && fade>0) ((fade-elapsed).toFloat()/fade).coerceIn(0f,1f) else 0f
@@ -170,7 +178,7 @@ internal fun AnimateImagesScreen(
             TextButton(onClick={::saveDraftAndReturn},enabled=!busy) {
                 Icon(Icons.Default.Save,null,Modifier.size(18.dp))
                 Spacer(Modifier.width(3.dp))
-                Text("Salvar",maxLines=1)
+                Text("Rascunho",maxLines=1)
             }
             IconButton(onClick=onChoose,enabled=!busy) {
                 Icon(Icons.Default.AddPhotoAlternate,"Importar imagens")
@@ -209,12 +217,20 @@ internal fun AnimateImagesScreen(
                     Box(Modifier.size(fittedWidth,fittedHeight).clip(RoundedCornerShape(10.dp)),
                         contentAlignment=Alignment.Center) {
                     if (bitmap != null) {
-                        // Prévia leve; usa a mesma curva temporal dos quadros Media3.
-                        Image(bitmap!!.asImageBitmap(),"Prévia da imagem ${currentIndex+1}",
-                            Modifier.fillMaxSize().graphicsLayer {
-                                scaleX=frame.scale;scaleY=frame.scale
-                                translationX=frame.panX*size.width;translationY=frame.panY*size.height
-                            },contentScale=ContentScale.Fit)
+                        // Espelha a composição do MP4: preenchimento, véu escuro e foto inteira.
+                        // A matriz de câmera transforma o conjunto, não apenas a foto central.
+                        Box(Modifier.fillMaxSize().graphicsLayer {
+                            scaleX = frame.scale; scaleY = frame.scale
+                            translationX = frame.panX * size.width
+                            translationY = frame.panY * size.height
+                        }) {
+                            Image(bitmap!!.asImageBitmap(), null, Modifier.fillMaxSize(),
+                                contentScale=ContentScale.Crop)
+                            Box(Modifier.fillMaxSize().background(
+                                androidx.compose.ui.graphics.Color.Black.copy(alpha=.6f)))
+                            Image(bitmap!!.asImageBitmap(),"Prévia da imagem ${currentIndex+1}",
+                                Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
+                        }
                     } else Icon(Icons.Default.Image,null,Modifier.size(65.dp),
                         tint=androidx.compose.ui.graphics.Color.White)
                     if (animated && fadeColor != androidx.compose.ui.graphics.Color.Transparent && fadeStrength>0f) {
@@ -236,7 +252,7 @@ internal fun AnimateImagesScreen(
                             modifier=Modifier.weight(1f))
                         Text(formatMs(previewMs),style=MaterialTheme.typography.labelSmall)
                     }
-                    Text("Prévia leve dos movimentos e fades; confira o MP4 final para avaliar nitidez.",
+                    Text("Prévia aproximada do enquadramento; confira efeitos e nitidez no MP4 final.",
                         style=MaterialTheme.typography.bodySmall)
                 }
                 Row(verticalAlignment=Alignment.CenterVertically) {
@@ -245,7 +261,7 @@ internal fun AnimateImagesScreen(
                 }
                 if(images.isEmpty()) Text("Escolha fotos na galeria para começar.",style=MaterialTheme.typography.bodySmall)
                 else {
-                    Text("Segure ☰ e arraste para reorganizar. Até 80 imagens.",
+                    Text("Toque na foto para pré-visualizar. Arraste ☰ ou use as setas para ordenar. Até 80 fotos.",
                         style=MaterialTheme.typography.labelSmall)
                     LazyColumn(Modifier.fillMaxWidth().heightIn(max=202.dp),state=listState,
                         verticalArrangement=Arrangement.spacedBy(5.dp)) {
@@ -254,7 +270,9 @@ internal fun AnimateImagesScreen(
                             var dragging by remember(uri) { mutableStateOf(false) }
                             Row(Modifier.fillMaxWidth().zIndex(if(dragging) 1f else 0f)
                                 .graphicsLayer { translationY=dragPx }
-                                .background(MaterialTheme.colorScheme.surfaceVariant,RoundedCornerShape(8.dp))
+                                .clickable { previewMs = ImageAnimationPlan.focusTimeMs(index, options); animated = true; playing = false }
+                                .background(if(animated && currentIndex==index) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surfaceVariant,RoundedCornerShape(8.dp))
                                 .padding(horizontal=4.dp,vertical=4.dp),
                                 verticalAlignment=Alignment.CenterVertically) {
                                 Icon(Icons.Default.DragHandle,"Arrastar imagem",
@@ -345,31 +363,22 @@ internal fun AnimateImagesScreen(
                     }) {Text("Remover somente fotos inacessíveis")}
                 }
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick={advanced=!advanced},modifier=Modifier.weight(1f)) {
+                    OutlinedButton(onClick={advanced=true},modifier=Modifier.weight(1f)) {
                         Icon(Icons.Default.Tune,null,Modifier.size(18.dp)); Spacer(Modifier.width(4.dp))
-                        Text(if(advanced) "Ocultar" else "Ajustes",fontSize=13.sp,maxLines=1)
+                        Text("Personalizar",fontSize=13.sp,maxLines=1)
                     }
                     Button(onClick={animated=true;playing=true;previewMs=0},enabled=images.isNotEmpty(),
                         modifier=Modifier.weight(1f)) {
                         Icon(Icons.Default.AutoAwesome,null,Modifier.size(18.dp));Spacer(Modifier.width(4.dp))
-                        Text("Animar",fontSize=13.sp,maxLines=1)
+                        Text("Ver prévia",fontSize=13.sp,maxLines=1)
                     }
                 }
-                if(advanced) {
-                    Card(Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(2.dp)) {
-                            EditorOptionRow("Intensidade",listOf("suave","normal","intensa"),options.intensity){options=options.copy(intensity=it);animated=false}
-                            EditorOptionRow("Duração",listOf(3,5,8),options.secondsPerImage){options=options.copy(secondsPerImage=it);animated=false}
-                            EditorOptionRow("Formato",listOf("9:16","16:9","1:1"),options.aspect){options=options.copy(aspect=it);animated=false}
-                            EditorOptionRow("Qualidade",listOf(720,1080),options.quality){options=options.copy(quality=it);animated=false}
-                            EditorOptionRow("Transição",listOf("auto","corte","preto","branco"),options.transition){options=options.copy(transition=it);animated=false}
-                            Text("30 FPS · H.264 · ${VideoExportQuality.videoBitrateBps(options.quality)/1_000_000} Mb/s solicitados · offline. " +
-                                "Imagens preparadas sem perdas (PNG temporário); exige mais espaço livre.",
-                                style=MaterialTheme.typography.labelSmall)
-                        }
-                    }
+                if (images.isNotEmpty()) {
+                    Text("${images.size} foto(s) · ${formatMs(total)} · ${options.width} × ${options.height} " +
+                        "· ${options.secondsPerImage}s por foto · ${ImageMotionUi.label(options.motion)}",
+                        style = MaterialTheme.typography.labelSmall)
                 }
-                if(animated) {
+                if(images.isNotEmpty()) {
                     Button(onClick={
                         if (!onSaveDraft(images.toList(),options)) saveError=true
                         else {
@@ -380,7 +389,7 @@ internal fun AnimateImagesScreen(
                         }
                     },modifier=Modifier.fillMaxWidth(),enabled=images.isNotEmpty() && allImagesReadable &&
                         draftStatus != ImageDraftStatus.DAMAGED) {
-                        Icon(Icons.Default.Save,null);Spacer(Modifier.width(8.dp));Text("Salvar MP4")
+                        Icon(Icons.Default.Save,null);Spacer(Modifier.width(8.dp));Text("Gerar MP4")
                     }
                 }
                 Text("Depois de gerar o MP4, use o editor para adicionar músicas, narração, legendas, cortes e PiP.",
@@ -388,6 +397,49 @@ internal fun AnimateImagesScreen(
                 if(saveError) Text("Não foi possível salvar a edição. Verifique o armazenamento.",
                     color=MaterialTheme.colorScheme.error)
                 if (task.message.isNotBlank()) Text(task.message,color=MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+    if (advanced) {
+        ModalBottomSheet(onDismissRequest={advanced=false}) {
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+                .padding(horizontal=16.dp,vertical=8.dp),
+                verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                Text("Personalizar animação",style=MaterialTheme.typography.titleLarge)
+                Text("Movimento das fotos",style=MaterialTheme.typography.titleMedium)
+                androidx.compose.foundation.lazy.LazyRow(
+                    horizontalArrangement=Arrangement.spacedBy(6.dp),
+                    contentPadding=PaddingValues(end=12.dp)) {
+                    items(ImageMotionUi.choices.size) { index ->
+                        val motion = ImageMotionUi.choices[index]
+                        FilterChip(selected=options.motion==motion,
+                            onClick={options=options.copy(motion=motion);animated=false},
+                            label={Text(ImageMotionUi.label(motion))})
+                    }
+                }
+                Text(ImageMotionUi.description(options.motion),style=MaterialTheme.typography.bodySmall)
+                EditorOptionRow("Intensidade",listOf("suave","normal","intensa"),options.intensity) {
+                    options=options.copy(intensity=it); animated=false
+                }
+                HorizontalDivider()
+                Text("Vídeo e transições",style=MaterialTheme.typography.titleMedium)
+                EditorOptionRow("Tempo/foto",listOf(3,5,8),options.secondsPerImage) {
+                    options=options.copy(secondsPerImage=it); animated=false
+                }
+                EditorOptionRow("Formato",listOf("9:16","16:9","1:1"),options.aspect) {
+                    options=options.copy(aspect=it); animated=false
+                }
+                EditorOptionRow("Resolução",listOf(720,1080),options.quality) {
+                    options=options.copy(quality=it); animated=false
+                }
+                EditorOptionRow("Transição",listOf("auto","corte","preto","branco"),options.transition) {
+                    options=options.copy(transition=it); animated=false
+                }
+                Text("30 FPS · H.264 · ${VideoExportQuality.videoBitrateBps(options.quality)/1_000_000} Mb/s solicitados · offline. " +
+                    "As imagens são preparadas em PNG temporário e precisam de espaço disponível.",
+                    style=MaterialTheme.typography.bodySmall)
+                Button(onClick={advanced=false},modifier=Modifier.fillMaxWidth()) {Text("Concluir ajustes")}
+                Spacer(Modifier.height(18.dp))
             }
         }
     }

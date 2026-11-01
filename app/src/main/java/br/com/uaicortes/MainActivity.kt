@@ -1,6 +1,9 @@
 package br.com.uaicortes
 import android.net.Uri
 import android.os.Bundle
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -23,26 +26,22 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.geometry.Offset
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-
 internal val Blue = Color(0xFF0866FF)
 internal val Purple = Color(0xFF6954B5)
 internal val Green = Color(0xFF16866E)
 internal val Ink = Color(0xFF151515)
 internal val LightBg = Color(0xFFF7F8FA)
-
 internal data class OverlapConfirmation(
     val project: VideoProject, val requested: List<Overlay>,
     val preferredId: String, val conflicts: Set<Pair<String, String>>
 )
 internal data class SequentialConfirmation(val uri: Uri, val isImage: Boolean, val mediaMs: Long)
-
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,7 +50,6 @@ class MainActivity : ComponentActivity() {
         setContent { UaiApp() }
     }
 }
-
 /** Observa falhas de reprodução em todos os players sem capturar caminhos de mídia. */
 internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     ExoPlayer.Builder(context).build().apply {
@@ -61,12 +59,11 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
             }
         })
     }
-
-@Composable
-fun UaiApp() {
+@Composable fun UaiApp() {
     val context = LocalContext.current
     val projectSession: EditorProjectViewModel = viewModel()
     val store = projectSession.store
+    val backupStore = remember(context) { ProjectBackupStore(context.applicationContext) }
     val whatsNewSeen = remember(context) { WhatsNewSeenStore(context.applicationContext) }
     val mediaController = remember(context) { MediaImportController(context.applicationContext) }
     val importScope = rememberCoroutineScope()
@@ -96,10 +93,11 @@ fun UaiApp() {
         }
     }
     var screen by workspace::screen
-    // O ViewModel mantém o cadastro durante rotação; SavedStateHandle preserva apenas o ID.
     val activeProjectId = projectSession.activeProjectId
     val projects = projectSession.projects
     val project = projectSession.project
+    ProjectBackupLifecycle(backupStore, activeProjectId, screen)
+    ProjectMediaAlert(if (screen == "editor") project else null)
     var selectedClip by workspace::selectedClip
     var selectedAudioTrackId by workspace::selectedAudioTrackId
     var selectedSubtitleId by workspace::selectedSubtitleId
@@ -117,7 +115,6 @@ fun UaiApp() {
         } }
     )) { mutableStateListOf<Uri>() }
     var animationDestination by rememberSaveable { mutableStateOf("new") }
-    // Sanitiza seleções restauradas, inclusive se o projeto tiver sido excluído.
     LaunchedEffect(project) {
         if (project == null && animationDestination == "append") animationDestination = "new"
         workspace.reconcile(project, mediaOrigin, mediaAction)
@@ -375,6 +372,8 @@ fun UaiApp() {
                 "whats_new" -> WhatsNewScreen(::back)
                 "diagnostics" -> DiagnosticScreen(::back, onEnabledChanged = { diagnosticsEnabled = it })
                 "general" -> GeneralScreen(store, ::back)
+                "backup_settings" -> ProjectBackupSettingsScreen(backupStore, projects,
+                    onRestore = { restored -> write(restored) }, back = ::back)
                 "speech_model" -> SpeechModelSettingsScreen(::back)
                 "gemini_settings" -> GeminiSettingsScreen(::back)
                 "appearance" -> AppearanceScreen(theme, { theme = it; store.setTheme(it) }, ::back)
@@ -596,4 +595,3 @@ fun UaiApp() {
         }
     }
 }
-

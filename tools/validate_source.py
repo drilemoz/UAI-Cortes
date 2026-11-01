@@ -19,10 +19,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*87',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.86"',gradle)
+assert re.search(r'versionCode\s*=\s*89',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.88"',gradle)
 assert 'AppReleaseNotes.VERSION_NAME' in (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
-for label in ["VERSION: '0.1.86'", "VERSION_CODE: '87'", 'TAG="v$VERSION"',
+for label in ["VERSION: '0.1.88'", "VERSION_CODE: '89'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -215,8 +215,8 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.86'" in package_script and 'VERSION_CODE = 87' in package_script
-assert 'versionCode = 87' in gradle and 'isUniversalApk = true' in gradle
+assert "VERSION = '0.1.88'" in package_script and 'VERSION_CODE = 89' in package_script
+assert 'versionCode = 89' in gradle and 'isUniversalApk = true' in gradle
 print('OK: versão atual 0.1.64 / versionCode 74, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
@@ -534,7 +534,7 @@ assert 'val fixedProgress=AnimationProgressUi.fraction(progress)' in anim
 assert 'LinearProgressIndicator(progress={fixedProgress}' in anim
 assert 'height(238.dp)' in anim and 'BoxWithConstraints(' in anim
 assert 'detectDragGestures(' in anim and 'listState.scrollBy(' in anim
-assert 'Text("Animar",' in anim and 'O Uai Cortes está preparando seu vídeo' in anim
+assert 'Text("Ver prévia",' in anim and 'O Uai Cortes está preparando seu vídeo' in anim
 assert 'fun fraction(value:Int?):Float?' in progress_ui
 assert (root/'app/src/test/java/br/com/uaicortes/AnimationProgressUiTest.kt').is_file()
 print('OK: v0.1.52, barra de progresso segura, preview compacto e arrasto em tempo real')
@@ -545,7 +545,7 @@ saved_dialog=(root/'app/src/main/java/br/com/uaicortes/VideoSavedDialog.kt').rea
 assert 'SharedPreferences' not in draft or 'getSharedPreferences' in draft
 assert all(t in draft for t in ['fun load()', 'fun save(', 'ImageAnimationDraftCodec.prepareWrite(', 'editor.commit()'])
 assert all(t in (root/'app/src/main/java/br/com/uaicortes/ImageAnimationDraftCodec.kt').read_text() for t in ['images', 'secondsPerImage', 'transition'])
-assert all(t in anim for t in ['Salvar edição das imagens?', 'confirmExit', 'VideoSavedDialog(', 'onSaveDraft(', 'EditorOptionRow(', 'Text("Salvar"'])
+assert all(t in anim for t in ['Salvar edição das imagens?', 'confirmExit', 'VideoSavedDialog(', 'onSaveDraft(', 'EditorOptionRow(', 'Text("Rascunho"'])
 assert 'progress!!' not in anim and 'onUseInEditor(uri)' in anim
 assert 'VideoSavedDialog(uri=savedUri' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/ImageAnimationDraftRulesTest.kt').is_file()
@@ -791,7 +791,7 @@ news=(app_files/'WhatsNewScreen.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
-assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 87'])
+assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 89'])
 assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
@@ -1057,3 +1057,32 @@ import runpy
 runpy.run_path(str(root/'tools/ci72_media3_optin_test.py'), run_name='__main__')
 assert 'ReleaseSummary("0.1.86", listOf(' in notes
 print('OK: v0.1.86 CI72: lint Media3 com opt-in local nos spans de legendas')
+
+# v0.1.87: opções de movimento reais e rascunhos compatíveis.
+anim_screen = (root/'app/src/main/java/br/com/uaicortes/AnimateImagesScreen.kt').read_text()
+anim_plan = (root/'app/src/main/java/br/com/uaicortes/ImageAnimationPlan.kt').read_text()
+anim_engine = (root/'app/src/main/java/br/com/uaicortes/ImageAnimationEngine.kt').read_text()
+anim_codec = (root/'app/src/main/java/br/com/uaicortes/ImageAnimationDraftCodec.kt').read_text()
+assert 'ImageMotionUi.choices' in anim_screen and 'ModalBottomSheet(' in anim_screen
+assert 'ImageAnimationPlan.frame(currentIndex,localFraction,options.intensity,options.motion)' in anim_screen
+assert 'ImageAnimationPlan.frame(index, fraction, intensity, motion)' in anim_engine
+assert 'options.motion' in anim_engine and 'motion = opts.optString("motion", "auto")' in anim_codec
+assert '.put("motion", options.motion)' in anim_codec
+assert 'Gerar MP4' in anim_screen and 'Rascunho' in anim_screen
+assert 'ReleaseSummary("0.1.87", listOf(' in notes
+print('OK: v0.1.87 animação de imagens: controles, preview e rascunhos legados')
+
+# v0.1.88: persistência e recuperação configurável; não altera o esquema dos projetos.
+backup=(root/'app/src/main/java/br/com/uaicortes/ProjectBackups.kt').read_text()
+backup_ui=(root/'app/src/main/java/br/com/uaicortes/ProjectBackupSettingsScreen.kt').read_text()
+backup_policy=(root/'app/src/main/java/br/com/uaicortes/ProjectBackupPolicy.kt').read_text()
+assert all(x in backup for x in ['AtomicFile(', 'ProjectBackupCodec.decode', 'writeExternal(', 'DocumentFile.fromTreeUri', 'takePersistableUriPermission', 'MAX_BYTES', 'sha256'])
+assert all(x in backup_ui for x in ['OpenDocumentTree()', 'OpenDocument()', 'CreateDocument(', 'AlertDialog(', '"Restaurar"', '"Exportar"'])
+assert all(x in backup_policy for x in ['15, 30, 60, 120, 300', '3, 5, 10', 'SHA-256'])
+assert '"backup_settings" -> ProjectBackupSettingsScreen(' in main
+assert 'ProjectBackupLifecycle(backupStore, activeProjectId, screen)' in main
+assert 'Lifecycle.Event.ON_STOP' in (app_files/'ProjectBackupLifecycle.kt').read_text()
+assert 'Environment.DIRECTORY_MOVIES + "/UaiCortes"' in (root/'app/src/main/java/br/com/uaicortes/GalleryVideoSaver.kt').read_text()
+assert '"backup_settings"' in nav
+assert 'ProjectBackupCodecTest.kt' in {p.name for p in (root/'app/src/test/java/br/com/uaicortes').glob('*.kt')}
+print('OK: v0.1.88 histórico de projetos, configurações, SAF e destino Filmes/UaiCortes')
