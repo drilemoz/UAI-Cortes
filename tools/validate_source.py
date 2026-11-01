@@ -19,10 +19,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*96',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.95"',gradle)
+assert re.search(r'versionCode\s*=\s*97',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.96"',gradle)
 assert 'AppReleaseNotes.VERSION_NAME' in (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
-for label in ["VERSION: '0.1.95'", "VERSION_CODE: '96'", 'TAG="v$VERSION"',
+for label in ["VERSION: '0.1.96'", "VERSION_CODE: '97'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -215,8 +215,8 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.95'" in package_script and 'VERSION_CODE = 96' in package_script
-assert 'versionCode = 96' in gradle and 'isUniversalApk = true' in gradle
+assert "VERSION = '0.1.96'" in package_script and 'VERSION_CODE = 97' in package_script
+assert 'versionCode = 97' in gradle and 'isUniversalApk = true' in gradle
 print('OK: versão atual 0.1.64 / versionCode 74, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
@@ -791,7 +791,7 @@ news=(app_files/'WhatsNewScreen.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
-assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 96'])
+assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 97'])
 assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
@@ -1202,3 +1202,16 @@ assert (root/'app/src/test/java/br/com/uaicortes/GeminiVoicePresentationTest.kt'
 assert (root/'docs/VALIDATION_0.1.95.md').exists()
 assert 'ReleaseSummary("0.1.95", listOf(' in notes
 print('OK: v0.1.95 catálogo de vozes, nomes localizados sem alteração do ID e cache privado de amostras')
+
+# v0.1.96: estilos e ajustes de narração não devem vazar para o texto falado.
+styling = (app_files/'GeminiNarrationStyling.kt').read_text()
+assert styling.count('GeminiNarrationPreset(') >= 17  # declaração + 16 entradas
+assert 'fun instruction(label: String, pace: Int = 2, expressiveness: Int = 2, pitch: Int = 2)' in styling
+assert 'GeminiNarrationStyling.instruction(style, pace, expressiveness, pitch)' in narration
+assert narration.count('GeminiPreviewIdentity.id(') >= 2
+assert 'val instruction = styleInstruction' in narration
+assert 'speech_metadata' in voice_core and 'put("style", style)' in voice_core
+assert (root/'app/src/test/java/br/com/uaicortes/GeminiNarrationStylingTest.kt').exists()
+assert (root/'docs/VALIDATION_0.1.96.md').exists()
+assert 'ReleaseSummary("0.1.96", listOf(' in notes
+print('OK: v0.1.96 presets e instruções de estilo compostas com cache coerente')

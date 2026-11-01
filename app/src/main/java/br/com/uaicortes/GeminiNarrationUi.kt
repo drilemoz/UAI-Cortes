@@ -32,14 +32,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.ensureActive
 import kotlin.coroutines.coroutineContext
 import java.io.File
+import kotlin.math.roundToInt
 
-private val narrationStyles = linkedMapOf(
-    "Neutra" to "clear, neutral and natural Brazilian Portuguese narration",
-    "Jornalística" to "informative broadcast newsreader, deliberate and articulate",
-    "Animada" to "cheerful, upbeat and expressive",
-    "Calma" to "soft, relaxed and soothing",
-    "Sussurrada" to "softly whispered, intimate"
-)
 
 @Composable
 internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: Long,
@@ -56,6 +50,11 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
     var selectedVoice by remember { mutableStateOf<GeminiVoice?>(null) }
     var voices by remember { mutableStateOf<List<GeminiVoice>>(emptyList()) }
     var style by remember { mutableStateOf("Neutra") }
+    var pace by remember { mutableIntStateOf(2) }
+    var expressiveness by remember { mutableIntStateOf(2) }
+    var pitch by remember { mutableIntStateOf(2) }
+    var advancedStylesOpen by remember { mutableStateOf(false) }
+    val styleInstruction = GeminiNarrationStyling.instruction(style, pace, expressiveness, pitch)
     var status by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
     var working by remember { mutableStateOf(false) }
@@ -227,13 +226,47 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                                     Text(style, modifier = Modifier.weight(1f))
                                     Icon(Icons.Default.ArrowDropDown, null)
                                 }
-                                DropdownMenu(expanded = styleMenu, onDismissRequest = { styleMenu = false }) {
-                                    narrationStyles.keys.forEach { label ->
+                                DropdownMenu(expanded = styleMenu, onDismissRequest = { styleMenu = false },
+                                    modifier = Modifier.heightIn(max = 380.dp)) {
+                                    GeminiNarrationStyling.presets.forEach { preset ->
+                                        val label = preset.label
                                         DropdownMenuItem(text = { Text(label) }, onClick = {
                                             style = label; styleMenu = false
                                         })
                                     }
                                 }
+                            }
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            TextButton(onClick = { advancedStylesOpen = !advancedStylesOpen },
+                                modifier = Modifier.fillMaxWidth(), enabled = !working) {
+                                Text(if (advancedStylesOpen) "Ocultar ajustes da voz" else "Ajustes avançados da voz",
+                                    modifier = Modifier.weight(1f))
+                                Icon(if (advancedStylesOpen) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = null)
+                            }
+                            if (advancedStylesOpen) {
+                                Text("Ritmo · ${GeminiNarrationStyling.paceLabels[pace]}",
+                                    style = MaterialTheme.typography.labelMedium)
+                                Slider(value = pace.toFloat(), onValueChange = { pace = it.roundToInt().coerceIn(0, 4) },
+                                    valueRange = 0f..4f, steps = 3, enabled = !working && !loading)
+                                Text("Emoção · ${GeminiNarrationStyling.expressivenessLabels[expressiveness]}",
+                                    style = MaterialTheme.typography.labelMedium)
+                                Slider(value = expressiveness.toFloat(),
+                                    onValueChange = { expressiveness = it.roundToInt().coerceIn(0, 4) },
+                                    valueRange = 0f..4f, steps = 3, enabled = !working && !loading)
+                                Text("Entonação / altura · ${GeminiNarrationStyling.pitchLabels[pitch]}",
+                                    style = MaterialTheme.typography.labelMedium)
+                                Slider(value = pitch.toFloat(), onValueChange = { pitch = it.roundToInt().coerceIn(0, 4) },
+                                    valueRange = 0f..4f, steps = 3, enabled = !working && !loading)
+                                TextButton(onClick = { pace = 2; expressiveness = 2; pitch = 2 },
+                                    enabled = !working && !loading && (pace != 2 || expressiveness != 2 || pitch != 2)) {
+                                    Text("Restaurar ajustes naturais")
+                                }
+                                Text("São orientações para a IA, não controles exatos de velocidade, " +
+                                    "frequência ou intensidade. O resultado depende da voz e do modelo.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                         if (loading || working) {
@@ -250,7 +283,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                                         val key = withContext(Dispatchers.IO) { creds.read() }
                                             ?: throw IllegalStateException("Chave ausente")
                                         val voice = selectedVoice ?: throw IllegalStateException("Nenhuma voz")
-                                        val id = GeminiPreviewIdentity.id(key, model, voice.id, narrationStyles.getValue(style))
+                                        val id = GeminiPreviewIdentity.id(key, model, voice.id, styleInstruction)
                                         val saved = withContext(Dispatchers.IO) { previewCache.find(id) }
                                         if (saved == null) confirmation = "sample"
                                         else {
@@ -336,7 +369,8 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                             Text(status, Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
                         }
                         Text("A primeira amostra de cada voz/modelo/estilo é gerada pela API e pode consumir cota. " +
-                            "Repetições usam cache local sem internet enquanto o Android mantiver o arquivo. " +
+                            "Repetições com a mesma voz, modelo, estilo e ajustes usam cache local sem internet " +
+                            "enquanto o Android mantiver o arquivo. " +
                             "O catálogo Gemini não fornece amostras oficiais para vozes predefinidas.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -414,7 +448,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                     val key = withContext(Dispatchers.IO) { creds.read() }
                         ?: throw IllegalStateException("Chave ausente")
                     val voice = selectedVoice ?: throw IllegalStateException("Nenhuma voz")
-                    val instruction = narrationStyles.getValue(style)
+                    val instruction = styleInstruction
                     val sampleId = if (action == "sample")
                         GeminiPreviewIdentity.id(key, model, voice.id, instruction) else ""
                     val cached = if (action == "sample") withContext(Dispatchers.IO) {
