@@ -108,6 +108,10 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     val activeProjectId = projectSession.activeProjectId
     val projects = projectSession.projects
     val project = projectSession.project
+    // Estado da narração acompanha o projeto enquanto o editor estiver aberto,
+    // mesmo após retornar à prévia. Não armazena tokens ou áudios em memória.
+    val narrationDraft = remember(project?.id) { GeminiNarrationDraft() }
+    var resumeVideoPreview by remember { mutableStateOf(false) }
     ProjectBackupLifecycle(backupStore, activeProjectId, screen)
     ProjectMediaAlert(if (screen == "editor") project else null)
     var selectedClip by workspace::selectedClip
@@ -418,7 +422,9 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     onSelectOverlay = { selectedOverlayId = it },
                     onTransition = { index -> selectedBoundary = index; screen = "transition" },
                     onSaveHome = { if (write(p)) screen = "home" },
-                    onClipAudio = { id -> selectedClip=id; navTo("clip_audio") }) }
+                    onClipAudio = { id -> selectedClip=id; navTo("clip_audio") },
+                    autoPlayOnReturn = resumeVideoPreview,
+                    onReturnPlaybackConsumed = { resumeVideoPreview = false }) }
                 "watermark" -> project?.let { current -> TextWatermarkScreen(current, ::back) { changed ->
                     if (write(changed)) screen = "editor"
                 } }
@@ -442,7 +448,9 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     externalVideoUri = importedAudioSourceVideo,
                     onExternalVideoConsumed = { importedAudioSourceVideo = null },
                     timelinePositionMs = positionMs,
-                    onOpenGeminiSettings = { previous = "audio"; screen = "gemini_settings" }) }
+                    onOpenGeminiSettings = { previous = "audio"; screen = "gemini_settings" },
+                    narrationDraft = narrationDraft,
+                    onReturnToVideo = { resumeVideoPreview = true; screen = "editor" }) }
                 "pip" -> project?.let { current -> PipScreen(current, selectedOverlayId,
                     onSelect = { selectedOverlayId = it }, back = ::back,
                     onChange = { changed ->

@@ -1,3 +1,10 @@
+# Uai Cortes v0.1.103 — Retorno ao vídeo ao escolher voz
+
+- Escolha uma voz em Áudio → Gerar por IA → Voz. Ao tocar em **Confirmar voz**, o app fecha as janelas e volta para a prévia do vídeo no editor, retomando a reprodução no ponto mantido na timeline.
+- O texto e a voz escolhida continuam no rascunho do mesmo projeto: para gerar narração com essa voz, reabra Gerar por IA e confirme a geração. A voz **não** substitui o áudio original apenas por ser selecionada.
+- O seletor ganhou linhas mais legíveis com marcador de seleção; Cancelar/Fechar não muda a voz nem dispara a API.
+- Versão 0.1.103 / versionCode 104 e GitHub Manager sincronizados. Build Android completo e verificação no aparelho pendentes.
+
 # Uai Cortes v0.1.102 — Diagnóstico do catálogo Gemini
 
 - Em Áudio → Gerar por IA → Voz, use **Consultar** ou abra **Diagnóstico do catálogo** e toque **Executar teste novamente**. O painel informa se o filtro `pt-BR` retornou vozes, se houve fallback geral e erros de acesso de forma sanitizada.

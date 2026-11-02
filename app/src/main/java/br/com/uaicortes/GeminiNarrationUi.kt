@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
@@ -35,10 +36,27 @@ import java.io.File
 import kotlin.math.roundToInt
 
 
+/** Rascunho de narração em memória, mantido pelo editor ao alternar telas.
+ * Não persiste credenciais nem inicia qualquer chamada à API.
+ */
+internal class GeminiNarrationDraft {
+    val text = mutableStateOf("")
+    val model = mutableStateOf(GeminiModels.LITE)
+    val selectedVoice = mutableStateOf<GeminiVoice?>(null)
+    val voices = mutableStateOf<List<GeminiVoice>>(emptyList())
+    val style = mutableStateOf("Neutra")
+    val pace = mutableIntStateOf(2)
+    val expressiveness = mutableIntStateOf(2)
+    val pitch = mutableIntStateOf(2)
+}
+
 @Composable
 internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: Long,
     update: (VideoProject) -> Unit, openSettings: () -> Unit,
-    modifier: Modifier = Modifier.fillMaxWidth()) {
+    modifier: Modifier = Modifier.fillMaxWidth(),
+    draft: GeminiNarrationDraft? = null,
+    onReturnToVideo: () -> Unit = {}) {
+    val currentDraft = draft ?: remember(project.id) { GeminiNarrationDraft() }
     val ctx = LocalContext.current
     val creds = remember(ctx) { GeminiCredentialStore(ctx) }
     val api = remember { GeminiTtsClient() }
@@ -54,16 +72,16 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
             NarrationSubtitleLine(it.id, it.text, it.startMs, it.endMs)
         })
     }
-    var text by remember(project.id) { mutableStateOf("") }
-    var model by remember { mutableStateOf(GeminiModels.LITE) }
-    var selectedVoice by remember { mutableStateOf<GeminiVoice?>(null) }
-    var voices by remember { mutableStateOf<List<GeminiVoice>>(emptyList()) }
+    var text by currentDraft.text
+    var model by currentDraft.model
+    var selectedVoice by currentDraft.selectedVoice
+    var voices by currentDraft.voices
     var voiceDiagnostic by remember { mutableStateOf<List<String>>(emptyList()) }
     var showVoiceDiagnostic by remember { mutableStateOf(false) }
-    var style by remember { mutableStateOf("Neutra") }
-    var pace by remember { mutableIntStateOf(2) }
-    var expressiveness by remember { mutableIntStateOf(2) }
-    var pitch by remember { mutableIntStateOf(2) }
+    var style by currentDraft.style
+    var pace by currentDraft.pace
+    var expressiveness by currentDraft.expressiveness
+    var pitch by currentDraft.pitch
     var advancedStylesOpen by remember { mutableStateOf(false) }
     val styleInstruction = GeminiNarrationStyling.instruction(style, pace, expressiveness, pitch)
     var status by remember { mutableStateOf("") }
@@ -112,9 +130,8 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
         if (loading || working) return
         // O toque do usuário inicia a consulta. Nenhum áudio/texto é transmitido e nada é selecionado.
         loading = true
-        // Não manter catálogo/voz antigos após falha ou troca de credencial.
-        voices = emptyList()
-        selectedVoice = null
+        // Preservar a seleção até a nova resposta. Nunca selecionar outra voz automaticamente.
+        // Uma consulta falha não deve apagar o rascunho confirmado.
         status = "Consulta de vozes iniciada. Aguardando resposta do Gemini..."
         voiceDiagnostic = listOf("Solicitação manual iniciada: GET /v1beta/voices (sem síntese de áudio).")
         job = scope.launch {
@@ -124,6 +141,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                 val result = api.voicesWithDiagnosis(key)
                 voices = result.voices
                 selectedVoice = result.voices.firstOrNull { it.id == selectedVoice?.id }
+                    ?: selectedVoice?.takeIf { current -> result.voices.isEmpty() && current.id.isNotBlank() }
                 voiceDiagnostic = result.report
                 status = if (result.voices.isEmpty())
                     "A consulta terminou sem vozes disponíveis. Abra Diagnóstico do catálogo para ver as etapas."
@@ -461,11 +479,15 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                 val filtered = GeminiVoiceSearch.filter(voices, voiceSearch)
                 Text("${filtered.size} de ${voices.size} vozes", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Ao confirmar, o vídeo volta a reproduzir. A voz só será ouvida depois de gerar o áudio e adicioná-lo à timeline.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                 LazyColumn(Modifier.weight(1f)) {
                     items(filtered, key = { it.id }) { voice ->
-                        TextButton(onClick = { draftVoiceId = voice.id },
-                            modifier = Modifier.fillMaxWidth(),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)) {
+                        Row(Modifier.fillMaxWidth()
+                                .clickable { draftVoiceId = voice.id }
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(GeminiVoicePresentation.label(voice), color = MaterialTheme.colorScheme.onSurface,
                                     maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -485,8 +507,8 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 2, overflow = TextOverflow.Ellipsis)
                             }
-                            if (draftVoiceId == voice.id) Icon(Icons.Default.Check,
-                                "Voz marcada para confirmação", tint = MaterialTheme.colorScheme.primary)
+                            RadioButton(selected = draftVoiceId == voice.id, onClick = null,
+                                modifier = Modifier.size(42.dp))
                         }
                         HorizontalDivider()
                     }
@@ -496,9 +518,17 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                         Text("Cancelar")
                     }
                     Button(onClick = {
-                        selectedVoice = voices.firstOrNull { it.id == draftVoiceId }
-                        voicePicker = false
-                        generated = null; duration = 0L; addedUri = null
+                        val chosen = GeminiVoiceChoice.confirmed(voices, draftVoiceId)
+                        if (chosen != null) {
+                            selectedVoice = chosen
+                            generated = null; duration = 0L; addedUri = null
+                            voicePicker = false
+                            player.pause()
+                            expanded = false
+                            // Retorna ao editor, preservando a voz e o texto no rascunho.
+                            // Não sintetiza nem adiciona faixas sem confirmação.
+                            onReturnToVideo()
+                        }
                     }, modifier = Modifier.weight(1f), enabled = draftVoiceId != null &&
                         voices.any { it.id == draftVoiceId } && !working) {
                         Text("Confirmar voz")

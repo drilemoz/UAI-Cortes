@@ -31,7 +31,9 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                         onSelectionConsumed:()->Unit = {},
                         onChooseExternalVideo:()->Unit = {}, externalVideoUri: Uri? = null,
                         onExternalVideoConsumed:()->Unit = {},
-                        timelinePositionMs: Long = 0L, onOpenGeminiSettings: () -> Unit = {}) {
+                        timelinePositionMs: Long = 0L, onOpenGeminiSettings: () -> Unit = {},
+                        narrationDraft: GeminiNarrationDraft? = null,
+                        onReturnToVideo: () -> Unit = {}) {
     val context = LocalContext.current
     val engine = remember { AudioExtractionEngine(context) }
     var sourceIndex by remember(p.id) { mutableIntStateOf(-1) } // -1 = all clips
@@ -392,7 +394,9 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                     chooseMusic()
                 },Modifier.weight(1f))
                 GeminiNarrationSection(p, timelinePositionMs, update, onOpenGeminiSettings,
-                    modifier=Modifier.weight(1f))
+                    modifier=Modifier.weight(1f),
+                    draft=narrationDraft ?: remember(p.id) { GeminiNarrationDraft() },
+                    onReturnToVideo=onReturnToVideo)
             }
             Text("Os áudios selecionados são adicionados diretamente ao projeto pelo seletor de arquivos do Android.",
                 style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)

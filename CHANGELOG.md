@@ -1,3 +1,11 @@
+## 0.1.103 · versionCode 104 (02/11/2026)
+
+- **Navegação:** Confirmar voz → fechar seletor e gerador → editor com vídeo reproduzindo a partir do cursor existente. Não chama TTS nem altera faixas nesse ato.
+- **Estado:** voz, texto, modelo, estilos e catálogo retidos durante a sessão de edição do projeto, mesmo ao trocar entre Áudio e editor.
+- **Interface:** listagem de vozes com linhas clicáveis alinhadas e marcador de seleção.
+- **Segurança/controle:** geração e inserção na timeline continuam exigindo confirmação explícita. Selecionar voz não modifica vídeo.
+- **Regressão:** testes unitários de seleção + validação estrutural de navegação e consistência de versão. Build Android pendente.
+
 ## 0.1.102 · versionCode 103 (02/11/2026)
 
 - Adicionado painel de Diagnóstico do catálogo de vozes com teste manual, motivo seguro de falha, estágio pt-BR/geral e contagem sem enviar texto ou chave.

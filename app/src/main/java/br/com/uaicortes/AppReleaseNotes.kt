@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.102"
-    const val VERSION_CODE = 103
+    const val VERSION_NAME = "0.1.103"
+    const val VERSION_CODE = 104
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.103", listOf(
+            ReleaseFeature("voice-select-returns-to-video", "Voltar ao vídeo após escolher voz",
+                "Confirmar voz fecha a seleção e a narração, retorna ao editor e retoma a prévia; não gera áudio automaticamente.", "film"),
+            ReleaseFeature("voice-draft-preserved", "Voz e texto preservados na edição",
+                "O rascunho e o catálogo continuam disponíveis quando o usuário reabre Gerar por IA no mesmo projeto.", "check"),
+            ReleaseFeature("voice-picker-readable", "Lista de vozes mais legível",
+                "Cada voz ocupa uma linha de seleção completa com indicador de marcação e conteúdo alinhado.", "check")
+        )),
         ReleaseSummary("0.1.102", listOf(
             ReleaseFeature("gemini-voice-catalog-diagnostic", "Diagnóstico das vozes Gemini",
                 "Consulta manual mostra o resultado do filtro pt-BR, fallback geral e motivo de falhas HTTP/rede sem exibir chave nem transcrição.", "check"),

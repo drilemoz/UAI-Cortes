@@ -1,3 +1,11 @@
+## Versão 0.1.103 · versionCode 104 (02/11/2026)
+
+- Confirmar uma voz no catálogo agora fecha a janela de narração e retorna à prévia do vídeo no editor, retomando a reprodução no cursor existente.
+- O rascunho da narração (texto, voz, catálogo, modelo e estilo) permanece em memória enquanto o mesmo projeto estiver aberto; tocar em confirmar voz não gera áudio nem adiciona trilha ao vídeo.
+- Lista de vozes usa linhas clicáveis com botão de seleção, evitando cortes de texto da interface anterior. Nenhuma credencial ou áudio é persistido no rascunho.
+- Continua necessário voltar em Áudio → Gerar por IA, confirmar a geração e confirmar a inclusão na timeline para ouvir a voz nova no vídeo. Não há cópia de áudio sem confirmação.
+- Testes locais e validações do ZIP não substituem build Android nem teste no aparelho.
+
 ## Versão 0.1.102 · versionCode 103 (02/11/2026)
 
 - Diagnóstico explícito na janela Narração com IA: consultar/diagnosticar vozes só por toque, indicar filtro pt-BR, fallback e falhas HTTP/SSL/rede sem mostrar a chave ou legendas. Busca geral após filtro vazio ou rejeição HTTP 400/422; erros de autenticação/cota não disparam retry desnecessário.

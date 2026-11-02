@@ -42,7 +42,9 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     onUpdate:(VideoProject)->Unit,onAddVideo:()->Unit,onPiP:()->Unit,onAudio:()->Unit,
     onSelectOverlay:(String)->Unit,onTransition:(Int)->Unit,onSaveHome:()->Unit,
     onSelectAudio:(String)->Unit,onSelectSubtitle:(String)->Unit,
-    onClipAudio:(String)->Unit) {
+    onClipAudio:(String)->Unit,
+    autoPlayOnReturn: Boolean = false,
+    onReturnPlaybackConsumed: () -> Unit = {}) {
     val context=LocalContext.current
     val captureScope = rememberCoroutineScope()
     var savingFrame by remember { mutableStateOf(false) }
@@ -92,6 +94,11 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         // o tempo salvo com o zero inicial do player durante o prepare().
         seekProjectPosition(player, p.clips, latestPosition)
         restoringMedia = false
+        if (autoPlayOnReturn) {
+            // Só reinicia a prévia após carregar a mídia e restaurar o cursor.
+            if (p.clips.isNotEmpty()) player.play()
+            onReturnPlaybackConsumed()
+        }
     }
     LaunchedEffect(player, p.clips.map { it.id to it.durationMs }) {
         while (true) {
