@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.101"
-    const val VERSION_CODE = 102
+    const val VERSION_NAME = "0.1.102"
+    const val VERSION_CODE = 103
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.102", listOf(
+            ReleaseFeature("gemini-voice-catalog-diagnostic", "Diagnóstico das vozes Gemini",
+                "Consulta manual mostra o resultado do filtro pt-BR, fallback geral e motivo de falhas HTTP/rede sem exibir chave nem transcrição.", "check"),
+            ReleaseFeature("gemini-voice-catalog-tests", "Testes do catálogo de vozes",
+                "Teste offline de resposta vazia, erros de autorização, fallback, paginação e sanitização de diagnósticos.", "check")
+        )),
         ReleaseSummary("0.1.101", listOf(
             ReleaseFeature("ci85-buildconfig-version-test", "Teste de versão vinculado ao Android",
                 "Sobre e Novidades agora são validados contra o BuildConfig, evitando números antigos nos testes.", "check"),

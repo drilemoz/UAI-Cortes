@@ -1,3 +1,9 @@
+## 0.1.102 · versionCode 103 (02/11/2026)
+
+- Adicionado painel de Diagnóstico do catálogo de vozes com teste manual, motivo seguro de falha, estágio pt-BR/geral e contagem sem enviar texto ou chave.
+- Busca pt-BR vazia ou com HTTP 400/422 tenta catálogo geral; erros 401/403/429 são reportados sem fallback automático. Parser, paginação e reporte testáveis com respostas simuladas.
+- Versão sincronizada com Gradle, GitHub Manager, Home/Sobre, Novidades e CI. Teste Android real pendente.
+
 ## v0.1.101 — 02/11/2026 (versionCode 102)
 
 - **Correção workflow 85:** dos 343 testes de unidade, `HomeAboutVersionContractTest` falhava por comparar o AppReleaseNotes com 0.1.99/100 fixos enquanto o app estava em 0.1.100/101 e por procurar a prévia da Home somente em `current.features`.

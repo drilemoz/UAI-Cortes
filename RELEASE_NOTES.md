@@ -1,3 +1,9 @@
+# Uai Cortes v0.1.102 — Diagnóstico do catálogo Gemini
+
+- Em Áudio → Gerar por IA → Voz, use **Consultar** ou abra **Diagnóstico do catálogo** e toque **Executar teste novamente**. O painel informa se o filtro `pt-BR` retornou vozes, se houve fallback geral e erros de acesso de forma sanitizada.
+- A consulta não envia legendas, não sintetiza áudio, não seleciona a voz e não consome cota de geração TTS; a chamada de listagem pode continuar sujeita a limites do serviço.
+- Adicionados testes offline de consulta, erro HTTP, resposta vazia, paginação, deduplicação e privacidade (9 verificações Kotlin isoladas passaram; Gradle pendente). Assinatura/5 APKs e esquema de projeto preservados. Build Android e teste com chave real pendentes.
+
 # Uai Cortes v0.1.101 — Correção dos testes de versões (workflow 85)
 
 - `HomeAboutVersionContractTest` usa `BuildConfig.VERSION_NAME` e `BuildConfig.VERSION_CODE` para validar Sobre/Novidades sem dados fixos antigos.

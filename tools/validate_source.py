@@ -1192,7 +1192,8 @@ labels=(app_files/'GeminiVoicePresentation.kt').read_text()
 voice_search=(app_files/'GeminiVoiceSearch.kt').read_text()
 preview=(app_files/'GeminiVoicePreviewCache.kt').read_text()
 identity=(app_files/'GeminiPreviewIdentity.kt').read_text()
-assert 'row.optString("language_code")' in voice_core and 'row.optString("gender")' in voice_core
+voice_catalog=(app_files/'GeminiVoiceCatalog.kt').read_text()
+assert 'row.optString("language_code")' in (voice_core + voice_catalog) and 'row.optString("gender")' in (voice_core + voice_catalog)
 assert 'GeminiVoicePresentation.label(voice)' in narration
 assert 'GeminiVoicePresentation.searchableText(it)' in voice_search
 assert 'previewCache.find(sampleId)' in narration and 'previewCache.save(sampleId, wave.bytes)' in narration
@@ -1291,3 +1292,13 @@ assert 'BuildConfig.VERSION_NAME' in version_test and 'BuildConfig.VERSION_CODE'
 assert 'AppReleaseNotes.recent.flatMap { it.features }' in version_test
 assert 'assertEquals("0.1.99", AppReleaseNotes.VERSION_NAME)' not in version_test
 print('OK: CI85 version test dynamic and Home/About changelog historical')
+
+# v0.1.102: consulta de vozes diagnostica causa e previne fallback desnecessário.
+assert 'GeminiVoiceCatalog.fetchCatalog' in voice_core
+assert 'shouldFallbackOnHttp' in voice_catalog and 'code == 400 || code == 422' in voice_catalog
+assert 'GeminiVoiceCatalog.safeMessage' in narration and 'Diagnóstico do catálogo' in narration
+assert 'Executar teste novamente' in narration and 'GeminiVoiceCatalogFailure' in narration
+assert (root/'app/src/test/java/br/com/uaicortes/GeminiVoiceCatalogTest.kt').exists()
+assert (root/'docs/VALIDATION_0.1.102.md').exists()
+assert 'ReleaseSummary("0.1.102", listOf(' in notes
+print('OK: v0.1.102 diagnóstico de vozes e fallback manual sem gerar áudio')

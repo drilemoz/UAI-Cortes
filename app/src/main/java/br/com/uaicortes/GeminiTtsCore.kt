@@ -171,33 +171,11 @@ internal class GeminiTtsClient {
             if (e.http == 404) false else throw e
         }
     }
-    suspend fun voices(key: String): List<GeminiVoice> {
-        val localized = listVoices(key, true)
-        return if (localized.isNotEmpty()) localized else listVoices(key, false)
-    }
-    private suspend fun listVoices(key: String, ptBrOnly: Boolean): List<GeminiVoice> {
-        val result = mutableListOf<GeminiVoice>()
-        var token = ""
-        repeat(5) {
-            val path = "voices?page_size=100" + (if (ptBrOnly) "&language_code=pt-BR" else "") +
-                if (token.isNotBlank()) "&page_token=${java.net.URLEncoder.encode(token, "UTF-8")}" else ""
-            val response = request(path, key)
-            val list = response.optJSONArray("voices") ?: JSONArray()
-            for (index in 0 until list.length()) {
-                val row = list.optJSONObject(index) ?: continue
-                val id = row.optString("id")
-                if (id.isNotBlank() && id.length <= 150) result += GeminiVoice(id,
-                    row.optString("display_name", id).ifBlank { id }.take(120),
-                    row.optString("description").take(300), row.optString("language_code").take(30),
-                    row.optString("accent").take(80), row.optString("persona").take(100),
-                    row.optString("context").take(80), row.optString("gender").take(30),
-                    row.optString("pitch").take(30))
-            }
-            token = response.optString("next_page_token")
-            if (token.isBlank()) return result.distinctBy { it.id }
-        }
-        return result.distinctBy { it.id }
-    }
+    /** A consulta não sintetiza áudio nem envia texto/legendas. */
+    suspend fun voicesWithDiagnosis(key: String): GeminiVoiceCatalogResult =
+        GeminiVoiceCatalog.fetchCatalog { path -> request(path, key) }
+
+    suspend fun voices(key: String): List<GeminiVoice> = voicesWithDiagnosis(key).voices
     suspend fun synthesize(key: String, model: String, voice: String, style: String, text: String): GeminiWave {
         GeminiModels.requireSupported(model)
         require(voice.isNotBlank() && voice.length <= 150) { "Selecione uma voz disponível." }

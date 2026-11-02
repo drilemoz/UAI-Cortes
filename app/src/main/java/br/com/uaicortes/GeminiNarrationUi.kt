@@ -58,6 +58,8 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
     var model by remember { mutableStateOf(GeminiModels.LITE) }
     var selectedVoice by remember { mutableStateOf<GeminiVoice?>(null) }
     var voices by remember { mutableStateOf<List<GeminiVoice>>(emptyList()) }
+    var voiceDiagnostic by remember { mutableStateOf<List<String>>(emptyList()) }
+    var showVoiceDiagnostic by remember { mutableStateOf(false) }
     var style by remember { mutableStateOf("Neutra") }
     var pace by remember { mutableIntStateOf(2) }
     var expressiveness by remember { mutableIntStateOf(2) }
@@ -108,20 +110,38 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
     }
     fun loadVoices() {
         if (loading || working) return
+        // O toque do usuário inicia a consulta. Nenhum áudio/texto é transmitido e nada é selecionado.
+        loading = true
+        // Não manter catálogo/voz antigos após falha ou troca de credencial.
+        voices = emptyList()
+        selectedVoice = null
+        status = "Consulta de vozes iniciada. Aguardando resposta do Gemini..."
+        voiceDiagnostic = listOf("Solicitação manual iniciada: GET /v1beta/voices (sem síntese de áudio).")
         job = scope.launch {
-            loading = true
             try {
                 val key = withContext(Dispatchers.IO) { creds.read() }
-                    ?: throw IllegalStateException("Configure sua chave Gemini.")
-                val available = api.voices(key)
-                voices = available
-                selectedVoice = available.firstOrNull { it.id == selectedVoice?.id }
-                status = if (available.isEmpty()) "Nenhuma voz em português brasileiro foi retornada para esta chave."
-                    else "${available.size} vozes retornadas pelo catálogo oficial da sua chave."
-            } catch (e: CancellationException) { throw e }
-            catch (e: GeminiApiError) { status = e.message ?: "Erro ao consultar vozes." }
-            catch (_: Exception) { status = "Não foi possível consultar as vozes. Confira a conexão e a chave." }
-            finally { loading = false }
+                    ?: throw IllegalStateException("Chave não configurada.")
+                val result = api.voicesWithDiagnosis(key)
+                voices = result.voices
+                selectedVoice = result.voices.firstOrNull { it.id == selectedVoice?.id }
+                voiceDiagnostic = result.report
+                status = if (result.voices.isEmpty())
+                    "A consulta terminou sem vozes disponíveis. Abra Diagnóstico do catálogo para ver as etapas."
+                else "${result.voices.size} vozes disponíveis. Toque na lista e confirme sua escolha."
+            } catch (e: CancellationException) {
+                voiceDiagnostic = voiceDiagnostic + "Consulta cancelada."
+                status = "Consulta cancelada."
+                throw e
+            } catch (e: GeminiVoiceCatalogFailure) {
+                voiceDiagnostic = e.report()
+                showVoiceDiagnostic = true
+                status = "Não foi possível carregar as vozes: ${GeminiVoiceCatalog.safeMessage(e.causeError)}"
+            } catch (e: Exception) {
+                voiceDiagnostic = listOf("Consulta interrompida antes de receber o catálogo.",
+                    GeminiVoiceCatalog.safeMessage(e))
+                showVoiceDiagnostic = true
+                status = "Não foi possível consultar as vozes: ${GeminiVoiceCatalog.safeMessage(e)}"
+            } finally { loading = false }
         }
     }
     // O gerador fica fora da rolagem do editor: somente o botão de abertura aparece na tela Áudio.
@@ -236,6 +256,32 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                                 TextButton(onClick = { loadVoices() }, enabled = !working && !loading) {
                                     Icon(Icons.Default.Refresh, null, Modifier.size(17.dp))
                                     Spacer(Modifier.width(4.dp)); Text(if (voices.isEmpty()) "Consultar" else "Atualizar")
+                                }
+                            }
+                            TextButton(onClick = { showVoiceDiagnostic = !showVoiceDiagnostic },
+                                enabled = !working, contentPadding = PaddingValues(horizontal = 0.dp)) {
+                                Icon(Icons.Default.BugReport, contentDescription = null, modifier = Modifier.size(17.dp))
+                                Spacer(Modifier.width(5.dp))
+                                Text(if (showVoiceDiagnostic) "Ocultar diagnóstico do catálogo" else "Diagnóstico do catálogo")
+                            }
+                            if (showVoiceDiagnostic) {
+                                Surface(color = MaterialTheme.colorScheme.surfaceVariant,
+                                    shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+                                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                        Text("Teste do catálogo Gemini", style = MaterialTheme.typography.labelMedium)
+                                        Text("Consulta sem síntese de áudio, sem enviar legendas e sem seleção automática. " +
+                                            "A chave nunca aparece neste relatório.", style = MaterialTheme.typography.bodySmall)
+                                        (if (voiceDiagnostic.isEmpty())
+                                            listOf("Nenhuma consulta registrada nesta janela.") else voiceDiagnostic).forEach { entry ->
+                                            Text("• $entry", style = MaterialTheme.typography.bodySmall)
+                                        }
+                                        OutlinedButton(onClick = { loadVoices() },
+                                            enabled = !loading && !working) {
+                                            Icon(Icons.Default.Refresh, null, Modifier.size(16.dp))
+                                            Spacer(Modifier.width(5.dp))
+                                            Text("Executar teste novamente")
+                                        }
+                                    }
                                 }
                             }
                             selectedVoice?.let { voice ->

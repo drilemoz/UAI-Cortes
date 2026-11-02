@@ -1,3 +1,8 @@
+## Versão 0.1.102 · versionCode 103 (02/11/2026)
+
+- Diagnóstico explícito na janela Narração com IA: consultar/diagnosticar vozes só por toque, indicar filtro pt-BR, fallback e falhas HTTP/SSL/rede sem mostrar a chave ou legendas. Busca geral após filtro vazio ou rejeição HTTP 400/422; erros de autenticação/cota não disparam retry desnecessário.
+- Novos testes automatizados do catálogo com respostas simuladas (execução completa no Gradle pendente; 9 verificações Kotlin isoladas passaram). A consulta não sintetiza áudio nem escolhe voz. Requer compilar no GitHub Actions e testar com a chave real para identificar a causa específica no aparelho.
+
 ## Versão 0.1.101 · versionCode 102 (02/11/2026)
 
 - Corrige os dois testes do workflow 85: `HomeAboutVersionContractTest` agora compara Sobre/Novidades com `BuildConfig` em vez de número de versão fixo; a documentação da prévia da Home é buscada no histórico, não apenas no release corrente.

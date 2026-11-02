@@ -262,3 +262,5 @@
 
 - v0.1.101: não fixar versionName/versionCode em testes Android (usar BuildConfig); conferir mudanças antigas da Home no histórico de AppReleaseNotes, não em current.features. O workflow 85 teve 343 testes, 2 falhas em HomeAboutVersionContractTest.
 - v0.1.101: ao mudar de versão, sempre sincronizar github-manager.json, app_identity.json, VERSION, Gradle, Home/Sobre, Novidades, CI, docs e nome do ZIP. A checagem de versão deve usar metadados reais, não string antiga fixada no validador.
+
+- v0.1.102: tela Narração com IA permite diagnóstico manual da consulta Voices API com resposta sanitizada, sem persistir chave, transcrição, URL de credenciais ou resposta HTTP bruta. Falha do filtro pt-BR com HTTP 400/422 pode recorrer à listagem geral; não repetir em 401/403/429. Testes JVM com transporte simulado; testar em Android e com API real antes de afirmar carregamento corrigido. VersionCode 103, versão 0.1.102; preservar seleção/geração com confirmação e schemaVersion 4.
