@@ -67,6 +67,15 @@ import kotlinx.coroutines.launch
         Button(onClick = { scope.launch { manager.check() } },
             enabled = check !is GitHubUpdateResult.Checking && !manager.downloading,
             modifier = Modifier.fillMaxWidth()) { Text("Verificar atualizações agora") }
+        OutlinedButton(onClick = {
+            installMessage = manager.openRepositoryReleases(input)
+        }, enabled = GitHubUpdateCore.normalizedRepository(input) != null,
+            modifier = Modifier.fillMaxWidth()) {
+            Text("Abrir Releases no navegador")
+        }
+        Text("Se a consulta falhar, abra as Releases no navegador para verificar se o " +
+            "repositório está público e acessível. A verificação automática não usa token privado.",
+            style = MaterialTheme.typography.bodySmall)
         when (check) {
             GitHubUpdateResult.Idle -> Text("Consulta ainda não realizada.")
             GitHubUpdateResult.Checking -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

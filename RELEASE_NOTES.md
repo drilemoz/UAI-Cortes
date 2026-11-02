@@ -1,3 +1,19 @@
+# Uai Cortes v0.1.105 — Prévia nítida no Animar Imagens
+
+- Prévia de fotos usa a mídia original proporcionada, com correção de orientação EXIF; não depende mais de uma miniatura de proporção quadrada.
+- Área de prévia maior para vídeos verticais e botão **Ampliar** para conferir os detalhes.
+- Três níveis de nitidez ajustam apenas a prévia (Rápida, Equilibrada, Alta); o vídeo final mantém a configuração de resolução já escolhida em Personalizar.
+- Limite de decodificação conservador para aparelhos com pouca RAM. O teste no Android é necessário para confirmar o resultado visual.
+
+# Uai Cortes v0.1.104 — Diagnóstico da consulta de atualizações GitHub
+
+- O verificador de Releases agora distingue erros de DNS, conexão, tempo limite, TLS/SSL, acesso HTTP 401/403/404/429 e respostas inválidas.
+- A opção **Abrir Releases no navegador** permite verificar o endereço do GitHub quando a API falha. Não envia credenciais e não baixa APK automaticamente.
+- Por segurança, o aplicativo não mostra mensagens internas de exceção, tokens, chaves ou URLs de requisição no diagnóstico.
+- A consulta exige um repositório público para funcionar sem token; não é possível deduzir somente da captura se o repo está privado ou houve falha local de rede.
+- Testes unitários adicionais para diagnóstico; assinatura, SHA-256, projeto e confirmadores preservados.
+- Versão 0.1.104 / versionCode 105. Compilação Android completa e teste em aparelho ainda pendentes.
+
 # Uai Cortes v0.1.103 — Retorno ao vídeo ao escolher voz
 
 - Escolha uma voz em Áudio → Gerar por IA → Voz. Ao tocar em **Confirmar voz**, o app fecha as janelas e volta para a prévia do vídeo no editor, retomando a reprodução no ponto mantido na timeline.

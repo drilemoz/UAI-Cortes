@@ -1,3 +1,17 @@
+## Versão 0.1.105 · versionCode 106 (02/11/2026)
+
+- Corrige imagem pouco nítida em **Animar Imagens**: substitui miniatura quadrada 640 × 640 por decodificação proporcional com rotação/espelhamento EXIF e redimensionamento sem ampliação artificial.
+- Painel de prévia maior e opção Ampliar; mantém a composição de fundo escurecido e imagem inteira já adotada pelo MP4.
+- Qualidade da prévia em 3 níveis independentes da exportação. Adiciona testes de proporção/amostragem e checagem de regressão no validador.
+- `schemaVersion` de projetos e contrato do rascunho Animar Imagens permanecem iguais; compilação Android e teste visual real pendentes.
+
+## Versão 0.1.104 · versionCode 105 (02/11/2026)
+
+- Consulta ao GitHub: mensagens seguras de erro para DNS, timeout, TLS/SSL, conexão, HTTP 401/403/404/429/5xx e resposta inválida. A exceção original não é exposta.
+- A tela Atualizações oferece **Abrir Releases no navegador** quando a API não pode ser consultada; consulta automática permanece sem token e requer repositório público.
+- Testes de regressão do diagnóstico e fallback; preservada confirmação antes de baixar ou instalar, verificação SHA-256 e assinatura Android.
+- Build Android físico e teste com repositório real ainda pendentes.
+
 ## 0.1.103 · versionCode 104 (02/11/2026)
 
 - **Navegação:** Confirmar voz → fechar seletor e gerador → editor com vídeo reproduzindo a partir do cursor existente. Não chama TTS nem altera faixas nesse ato.

@@ -26,6 +26,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -85,6 +87,8 @@ internal fun AnimateImagesScreen(
     var advanced by remember { mutableStateOf(false) }
     var animated by remember { mutableStateOf(false) }
     var playing by remember { mutableStateOf(true) }
+    var previewQuality by rememberSaveable { mutableStateOf(ImagePreviewQuality.BALANCED.name) }
+    var expandedPreview by remember { mutableStateOf(false) }
     var previewMs by remember { mutableLongStateOf(0L) }
     var confirmCancel by remember { mutableStateOf(false) }
     val total = ImageAnimationPlan.totalDuration(images.size,options)
@@ -165,10 +169,39 @@ internal fun AnimateImagesScreen(
         else -> androidx.compose.ui.graphics.Color.Transparent
     }
     val itemUri = images.getOrNull(currentIndex)
-    val bitmap by produceState<Bitmap?>(initialValue=null,itemUri) {
+    val selectedPreviewQuality = ImagePreviewQuality.entries.firstOrNull { it.name == previewQuality }
+        ?: ImagePreviewQuality.BALANCED
+    val previewImage by produceState<ImagePreviewDecoded?>(initialValue = null, itemUri, selectedPreviewQuality) {
+        value = null
         value = itemUri?.let { uri -> withContext(Dispatchers.IO) {
-            readPreviewThumbnail(context,uri,640)
+            ImageAnimationPreviewDecoder.decode(context, uri, selectedPreviewQuality)
         } }
+    }
+    if (expandedPreview) {
+        Dialog(onDismissRequest = { expandedPreview = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Column(Modifier.fillMaxWidth(.96f)
+                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(14.dp))
+                .padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Prévia ampliada", style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f))
+                    IconButton(onClick = { expandedPreview = false }) {
+                        Icon(Icons.Default.Close, "Fechar prévia")
+                    }
+                }
+                BoxWithConstraints(Modifier.fillMaxWidth().heightIn(max = 560.dp),
+                    contentAlignment = Alignment.Center) {
+                    val ratio = options.width.toFloat() / options.height
+                    val targetHeight = minOf(560.dp, maxWidth / ratio)
+                    AnimationFrameImage(previewImage?.bitmap, frame, fadeColor,
+                        if (animated) fadeStrength else 0f, currentIndex, images.size,
+                        animated, Modifier.size(targetHeight * ratio, targetHeight))
+                }
+                Text("Amostra ${selectedPreviewQuality.label.lowercase()} · Não altera o MP4",
+                    style = MaterialTheme.typography.labelSmall)
+            }
+        }
     }
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
         Row(Modifier.fillMaxWidth().height(56.dp),verticalAlignment=Alignment.CenterVertically) {
@@ -207,41 +240,40 @@ internal fun AnimateImagesScreen(
         } else {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
                 verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                val previewRatio=options.width.toFloat()/options.height
-                BoxWithConstraints(Modifier.fillMaxWidth().height(238.dp)
+                val previewRatio = options.width.toFloat() / options.height
+                val stageHeight = when {
+                    previewRatio < .8f -> 380.dp
+                    previewRatio > 1.3f -> 220.dp
+                    else -> 320.dp
+                }
+                BoxWithConstraints(Modifier.fillMaxWidth().height(stageHeight)
                     .clip(RoundedCornerShape(12.dp))
                     .background(androidx.compose.ui.graphics.Color(0xFF171923)),
-                    contentAlignment=Alignment.Center) {
-                    val fittedWidth=minOf(maxWidth,238.dp*previewRatio)
-                    val fittedHeight=fittedWidth/previewRatio
-                    Box(Modifier.size(fittedWidth,fittedHeight).clip(RoundedCornerShape(10.dp)),
-                        contentAlignment=Alignment.Center) {
-                    if (bitmap != null) {
-                        // Espelha a composição do MP4: preenchimento, véu escuro e foto inteira.
-                        // A matriz de câmera transforma o conjunto, não apenas a foto central.
-                        Box(Modifier.fillMaxSize().graphicsLayer {
-                            scaleX = frame.scale; scaleY = frame.scale
-                            translationX = frame.panX * size.width
-                            translationY = frame.panY * size.height
-                        }) {
-                            Image(bitmap!!.asImageBitmap(), null, Modifier.fillMaxSize(),
-                                contentScale=ContentScale.Crop)
-                            Box(Modifier.fillMaxSize().background(
-                                androidx.compose.ui.graphics.Color.Black.copy(alpha=.6f)))
-                            Image(bitmap!!.asImageBitmap(),"Prévia da imagem ${currentIndex+1}",
-                                Modifier.fillMaxSize(),contentScale=ContentScale.Fit)
-                        }
-                    } else Icon(Icons.Default.Image,null,Modifier.size(65.dp),
-                        tint=androidx.compose.ui.graphics.Color.White)
-                    if (animated && fadeColor != androidx.compose.ui.graphics.Color.Transparent && fadeStrength>0f) {
-                        Box(Modifier.fillMaxSize().background(fadeColor.copy(alpha=fadeStrength)))
+                    contentAlignment = Alignment.Center) {
+                    val fittedWidth = minOf(maxWidth, stageHeight * previewRatio)
+                    val fittedHeight = fittedWidth / previewRatio
+                    AnimationFrameImage(previewImage?.bitmap, frame, fadeColor,
+                        if (animated) fadeStrength else 0f, currentIndex, images.size,
+                        animated, Modifier.size(fittedWidth, fittedHeight))
+                }
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Nitidez", style = MaterialTheme.typography.labelMedium)
+                    ImagePreviewQuality.entries.forEach { quality ->
+                        FilterChip(selected = previewQuality == quality.name,
+                            onClick = { previewQuality = quality.name },
+                            label = { Text(quality.label, fontSize = 11.sp, maxLines = 1) },
+                            modifier = Modifier.weight(1f))
                     }
-                    if (animated && images.isNotEmpty()) {
-                        Text("${currentIndex+1} / ${images.size}",
-                            Modifier.align(Alignment.TopEnd).padding(8.dp).background(
-                                androidx.compose.ui.graphics.Color.Black.copy(alpha=.6f),RoundedCornerShape(5.dp))
-                                .padding(5.dp),color=androidx.compose.ui.graphics.Color.White)
-                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(previewImage?.let { "Foto original: ${it.originalWidth} × ${it.originalHeight}" }
+                        ?: if (images.isEmpty()) "Selecione uma imagem" else "Carregando imagem original…",
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.weight(1f))
+                    TextButton(onClick = { expandedPreview = true }, enabled = previewImage != null) {
+                        Icon(Icons.Default.Fullscreen, null, Modifier.size(18.dp))
+                        Text("Ampliar")
                     }
                 }
                 if (animated && images.isNotEmpty()) {
@@ -252,7 +284,7 @@ internal fun AnimateImagesScreen(
                             modifier=Modifier.weight(1f))
                         Text(formatMs(previewMs),style=MaterialTheme.typography.labelSmall)
                     }
-                    Text("Prévia aproximada do enquadramento; confira efeitos e nitidez no MP4 final.",
+                    Text("Prévia proporcional da foto original; a qualidade escolhida aqui não muda o MP4.",
                         style=MaterialTheme.typography.bodySmall)
                 }
                 Row(verticalAlignment=Alignment.CenterVertically) {
@@ -463,3 +495,43 @@ private fun readPreviewThumbnail(context: android.content.Context, uri: Uri, max
         }
     }
 }.getOrNull()
+
+
+/** A mesma composição de fundo/primeiro plano usada pelo exportador (ImageAnimationEngine).
+ * A câmera, o preenchimento e o fade se aplicam ao conjunto, como no vídeo final.
+ */
+@Composable
+private fun AnimationFrameImage(bitmap: Bitmap?, frame: CameraFrame,
+    fadeColor: androidx.compose.ui.graphics.Color, fadeStrength: Float,
+    currentIndex: Int, imageCount: Int, animated: Boolean, modifier: Modifier = Modifier
+) {
+    Box(modifier.clip(RoundedCornerShape(10.dp))
+        .background(androidx.compose.ui.graphics.Color.Black),
+        contentAlignment = Alignment.Center) {
+        if (bitmap != null) {
+            Box(Modifier.fillMaxSize().graphicsLayer {
+                scaleX = frame.scale; scaleY = frame.scale
+                translationX = frame.panX * size.width
+                translationY = frame.panY * size.height
+            }) {
+                Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop)
+                Box(Modifier.fillMaxSize().background(
+                    androidx.compose.ui.graphics.Color.Black.copy(alpha = .6f)))
+                Image(bitmap.asImageBitmap(), "Foto ${currentIndex + 1}", Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit)
+            }
+        } else Icon(Icons.Default.Image, null, Modifier.size(65.dp),
+            tint = androidx.compose.ui.graphics.Color.White)
+        if (animated && fadeColor != androidx.compose.ui.graphics.Color.Transparent && fadeStrength > 0f) {
+            Box(Modifier.fillMaxSize().background(fadeColor.copy(alpha = fadeStrength)))
+        }
+        if (animated && imageCount > 0) {
+            Text("${currentIndex + 1} / $imageCount",
+                Modifier.align(Alignment.TopEnd).padding(8.dp)
+                    .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = .6f),
+                        RoundedCornerShape(5.dp)).padding(5.dp),
+                color = androidx.compose.ui.graphics.Color.White)
+        }
+    }
+}

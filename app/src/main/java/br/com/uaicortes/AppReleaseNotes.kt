@@ -16,11 +16,27 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.103"
-    const val VERSION_CODE = 104
+    const val VERSION_NAME = "0.1.105"
+    const val VERSION_CODE = 106
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.105", listOf(
+            ReleaseFeature("animation-source-preview", "Prévia das fotos com nitidez proporcional",
+                "Carrega a foto pelo MediaStore/SAF em proporção original e respeita orientação; evita miniaturas quadradas e deformação.", "film"),
+            ReleaseFeature("animation-preview-quality", "Qualidade Rápida, Equilibrada ou Alta",
+                "Ajuste apenas a decodificação da prévia, sem alterar resolução, taxa ou qualidade da exportação MP4.", "check"),
+            ReleaseFeature("animation-preview-expanded", "Prévia ampliada para conferir enquadramento",
+                "Visualizador maior usa o mesmo movimento e composição da prévia e mantém a foto original intacta.", "film")
+        )),
+        ReleaseSummary("0.1.104", listOf(
+            ReleaseFeature("github-update-network-diagnostics", "Diagnóstico das atualizações pelo GitHub",
+                "Falhas de DNS, timeout, SSL e HTTP mostram mensagens específicas, sem expor tokens nem URLs privadas.", "check"),
+            ReleaseFeature("github-update-browser-fallback", "Abrir Releases pelo navegador",
+                "A tela de atualizações permite conferir o repositório no GitHub quando a consulta automática falha.", "film"),
+            ReleaseFeature("github-update-diagnostic-tests", "Testes para erros de rede e privacidade",
+                "Cenários simulados verificam classificação de falhas e proteção contra exposição de mensagens sensíveis.", "check")
+        )),
         ReleaseSummary("0.1.103", listOf(
             ReleaseFeature("voice-select-returns-to-video", "Voltar ao vídeo após escolher voz",
                 "Confirmar voz fecha a seleção e a narração, retorna ao editor e retoma a prévia; não gera áudio automaticamente.", "film"),

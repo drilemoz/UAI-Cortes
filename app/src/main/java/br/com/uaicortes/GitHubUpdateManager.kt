@@ -81,12 +81,9 @@ internal class GitHubUpdateManager(private val context: Context) {
                 try {
                     val status = connection.responseCode
                     if (status != 200) {
-                        val message = when (status) {
-                            403, 429 -> "Limite de consultas do GitHub atingido. Tente novamente mais tarde."
-                            404 -> "Repositório não encontrado ou privado. Configure um repositório público."
-                            else -> "O GitHub respondeu com HTTP $status."
-                        }
-                        GitHubUpdateResult.Error(message)
+                        GitHubUpdateResult.Error(GitHubUpdateDiagnostics.http(
+                            status, connection.getHeaderField("X-RateLimit-Remaining")
+                        ))
                     } else {
                         val body = connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readTextLimited(1_200_000) }
                         val release = GitHubUpdateCore.parseReleases(body, repo, BuildConfig.VERSION_NAME)
@@ -94,8 +91,8 @@ internal class GitHubUpdateManager(private val context: Context) {
                         else GitHubUpdateResult.Available(release)
                     }
                 } finally { connection.disconnect() }
-            } catch (_: Exception) {
-                GitHubUpdateResult.Error("Não foi possível consultar o GitHub. Verifique a conexão e tente novamente.")
+            } catch (error: Exception) {
+                GitHubUpdateResult.Error(GitHubUpdateDiagnostics.exception(error))
             }
         }
         result = updated
@@ -173,6 +170,20 @@ internal class GitHubUpdateManager(private val context: Context) {
         } catch (error: Exception) {
             downloadError = error.message?.take(180) ?: "Falha ao baixar o APK"
         } finally { downloading = false }
+    }
+
+    /** Alternativa manual sem token e sem download automático quando a API não responde. */
+    fun openRepositoryReleases(repositoryInput: String): String? {
+        val repo = GitHubUpdateCore.normalizedRepository(repositoryInput)
+            ?: return "Configure um repositório válido antes de abrir as Releases."
+        return try {
+            context.startActivity(Intent(Intent.ACTION_VIEW,
+                Uri.parse("https://github.com/$repo/releases"))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            null
+        } catch (_: Exception) {
+            "Não foi possível abrir o navegador para consultar as Releases."
+        }
     }
 
     fun openRelease(release: GitHubUpdateRelease) {

@@ -1,3 +1,16 @@
+## Versão 0.1.105 · versionCode 106 (02/11/2026)
+
+- **Animar Imagens:** prévia principal agora decodifica a imagem real via MediaStore/SAF, preservando proporção e orientação EXIF, em vez de usar miniatura quadrada solicitada em 640 px.
+- Painel principal mais alto especialmente em 9:16; botão **Ampliar** oferece inspeção maior do enquadramento com o mesmo movimento e composição do editor.
+- Seletor **Nitidez:** Rápida (720), Equilibrada (1280) e Alta (1920 pixels no lado maior), sem interpolar imagens originais pequenas e sem modificar opções do MP4 exportado.
+- Memória limitada por amostragem, leitura assíncrona e bitmap único por foto; testes estruturais não substituem avaliação física de fluidez e nitidez no aparelho.
+
+## Versão 0.1.104 · versionCode 105 (02/11/2026)
+
+- Em **Atualizações pelo GitHub**, falhas antes ocultas agora aparecem com categorias concretas (DNS, rede, SSL, HTTP e JSON). O app preserva a privacidade: não mostra tokens, dados da requisição ou caminhos internos.
+- **Abrir Releases no navegador** permite verificar manualmente o acesso ao repositório configurado. Repositórios privados não são consultáveis anonimamente pela API.
+- Atualização automática significa apenas **verificação**; download e instalação continuam sob confirmação.
+
 ## Versão 0.1.103 · versionCode 104 (02/11/2026)
 
 - Confirmar uma voz no catálogo agora fecha a janela de narração e retorna à prévia do vídeo no editor, retomando a reprodução no cursor existente.

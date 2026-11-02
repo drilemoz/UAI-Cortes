@@ -534,12 +534,12 @@ progress_ui=(root/'app/src/main/java/br/com/uaicortes/AnimationProgressUi.kt').r
 assert 'progress!!' not in anim
 assert 'val fixedProgress=AnimationProgressUi.fraction(progress)' in anim
 assert 'LinearProgressIndicator(progress={fixedProgress}' in anim
-assert 'height(238.dp)' in anim and 'BoxWithConstraints(' in anim
+assert 'stageHeight' in anim and 'BoxWithConstraints(' in anim
 assert 'detectDragGestures(' in anim and 'listState.scrollBy(' in anim
 assert 'Text("Ver prévia",' in anim and 'O Uai Cortes está preparando seu vídeo' in anim
 assert 'fun fraction(value:Int?):Float?' in progress_ui
 assert (root/'app/src/test/java/br/com/uaicortes/AnimationProgressUiTest.kt').is_file()
-print('OK: v0.1.52, barra de progresso segura, preview compacto e arrasto em tempo real')
+print('OK: progresso seguro, preview proporcional e arrasto em tempo real')
 
 # v0.1.52: guarda rascunho separado, confirma saída e compartilha sucesso do editor.
 draft=(root/'app/src/main/java/br/com/uaicortes/ImageAnimationDraftStore.kt').read_text()
@@ -1302,3 +1302,30 @@ assert (root/'app/src/test/java/br/com/uaicortes/GeminiVoiceCatalogTest.kt').exi
 assert (root/'docs/VALIDATION_0.1.102.md').exists()
 assert 'ReleaseSummary("0.1.102", listOf(' in notes
 print('OK: v0.1.102 diagnóstico de vozes e fallback manual sem gerar áudio')
+
+# v0.1.104: consulta ao GitHub deve distinguir falhas e manter download com confirmação.
+update_diag = (root/'app/src/main/java/br/com/uaicortes/GitHubUpdateDiagnostics.kt').read_text()
+assert 'UnknownHostException' in update_diag and 'SocketTimeoutException' in update_diag
+assert 'SSLException' in update_diag and 'rateLimitRemaining' in update_diag
+assert 'GitHubUpdateDiagnostics.exception(error)' in update_manager
+assert 'GitHubUpdateDiagnostics.http(' in update_manager
+assert 'openRepositoryReleases(input)' in update_ui and 'Abrir Releases no navegador' in update_ui
+assert 'https://github.com/$repo/releases' in update_manager
+assert (root/'app/src/test/java/br/com/uaicortes/GitHubUpdateDiagnosticsTest.kt').is_file()
+assert (root/'docs/VALIDATION_0.1.104.md').is_file()
+print('OK: v0.1.104 GitHub erros categorizados, navegador de fallback e confirmações mantidas')
+
+# v0.1.105: painel principal lê a foto real, sem usar thumbnail quadrada de 640 px.
+preview_screen=(root/'app/src/main/java/br/com/uaicortes/AnimateImagesScreen.kt').read_text()
+preview_decode=(root/'app/src/main/java/br/com/uaicortes/ImageAnimationPreviewDecoder.kt').read_text()
+preview_sizing=(root/'app/src/main/java/br/com/uaicortes/ImagePreviewSizing.kt').read_text()
+assert 'ImageAnimationPreviewDecoder.decode(context, uri, selectedPreviewQuality)' in preview_screen
+assert 'readPreviewThumbnail(context,uri,640)' not in preview_screen
+assert 'Rápida' in preview_sizing and 'Equilibrada' in preview_sizing and 'Alta' in preview_sizing
+assert '320.dp' in preview_screen and '380.dp' in preview_screen
+assert 'AnimationFrameImage(previewImage?.bitmap' in preview_screen
+assert 'expandedPreview' in preview_screen and 'Ampliar' in preview_screen
+assert 'ExifInterface' in preview_decode and 'BitmapFactory.decodeStream' in preview_decode
+assert (root/'app/src/test/java/br/com/uaicortes/ImagePreviewSizingTest.kt').is_file()
+assert (root/'docs/VALIDATION_0.1.105.md').is_file()
+print('OK: v0.1.105 prévia proporcional, qualidade configurável e ampliação, exportação preservada')
