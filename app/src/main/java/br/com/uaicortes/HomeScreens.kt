@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -50,8 +51,8 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
 }
 
 @Composable internal fun ItemCard(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, subtitle: String,
-                                onClick: () -> Unit) {
-    Surface(onClick, shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface,
+                                enabled: Boolean = true, onClick: () -> Unit) {
+    Surface(onClick = onClick, enabled = enabled, shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface,
         tonalElevation = 1.dp) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = Blue, modifier = Modifier.size(28.dp))
@@ -63,6 +64,35 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
     }
 }
 
+/** Fonte visual compartilhada: Home e prévia de validação na tela Sobre. */
+@Composable internal fun AppVersionLabel() {
+    Text("Versão ${AppReleaseNotes.VERSION_NAME} (${AppReleaseNotes.VERSION_CODE})",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+@Composable internal fun HomePrimaryActions(onCreate: () -> Unit, onAnimate: () -> Unit,
+    preview: Boolean = false) {
+    Surface(color = Blue, shape = RoundedCornerShape(24.dp)) {
+        Column(Modifier.fillMaxWidth().padding(22.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Icon(Icons.Default.MovieCreation, null, tint = Color.White, modifier = Modifier.size(32.dp))
+            Text("Nova edição", fontSize=25.sp, fontWeight=FontWeight.Bold, color=Color.White)
+            Text("Importe seus vídeos e comece a editar.", color=Color.White)
+            Button(onClick=onCreate, enabled = !preview, modifier=Modifier.fillMaxWidth().height(52.dp),
+                colors=ButtonDefaults.buttonColors(containerColor=Color.White,
+                    disabledContainerColor=Color.White.copy(alpha=0.92f)),
+                shape=RoundedCornerShape(30.dp)) {
+                Icon(Icons.Default.Add, null, tint=Blue)
+                Spacer(Modifier.width(8.dp))
+                Text("Criar projeto", color=Blue)
+            }
+        }
+    }
+    Spacer(Modifier.height(16.dp))
+    ItemCard(Icons.Default.AutoAwesomeMotion, "Animar Imagens",
+        "Crie um MP4 animado offline com suas fotos", enabled = !preview) { onAnimate() }
+}
+
 @Composable internal fun MainHome(projects: List<VideoProject>, onCreate: () -> Unit, onAnimate: () -> Unit,
     onOpen: (VideoProject)->Unit, onDelete: (VideoProject)->Unit, onDeleteAll: ()->Unit,
     onSettings: ()->Unit, onTab:(String)->Unit) {
@@ -70,25 +100,14 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
         Row(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Movie, null, tint = Blue, modifier = Modifier.size(30.dp))
             Spacer(Modifier.width(12.dp))
-            Text("Uai Cortes", fontSize = 25.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Column(Modifier.weight(1f)) {
+                Text("Uai Cortes", fontSize = 25.sp, fontWeight = FontWeight.Bold)
+                AppVersionLabel()
+            }
             IconButton(onClick = onSettings) { Icon(Icons.Default.Settings, "Configurações") }
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal=20.dp)) {
-            Surface(color = Blue, shape = RoundedCornerShape(24.dp)) {
-                Column(Modifier.fillMaxWidth().padding(22.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Icon(Icons.Default.MovieCreation, null, tint = Color.White, modifier=Modifier.size(32.dp))
-                    Text("Nova edição", fontSize=25.sp, fontWeight=FontWeight.Bold, color=Color.White)
-                    Text("Importe seus vídeos e comece a editar.", color=Color.White)
-                    Button(onClick=onCreate, modifier=Modifier.fillMaxWidth().height(52.dp),
-                        colors=ButtonDefaults.buttonColors(containerColor=Color.White),
-                        shape=RoundedCornerShape(30.dp)) {
-                        Icon(Icons.Default.Add,null,tint=Blue);Spacer(Modifier.width(8.dp));Text("Criar projeto",color=Blue)
-                    }
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-            ItemCard(Icons.Default.AutoAwesomeMotion,"Animar Imagens",
-                "Crie um MP4 animado offline com suas fotos") { onAnimate() }
+            HomePrimaryActions(onCreate, onAnimate)
             Spacer(Modifier.height(24.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("Edições recentes",fontSize=21.sp, fontWeight=FontWeight.SemiBold,
@@ -226,6 +245,7 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
 }
 
 @Composable internal fun AboutScreen(back:()->Unit, onShowWhatsNew:()->Unit) {
+    var showHomePreview by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal=20.dp)) {
         Heading("Sobre",back)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),
@@ -235,8 +255,7 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
                 tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(65.dp))
             Spacer(Modifier.height(12.dp))
             Text("Uai Cortes", fontSize=24.sp, fontWeight=FontWeight.Bold)
-            Text("Versão ${AppReleaseNotes.VERSION_NAME} (${AppReleaseNotes.VERSION_CODE})",
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            AppVersionLabel()
             Spacer(Modifier.height(14.dp))
             Text("Editor de vídeos local para Android.",
                 textAlign=TextAlign.Center, color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -245,6 +264,30 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
                 Icon(Icons.Default.AutoAwesome, contentDescription=null)
                 Spacer(Modifier.width(8.dp))
                 Text("Ver novidades")
+            }
+            Spacer(Modifier.height(16.dp))
+            OutlinedButton(onClick = { showHomePreview = !showHomePreview },
+                shape = RoundedCornerShape(15.dp)) {
+                Icon(Icons.Default.Visibility, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(if (showHomePreview) "Ocultar teste da Home" else "Testar visual da Home")
+            }
+            if (showHomePreview) {
+                Spacer(Modifier.height(12.dp))
+                Text("Prévia visual da Home — mesmos componentes, em modo somente leitura.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(12.dp))
+                Box(Modifier.fillMaxWidth().padding(horizontal=2.dp)) {
+                    Column {
+                        HomePrimaryActions(onCreate = {}, onAnimate = {}, preview = true)
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("Os botões ficam desabilitados. Esta prévia não testa abertura, salvamento, " +
+                    "galeria ou desempenho; valide essas ações na Home real.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(Modifier.height(22.dp))
             ReleaseHighlights(AppReleaseNotes.forAbout())

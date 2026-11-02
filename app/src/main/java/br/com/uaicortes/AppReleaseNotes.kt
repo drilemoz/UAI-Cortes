@@ -16,11 +16,23 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.97"
-    const val VERSION_CODE = 98
+    const val VERSION_NAME = "0.1.99"
+    const val VERSION_CODE = 100
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.99", listOf(
+            ReleaseFeature("home-preview-about", "Teste visual da tela inicial no Sobre",
+                "Visualize as mesmas ações da Home em modo seguro, sem criar projetos; a versão é compartilhada entre Home e Sobre.", "film"),
+            ReleaseFeature("manager-version-sync", "Versão reconhecida pelo GitHub Manager",
+                "Metadados github-manager.json e app_identity.json sincronizados com Gradle, Sobre e publicação; falha em CI se divergirem.", "check")
+        )),
+        ReleaseSummary("0.1.98", listOf(
+            ReleaseFeature("source-package-gradle-fix", "Projeto Android completo no ZIP",
+                "Corrigidos os arquivos Gradle ausentes que impediam a validação e compilação do projeto no GitHub Actions.", "check"),
+            ReleaseFeature("source-archive-verification", "Validação do pacote de código-fonte",
+                "A entrega passa a verificar os scripts de configuração e a executar a validação também a partir do ZIP extraído.", "check")
+        )),
         ReleaseSummary("0.1.97", listOf(
             ReleaseFeature("subtitle-reuse-for-tts", "Reutilizar legendas na narração",
                 "Importe localmente legendas manuais, offline ou Gemini para o texto da voz; escolha trechos e confirme antes de substituir o rascunho.", "captions"),

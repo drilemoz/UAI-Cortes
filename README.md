@@ -1,3 +1,17 @@
+## Versão 0.1.99 · versionCode 100 (01/11/2026)
+
+- Tela **Sobre**: teste visual da Home com os **mesmos componentes** de Criar projeto e Animar Imagens, mas ações desabilitadas para não alterar dados. Home e Sobre exibem versão pela mesma fonte `AppReleaseNotes`.
+- Identificação para o **GitHub Manager**: `github-manager.json`, `app_identity.json` e `VERSION` na raiz. O validador bloqueia versões divergentes antes da publicação.
+- Teste Android instrumentado de Home/Sobre adicionado; depende de emulador/aparelho para execução real.
+
+## v0.1.98 (versionCode 99) · 01/11/2026
+
+- **Correção do workflow Gerar APK Uai Cortes 83:** o ZIP da v0.1.97 estava incompleto e não incluía `app/build.gradle.kts`, `build.gradle.kts` e `settings.gradle.kts`. A etapa de validação parava com `FileNotFoundError` antes de compilar Kotlin/Android.
+- **Empacotamento corrigido:** os três scripts Gradle retornaram ao pacote de código-fonte. Incluído `tools/package_source.py` para gerar futuros ZIPs, verificar todos os arquivos críticos e validar o conteúdo após extração temporária.
+- **Preservação funcional:** importação de legendas com confirmação, escolha de voz, cache, estilos e editor permanecem sem mudanças de funcionamento; `schemaVersion=4` mantido.
+- **Versionamento:** `versionName=0.1.98`, `versionCode=99`, workflows e nomenclatura dos cinco APKs sincronizados.
+- **Limite da verificação:** o pacote pode ser validado estruturalmente; a execução de `:app:testDebugUnitTest :app:lintDebug :app:assembleRelease` ainda depende de ambiente Android/CI, assim como testes em dispositivo.
+
 ## v0.1.97 (versionCode 98) · 01/11/2026
 
 - **Áudio → Gerar por IA → Reutilizar legendas**: permite reaproveitar exclusivamente os textos de legendas já salvas no projeto, independentemente da origem offline, Gemini ou manual. Nenhuma nova transcrição, upload ou chamada à API é feita ao importar.

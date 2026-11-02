@@ -19,10 +19,10 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*98',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.97"',gradle)
+assert re.search(r'versionCode\s*=\s*100',gradle)
+assert re.search(r'versionName\s*=\s*"0.1.99"',gradle)
 assert 'AppReleaseNotes.VERSION_NAME' in (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
-for label in ["VERSION: '0.1.97'", "VERSION_CODE: '98'", 'TAG="v$VERSION"',
+for label in ["VERSION: '0.1.99'", "VERSION_CODE: '100'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -215,8 +215,8 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.97'" in package_script and 'VERSION_CODE = 98' in package_script
-assert 'versionCode = 98' in gradle and 'isUniversalApk = true' in gradle
+assert "VERSION = '0.1.99'" in package_script and 'VERSION_CODE = 100' in package_script
+assert 'versionCode = 100' in gradle and 'isUniversalApk = true' in gradle
 print('OK: versão atual 0.1.64 / versionCode 74, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
@@ -791,7 +791,7 @@ news=(app_files/'WhatsNewScreen.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
-assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 98'])
+assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 100'])
 assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
@@ -1233,3 +1233,33 @@ assert (root/'app/src/test/java/br/com/uaicortes/SubtitleNarrationReuseTest.kt')
 assert (root/'docs/VALIDATION_0.1.97.md').exists()
 assert 'ReleaseSummary("0.1.97", listOf(' in notes
 print('OK: v0.1.97 reutilização local de legendas, confirmações e voz manual')
+
+# v0.1.98: requisitos mínimos do pacote Gradle após falha do workflow 83.
+required_source_files = (
+    'build.gradle.kts', 'settings.gradle.kts', 'app/build.gradle.kts',
+    'gradle.properties', 'gradle/wrapper/gradle-wrapper.properties',
+    'gradlew', '.github/workflows/android-apk.yml',
+    'tools/package_source.py', 'tools/package_apks.py',
+)
+assert all((root / relative).is_file() for relative in required_source_files), 'Pacote-fonte incompleto: Gradle/CI'
+assert 'include(":app")' in (root / 'settings.gradle.kts').read_text()
+assert 'id("com.android.application")' in (root / 'build.gradle.kts').read_text()
+assert "VERSION = '0.1.99'" in (root / 'tools/package_apks.py').read_text()
+assert 'ReleaseSummary("0.1.98", listOf(' in notes
+assert (root / 'docs/VALIDATION_0.1.98.md').exists()
+print('OK: v0.1.98 CI83 scripts Gradle restaurados, fonte verificável')
+
+# v0.1.99: a Home/Sobre compartilham ações e versão, o GitHub Manager lê metadados atuais.
+from check_version_sync import check
+assert check(root) == ('0.1.99', 100)
+home = (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
+assert 'internal fun HomePrimaryActions(' in home
+assert 'HomePrimaryActions(onCreate, onAnimate)' in home
+assert 'HomePrimaryActions(onCreate = {}, onAnimate = {}, preview = true)' in home
+assert 'AppVersionLabel()' in home and home.count('AppVersionLabel()') >= 3
+assert 'Testar visual da Home' in home
+assert 'enabled = !preview' in home
+assert (root/'app/src/androidTest/java/br/com/uaicortes/HomeAboutPreviewAndroidTest.kt').exists()
+assert (root/'app/src/test/java/br/com/uaicortes/HomeAboutVersionContractTest.kt').exists()
+assert (root/'docs/VALIDATION_0.1.99.md').is_file()
+print('OK: v0.1.99 Home/Sobre, prévia sem efeitos e metadados GitHub Manager')
