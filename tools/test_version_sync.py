@@ -14,7 +14,7 @@ FILES = [
 ]
 
 def test() -> None:
-    assert check(ROOT) == ('0.1.99', 100)
+    assert check(ROOT) == ('0.1.100', 101)
     for target, stale in (
         ('github-manager.json', {'version': '0.1.98'}),
         ('app_identity.json', {'version': '0.1.98'}),
@@ -37,7 +37,7 @@ def test() -> None:
             elif target == 'VERSION':
                 p.write_text(stale)
             else:
-                p.write_text(p.read_text().replace("VERSION_CODE: '100'", stale))
+                p.write_text(p.read_text().replace("VERSION_CODE: '101'", stale))
             try:
                 check(dst)
             except ValueError:

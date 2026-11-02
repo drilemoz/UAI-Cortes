@@ -22,6 +22,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
@@ -65,8 +68,17 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     val store = projectSession.store
     val backupStore = remember(context) { ProjectBackupStore(context.applicationContext) }
     val whatsNewSeen = remember(context) { WhatsNewSeenStore(context.applicationContext) }
+    val githubUpdates = remember(context) { GitHubUpdateManager(context.applicationContext) }
     val mediaController = remember(context) { MediaImportController(context.applicationContext) }
     val importScope = rememberCoroutineScope()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, githubUpdates, importScope) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_START) importScope.launch { githubUpdates.checkOnForeground() }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     val mediaTasks = remember(mediaController) { MediaImportTasks(mediaController) }
     var activeMediaTask by remember { mutableStateOf<MediaTaskKind?>(null) }
     val mediaTaskCoordinator = remember(importScope) {
@@ -369,6 +381,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 "projects" -> ProjectsScreen(projects, { back() }, { openProject(it.id) },
                     { pendingProjectDelete = it })
                 "settings" -> SettingsScreen({ back() }) { previous = "settings"; screen = it }
+                "updates" -> GitHubUpdatesScreen(githubUpdates, ::back)
                 "whats_new" -> WhatsNewScreen(::back)
                 "diagnostics" -> DiagnosticScreen(::back, onEnabledChanged = { diagnosticsEnabled = it })
                 "general" -> GeneralScreen(store, ::back)
@@ -377,7 +390,9 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 "speech_model" -> SpeechModelSettingsScreen(::back)
                 "gemini_settings" -> GeminiSettingsScreen(::back)
                 "appearance" -> AppearanceScreen(theme, { theme = it; store.setTheme(it) }, ::back)
-                "about" -> AboutScreen(::back, onShowWhatsNew = { previous = "about"; screen = "whats_new" })
+                "about" -> AboutScreen(::back,
+                    onShowWhatsNew = { previous = "about"; screen = "whats_new" },
+                    onUpdates = { previous = "about"; screen = "updates" })
                 "editor" -> project?.let { p -> EditorScreen(p, selectedClip, positionMs,
                     onSelected = { selectedClip = it }, onPosition = { positionMs = it }, onBack = ::back,
                     onEdit = {
@@ -521,6 +536,10 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 confirmButton = { TextButton(onClick = { mediaTaskCoordinator.cancel() }) {
                     Text("Cancelar importação")
                 } })
+        }
+        GitHubUpdatePrompt(githubUpdates) {
+            previous = screen
+            screen = "updates"
         }
         if (pendingNewProjectName) CreateProjectNameDialog(newProjectName,
             onNameChange = { newProjectName = it },

@@ -1,3 +1,11 @@
+# Uai Cortes v0.1.100 — Atualizações online pelo GitHub
+
+- Ao abrir o Uai Cortes, verifica se há Release mais recente no repositório público configurado. Inclui pré-releases; não usa `releases/latest`.
+- Uma nova versão é anunciada em diálogo sem download automático. Configurações → Atualizações pelo GitHub permite verificar, ler novidades, baixar e instalar com confirmações.
+- O APK universal é conferido com tamanho, SHA-256 (quando publicado) e identificador/versão do Android. Se a Release não tiver digest, somente abre a página oficial para download manual.
+- Builds no GitHub Actions gravam o identificador do repositório no APK; compilação local pode exigir configurar manualmente. Atualizações só instalam por cima com assinatura consistente. O workflow exige os quatro Secrets de assinatura e bloqueia publicação sem eles.
+- Versionamento: v0.1.100, versionCode 101. Requer teste no GitHub Actions e em aparelho Android antes de considerar a instalação validada.
+
 # Uai Cortes v0.1.99 — Teste da Home e versão no GitHub Manager
 
 - Em **Sobre**, toque em **Testar visual da Home** para conferir os cartões da Home reutilizados, com ações desativadas.

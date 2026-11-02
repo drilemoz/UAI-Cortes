@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.99"
-    const val VERSION_CODE = 100
+    const val VERSION_NAME = "0.1.100"
+    const val VERSION_CODE = 101
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.100", listOf(
+            ReleaseFeature("github-release-check", "Verificar versões no GitHub ao abrir",
+                "Consulta Releases públicas, inclusive pré-lançamentos, sem baixar nada automaticamente.", "check"),
+            ReleaseFeature("github-verified-apk", "Baixar e instalar com confirmação",
+                "APK universal validado por SHA-256, tamanho, pacote e versão; instalação depende do Android.", "download"),
+            ReleaseFeature("github-repository-setting", "Configuração de repositório",
+                "O GitHub Actions informa o repositório no build e Configurações permite consultar ou ajustá-lo.", "check")
+        )),
         ReleaseSummary("0.1.99", listOf(
             ReleaseFeature("home-preview-about", "Teste visual da tela inicial no Sobre",
                 "Visualize as mesmas ações da Home em modo seguro, sem criar projetos; a versão é compartilhada entre Home e Sobre.", "film"),

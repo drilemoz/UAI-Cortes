@@ -205,6 +205,8 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
             "Chave, vozes e narrações") { onClick("gemini_settings") }
         ItemCard(Icons.Default.BugReport,"Diagnóstico","Capturar erros e toques, exportar relatório") {onClick("diagnostics")}
         ItemCard(Icons.Default.AutoAwesome,"Novidades","Veja o que mudou nas últimas versões") { onClick("whats_new") }
+        ItemCard(Icons.Default.SystemUpdate,"Atualizações pelo GitHub",
+            "Verificar versões, baixar e instalar com confirmação") { onClick("updates") }
         ItemCard(Icons.Default.Info,"Sobre","Versão e informações do aplicativo") {onClick("about")}
     }
 }
@@ -244,7 +246,7 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
     }
 }
 
-@Composable internal fun AboutScreen(back:()->Unit, onShowWhatsNew:()->Unit) {
+@Composable internal fun AboutScreen(back:()->Unit, onShowWhatsNew:()->Unit, onUpdates:()->Unit = {}) {
     var showHomePreview by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal=20.dp)) {
         Heading("Sobre",back)
@@ -264,6 +266,12 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
                 Icon(Icons.Default.AutoAwesome, contentDescription=null)
                 Spacer(Modifier.width(8.dp))
                 Text("Ver novidades")
+            }
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(onClick = onUpdates, shape = RoundedCornerShape(15.dp)) {
+                Icon(Icons.Default.SystemUpdate, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Verificar atualizações")
             }
             Spacer(Modifier.height(16.dp))
             OutlinedButton(onClick = { showHomePreview = !showHomePreview },

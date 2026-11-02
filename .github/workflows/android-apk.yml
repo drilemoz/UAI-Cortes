@@ -15,8 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      VERSION: '0.1.99'
-      VERSION_CODE: '100'
+      VERSION: '0.1.100'
+      VERSION_CODE: '101'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -56,7 +56,8 @@ jobs:
             echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/uai-cortes-release.p12" >> "$GITHUB_ENV"
             echo 'Assinatura persistente ativada.'
           else
-            echo 'AVISO: sem os quatro Secrets, assinatura DEBUG provisória. Atualização poderá falhar.'
+            echo 'ERRO: Release requer os 4 Secrets de assinatura estável. Sem eles, a atualização Android não é confiável.' >&2
+            exit 1
           fi
       - name: Validar código-fonte e política de publicação
         run: |

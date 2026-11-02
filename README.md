@@ -1,3 +1,9 @@
+## Versão 0.1.100 · versionCode 101 (02/11/2026)
+
+- **Atualizações GitHub Releases**: consulta online ao iniciar o aplicativo ou ao voltar para primeiro plano (com intervalo mínimo de um minuto para evitar excesso de chamadas), inclusive pré-releases, sem download automático. Se houver versão mais recente com APK universal, mostra diálogo; em Configurações → Atualizações pelo GitHub há consulta manual, dados da Release e confirmação para baixar e instalar.
+- **Origem confiável**: builds feitos no GitHub Actions recebem `GITHUB_REPOSITORY` automaticamente; builds locais podem configurar um repositório público manualmente. Nenhuma chave GitHub é exigida, não há consulta sem repositório configurado.
+- **Segurança**: HTTPS, apenas asset universal oficial, SHA-256 da API, versão superior/mesmo pacote e instalação via Android com confirmação. Certificado precisa ser o mesmo do APK anterior. **CI bloqueia Releases sem os quatro Secrets de assinatura persistente** (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`). Sem digest não faz download interno.
+
 ## Versão 0.1.99 · versionCode 100 (01/11/2026)
 
 - Tela **Sobre**: teste visual da Home com os **mesmos componentes** de Criar projeto e Animar Imagens, mas ações desabilitadas para não alterar dados. Home e Sobre exibem versão pela mesma fonte `AppReleaseNotes`.

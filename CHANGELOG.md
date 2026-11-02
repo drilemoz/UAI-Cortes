@@ -1,3 +1,10 @@
+## v0.1.100 — 02/11/2026 (versionCode 101)
+
+- Consulta a Releases do GitHub na abertura do app (inclusive pré-lançamentos publicados pelo workflow), somente quando há repositório configurado via CI ou Configurações. Sem download em segundo plano.
+- Configurações → Atualizações pelo GitHub: repositório, verificar agora, changelog, download manual, SHA-256, conferência do APK e instalação explicitamente autorizada pelo usuário e Android.
+- Metadados do GitHub Manager, workflow, Gradle, Sobre/Novidades, scripts e validação em sincronia. `schemaVersion=4` preservado.
+- Sem Android SDK local, compilação e teste físico pendentes.
+
 ## 0.1.99 (versionCode 100) — 2026-11-01
 - A tela Sobre oferece prévia somente leitura de elementos reais da Home para conferir alterações visuais sem iniciar ações.
 - Uma única fonte de versão é usada na Home e em Sobre; teste UI instrumentado cobre a comparação e ausência de efeitos colaterais na prévia.

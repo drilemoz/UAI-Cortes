@@ -11,9 +11,15 @@ android {
         applicationId = "br.com.uaicortes"
         minSdk = 26
         targetSdk = 36
-        versionCode = 100
-        versionName = "0.1.99"
+        versionCode = 101
+        versionName = "0.1.100"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Definido pelo runner do GitHub Actions, sem inventar nome de repositório.
+        val ciRepository = System.getenv("GITHUB_REPOSITORY").orEmpty()
+        val safeRepository = ciRepository.takeIf {
+            Regex("[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}").matches(it)
+        }.orEmpty()
+        buildConfigField("String", "GITHUB_RELEASE_REPOSITORY", "\"$safeRepository\"")
     }
     signingConfigs {
         create("ciRelease") {
@@ -34,7 +40,7 @@ android {
         }
     }
     // Um build Release, cinco APKs diretos para GitHub Releases.
-    // Todos usam versionCode 100 para permitir trocar de arquitetura/universal
+    // Todos usam versionCode 101 para permitir trocar de arquitetura/universal
     // sem criar versões artificiais. Não publicamos multi-APK na Play Store.
     splits {
         abi {
@@ -46,7 +52,7 @@ android {
     }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
 }
 
