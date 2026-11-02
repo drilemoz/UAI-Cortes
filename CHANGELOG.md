@@ -1,3 +1,11 @@
+## v0.1.101 — 02/11/2026 (versionCode 102)
+
+- **Correção workflow 85:** dos 343 testes de unidade, `HomeAboutVersionContractTest` falhava por comparar o AppReleaseNotes com 0.1.99/100 fixos enquanto o app estava em 0.1.100/101 e por procurar a prévia da Home somente em `current.features`.
+- **Verificação dinâmica:** agora os testes conferem `BuildConfig.VERSION_NAME` e `VERSION_CODE`; a busca por documentação da Home percorre todas as notas retidas (sem pedir que funcionalidades antigas sejam novidades da versão atual).
+- **Prevenção:** `tools/test_version_sync.py` e as principais asserções de versão de `tools/validate_source.py` derivam a versão do Gradle. Incluído contrato de teste no validador para prevenir regressão CI85.
+- **Sincronização:** v0.1.101/versionCode 102 no Gradle, workflow, AppReleaseNotes, VERSION, GitHub Manager, pacote e notas.
+- **Limite:** testes Kotlin isolados e validação estrutural não equivalem a Gradle/Android completo. Reexecutar CI para confirmar 343+ testes, Lint e os cinco APKs Release.
+
 ## v0.1.100 — 02/11/2026 (versionCode 101)
 
 - Consulta a Releases do GitHub na abertura do app (inclusive pré-lançamentos publicados pelo workflow), somente quando há repositório configurado via CI ou Configurações. Sem download em segundo plano.

@@ -1,3 +1,10 @@
+# Uai Cortes v0.1.101 — Correção dos testes de versões (workflow 85)
+
+- `HomeAboutVersionContractTest` usa `BuildConfig.VERSION_NAME` e `BuildConfig.VERSION_CODE` para validar Sobre/Novidades sem dados fixos antigos.
+- Teste da mudança da Home em Sobre passa a pesquisar novidades em todas as versões retidas, mantendo a exigência de documentação mas sem falhar quando a funcionalidade já foi lançada anteriormente.
+- Verificador de código-fonte e teste de versão sincronizada usam os valores do Gradle, reduzindo regressões. Arquivos GitHub Manager, workflow, app e pacote sincronizados em **0.1.101 / versionCode 102**.
+- Mantidas as atualizações via GitHub e a política de instalação/download somente com confirmação. Requer rerun do GitHub Actions e teste em aparelho antes de afirmar que APK foi validado.
+
 # Uai Cortes v0.1.100 — Atualizações online pelo GitHub
 
 - Ao abrir o Uai Cortes, verifica se há Release mais recente no repositório público configurado. Inclui pré-releases; não usa `releases/latest`.

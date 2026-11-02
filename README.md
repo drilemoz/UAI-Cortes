@@ -1,3 +1,9 @@
+## Versão 0.1.101 · versionCode 102 (02/11/2026)
+
+- Corrige os dois testes do workflow 85: `HomeAboutVersionContractTest` agora compara Sobre/Novidades com `BuildConfig` em vez de número de versão fixo; a documentação da prévia da Home é buscada no histórico, não apenas no release corrente.
+- Testes de sincronização de metadados e verificações estáticas passam a aproveitar os valores atuais do Gradle, evitando versões antigas em asserts. Consulta de atualizações pelo GitHub e confirmações permanecem como na v0.1.100.
+- Fonte preparada; a compilação completa Android e o teste real de atualização precisam ser executados no GitHub Actions/aparelho.
+
 ## Versão 0.1.100 · versionCode 101 (02/11/2026)
 
 - **Atualizações GitHub Releases**: consulta online ao iniciar o aplicativo ou ao voltar para primeiro plano (com intervalo mínimo de um minuto para evitar excesso de chamadas), inclusive pré-releases, sem download automático. Se houver versão mais recente com APK universal, mostra diálogo; em Configurações → Atualizações pelo GitHub há consulta manual, dados da Release e confirmação para baixar e instalar.

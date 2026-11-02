@@ -259,3 +259,6 @@
 
 - v0.1.100: atualizações via GitHub Releases usam `GITHUB_REPOSITORY` como valor de build no CI; nunca inventar dono/repositório. Se local, permitir configuração manual. Consultar uma vez ao abrir, inclusive pré-releases, sem chamadas duplicadas por recomposição; nenhuma instalação/download automático.
 - v0.1.100: exigir confirmação de download e instalação; validação SHA-256 quando GitHub informar digest, conferência de tamanho, packageName e versionCode; sem digest, somente abrir página oficial. Manter FileProvider privado e exigir assinatura persistente para atualização in-place. Verificação offline falha sem interromper editor. Preservar schemaVersion 4, versionCode 101 e metadados GitHub Manager.
+
+- v0.1.101: não fixar versionName/versionCode em testes Android (usar BuildConfig); conferir mudanças antigas da Home no histórico de AppReleaseNotes, não em current.features. O workflow 85 teve 343 testes, 2 falhas em HomeAboutVersionContractTest.
+- v0.1.101: ao mudar de versão, sempre sincronizar github-manager.json, app_identity.json, VERSION, Gradle, Home/Sobre, Novidades, CI, docs e nome do ZIP. A checagem de versão deve usar metadados reais, não string antiga fixada no validador.

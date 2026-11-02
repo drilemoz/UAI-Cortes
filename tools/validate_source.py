@@ -19,10 +19,12 @@ placement=(root/'app/src/main/java/br/com/uaicortes/OverlayPlacement.kt').read_t
 browser=(root/'app/src/main/java/br/com/uaicortes/MediaBrowser.kt').read_text()
 workflow=(root/'.github/workflows/android-apk.yml').read_text()
 gradle=(root/'app/build.gradle.kts').read_text()
-assert re.search(r'versionCode\s*=\s*101',gradle)
-assert re.search(r'versionName\s*=\s*"0.1.100"',gradle)
+from check_version_sync import check
+current_version, current_code = check(root)
+assert re.search(rf'versionCode\s*=\s*{current_code}\b',gradle)
+assert re.search(rf'versionName\s*=\s*"{re.escape(current_version)}"',gradle)
 assert 'AppReleaseNotes.VERSION_NAME' in (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
-for label in ["VERSION: '0.1.100'", "VERSION_CODE: '101'", 'TAG="v$VERSION"',
+for label in [f"VERSION: '{current_version}'", f"VERSION_CODE: '{current_code}'", 'TAG="v$VERSION"',
               'gh release upload', 'tools/package_apks.py', 'arm32 arm64 x86 x86_64 universal']:
     assert label in workflow, label
 assert 'actions/upload-artifact@v4' not in workflow
@@ -215,8 +217,8 @@ assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePresentationTest.kt').exists()
-assert "VERSION = '0.1.100'" in package_script and 'VERSION_CODE = 101' in package_script
-assert 'versionCode = 101' in gradle and 'isUniversalApk = true' in gradle
+assert f"VERSION = '{current_version}'" in package_script and f'VERSION_CODE = {current_code}' in package_script
+assert f'versionCode = {current_code}' in gradle and 'isUniversalApk = true' in gradle
 print('OK: versão atual 0.1.64 / versionCode 74, compatibilidade das legendas, JSON legado, APKs')
 
 # build 26: Compose UI usa StrokeJoin, não PathJoin. Falha anterior em Debug/Release.
@@ -791,7 +793,7 @@ news=(app_files/'WhatsNewScreen.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
-assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', 'VERSION_CODE = 101'])
+assert all(x in notes for x in ['fun forAbout()', 'fun forWhatsNew()', 'fun fingerprintFor(', 'currentFingerprint', '0.1.76', f'VERSION_CODE = {current_code}'])
 assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
@@ -1244,14 +1246,14 @@ required_source_files = (
 assert all((root / relative).is_file() for relative in required_source_files), 'Pacote-fonte incompleto: Gradle/CI'
 assert 'include(":app")' in (root / 'settings.gradle.kts').read_text()
 assert 'id("com.android.application")' in (root / 'build.gradle.kts').read_text()
-assert "VERSION = '0.1.100'" in (root / 'tools/package_apks.py').read_text()
+assert f"VERSION = '{current_version}'" in (root / 'tools/package_apks.py').read_text()
 assert 'ReleaseSummary("0.1.98", listOf(' in notes
 assert (root / 'docs/VALIDATION_0.1.98.md').exists()
 print('OK: v0.1.98 CI83 scripts Gradle restaurados, fonte verificável')
 
 # v0.1.100: a Home/Sobre compartilham ações e versão, o GitHub Manager lê metadados atuais.
 from check_version_sync import check
-assert check(root) == ('0.1.100', 101)
+assert check(root) == (current_version, current_code)
 home = (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
 assert 'internal fun HomePrimaryActions(' in home
 assert 'HomePrimaryActions(onCreate, onAnimate)' in home
@@ -1262,6 +1264,7 @@ assert 'enabled = !preview' in home
 assert (root/'app/src/androidTest/java/br/com/uaicortes/HomeAboutPreviewAndroidTest.kt').exists()
 assert (root/'app/src/test/java/br/com/uaicortes/HomeAboutVersionContractTest.kt').exists()
 assert (root/'docs/VALIDATION_0.1.100.md').is_file()
+assert (root/'docs/VALIDATION_0.1.101.md').is_file()
 print('OK: v0.1.100 Home/Sobre, prévia sem efeitos e metadados GitHub Manager')
 
 # v0.1.100: update checker must not silently download/install or lose URI security.
@@ -1275,9 +1278,16 @@ assert 'githubUpdates.checkOnForeground()' in (root/'app/src/main/java/br/com/ua
 assert 'manager.download(release)' in update_ui and 'confirmDownload' in update_ui
 assert 'REQUEST_INSTALL_PACKAGES' in manifest
 assert '<cache-path name="atualizacoes" path="updates/" />' in (root/'app/src/main/res/xml/diagnostic_file_paths.xml').read_text()
-assert 'versionCode = 101' in gradle and 'GITHUB_RELEASE_REPOSITORY' in gradle
+assert f'versionCode = {current_code}' in gradle and 'GITHUB_RELEASE_REPOSITORY' in gradle
 assert 'GitHubUpdateCore.newer' not in update_manager or 'GitHubUpdateCore.parseReleases' in update_manager
 print('OK: v0.1.100 atualização consentida, download verificado, FileProvider privado e CI versionado')
 
 assert "Release requer os 4 Secrets de assinatura estável" in workflow
 assert (root/'app/src/test/java/br/com/uaicortes/GitHubUpdateCoreTest.kt').is_file()
+
+# v0.1.101 CI85: automated test must read Android BuildConfig and historical notes.
+version_test = (root/'app/src/test/java/br/com/uaicortes/HomeAboutVersionContractTest.kt').read_text()
+assert 'BuildConfig.VERSION_NAME' in version_test and 'BuildConfig.VERSION_CODE' in version_test
+assert 'AppReleaseNotes.recent.flatMap { it.features }' in version_test
+assert 'assertEquals("0.1.99", AppReleaseNotes.VERSION_NAME)' not in version_test
+print('OK: CI85 version test dynamic and Home/About changelog historical')
