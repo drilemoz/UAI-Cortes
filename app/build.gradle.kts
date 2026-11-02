@@ -11,8 +11,8 @@ android {
         applicationId = "br.com.uaicortes"
         minSdk = 26
         targetSdk = 36
-        versionCode = 106
-        versionName = "0.1.105"
+        versionCode = 107
+        versionName = "0.1.106"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Definido pelo runner do GitHub Actions, sem inventar nome de repositório.
         val ciRepository = System.getenv("GITHUB_REPOSITORY").orEmpty()
@@ -40,7 +40,7 @@ android {
         }
     }
     // Um build Release, cinco APKs diretos para GitHub Releases.
-    // Todos usam versionCode 106 para permitir trocar de arquitetura/universal
+    // Todos usam versionCode 107 para permitir trocar de arquitetura/universal
     // sem criar versões artificiais. Não publicamos multi-APK na Play Store.
     splits {
         abi {

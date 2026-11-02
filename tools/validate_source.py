@@ -1329,3 +1329,21 @@ assert 'ExifInterface' in preview_decode and 'BitmapFactory.decodeStream' in pre
 assert (root/'app/src/test/java/br/com/uaicortes/ImagePreviewSizingTest.kt').is_file()
 assert (root/'docs/VALIDATION_0.1.105.md').is_file()
 print('OK: v0.1.105 prévia proporcional, qualidade configurável e ampliação, exportação preservada')
+
+# v0.1.106: seleção compacta, sem janelas sobrepostas nem inferência de gênero.
+voice_ui = (app_files/'GeminiNarrationUi.kt').read_text()
+voice_search = (app_files/'GeminiVoiceSearch.kt').read_text()
+voice_presentation = (app_files/'GeminiVoicePresentation.kt').read_text()
+assert 'if (expanded && !voicePicker) Dialog(' in voice_ui
+assert 'if (voicePicker && expanded) Dialog(' in voice_ui
+assert 'GeminiVoiceSearch.byGender(searched, voiceGenderFilter)' in voice_ui
+assert 'GeminiVoicePresentation.shortDetails(voice)' in voice_ui
+assert 'expandedVoiceId = if (detailsOpen) null else voice.id' in voice_ui
+assert 'Descrição original da API' in voice_ui
+assert '"Femininas" -> voices.filter { it.gender.equals("female", true) }' in voice_search
+assert '"Masculinas" -> voices.filter { it.gender.equals("male", true) }' in voice_search
+assert 'Características não informadas' in voice_presentation
+assert (root/'app/src/test/java/br/com/uaicortes/GeminiVoiceCompactPickerTest.kt').is_file()
+assert (root/'docs/VALIDATION_0.1.106.md').is_file()
+assert 'ReleaseSummary("0.1.106", listOf(' in notes
+print('OK: v0.1.106 seleção compacta, filtros confiáveis, detalhes opcionais e navegação')

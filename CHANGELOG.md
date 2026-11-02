@@ -1,3 +1,11 @@
+## Versão 0.1.106 · versionCode 107 (02/11/2026)
+
+- Seletor de vozes enxuto, pesquisa por nome/ID/perfil e filtros de gênero sem adivinhar características não informadas.
+- Metadados e descrição original agora ficam recolhidos em Detalhes, reduzindo truncamento e excesso de textos em inglês na lista principal.
+- Corrigida a sobreposição visual de diálogos Narração/Escolher voz: uma única janela por vez. Confirmar retorna ao vídeo sem chamadas TTS; cancelar não altera a voz.
+- Testes JVM de filtros/resumo e contrato estático de seleção; versionCode 107, metadados GitHub Manager, workflow e documentação sincronizados.
+- Gradle Android e teste visual no aparelho ainda pendentes.
+
 ## Versão 0.1.105 · versionCode 106 (02/11/2026)
 
 - Corrige imagem pouco nítida em **Animar Imagens**: substitui miniatura quadrada 640 × 640 por decodificação proporcional com rotação/espelhamento EXIF e redimensionamento sem ampliação artificial.

@@ -1,3 +1,11 @@
+# Uai Cortes v0.1.106 — Seleção de vozes simplificada
+
+- Lista compacta: nome em português quando conhecido, características oficiais resumidas e opções Todas/Femininas/Masculinas.
+- Use Detalhes para consultar nome original da API, ID, descrição e perfil completos, sem poluir a tela de escolha.
+- Seleção e narração não aparecem mais em dois diálogos simultâneos. Confirmar voz volta ao vídeo; cancelar retorna ao gerador, sem alterar a voz anterior.
+- Reutilização de legendas e confirmações antes de gerar áudio permanecem intactas.
+- Versionamento e GitHub Manager sincronizados em 0.1.106 / versionCode 107. Build Android e testes no aparelho pendentes.
+
 # Uai Cortes v0.1.105 — Prévia nítida no Animar Imagens
 
 - Prévia de fotos usa a mídia original proporcionada, com correção de orientação EXIF; não depende mais de uma miniatura de proporção quadrada.

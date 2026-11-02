@@ -1,3 +1,10 @@
+## Versão 0.1.106 · versionCode 107 (02/11/2026)
+
+- O catálogo de vozes do Gemini foi redesenhado: cartões compactos com nome legível, resumo curto em português, campo de busca e filtros Todas/Femininas/Masculinas baseados somente nos metadados recebidos da API.
+- Nome original, ID, descrição em inglês e metadados detalhados aparecem somente em **Detalhes**, com expansão sob demanda; outras vozes continuam acessíveis pela rolagem.
+- Ao abrir Escolher voz, a janela de narração fica temporariamente oculta, evitando dois diálogos sobrepostos. Cancelar volta à narração sem aplicar escolha; Confirmar voz retorna ao editor e retoma o vídeo sem sintetizar automaticamente.
+- Preservados seleção explícita, cache de amostras, reutilização de legendas, geração com confirmação, atualizações pelo GitHub e ferramentas de Animar Imagens. Teste real no Android pendente.
+
 ## Versão 0.1.105 · versionCode 106 (02/11/2026)
 
 - **Animar Imagens:** prévia principal agora decodifica a imagem real via MediaStore/SAF, preservando proporção e orientação EXIF, em vez de usar miniatura quadrada solicitada em 640 px.

@@ -64,6 +64,21 @@ internal object GeminiVoicePresentation {
         if (studioName != null) return "${studioName.key} · ${studioName.value}"
         return original
     }
+    /** Resumo compacto: mostra apenas características declaradas pelo catálogo. */
+    fun shortDetails(voice: GeminiVoice): String = buildList {
+        when (voice.gender.lowercase(Locale.ROOT)) {
+            "female" -> add("Feminina")
+            "male" -> add("Masculina")
+            "neutral" -> add("Neutra")
+        }
+        if (voice.languageCode.isNotBlank()) add(
+            if (voice.languageCode.equals("pt-BR", true)) "Português (Brasil)" else voice.languageCode)
+        when (voice.pitch.lowercase(Locale.ROOT)) {
+            "low" -> add("Grave")
+            "medium" -> add("Média")
+            "high" -> add("Aguda")
+        }
+    }.ifEmpty { listOf("Características não informadas") }.joinToString(" · ")
     fun details(voice: GeminiVoice): String = buildList {
         val lang = voice.languageCode.trim()
         if (lang.isNotEmpty()) add(if (lang.equals("pt-BR", true)) "Português (Brasil)" else lang)

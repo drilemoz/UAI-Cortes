@@ -4,12 +4,14 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.window.Dialog
@@ -94,10 +96,13 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
     var voicePicker by remember { mutableStateOf(false) }
     var draftVoiceId by remember { mutableStateOf<String?>(null) }
     var voiceSearch by remember { mutableStateOf("") }
+    var voiceGenderFilter by remember { mutableStateOf("Todas") }
+    var expandedVoiceId by remember { mutableStateOf<String?>(null) }
     var modelMenu by remember { mutableStateOf(false) }
     var styleMenu by remember { mutableStateOf(false) }
     var job by remember { mutableStateOf<Job?>(null) }
     val lastJob by rememberUpdatedState(job)
+    val narrationScrollState = rememberScrollState()
     val player = remember(ctx) { diagnosticPlayer(ctx) }
     var playing by remember { mutableStateOf(false) }
     DisposableEffect(player, api) {
@@ -167,7 +172,8 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
         expanded = true
         // Abrir a janela nunca faz chamadas de rede ou escolhe uma voz automaticamente.
     },modifier=modifier)
-    if (expanded) Dialog(
+    // Apenas uma janela visível: ao escolher voz, oculta a narração sob o seletor.
+    if (expanded && !voicePicker) Dialog(
         onDismissRequest = {
             if (!working) {
                 if (loading) { job?.cancel(); api.cancel() }
@@ -196,7 +202,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                     }
                 }
                 HorizontalDivider()
-                Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())
+                Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(narrationScrollState)
                     .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         OutlinedButton(onClick = {
@@ -256,7 +262,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("Voz", style = MaterialTheme.typography.labelMedium)
-                            OutlinedButton(onClick = { voiceSearch = ""; draftVoiceId = selectedVoice?.id; voicePicker = true },
+                            OutlinedButton(onClick = { voiceSearch = ""; voiceGenderFilter = "Todas"; expandedVoiceId = null; draftVoiceId = selectedVoice?.id; voicePicker = true },
                                 modifier = Modifier.fillMaxWidth(),
                                 enabled = !working && !loading && voices.isNotEmpty()) {
                                 Icon(Icons.Default.RecordVoiceOver, null, Modifier.size(18.dp))
@@ -460,59 +466,115 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
             }
         }
     }
+    // Seletor único, sem a janela "Narração" aberta atrás e sem ações de rede.
     if (voicePicker && expanded) Dialog(onDismissRequest = { voicePicker = false },
         properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(modifier = Modifier.fillMaxWidth(0.92f).fillMaxHeight(0.76f),
+        Surface(modifier = Modifier.fillMaxWidth(0.96f).fillMaxHeight(0.90f),
             shape = RoundedCornerShape(22.dp), color = MaterialTheme.colorScheme.surface) {
-            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.RecordVoiceOver, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(8.dp))
                     Text("Escolher voz", style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.weight(1f))
                     IconButton(onClick = { voicePicker = false }) {
-                        Icon(Icons.Default.Close, "Fechar seleção de voz")
+                        Icon(Icons.Default.Close, "Voltar à narração")
                     }
                 }
-                OutlinedTextField(voiceSearch, onValueChange = { voiceSearch = it },
+                OutlinedTextField(value = voiceSearch, onValueChange = { voiceSearch = it },
                     modifier = Modifier.fillMaxWidth(), singleLine = true,
-                    label = { Text("Buscar voz, perfil ou código") },
-                    leadingIcon = { Icon(Icons.Default.Search, null) })
-                val filtered = GeminiVoiceSearch.filter(voices, voiceSearch)
-                Text("${filtered.size} de ${voices.size} vozes", style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Ao confirmar, o vídeo volta a reproduzir. A voz só será ouvida depois de gerar o áudio e adicioná-lo à timeline.",
+                    placeholder = { Text("Pesquisar vozes...") },
+                    leadingIcon = { Icon(Icons.Default.Search, null) },
+                    trailingIcon = {
+                        if (voiceSearch.isNotBlank()) IconButton(onClick = { voiceSearch = "" }) {
+                            Icon(Icons.Default.Close, "Limpar busca")
+                        }
+                    })
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("Todas", "Femininas", "Masculinas").forEach { option ->
+                        FilterChip(selected = voiceGenderFilter == option,
+                            onClick = { voiceGenderFilter = option },
+                            label = { Text(option) })
+                    }
+                }
+                val searched = GeminiVoiceSearch.filter(voices, voiceSearch)
+                val filtered = GeminiVoiceSearch.byGender(searched, voiceGenderFilter)
+                Text("${filtered.size} de ${voices.size} vozes · Selecione uma para confirmar",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                LazyColumn(Modifier.weight(1f)) {
+                if (filtered.isEmpty()) {
+                    Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Text("Nenhuma voz encontrada. Altere a busca ou o filtro.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                } else LazyColumn(Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    contentPadding = PaddingValues(bottom = 8.dp)) {
                     items(filtered, key = { it.id }) { voice ->
-                        Row(Modifier.fillMaxWidth()
-                                .clickable { draftVoiceId = voice.id }
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text(GeminiVoicePresentation.label(voice), color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                if (GeminiVoicePresentation.label(voice) != voice.name)
-                                    Text("Original: ${voice.name}", style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                val details = GeminiVoicePresentation.details(voice)
-                                if (details.isNotEmpty()) Text(details, style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 3, overflow = TextOverflow.Ellipsis)
-                                if (voice.description.isNotBlank()) Text(voice.description,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                Text("ID: ${voice.id}", style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        val selected = draftVoiceId == voice.id
+                        val detailsOpen = expandedVoiceId == voice.id
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(if (selected) 2.dp else 1.dp,
+                                if (selected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outlineVariant),
+                            color = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+                                else MaterialTheme.colorScheme.surface
+                        ) {
+                            Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp)) {
+                                Row(Modifier.fillMaxWidth().clickable { draftVoiceId = voice.id },
+                                    verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Mic, null, tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text(GeminiVoicePresentation.label(voice),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                        Text(GeminiVoicePresentation.shortDetails(voice),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
+                                    RadioButton(selected = draftVoiceId == voice.id, onClick = null,
+                                        modifier = Modifier.size(42.dp))
+                                }
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                    TextButton(onClick = {
+                                        expandedVoiceId = if (detailsOpen) null else voice.id
+                                    }) {
+                                        Text(if (detailsOpen) "Ocultar detalhes" else "Detalhes")
+                                        Spacer(Modifier.width(4.dp))
+                                        Icon(if (detailsOpen) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                            null, Modifier.size(18.dp))
+                                    }
+                                }
+                                if (detailsOpen) {
+                                    HorizontalDivider()
+                                    Spacer(Modifier.height(6.dp))
+                                    Text("Nome original: ${voice.name}",
+                                        style = MaterialTheme.typography.bodySmall)
+                                    Text("Código da API: ${voice.id}",
+                                        style = MaterialTheme.typography.bodySmall)
+                                    val allDetails = GeminiVoicePresentation.details(voice)
+                                    if (allDetails.isNotBlank()) Text(allDetails,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    if (voice.description.isNotBlank()) Text(
+                                        "Descrição original da API: ${voice.description}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                             }
-                            RadioButton(selected = draftVoiceId == voice.id, onClick = null,
-                                modifier = Modifier.size(42.dp))
                         }
-                        HorizontalDivider()
                     }
                 }
+                HorizontalDivider()
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { voicePicker = false }, modifier = Modifier.weight(1f)) {
                         Text("Cancelar")
@@ -525,8 +587,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                             voicePicker = false
                             player.pause()
                             expanded = false
-                            // Retorna ao editor, preservando a voz e o texto no rascunho.
-                            // Não sintetiza nem adiciona faixas sem confirmação.
+                            // Só escolhe a voz; retorna à prévia sem gerar ou incluir áudio.
                             onReturnToVideo()
                         }
                     }, modifier = Modifier.weight(1f), enabled = draftVoiceId != null &&
