@@ -1407,3 +1407,8 @@ print('OK: v0.1.113 waveform local e sugestão opcional sem nova transcrição')
 from test_narration114_contract import *
 assert 'ReleaseSummary("0.1.114", listOf(' in notes
 print('OK: v0.1.114 comparação de áudio, meta temporal aproximada e refazer fala individual')
+
+# v0.1.115: checkpoint local verificado, sem geração silenciosa ou mudança no formato do projeto.
+from test_narration115_contract import *
+assert 'ReleaseSummary("0.1.115", listOf(' in notes
+print('OK: v0.1.115 recuperação segura e retomada de lotes de narração Gemini')

@@ -16,11 +16,27 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.114"
-    const val VERSION_CODE = 115
+    const val VERSION_NAME = "0.1.116"
+    const val VERSION_CODE = 117
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.116", listOf(
+            ReleaseFeature("gemini-compact-editor", "Trecho por vez na narração",
+                "Revise e edite a fala selecionada sem percorrer dezenas de caixas de texto; avance ou volte pelos trechos.", "film"),
+            ReleaseFeature("gemini-clear-blocker", "Geração sempre acessível",
+                "O botão Gerar falas fica fixo e explica quando faltam voz, texto ou um lote válido de até 12 legendas.", "check"),
+            ReleaseFeature("gemini-reference-compact", "Áudio de referência mais simples",
+                "Navegue uma fala por vez, ouça, analise e marque horários sem repetir comandos para todas as legendas.", "check")
+        )),
+        ReleaseSummary("0.1.115", listOf(
+            ReleaseFeature("gemini-checkpoint", "Recuperar lote de narração",
+                "O progresso da narração por trechos é salvo por projeto com texto, horários, voz e WAVs, mesmo após fechar o aplicativo.", "check"),
+            ReleaseFeature("gemini-retry-safe", "Retomar somente falas pendentes",
+                "WAVs válidos são conferidos por SHA-256 antes de reutilizar; novas chamadas Gemini sempre exigem confirmação.", "check"),
+            ReleaseFeature("gemini-batch-12", "Selecionar próximos lotes de legendas",
+                "Reutilize até 12 legendas por lote e navegue para as próximas sem reimportar tudo.", "film")
+        )),
         ReleaseSummary("0.1.114", listOf(
             ReleaseFeature("gemini-compare-ab", "Comparar voz original e Gemini",
                 "Ouça separadamente o áudio do vídeo e o WAV da fala selecionada antes de inserir na linha do tempo.", "film"),

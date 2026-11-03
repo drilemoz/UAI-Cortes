@@ -1,3 +1,20 @@
+## Versão 0.1.116 · versionCode 117 (03/11/2026)
+
+- Interface **Narração Gemini**: remove dezenas de campos de texto simultâneos e exibe uma única fala editável por vez, com navegação anterior/próxima, preservando os textos e horários originais.
+- **Gerar falas/Retomar/Revisar** permanece fixo no rodapé da janela, visível sem percorrer toda a rolagem. Quando desabilitado, explica se falta voz, consulta ao catálogo, texto, espaço disponível ou um lote válido (máximo de 12).
+- Importação de legendas paginada em grupos de 12: exibe apenas uma página, com navegação, seleção da página corrente e confirmação manual. Não altera automaticamente os demais trechos.
+- **Áudio como referência**: apenas uma fala ativa na análise e nos comandos Ir à legenda/Marcar aqui; Anterior/Próxima substituem os três controles repetidos em cada linha. O processamento continua local e sob demanda.
+- Preserva checkpoint SHA-256, cache de WAV, estilos e confirmação antes das requisições ao Gemini. Não altera `schemaVersion=4`.
+- **Testes pendentes**: build Android completo, interação real em celular, geração de voz, consumo de cota, análise de MP4 e exportação.
+
+## Versão 0.1.115 · versionCode 116 (03/11/2026)
+
+- Checkpoint privado por projeto para **narração sincronizada**: armazena rascunho de trechos, modelo, voz, estilo, horários corrigidos, metas de duração e caminho/medida/digest SHA-256 de WAVs já gerados. Não registra a chave Gemini e não envia arquivos à rede.
+- Após reinício do aplicativo, reabre o lote somente se projeto e horários das legendas ainda forem compatíveis. Cada WAV é verificado contra o digest salvo; ausência, corrupção ou alteração de origem impedem reutilização silenciosa.
+- Após cada síntese de um trecho e gravação íntegra do WAV, registra o checkpoint **antes de solicitar o próximo trecho**. Falha/cancelamento pode deixar chamada de API já contabilizada, mas trechos concluídos são reutilizados. Não há novas chamadas automáticas.
+- Importador de legendas seleciona até **12 falas por lote**, com botão "Próximas 12"; a ação "Retomar (N)" mostra quantas chamadas faltam e exige autorização. Nenhuma alteração de formato de projeto (`schemaVersion=4`).
+- **Pendências de validação:** Gradle/Android completo, morte do processo durante a geração, restauração real de WAVs, transições de lotes e MP4 exportado.
+
 ## Versão 0.1.114 · versionCode 115 (03/11/2026)
 
 - Na narração sincronizada, cada WAV preparado tem **Comparar A/B**: ouvir o som original do vídeo na janela correspondente e ouvir o WAV Gemini separadamente. Player local, sem efeito sobre o projeto ou exportação.

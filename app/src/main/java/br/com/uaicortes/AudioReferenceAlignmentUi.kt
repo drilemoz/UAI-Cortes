@@ -247,15 +247,14 @@ internal fun AudioReferenceAlignmentDialog(
                     Slider(value = currentMs.coerceIn(minMs, maxMs).toFloat(),
                         onValueChange = { seekToProjectPosition(it.toLong()) },
                         valueRange = minMs.toFloat()..maxMs.toFloat())
-                    Text("Toque em 'Marcar aqui' na fala correspondente. Os horários originais " +
-                        "permanecem nas legendas.", style = MaterialTheme.typography.bodySmall)
+                    Text("Use Anterior/Próxima para escolher outra fala; as legendas não mudam.",
+                        style = MaterialTheme.typography.bodySmall)
                 } else Text("Selecione uma origem de áudio antes de marcar os tempos.",
                     style = MaterialTheme.typography.bodySmall)
                 if (available && selectedSegment != null) {
                     HorizontalDivider()
                     Text("Atividade sonora · análise local", style = MaterialTheme.typography.titleSmall)
-                    Text("Selecione uma fala abaixo e toque em Analisar. A forma de onda mostra " +
-                        "energia do áudio, não identifica palavras nem garante que seja voz.",
+                    Text("Analise a fala selecionada. A forma de onda mede energia, não reconhece palavras.",
                         style = MaterialTheme.typography.bodySmall)
                     Text("Fala selecionada: ${selectedSegment.text}", maxLines = 2,
                         overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelMedium)
@@ -286,37 +285,49 @@ internal fun AudioReferenceAlignmentDialog(
                         style = MaterialTheme.typography.bodySmall)
                     HorizontalDivider()
                 }
-                segments.forEach { segment ->
+                selectedSegment?.let { segment ->
+                    val index = segments.indexOfFirst { it.cueId == segment.cueId }.coerceAtLeast(0)
                     val actual = NarrationReferenceAlignment.start(segment, marks)
-                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text(segment.text, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.bodySmall)
-                        Text("Legenda: ${NarrationReferenceAlignment.timeLabel(segment.startMs)} · " +
-                            "Voz: ${NarrationReferenceAlignment.timeLabel(actual)}",
-                            style = MaterialTheme.typography.labelSmall)
-                        OutlinedButton(enabled = available && selectedCueId != segment.cueId, onClick = {
-                            analysisJob?.cancel()
-                            analysisBusy = false
-                            selectedCueId = segment.cueId
-                            analyzed = null
-                            analysisFeedback = ""
-                            seekToProjectPosition(segment.startMs)
-                        }) { Text(if (selectedCueId == segment.cueId) "Selecionada para análise" else "Selecionar para análise") }
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            OutlinedButton(enabled = available, onClick = {
-                                seekToProjectPosition(segment.startMs)
-                            }) { Text("Ir à legenda") }
-                            OutlinedButton(enabled = available, onClick = {
-                                marks = NarrationReferenceAlignment.cleaned(segments,
-                                    marks + (segment.cueId to currentMs))
-                            }) { Text("Marcar aqui") }
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        IconButton(onClick = {
+                            analysisJob?.cancel(); analysisBusy = false
+                            selectedCueId = segments[index - 1].cueId
+                            analyzed = null; analysisFeedback = ""
+                            seekToProjectPosition(segments[index - 1].startMs)
+                        }, enabled = index > 0 && !analysisBusy) {
+                            Icon(Icons.Default.ChevronLeft, "Fala anterior")
                         }
-                        if (segment.cueId in marks) TextButton(onClick = {
-                            marks = marks - segment.cueId
-                        }) { Text("Restaurar horário original") }
+                        Text("Fala ${index + 1} de ${segments.size}",
+                            modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
+                        IconButton(onClick = {
+                            analysisJob?.cancel(); analysisBusy = false
+                            selectedCueId = segments[index + 1].cueId
+                            analyzed = null; analysisFeedback = ""
+                            seekToProjectPosition(segments[index + 1].startMs)
+                        }, enabled = index < segments.lastIndex && !analysisBusy) {
+                            Icon(Icons.Default.ChevronRight, "Próxima fala")
+                        }
                     }
-                    HorizontalDivider()
+                    Text(segment.text, maxLines = 3, overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodyMedium)
+                    Text("Legenda: ${NarrationReferenceAlignment.timeLabel(segment.startMs)} · " +
+                        "Voz: ${NarrationReferenceAlignment.timeLabel(actual)}",
+                        style = MaterialTheme.typography.labelSmall)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(enabled = available, onClick = {
+                            seekToProjectPosition(segment.startMs)
+                        }, modifier = Modifier.weight(1f)) { Text("Ir à legenda") }
+                        OutlinedButton(enabled = available, onClick = {
+                            marks = NarrationReferenceAlignment.cleaned(segments,
+                                marks + (segment.cueId to currentMs))
+                        }, modifier = Modifier.weight(1f)) { Text("Marcar aqui") }
+                    }
+                    if (segment.cueId in marks) TextButton(onClick = {
+                        marks = marks - segment.cueId
+                    }) { Text("Restaurar horário original") }
                 }
+                HorizontalDivider()
                 if (problems != null) Text(problems, color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall)
                 Text("Os ajustes só serão aplicados após confirmar. A geração Gemini " +
