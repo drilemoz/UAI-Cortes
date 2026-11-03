@@ -1,3 +1,12 @@
+## Versão 0.1.117 · versionCode 118 (03/11/2026)
+
+- A confirmação **Vídeo salvo** foi redesenhada: estado compacto, miniatura quando o Android fornecer, nome e qualidade em resumo, pasta de destino, compartilhamento prioritário e opções Abrir/Voltar/Fechar. Informações técnicas ficam recolhidas por padrão.
+- Campos **Descrição** e **5 hashtags** editáveis, contador do total (até 100 caracteres com quebra de linha), sem emojis/emoticons, hashtags distintas, validação antes de Copiar ou incluir a legenda no compartilhamento.
+- Botão opcional **Gerar descrição com IA** reutiliza a chave Gemini já configurada. Mostra o contexto textual e exige confirmação explícita antes da requisição; envia somente assunto/legendas selecionados, nunca vídeo ou áudio. Não fabrica conteúdo se não houver contexto. Pode consumir cota; sem chave, mantém a edição manual.
+- Geração no endpoint `models/gemini-2.5-flash:generateContent` com resposta JSON validada, cinco hashtags exatas e corte conservador da descrição ao limite de 100 caracteres. Erros de rede, cota e formatação informados sem mostrar credenciais.
+- Mantido o mesmo diálogo nos fluxos **Exportar vídeo** e **Animar Imagens**, sem alteração de `schemaVersion=4`, MP4, timeline, assinatura ou workflow de cinco APKs.
+- **Validação:** contratos locais e testes Kotlin de política de publicação. Ainda pendentes build Android completo, chamadas Gemini reais, teste de miniatura, layout e compartilhamento em aparelhos.
+
 ## Versão 0.1.116 · versionCode 117 (03/11/2026)
 
 - Interface **Narração Gemini**: remove dezenas de campos de texto simultâneos e exibe uma única fala editável por vez, com navegação anterior/próxima, preservando os textos e horários originais.

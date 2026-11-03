@@ -1,3 +1,7 @@
+## v0.1.117 (versionCode 118): confirmação do vídeo e descrição para redes sociais
+
+- Ver `docs/VALIDATION_0.1.117.md` para verificações locais e testes Android ainda necessários.
+
 ## v0.1.89 (versionCode 90): estilos de legenda e navegação
 - Ver `docs/VALIDATION_0.1.89.md` para alterações, verificações e testes Android ainda necessários.
 

@@ -301,7 +301,17 @@ internal fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
     // Confirmação compartilhada com Animar Imagens, somente após MediaStore concluir.
     savedVideo?.let { savedUri ->
         VideoSavedDialog(uri=savedUri,name=savedName,editLabel="Voltar ao editor",
-            exportDetails=qualityReport?.lines().orEmpty(),
+            exportDetails=qualityReport?.lines().orEmpty(), qualityReport=qualityReport,
+            videoContext=remember(p.id, p.title, p.subtitles) {
+                buildString {
+                    if (p.title.isNotBlank() && p.title != "Meu vídeo")
+                        append("Título do projeto: ${p.title.take(120)}\n")
+                    val subtitleText = p.subtitles.sortedBy { it.startMs }
+                        .map { it.text.trim() }.filter { it.isNotEmpty() }
+                        .distinct().joinToString(" ").take(750)
+                    if (subtitleText.isNotBlank()) append("Legendas do vídeo: $subtitleText")
+                }
+            },
             onEdit={exportVm.dismissSaved();back()},onClose={exportVm.dismissSaved()})
     }
 
