@@ -1,3 +1,11 @@
+## Versão 0.1.112 · versionCode 113 (03/11/2026)
+
+- Na geração por trechos, novo botão **Usar áudio como referência de tempo**: ouvir o vídeo do projeto, uma faixa adicional ou importar áudio local pelo seletor Android.
+- Marcação manual dos inícios de falas usando o tempo da referência, com offset ajustável para arquivo externo, revisão e confirmação. Preserva horários/textos das legendas; nenhum processamento de reconhecimento novo ou upload do áudio.
+- Os horários de voz confirmados entram na revisão de conflitos e são gravados nas faixas Gemini, mantendo os WAVs já gerados, sem cortar silenciosamente nem mudar `schemaVersion=4`.
+- **Limite:** não é alinhamento automático por voz; a API TTS normal recebe apenas texto. Replicação de timbre exige recurso separado, consentimento e autorização; não foi ativada.
+- **Pendente:** compilar Android no GitHub Actions e testar referência sonora/Media3 e exportação real em aparelho.
+
 ## Versão 0.1.111 · versionCode 112 (03/11/2026)
 
 - **Reutilizar legendas:** modo Sincronizada por trechos ou Contínua. O modo temporal preserva os instantes de cada legenda, permite edição individual sem alterar o texto original e exige confirmação antes das chamadas Gemini.

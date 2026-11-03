@@ -1334,7 +1334,7 @@ print('OK: v0.1.105 prévia proporcional, qualidade configurável e ampliação,
 voice_ui = (app_files/'GeminiNarrationUi.kt').read_text()
 voice_search = (app_files/'GeminiVoiceSearch.kt').read_text()
 voice_presentation = (app_files/'GeminiVoicePresentation.kt').read_text()
-assert 'if (expanded && !voicePicker) Dialog(' in voice_ui
+assert 'if (expanded && !voicePicker && !referenceDialog) Dialog(' in voice_ui
 assert 'if (voicePicker && expanded) Dialog(' in voice_ui
 assert 'GeminiVoiceSearch.byGender(searched, voiceGenderFilter)' in voice_ui
 assert 'GeminiVoicePresentation.shortDetails(voice)' in voice_ui
@@ -1365,7 +1365,7 @@ assert 'MAX_SEGMENTS = 12' in timed and 'PROJECT_OVERFLOW' in timed
 assert 'NEXT_SPEECH_OVERLAP' in timed and 'SUBTITLE_TOO_SHORT' in timed
 assert 'timedLines = SubtitleNarrationReuse.eligible(reuseSnapshot)' in narration
 assert '"generate_sync"' in narration and 'GeminiTimedFile(' in narration
-assert 'startMs = result.segment.startMs, durationMs = result.durationMs' in narration
+assert 'startMs = NarrationReferenceAlignment.start(result.segment, referenceStarts)' in narration
 assert 'timedReview = true' in narration and 'Checkbox(checked = approveOverrun' in narration
 assert 'onSaveToAudio(changed)' in narration
 assert 'if (playable < 250L || playable < duration)' in narration
@@ -1374,3 +1374,16 @@ assert (root/'tools/test_narration_sync_contract.py').exists()
 assert (root/'docs/VALIDATION_0.1.111.md').exists()
 assert 'ReleaseSummary("0.1.111", listOf(' in notes
 print('OK: v0.1.111 geração por trechos, alinhamento, revisão, cota e sem corte silencioso')
+
+# v0.1.112: áudio de referência local e marcação de início por fala, sem nova transcrição.
+reference_ui = (app_files/'AudioReferenceAlignmentUi.kt').read_text()
+reference_logic = (app_files/'NarrationReferenceAlignment.kt').read_text()
+assert 'ActivityResultContracts.OpenDocument()' in reference_ui
+assert '"Aplicar horários"' in reference_ui and '"Marcar aqui"' in reference_ui
+assert 'NarrationReferenceAlignment.placed(it.segment, referenceStarts)' in narration
+assert 'startMs = NarrationReferenceAlignment.start(result.segment, referenceStarts)' in narration
+assert 'sourceToProject' in reference_logic and 'fun validate(' in reference_logic
+assert (root/'docs/VALIDATION_0.1.112.md').exists()
+assert 'ReleaseSummary("0.1.112", listOf(' in notes
+from test_audio_reference_contract import *
+print('OK: v0.1.112 referência sonora local e alinhamento com confirmação')

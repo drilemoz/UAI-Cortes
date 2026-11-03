@@ -16,7 +16,7 @@ assert 'SubtitleNarrationTimeline.inspect(records, current.durationMs)' in ui
 assert 'Text("Revisar narração sincronizada")' in ui
 assert 'Checkbox(checked = approveOverrun' in ui
 assert 'inspections.any { it.blocking }' in ui
-assert 'startMs = result.segment.startMs, durationMs = result.durationMs' in ui
+assert 'startMs = NarrationReferenceAlignment.start(result.segment, referenceStarts)' in ui
 assert 'ready.size != timedLines.size' in ui
 assert 'current.audioTracks + tracks' in ui
 assert 'if (onSaveToAudio(changed))' in ui

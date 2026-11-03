@@ -54,6 +54,8 @@ internal class GeminiNarrationDraft {
     val timedLines = mutableStateOf<List<SubtitleNarrationTimeline.Segment>>(emptyList())
     val useTimedSubtitles = mutableStateOf(false)
     val timedFiles = mutableStateOf<List<GeminiTimedFile>>(emptyList())
+    /** Marcação manual com referência sonora; não modifica as legendas. */
+    val referenceStarts = mutableStateOf<Map<String, Long>>(emptyMap())
 }
 
 internal data class GeminiTimedFile(
@@ -100,6 +102,8 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
     var timedLines by currentDraft.timedLines
     var useTimedSubtitles by currentDraft.useTimedSubtitles
     var timedFiles by currentDraft.timedFiles
+    var referenceStarts by currentDraft.referenceStarts
+    var referenceDialog by remember(project.id) { mutableStateOf(false) }
     var timedReview by remember(project.id) { mutableStateOf(false) }
     val styleInstruction = GeminiNarrationStyling.instruction(style, pace, expressiveness, pitch)
     val timedSettingsKey = "$model|${selectedVoice?.id.orEmpty()}|$styleInstruction"
@@ -199,7 +203,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
         // Abrir a janela nunca faz chamadas de rede ou escolhe uma voz automaticamente.
     },modifier=modifier)
     // Apenas uma janela visível: ao escolher voz, oculta a narração sob o seletor.
-    if (expanded && !voicePicker) Dialog(
+    if (expanded && !voicePicker && !referenceDialog) Dialog(
         onDismissRequest = {
             if (!working) {
                 if (loading) { job?.cancel(); api.cancel() }
@@ -252,7 +256,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                         text = it.take(SubtitleNarrationReuse.MAX_CHARACTERS)
                         // Texto digitado livremente não conserva alinhamento com as legendas.
                         timedLines = emptyList(); useTimedSubtitles = false
-                        timedFiles = emptyList()
+                        timedFiles = emptyList(); referenceStarts = emptyMap()
                         generated = null; duration = 0L; addedUri = null
                     }, modifier = Modifier.fillMaxWidth(), minLines = 3, maxLines = 7,
                         readOnly = useTimedSubtitles, enabled = !working,
@@ -276,6 +280,17 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                                 "A duração real será revisada antes de inserir qualquer faixa. " +
                                 "Editar o texto abaixo não modifica as legendas originais.",
                                 style = MaterialTheme.typography.bodySmall)
+                            OutlinedButton(onClick = { referenceDialog = true },
+                                enabled = !working && !loading && timedLines.isNotEmpty(),
+                                modifier = Modifier.fillMaxWidth()) {
+                                Icon(Icons.Default.Headphones, null, Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Usar áudio como referência de tempo")
+                            }
+                            Text(if (referenceStarts.isEmpty())
+                                "Horários originais das legendas. Referência de áudio é opcional e não é enviada ao Gemini."
+                            else "${referenceStarts.size} falas com início ajustado pela referência sonora.",
+                                style = MaterialTheme.typography.bodySmall)
                             timedLines.forEach { line ->
                                 OutlinedTextField(value = line.text, onValueChange = { newText ->
                                     timedLines = timedLines.map { if (it.cueId == line.cueId)
@@ -296,10 +311,12 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                                     style = MaterialTheme.typography.labelMedium)
                                 timedReady.forEach { result ->
                                     val report = SubtitleNarrationTimeline.inspect(
-                                        listOf(SubtitleNarrationTimeline.Recorded(result.segment, result.durationMs)),
+                                        listOf(SubtitleNarrationTimeline.Recorded(
+                                            NarrationReferenceAlignment.placed(result.segment, referenceStarts), result.durationMs)),
                                         project.durationMs).single()
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("${formatMs(result.segment.startMs)} · ${formatMs(result.durationMs)}" +
+                                        Text("${formatMs(NarrationReferenceAlignment.start(result.segment, referenceStarts))} · " +
+                                            "${formatMs(result.durationMs)}" +
                                             if (report.needsApproval) " · revisar" else " · ok",
                                             modifier = Modifier.weight(1f),
                                             style = MaterialTheme.typography.bodySmall)
@@ -830,7 +847,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                                     .map { SubtitleNarrationTimeline.Segment(it.id,
                                         it.text.trim().replace(Regex("\\s+"), " "), it.startMs, it.endMs) }
                                 useTimedSubtitles = true
-                                timedFiles = emptyList()
+                                timedFiles = emptyList(); referenceStarts = emptyMap()
                                 generated = null; duration = 0L; addedUri = null
                                 status = "$selectedCount trechos reutilizados localmente. " +
                                     "Agora consulte as vozes, escolha uma e confirme a geração quando quiser."
@@ -881,18 +898,30 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                 Text("Cancelar")
             } })
     }
+    if (referenceDialog && timedLines.isNotEmpty()) {
+        AudioReferenceAlignmentDialog(project, timedLines, referenceStarts,
+            onApply = { marked ->
+                referenceStarts = marked
+                referenceDialog = false
+                status = if (marked.isEmpty()) "Horários originais restaurados." else
+                    "${marked.size} inícios ajustados ouvindo a referência. " +
+                    "A próxima geração usará esses horários; o áudio de referência não é enviado à API."
+            }, onDismiss = { referenceDialog = false })
+    }
     if (timedReview) {
         val current = latestProject
         val ready = timedLines.mapNotNull { seg ->
             timedFiles.firstOrNull { it.segment == seg && it.settingsKey == timedSettingsKey && it.file.exists() }
         }
-        val records = ready.map { SubtitleNarrationTimeline.Recorded(it.segment, it.durationMs) }
+        val records = ready.map { SubtitleNarrationTimeline.Recorded(
+            NarrationReferenceAlignment.placed(it.segment, referenceStarts), it.durationMs) }
         val inspections = SubtitleNarrationTimeline.inspect(records, current.durationMs)
+        val referenceIssue = NarrationReferenceAlignment.validate(timedLines, referenceStarts, current.durationMs)
         val staleSource = timedLines.any { seg -> current.subtitles.none { cue ->
             cue.id == seg.cueId && cue.startMs == seg.startMs && cue.endMs == seg.subtitleEndMs
         } }
         val invalid = SubtitleNarrationTimeline.validate(timedLines, current.durationMs) != null ||
-            ready.size != timedLines.size || staleSource || inspections.any { it.blocking } ||
+            referenceIssue != null || ready.size != timedLines.size || staleSource || inspections.any { it.blocking } ||
             ready.any { it.file.length() == 0L || current.audioTracks.any { track ->
                 track.uri == GeminiAudioFiles.uri(it.file) } }
         var approveOverrun by remember(timedReview) { mutableStateOf(false) }
@@ -901,8 +930,8 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
             title = { Text("Revisar narração sincronizada") },
             text = { Column(Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("${ready.size} falas geradas. Cada áudio começa no horário da legenda; " +
-                    "nenhum áudio será cortado automaticamente.")
+                Text("${ready.size} falas geradas. Cada áudio começará no horário confirmado " +
+                    "(original da legenda ou ajustado pela referência sonora). Não haverá corte automático.")
                 inspections.forEach { item ->
                     val reason = buildList {
                         if (SubtitleNarrationTimeline.Issue.SUBTITLE_TOO_SHORT in item.issues)
@@ -918,6 +947,8 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                         color = if (reason.isEmpty()) MaterialTheme.colorScheme.onSurface
                             else MaterialTheme.colorScheme.error)
                 }
+                if (referenceIssue != null) Text(referenceIssue,
+                    color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 if (invalid) Text("Não é possível inserir: projeto, legendas ou arquivos mudaram, " +
                     "ou uma fala ultrapassa o final. Corrija e regenere somente as falas alteradas.",
                     color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
@@ -933,12 +964,13 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                 if (invalid || (overruns > 0 && !approveOverrun)) return@TextButton
                 val tracks = ready.map { result -> AudioTrack(
                     uri = GeminiAudioFiles.uri(result.file),
-                    title = "Gemini · ${formatMs(result.segment.startMs)}",
-                    startMs = result.segment.startMs, durationMs = result.durationMs, volume = 1f) }
+                    title = "Gemini · ${formatMs(NarrationReferenceAlignment.start(result.segment, referenceStarts))}",
+                    startMs = NarrationReferenceAlignment.start(result.segment, referenceStarts),
+                    durationMs = result.durationMs, volume = 1f) }
                 val changed = current.copy(audioTracks = current.audioTracks + tracks)
                 if (runCatching { onSaveToAudio(changed) }.getOrDefault(false)) {
                     timedReview = false; expanded = false
-                    status = "${tracks.size} narrações adicionadas à timeline com horários originais."
+                    status = "${tracks.size} narrações adicionadas com horários confirmados."
                 } else {
                     timedReview = false
                     status = "Falha ao salvar. Áudios preparados foram mantidos; tente inserir novamente."
@@ -978,6 +1010,8 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                         val current = latestProject
                         val failure = SubtitleNarrationTimeline.validate(segments, current.durationMs)
                         if (failure != null) throw IllegalStateException(failure)
+                        NarrationReferenceAlignment.validate(segments, referenceStarts, current.durationMs)
+                            ?.let { throw IllegalStateException(it) }
                         if (current.id != project.id || segments.any { seg -> current.subtitles.none { cue ->
                             cue.id == seg.cueId && cue.startMs == seg.startMs &&
                                 cue.endMs == seg.subtitleEndMs
