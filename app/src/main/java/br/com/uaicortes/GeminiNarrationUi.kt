@@ -57,7 +57,8 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
     update: (VideoProject) -> Unit, openSettings: () -> Unit,
     modifier: Modifier = Modifier.fillMaxWidth(),
     draft: GeminiNarrationDraft? = null,
-    onReturnToVideo: () -> Unit = {}) {
+    onReturnToVideo: () -> Unit = {},
+    onSaveAndReturn: (VideoProject) -> Boolean = { false }) {
     val currentDraft = draft ?: remember(project.id) { GeminiNarrationDraft() }
     val ctx = LocalContext.current
     val creds = remember(ctx) { GeminiCredentialStore(ctx) }
@@ -450,7 +451,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                                     modifier = Modifier.fillMaxWidth(),
                                     enabled = !working && addedUri != GeminiAudioFiles.uri(file) &&
                                         (project.durationMs - timelinePositionMs.coerceIn(0L, project.durationMs)) >= 250L) {
-                                    Text("Adicionar à timeline")
+                                    Text("Salvar e usar no vídeo")
                                 }
                             }
                         }
@@ -756,11 +757,12 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
             timelinePositionMs.coerceIn(0L, project.durationMs)).coerceAtLeast(0L)
         val playable = minOf(duration, available)
         AlertDialog(onDismissRequest = { addTimelineConfirm = false },
-            title = { Text("Adicionar narração à timeline?") },
+            title = { Text("Salvar narração e voltar ao vídeo?") },
             text = { Text("O áudio gerado será adicionado como nova faixa em " +
                 "${formatMs(timelinePositionMs.coerceIn(0L, project.durationMs))}. " +
                 "Duração disponível: ${formatMs(playable)}. " +
-                "O áudio original e as legendas não serão apagados." +
+                "O áudio original e as legendas não serão apagados. " +
+                "Após salvar o projeto, o aplicativo volta à edição do vídeo." +
                 (if (playable < duration) " O final da narração será cortado ao fim do vídeo." else "")) },
             confirmButton = { TextButton(onClick = {
                 addTimelineConfirm = false
@@ -771,12 +773,16 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                         val track = AudioTrack(uri = uri, title = "Narração Gemini",
                             startMs = timelinePositionMs.coerceIn(0L, project.durationMs),
                             durationMs = playable, volume = 1f)
-                        update(project.copy(audioTracks = project.audioTracks + track))
-                        addedUri = uri
-                        status = "Narração adicionada à timeline após confirmação."
+                        val changed = project.copy(audioTracks = project.audioTracks + track)
+                        // A gravação precisa terminar com sucesso antes de navegar.
+                        if (onSaveAndReturn(changed)) {
+                            addedUri = uri
+                            player.pause()
+                            expanded = false
+                        } else status = "Não foi possível salvar o projeto. A edição foi mantida aberta."
                     } else status = "Esta narração já foi adicionada ao projeto."
                 } else status = "Áudio indisponível ou cursor no final do projeto."
-            }) { Text("Adicionar") } },
+            }) { Text("Salvar e voltar") } },
             dismissButton = { TextButton(onClick = { addTimelineConfirm = false }) {
                 Text("Cancelar")
             } })

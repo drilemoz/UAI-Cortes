@@ -33,11 +33,14 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                         onExternalVideoConsumed:()->Unit = {},
                         timelinePositionMs: Long = 0L, onOpenGeminiSettings: () -> Unit = {},
                         narrationDraft: GeminiNarrationDraft? = null,
-                        onReturnToVideo: () -> Unit = {}) {
+                        onReturnToVideo: () -> Unit = {},
+                        onSaveGeminiAndReturn: (VideoProject) -> Boolean = { false }) {
     val context = LocalContext.current
     val engine = remember { AudioExtractionEngine(context) }
     var sourceIndex by remember(p.id) { mutableIntStateOf(-1) } // -1 = all clips
     var message by remember { mutableStateOf("") }
+    // A extração é uma ferramenta opcional: não ocupa a tela inteira ao abrir Áudio.
+    var extractionExpanded by remember(p.id) { mutableStateOf(false) }
     var volumesExpanded by remember(p.id) { mutableStateOf(p.clips.size <= 2) }
     var trackVolumeExpandedId by remember(p.id) { mutableStateOf<String?>(null) }
     var pendingAudioDeleteId by remember(p.id) { mutableStateOf<String?>(null) }
@@ -56,6 +59,7 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
     }
     LaunchedEffect(externalVideoUri) {
         if (externalVideoUri != null) {
+            extractionExpanded = true // A seleção externa deve mostrar as opções para continuar.
             val duration = mediaDuration(context, externalVideoUri)
             if (duration > 0) {
                 externalClip = Clip(uri = externalVideoUri.toString(),
@@ -68,7 +72,7 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
     // Pré-escuta da origem selecionada, sem alterar a linha do tempo.
     val previewPlayer = remember(context) { diagnosticPlayer(context) }
     var previewPlaying by remember { mutableStateOf(false) }
-    val previewClip = externalClip ?: p.clips.getOrNull(sourceIndex)
+    val previewClip = if (extractionExpanded) externalClip ?: p.clips.getOrNull(sourceIndex) else null
     val previewStartMs = if (externalClip != null) (externalClip!!.sourceDurationMs * trimStart).toLong()
         else previewClip?.startMs ?: 0L
     val previewEndMs = if (externalClip != null) (externalClip!!.sourceDurationMs * trimEnd).toLong()
@@ -396,22 +400,31 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                 GeminiNarrationSection(p, timelinePositionMs, update, onOpenGeminiSettings,
                     modifier=Modifier.weight(1f),
                     draft=narrationDraft ?: remember(p.id) { GeminiNarrationDraft() },
-                    onReturnToVideo=onReturnToVideo)
+                    onReturnToVideo=onReturnToVideo,
+                    onSaveAndReturn=onSaveGeminiAndReturn)
             }
             Text("Os áudios selecionados são adicionados diretamente ao projeto pelo seletor de arquivos do Android.",
                 style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         AudioPanelCard {
-                Row(verticalAlignment=Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().clickable(enabled = !exporting) {
+                    extractionExpanded = !extractionExpanded
+                    if (!extractionExpanded) { previewPlayer.pause(); previewPlaying = false }
+                }, verticalAlignment=Alignment.CenterVertically) {
                     Icon(Icons.Default.VideoLibrary,null,tint=MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(9.dp))
-                    Column {
+                    Column(Modifier.weight(1f)) {
                         Text("Extrair áudio de vídeo",fontWeight=FontWeight.Bold,fontSize=18.sp)
-                        Text("Extraia o áudio sem alterar o vídeo original.",
+                        Text(if (extractionExpanded) "Extraia o áudio sem alterar o vídeo original."
+                             else "Toque para abrir as opções de extração.",
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                    Icon(if (extractionExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = if (extractionExpanded) "Recolher extração" else "Abrir extração",
+                        tint = MaterialTheme.colorScheme.primary)
                 }
+                if (extractionExpanded) {
                 Text("Origem do vídeo",fontWeight=FontWeight.SemiBold)
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                     FilterChip(selected=externalClip==null && sourceIndex==-1,
@@ -512,6 +525,7 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                     LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
                     Text("Extraindo áudio... mantenha esta tela aberta.",fontSize=12.sp)
                 }
+                } // As opções são exibidas somente após a expansão manual.
         }
         if(message.isNotBlank()) Text(message,color=MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(20.dp))

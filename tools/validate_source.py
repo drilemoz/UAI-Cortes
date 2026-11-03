@@ -1229,7 +1229,7 @@ assert 'selectedText.length > SubtitleNarrationReuse.MAX_CHARACTERS' in narratio
 assert 'availableSubtitleLines != reuseSnapshot' in narration
 assert 'text = selectedText' in narration and 'generated = null' in narration
 assert 'Consultar' in narration and 'Confirmar voz' in narration
-assert 'addTimelineConfirm = true' in narration and 'Adicionar narração à timeline?' in narration
+assert 'addTimelineConfirm = true' in narration and 'Salvar narração e voltar ao vídeo?' in narration
 assert 'if (creds.hasKey() && voices.isEmpty()) loadVoices()' not in narration
 assert '?: available.firstOrNull()' not in narration
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleNarrationReuseTest.kt').exists()
@@ -1347,3 +1347,8 @@ assert (root/'app/src/test/java/br/com/uaicortes/GeminiVoiceCompactPickerTest.kt
 assert (root/'docs/VALIDATION_0.1.106.md').is_file()
 assert 'ReleaseSummary("0.1.106", listOf(' in notes
 print('OK: v0.1.106 seleção compacta, filtros confiáveis, detalhes opcionais e navegação')
+
+# v0.1.108: extração recolhida e navegação apenas após gravação confirmada.
+from test_audio_gemini_flow_contract import *  # testa contrato sem chamada à API
+assert 'ReleaseSummary("0.1.108", listOf(' in notes
+print('OK: v0.1.108 extração recolhida, projeto persistido antes de voltar ao editor')

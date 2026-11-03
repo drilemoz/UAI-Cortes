@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.107"
-    const val VERSION_CODE = 108
+    const val VERSION_NAME = "0.1.108"
+    const val VERSION_CODE = 109
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.108", listOf(
+            ReleaseFeature("audio-extraction-collapsible", "Extração de áudio recolhida",
+                "Extrair áudio de vídeo abre por toque e não ocupa toda a tela Áudio por padrão.", "check"),
+            ReleaseFeature("gemini-save-return-editor", "Salvar narração e voltar ao vídeo",
+                "Depois de confirmar a inclusão do áudio Gemini, o projeto é salvo antes do retorno ao editor.", "film")
+        )),
         ReleaseSummary("0.1.107", listOf(
             ReleaseFeature("gemini-voice-visible-confirm", "Escolha de voz correta no filtro",
                 "O filtro Femininas/Masculinas não confirma mais uma voz antiga oculta; marcar exige seleção visível.", "check"),

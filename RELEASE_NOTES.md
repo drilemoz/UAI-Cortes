@@ -1,3 +1,10 @@
+# Uai Cortes v0.1.108 — Extração recolhida e retorno ao editor
+
+- A ferramenta **Extrair áudio de vídeo** inicia recolhida, com título e seta para abrir/fechar; mantém origem, pré-escuta, formato e opções Salvar/Salvar e usar. Ao importar um vídeo externo pela galeria, o painel abre para continuar a extração.
+- Após gerar uma narração Gemini e confirmar **Adicionar à timeline**, o projeto é persistido antes de voltar ao editor de vídeo. Falha ao salvar mantém o editor de Áudio aberto e informa o problema; não há inclusão silenciosa.
+- Confirmar apenas a escolha da voz continua retornando ao editor sem gerar nem adicionar áudio. Salvamento em arquivo externo (Salvar áudio) permanece independente.
+- `schemaVersion=4` mantido, versionCode 109, GitHub Manager/Gradle/CI sincronizados. Compilação Android e teste físico pendentes.
+
 # Uai Cortes v0.1.107 — Seleção feminina e teste de voz
 
 - Corrige o caso em que o filtro Femininas mostrava somente vozes femininas, mas uma voz masculina marcada anteriormente ainda poderia ser confirmada.

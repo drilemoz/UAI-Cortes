@@ -450,7 +450,15 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     timelinePositionMs = positionMs,
                     onOpenGeminiSettings = { previous = "audio"; screen = "gemini_settings" },
                     narrationDraft = narrationDraft,
-                    onReturnToVideo = { resumeVideoPreview = true; screen = "editor" }) }
+                    onReturnToVideo = { resumeVideoPreview = true; screen = "editor" },
+                    onSaveGeminiAndReturn = { changed ->
+                        // Não navegar se a gravação falhar; preservar a faixa e o projeto anterior.
+                        if (write(changed)) {
+                            resumeVideoPreview = true
+                            screen = "editor"
+                            true
+                        } else false
+                    }) }
                 "pip" -> project?.let { current -> PipScreen(current, selectedOverlayId,
                     onSelect = { selectedOverlayId = it }, back = ::back,
                     onChange = { changed ->
