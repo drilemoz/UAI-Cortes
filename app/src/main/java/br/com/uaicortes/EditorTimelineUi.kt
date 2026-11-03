@@ -513,7 +513,8 @@ internal fun OverlayTimeline(overlays: List<Overlay>, total: Long, onClick: (Str
 @OptIn(UnstableApi::class)
 @Composable
 internal fun PipLayer(pip: Overlay, timeMs: Long, playing: Boolean,
-                     speed: Float = 1f, editable: Boolean = true, onUpdate: (Overlay) -> Unit) {
+                     speed: Float = 1f, editable: Boolean = true,
+                     previewGain: Float = 1f, onUpdate: (Overlay) -> Unit) {
     val context = LocalContext.current
     val sourceAspect = remember(pip.uri, pip.isImage) { mediaAspect(context, pip.uri, pip.isImage) }
     val pipPlayer = remember(pip.uri) { if (!pip.isImage) diagnosticPlayer(context) else null }
@@ -521,10 +522,10 @@ internal fun PipLayer(pip: Overlay, timeMs: Long, playing: Boolean,
     LaunchedEffect(pip.uri) {
         pipPlayer?.apply { setMediaItem(MediaItem.fromUri(pip.uri)); prepare() }
     }
-    LaunchedEffect(playing, timeMs, pip.volume, pip.muted, speed) {
+    LaunchedEffect(playing, timeMs, pip.volume, pip.muted, speed, previewGain) {
         pipPlayer?.apply {
             setPlaybackParameters(PlaybackParameters(speed))
-            volume = if (pip.muted) 0f else pip.volume
+            volume = if (pip.muted) 0f else EditorPreviewVolume.output(pip.volume, previewGain)
             if (kotlin.math.abs(currentPosition - timeMs) > 400L) seekTo(timeMs.coerceAtLeast(0L))
             if (playing) play() else pause()
         }

@@ -16,8 +16,8 @@ assert '"Masculinas" -> voices.filter { it.gender.equals("male", true) }' in sea
 assert 'Características não informadas' in presentation
 section = ui.split('Text("Confirmar voz")')[0].rsplit('Button(onClick = {', 1)[-1]
 for expected in ('GeminiVoiceChoice.visibleChoice(filtered, draftVoiceId)',
-                 'selectedVoice = chosen', 'voicePicker = false', 'expanded = false',
-                 'onReturnToVideo()'):
+                 'selectedVoice = chosen', 'voicePicker = false',
+                 'status = "Voz escolhida:'):
     assert expected in section, expected
 for forbidden in ('api.synthesize', 'api.generate', 'AudioTrack(', 'update(project', 'loadVoices()'):
     assert forbidden not in section, forbidden

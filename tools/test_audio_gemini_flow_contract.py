@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Teste de contrato de UI/navegação da v0.1.108.
+"""Teste de contrato de UI/navegação da v0.1.109.
 Não substitui testes Android instrumentados nem chamada real ao Gemini.
 """
 from pathlib import Path
@@ -23,24 +23,25 @@ for token in ['"Origem do vídeo"', '"Fonte externa"', '"Formato de áudio"', '"
 assert 'extractionExpanded = true // A seleção externa' in audio
 assert 'val previewClip = if (extractionExpanded)' in audio
 
-# A gravação do projeto precisa ser bem-sucedida ANTES da navegação.
-assert 'onSaveGeminiAndReturn = { changed ->' in main
-callback = main[main.index('onSaveGeminiAndReturn = { changed ->'):]
-assert callback.index('if (write(changed))') < callback.index('screen = "editor"')
-assert 'onSaveAndReturn=onSaveGeminiAndReturn' in audio
-segment = voice[voice.index('if (addTimelineConfirm) {'):voice.index('if (confirmation.isNotBlank())')]
-assert 'if (onSaveAndReturn(changed)) {' in segment
-assert segment.index('if (onSaveAndReturn(changed))') < segment.index('expanded = false')
-assert 'Não foi possível salvar o projeto' in segment
-assert 'project.audioTracks.none { it.uri == uri }' in segment  # sem duplicar
-assert 'player.pause()' in segment
-assert 'Após salvar o projeto' in segment
-assert 'Salvar e usar no vídeo' in voice and 'Salvar e voltar' in segment
-
-# A escolha da voz permanece separada da geração e inclusão.
+# Após confirmar geração, o WAV válido entra na tela Áudio, sem navegação automática.
+assert 'onSaveGeminiToAudio = { changed ->' in main
+callback = main[main.index('onSaveGeminiToAudio = { changed ->'):]
+assert 'write(changed)' in callback
+assert 'screen = "editor"' not in callback.split('}) }',1)[0]
+assert 'onSaveToAudio = { changed ->' in audio
+assert 'if (onSaveToAudio(changed)) {' in voice
+assert 'if (onSaveToAudio(changed)) {' in voice[voice.index('if (addTimelineConfirm) {'):]
+assert 'latestProject' in voice and 'latestTimelinePosition' in voice
+assert 'fresh.audioTracks.any { it.uri == uri }' in voice  # sem duplicar
+assert 'Áudio gerado' in voice
+assert 'Gerar e usar' in voice
+assert 'Adicionar à mixagem' in voice
+assert 'if (!api.checkModel(' not in voice
+assert 'previewCache.find(' in voice
+# A escolha da voz é separada de síntese; o retorno é para a janela Gemini.
 confirm_voice = voice.split('Text("Confirmar voz")')[0].rsplit('Button(onClick = {', 1)[-1]
 assert 'selectedVoice = chosen' in confirm_voice
-assert 'onReturnToVideo()' in confirm_voice
-for bad in ['api.synthesize', 'onSaveAndReturn(', 'AudioTrack(']:
+assert 'voicePicker = false' in confirm_voice
+for bad in ['onReturnToVideo()', 'api.synthesize', 'onSaveToAudio(']:
     assert bad not in confirm_voice
-print('OK: extração recolhida, importação externa, salvamento confirmado e retorno ao editor sem inclusão duplicada')
+print('OK: extração recolhida, geração consentida, salvamento e retorno à tela Áudio sem duplicação')

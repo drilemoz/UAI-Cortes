@@ -96,7 +96,7 @@ for token in ['subtitles: List<SubtitleCue>','transitions: List<ClipTransition>'
     assert token in model, token
 for token in ['ClipSheetAction(', 'TimelineTimedRow(', 'internal fun SubtitleScreen(',
               'internal fun TransitionScreen(', 'AudioExtractionEngine(context)',
-              'player.volume = p.clips', 'Remover este clipe?', 'TrackAudioPreview(']:
+              'EditorPreviewVolume.output(clipGain, previewVolume)', 'Remover este clipe?', 'TrackAudioPreview(']:
     assert token in ui, token
 assert 'TimedSubtitleOverlay' in fx and 'ClipFadeEffect' in fx
 assert 'EditFeatures.parseSrt' in ui and 'setRemoveVideo(true)' in extract
@@ -1229,7 +1229,7 @@ assert 'selectedText.length > SubtitleNarrationReuse.MAX_CHARACTERS' in narratio
 assert 'availableSubtitleLines != reuseSnapshot' in narration
 assert 'text = selectedText' in narration and 'generated = null' in narration
 assert 'Consultar' in narration and 'Confirmar voz' in narration
-assert 'addTimelineConfirm = true' in narration and 'Salvar narração e voltar ao vídeo?' in narration
+assert 'addTimelineConfirm = true' in narration and 'Adicionar narração à mixagem?' in narration
 assert 'if (creds.hasKey() && voices.isEmpty()) loadVoices()' not in narration
 assert '?: available.firstOrNull()' not in narration
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleNarrationReuseTest.kt').exists()
@@ -1351,4 +1351,8 @@ print('OK: v0.1.106 seleção compacta, filtros confiáveis, detalhes opcionais 
 # v0.1.108: extração recolhida e navegação apenas após gravação confirmada.
 from test_audio_gemini_flow_contract import *  # testa contrato sem chamada à API
 assert 'ReleaseSummary("0.1.108", listOf(' in notes
-print('OK: v0.1.108 extração recolhida, projeto persistido antes de voltar ao editor')
+print('OK: extração recolhida e salvamento confirmado da narração na tela Áudio')
+from test_voice_return_contract import *
+from test_editor_preview_volume_contract import *
+assert 'ReleaseSummary("0.1.109", listOf(' in notes
+print('OK: v0.1.109 navegação de voz, mixagem audível e volume somente de prévia')

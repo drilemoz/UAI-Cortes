@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.108"
-    const val VERSION_CODE = 109
+    const val VERSION_NAME = "0.1.109"
+    const val VERSION_CODE = 110
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.109", listOf(
+            ReleaseFeature("gemini-audio-commit-in-mixer", "Gemini gera e adiciona à tela Áudio",
+                "Após confirmar a geração, salva o WAV e inclui a faixa no projeto sem sair da tela Áudio; falha preserva o áudio para nova tentativa.", "film"),
+            ReleaseFeature("audio-mixer-listen", "Ouvir mixagem no topo",
+                "Pré-escuta sincronizada do áudio do vídeo, música e faixas adicionais sem alterar a exportação.", "check"),
+            ReleaseFeature("editor-preview-volume", "Volume exclusivo da prévia",
+                "Controle ao lado do Play reduz todo o áudio ouvido no editor, inclusive PiP, sem mudar os volumes do projeto ou MP4.", "check")
+        )),
         ReleaseSummary("0.1.108", listOf(
             ReleaseFeature("audio-extraction-collapsible", "Extração de áudio recolhida",
                 "Extrair áudio de vídeo abre por toque e não ocupa toda a tela Áudio por padrão.", "check"),

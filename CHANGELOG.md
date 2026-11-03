@@ -1,3 +1,11 @@
+## Versão 0.1.109 · versionCode 110 (03/11/2026)
+
+- Corrigida a navegação da narração Gemini mostrada no vídeo de teste: confirmar a voz mantém a janela de geração aberta; após consentir com a chamada de IA, uma resposta WAV válida é gravada e adicionada à tela Áudio, sem navegação automática. Falhas de gravação preservam o WAV para nova tentativa sem repetir a síntese.
+- Adicionado botão **Ouvir mixagem** no topo da tela Áudio para conferir o som original do vídeo e as faixas sincronizadas. A reprodução não muda o projeto.
+- Novo botão de **Volume da prévia** junto ao Play na tela do editor, com ajuste de 0% a 100% para clipes, música, faixas adicionais e áudio dos PiPs. Não altera a mixagem persistida nem o MP4.
+- A confirmação de geração esclarece custo/cota e inclusão; removida a solicitação GET desnecessária de validação do modelo, sem repetição automática de chamadas. Preservado schemaVersion 4, cinco APKs por arquitetura e versionCode 110.
+- Verificações locais de sintaxe e contratos não substituem compilação Gradle/Android nem chamada Gemini com chave real.
+
 ## Versão 0.1.108 · versionCode 109 (03/11/2026)
 
 - A ferramenta **Extrair áudio de vídeo** inicia recolhida, com título e seta para abrir/fechar; mantém origem, pré-escuta, formato e opções Salvar/Salvar e usar. Ao importar um vídeo externo pela galeria, o painel abre para continuar a extração.

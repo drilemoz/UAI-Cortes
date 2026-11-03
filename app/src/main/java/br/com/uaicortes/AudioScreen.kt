@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import kotlinx.coroutines.launch
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.delay
@@ -33,9 +34,55 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                         onExternalVideoConsumed:()->Unit = {},
                         timelinePositionMs: Long = 0L, onOpenGeminiSettings: () -> Unit = {},
                         narrationDraft: GeminiNarrationDraft? = null,
-                        onReturnToVideo: () -> Unit = {},
-                        onSaveGeminiAndReturn: (VideoProject) -> Boolean = { false }) {
+                        onSaveGeminiToAudio: (VideoProject) -> Boolean = { false }) {
     val context = LocalContext.current
+    val mixPlayer = remember(p.id) { diagnosticPlayer(context) }
+    var mixPlaying by remember(p.id) { mutableStateOf(false) }
+    var mixMs by remember(p.id) { mutableLongStateOf(0L) }
+    LaunchedEffect(mixPlayer, p.clips.map { Triple(it.uri, it.startMs, it.endMs) }) {
+        mixPlaying = false
+        mixPlayer.setMediaItems(p.clips.map { clip ->
+            MediaItem.Builder().setUri(clip.uri).setClippingConfiguration(
+                MediaItem.ClippingConfiguration.Builder().setStartPositionMs(clip.startMs)
+                    .setEndPositionMs(clip.endMs).build()).build()
+        })
+        if (p.clips.isNotEmpty()) {
+            mixPlayer.prepare()
+            seekProjectPosition(mixPlayer, p.clips, mixMs)
+        }
+    }
+    LaunchedEffect(mixPlayer, p.clips.map { it.id to it.volume }) {
+        while (true) {
+            mixPlayer.volume = p.clips.getOrNull(mixPlayer.currentMediaItemIndex)
+                ?.volume?.coerceIn(0f, 1f) ?: 1f
+            delay(150)
+        }
+    }
+    LaunchedEffect(mixPlayer, mixPlaying) {
+        while (mixPlaying) {
+            val next = projectPosition(mixPlayer, p.clips, p.durationMs)
+            mixMs = next.coerceIn(0L, p.durationMs)
+            if (mixPlayer.playbackState == Player.STATE_ENDED || mixMs >= p.durationMs) {
+                mixPlayer.pause()
+                mixPlaying = false
+            }
+            delay(120)
+        }
+    }
+    DisposableEffect(mixPlayer) {
+        onDispose { mixPlayer.pause(); mixPlayer.release() }
+    }
+    // Sincroniza as faixas adicionais com a pré-escuta, sem alterar a mixagem gravada.
+    p.music?.let { music ->
+        TrackAudioPreview(music.uri, 0L, p.durationMs, music.volume,
+            mixMs, mixPlaying, 1f, true)
+    }
+    ClipAudioBindings.resolved(p).forEach { track ->
+        key(track.id) {
+            TrackAudioPreview(track.uri, track.startMs, track.durationMs, track.volume,
+                mixMs, mixPlaying, 1f, false, track.sourceStartMs)
+        }
+    }
     val engine = remember { AudioExtractionEngine(context) }
     var sourceIndex by remember(p.id) { mutableIntStateOf(-1) } // -1 = all clips
     var message by remember { mutableStateOf("") }
@@ -200,6 +247,37 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                     Text(if(volumesExpanded) "Recolher" else "Gerenciar faixas",fontSize=12.sp)
                 }
             }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = {
+                    if (mixPlaying) {
+                        mixPlayer.pause()
+                        mixPlaying = false
+                    } else {
+                        previewPlayer.pause(); previewPlaying = false
+                        trackPlayer.pause(); trackPlaying = false
+                        if (mixPlayer.playbackState == Player.STATE_ENDED ||
+                            mixMs >= p.durationMs) {
+                            mixMs = 0L
+                            seekProjectPosition(mixPlayer, p.clips, 0L)
+                        }
+                        mixPlayer.play()
+                        mixPlaying = true
+                    }
+                }, enabled = p.clips.isNotEmpty() && p.durationMs > 0L,
+                    modifier = Modifier.weight(1f)) {
+                    Icon(if (mixPlaying) Icons.Default.Pause else Icons.Default.VolumeUp,
+                        contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(if (mixPlaying) "Pausar áudio" else "Ouvir mixagem", fontSize = 13.sp)
+                }
+                Text("${formatMs(mixMs)} / ${formatMs(p.durationMs)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text("Pré-escuta da mixagem; não altera volume nem arquivos do vídeo.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
             if(volumesExpanded) {
                 p.clips.forEachIndexed { index,clip ->
                     AudioTrackCard {
@@ -400,8 +478,16 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                 GeminiNarrationSection(p, timelinePositionMs, update, onOpenGeminiSettings,
                     modifier=Modifier.weight(1f),
                     draft=narrationDraft ?: remember(p.id) { GeminiNarrationDraft() },
-                    onReturnToVideo=onReturnToVideo,
-                    onSaveAndReturn=onSaveGeminiAndReturn)
+                    onOpenGenerator = { mixPlayer.pause(); mixPlaying = false },
+                    onSaveToAudio = { changed ->
+                        val saved = onSaveGeminiToAudio(changed)
+                        if (saved) {
+                            message = "Narração Gemini incluída na mixagem. Toque em Ouvir mixagem para conferir."
+                            mixPlayer.pause(); mixPlaying = false
+                            mixMs = 0L
+                        }
+                        saved
+                    })
             }
             Text("Os áudios selecionados são adicionados diretamente ao projeto pelo seletor de arquivos do Android.",
                 style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)

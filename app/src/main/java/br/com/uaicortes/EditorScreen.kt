@@ -52,6 +52,9 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     val playbackVm: EditorPlaybackViewModel = viewModel()
     LaunchedEffect(p.id) { playbackVm.selectProject(p.id) }
     val playbackSpeed = playbackVm.speed
+    // Estado exclusivamente da prévia; não é salvo no projeto nem enviado ao exportador.
+    var previewVolume by remember(p.id) { mutableFloatStateOf(1f) }
+    var previewVolumeMenu by remember { mutableStateOf(false) }
     val activeFrameIndex = AdaptiveVideoLayout.activeClipIndex(p.clips.map { it.durationMs }, currentMs)
     val activeFrameUri = p.clips.getOrNull(activeFrameIndex)?.uri
     // Um clipe novo pode ter FPS diferente. A leitura não bloqueia a interface.
@@ -68,9 +71,10 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     var clipMenuId by remember(p.id) { mutableStateOf<String?>(null) }
     var deletionRequested by remember(p.id) { mutableStateOf<String?>(null) }
     var feedback by remember(p.id) { mutableStateOf("") }
-    LaunchedEffect(player, p.clips.map { it.id to it.volume }) {
+    LaunchedEffect(player, p.clips.map { it.id to it.volume }, previewVolume) {
         while (true) {
-            player.volume = p.clips.getOrNull(player.currentMediaItemIndex)?.volume?.coerceIn(0f,1f) ?: 1f
+            val clipGain = p.clips.getOrNull(player.currentMediaItemIndex)?.volume ?: 1f
+            player.volume = EditorPreviewVolume.output(clipGain, previewVolume)
             delay(120)
         }
     }
@@ -126,12 +130,14 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         }
         // Separate audio players track the editor playhead without modifying source media.
         p.music?.let { music ->
-            TrackAudioPreview(music.uri, 0L, p.durationMs, music.volume, currentMs,
+            TrackAudioPreview(music.uri, 0L, p.durationMs,
+                EditorPreviewVolume.output(music.volume, previewVolume), currentMs,
                 isPlaying, playbackSpeed, true)
         }
         ClipAudioBindings.resolved(p).forEach { audio ->
             key(audio.id) {
-                TrackAudioPreview(audio.uri, audio.startMs, audio.durationMs, audio.volume,
+                TrackAudioPreview(audio.uri, audio.startMs, audio.durationMs,
+                    EditorPreviewVolume.output(audio.volume, previewVolume),
                     currentMs, isPlaying, playbackSpeed, false, audio.sourceStartMs)
             }
         }
@@ -171,7 +177,8 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                     if (currentMs >= pip.startAtMs && currentMs < pip.startAtMs + pip.durationMs) {
                         key(pip.id) {
                             PipLayer(pip, currentMs - pip.startAtMs, isPlaying,
-                                speed = playbackSpeed, editable = false) { }
+                                speed = playbackSpeed, editable = false,
+                                previewGain = previewVolume) { }
                         }
                     }
                 }
@@ -183,23 +190,47 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 }
             }
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=6.dp),horizontalArrangement=Arrangement.Center,
+        Row(Modifier.fillMaxWidth().padding(horizontal=4.dp,vertical=6.dp),horizontalArrangement=Arrangement.Center,
             verticalAlignment=Alignment.CenterVertically) {
             IconButton(onClick = {
                 player.pause()
                 seekGlobal(FrameStepPolicy.target(currentMs, p.durationMs, -1, frameFps))
-            }, enabled = p.durationMs > 0) {
+            }, enabled = p.durationMs > 0, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Default.SkipPrevious, "Voltar aproximadamente um quadro")
             }
-            IconButton(onClick={if(isPlaying)player.pause() else player.play()}) {
+            IconButton(onClick={if(isPlaying)player.pause() else player.play()},
+                modifier = Modifier.size(40.dp)) {
                 Icon(if(isPlaying) Icons.Default.PauseCircle else Icons.Default.PlayCircle, "Reproduzir / pausar",
                     modifier=Modifier.size(35.dp))
             }
             IconButton(onClick = {
                 player.pause()
                 seekGlobal(FrameStepPolicy.target(currentMs, p.durationMs, 1, frameFps))
-            }, enabled = p.durationMs > 0) {
+            }, enabled = p.durationMs > 0, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Default.SkipNext, "Avançar aproximadamente um quadro")
+            }
+            Box {
+                IconButton(onClick = { previewVolumeMenu = true },
+                    modifier = Modifier.size(40.dp)) {
+                    Icon(if (previewVolume <= 0f) Icons.Default.VolumeOff
+                         else if (previewVolume < 0.6f) Icons.Default.VolumeDown
+                         else Icons.Default.VolumeUp,
+                        "Volume apenas da prévia: ${EditorPreviewVolume.percent(previewVolume)}%")
+                }
+                DropdownMenu(expanded = previewVolumeMenu,
+                    onDismissRequest = { previewVolumeMenu = false },
+                    modifier = Modifier.width(246.dp)) {
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        Text("Volume da prévia · ${EditorPreviewVolume.percent(previewVolume)}%",
+                            style = MaterialTheme.typography.titleSmall)
+                        Slider(value = previewVolume,
+                            onValueChange = { previewVolume = it.coerceIn(0f, 1f) },
+                            valueRange = 0f..1f)
+                        Text("Não modifica a mixagem ou o MP4 exportado.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
             }
             PlaybackSpeedButton(playbackSpeed, onSelect = playbackVm::updateSpeed)
             // Fotografa o quadro original no cursor; PiP/legendas não entram no PNG.
