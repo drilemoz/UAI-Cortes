@@ -95,6 +95,8 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
     var confirmation by remember { mutableStateOf("") }
     var voicePicker by remember { mutableStateOf(false) }
     var draftVoiceId by remember { mutableStateOf<String?>(null) }
+    var pendingSampleVoiceId by remember { mutableStateOf<String?>(null) }
+    var voiceSampleStatus by remember { mutableStateOf("") }
     var voiceSearch by remember { mutableStateOf("") }
     var voiceGenderFilter by remember { mutableStateOf("Todas") }
     var expandedVoiceId by remember { mutableStateOf<String?>(null) }
@@ -262,7 +264,8 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("Voz", style = MaterialTheme.typography.labelMedium)
-                            OutlinedButton(onClick = { voiceSearch = ""; voiceGenderFilter = "Todas"; expandedVoiceId = null; draftVoiceId = selectedVoice?.id; voicePicker = true },
+                            OutlinedButton(onClick = { voiceSearch = ""; voiceGenderFilter = "Todas"; expandedVoiceId = null; draftVoiceId = selectedVoice?.id
+                                voiceSampleStatus = ""; pendingSampleVoiceId = null; voicePicker = true },
                                 modifier = Modifier.fillMaxWidth(),
                                 enabled = !working && !loading && voices.isNotEmpty()) {
                                 Icon(Icons.Default.RecordVoiceOver, null, Modifier.size(18.dp))
@@ -467,7 +470,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
         }
     }
     // Seletor único, sem a janela "Narração" aberta atrás e sem ações de rede.
-    if (voicePicker && expanded) Dialog(onDismissRequest = { voicePicker = false },
+    if (voicePicker && expanded) Dialog(onDismissRequest = { if (!working) { player.pause(); voicePicker = false } },
         properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(modifier = Modifier.fillMaxWidth(0.96f).fillMaxHeight(0.90f),
             shape = RoundedCornerShape(22.dp), color = MaterialTheme.colorScheme.surface) {
@@ -478,11 +481,17 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                     Spacer(Modifier.width(8.dp))
                     Text("Escolher voz", style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.weight(1f))
-                    IconButton(onClick = { voicePicker = false }) {
+                    IconButton(onClick = { player.pause(); voicePicker = false }, enabled = !working) {
                         Icon(Icons.Default.Close, "Voltar à narração")
                     }
                 }
-                OutlinedTextField(value = voiceSearch, onValueChange = { voiceSearch = it },
+                OutlinedTextField(value = voiceSearch, onValueChange = { query ->
+                    voiceSearch = query
+                    val visible = GeminiVoiceSearch.byGender(GeminiVoiceSearch.filter(voices, query), voiceGenderFilter)
+                    draftVoiceId = GeminiVoiceChoice.visibleIdOrNull(visible, draftVoiceId)
+                    player.pause()
+                    voiceSampleStatus = ""
+                },
                     modifier = Modifier.fillMaxWidth(), singleLine = true,
                     placeholder = { Text("Pesquisar vozes...") },
                     leadingIcon = { Icon(Icons.Default.Search, null) },
@@ -495,12 +504,19 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("Todas", "Femininas", "Masculinas").forEach { option ->
                         FilterChip(selected = voiceGenderFilter == option,
-                            onClick = { voiceGenderFilter = option },
-                            label = { Text(option) })
+                            onClick = {
+                                voiceGenderFilter = option
+                                val visible = GeminiVoiceSearch.byGender(
+                                    GeminiVoiceSearch.filter(voices, voiceSearch), option)
+                                draftVoiceId = GeminiVoiceChoice.visibleIdOrNull(visible, draftVoiceId)
+                                player.pause()
+                                voiceSampleStatus = ""
+                            }, label = { Text(option) })
                     }
                 }
                 val searched = GeminiVoiceSearch.filter(voices, voiceSearch)
                 val filtered = GeminiVoiceSearch.byGender(searched, voiceGenderFilter)
+                val visibleChoice = GeminiVoiceChoice.visibleChoice(filtered, draftVoiceId)
                 Text("${filtered.size} de ${voices.size} vozes · Selecione uma para confirmar",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -526,7 +542,11 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                                 else MaterialTheme.colorScheme.surface
                         ) {
                             Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp)) {
-                                Row(Modifier.fillMaxWidth().clickable { draftVoiceId = voice.id },
+                                Row(Modifier.fillMaxWidth().clickable {
+                                    draftVoiceId = voice.id
+                                    player.pause()
+                                    voiceSampleStatus = ""
+                                },
                                     verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.Mic, null, tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(20.dp))
@@ -540,9 +560,16 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        if (selected) Text("Voz marcada para confirmação",
+                                            color = MaterialTheme.colorScheme.primary,
+                                            style = MaterialTheme.typography.labelSmall)
                                     }
-                                    RadioButton(selected = draftVoiceId == voice.id, onClick = null,
-                                        modifier = Modifier.size(42.dp))
+                                    RadioButton(selected = draftVoiceId == voice.id,
+                                        onClick = {
+                                            draftVoiceId = voice.id
+                                            player.pause()
+                                            voiceSampleStatus = ""
+                                        }, modifier = Modifier.size(42.dp))
                                 }
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                                     TextButton(onClick = {
@@ -574,13 +601,57 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                         }
                     }
                 }
+                // Reproduzir amostra é opcional e não altera a escolha confirmada.
+                // Somente a primeira amostra de cada voz/modelo/estilo pode usar cota.
+                OutlinedButton(onClick = {
+                    val candidate = GeminiVoiceChoice.visibleChoice(filtered, draftVoiceId)
+                    if (candidate != null && !working && !loading) {
+                        pendingSampleVoiceId = candidate.id
+                        player.pause()
+                        voiceSampleStatus = "Verificando amostra de ${GeminiVoicePresentation.label(candidate)}..."
+                        job = scope.launch {
+                            working = true
+                            try {
+                                val key = withContext(Dispatchers.IO) { creds.read() }
+                                    ?: throw IllegalStateException("Chave Gemini ausente")
+                                val id = GeminiPreviewIdentity.id(key, model, candidate.id, styleInstruction)
+                                val cached = withContext(Dispatchers.IO) { previewCache.find(id) }
+                                if (cached == null) {
+                                    confirmation = "sample"
+                                    voiceSampleStatus = "Amostra não armazenada: confirme a consulta à API."
+                                } else {
+                                    player.setMediaItem(MediaItem.fromUri(Uri.fromFile(cached)))
+                                    player.prepare(); player.play()
+                                    voiceSampleStatus = "Ouvindo ${GeminiVoicePresentation.label(candidate)} do cache local."
+                                }
+                            } catch (e: CancellationException) { throw e }
+                            catch (_: Exception) {
+                                voiceSampleStatus = "Não foi possível acessar a amostra. Verifique a chave e a conexão."
+                                pendingSampleVoiceId = null
+                            } finally { working = false }
+                        }
+                    }
+                }, modifier = Modifier.fillMaxWidth(),
+                    enabled = visibleChoice != null && !loading && !working) {
+                    Icon(Icons.Default.Headphones, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(if (playing) "Reproduzindo amostra" else "Ouvir voz marcada")
+                }
+                Text("Ouvir uma voz pode consumir cota na primeira vez; o aplicativo pede autorização. " +
+                    "Confirmar a voz não gera narração automaticamente.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (voiceSampleStatus.isNotBlank()) Text(voiceSampleStatus,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                 HorizontalDivider()
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { voicePicker = false }, modifier = Modifier.weight(1f)) {
+                    OutlinedButton(onClick = { player.pause(); voicePicker = false },
+                        modifier = Modifier.weight(1f), enabled = !working) {
                         Text("Cancelar")
                     }
                     Button(onClick = {
-                        val chosen = GeminiVoiceChoice.confirmed(voices, draftVoiceId)
+                        val chosen = GeminiVoiceChoice.visibleChoice(filtered, draftVoiceId)
                         if (chosen != null) {
                             selectedVoice = chosen
                             generated = null; duration = 0L; addedUri = null
@@ -590,8 +661,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                             // Só escolhe a voz; retorna à prévia sem gerar ou incluir áudio.
                             onReturnToVideo()
                         }
-                    }, modifier = Modifier.weight(1f), enabled = draftVoiceId != null &&
-                        voices.any { it.id == draftVoiceId } && !working) {
+                    }, modifier = Modifier.weight(1f), enabled = visibleChoice != null && !working && !loading) {
                         Text("Confirmar voz")
                     }
                 }
@@ -711,12 +781,14 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                 Text("Cancelar")
             } })
     }
-    if (confirmation.isNotBlank()) AlertDialog(onDismissRequest = { confirmation = "" },
+    if (confirmation.isNotBlank()) AlertDialog(onDismissRequest = {
+        confirmation = ""; pendingSampleVoiceId = null
+    },
         title = { Text("Confirmar solicitação Gemini") },
         text = { Text(if (confirmation == "sample")
             "Não existe amostra oficial disponível nesta consulta. Gerar uma amostra curta pela API " +
                 "pode consumir cota ou gerar cobrança. Ela ficará no cache local para próximas reproduções " +
-                "com a mesma voz, modelo e estilo. Continuar?"
+                "com a mesma voz, modelo e estilo. A escolha da voz não será alterada. Continuar?"
             else "Gerar esta narração pode consumir cota ou gerar cobrança. Não haverá repetição automática em caso de falha.") },
         confirmButton = { TextButton(onClick = {
             val action = confirmation; confirmation = ""
@@ -727,7 +799,10 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                 try {
                     val key = withContext(Dispatchers.IO) { creds.read() }
                         ?: throw IllegalStateException("Chave ausente")
-                    val voice = selectedVoice ?: throw IllegalStateException("Nenhuma voz")
+                    val voice = if (action == "sample" && pendingSampleVoiceId != null)
+                        GeminiVoiceChoice.confirmed(voices, pendingSampleVoiceId)
+                    else selectedVoice
+                    if (voice == null) throw IllegalStateException("Nenhuma voz disponível")
                     val instruction = styleInstruction
                     val sampleId = if (action == "sample")
                         GeminiPreviewIdentity.id(key, model, voice.id, instruction) else ""
@@ -760,7 +835,11 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                     }
                     player.setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
                     player.prepare()
-                    if (action == "sample") player.play()
+                    if (action == "sample") {
+                        player.play()
+                        voiceSampleStatus = "Ouvindo amostra de ${GeminiVoicePresentation.label(voice)}."
+                        pendingSampleVoiceId = null
+                    }
                     status = when {
                         action == "sample" && reused -> "Amostra local: nenhuma chamada à API."
                         action == "sample" -> "Amostra gerada pela API e guardada no cache local."
@@ -770,11 +849,22 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                     status = "Solicitação cancelada. A API pode já ter consumido cota."
                     throw e
                 }
-                catch (e: GeminiApiError) { status = e.message ?: "Falha na API Gemini." }
-                catch (e: java.io.IOException) { status = e.message ?: "Falha de conexão ou armazenamento." }
-                catch (_: Exception) { status = "Não foi possível gerar áudio ou acessar a chave." }
+                catch (e: GeminiApiError) {
+                    status = e.message ?: "Falha na API Gemini."
+                    if (action == "sample") voiceSampleStatus = status
+                }
+                catch (e: java.io.IOException) {
+                    status = e.message ?: "Falha de conexão ou armazenamento."
+                    if (action == "sample") voiceSampleStatus = status
+                }
+                catch (_: Exception) {
+                    status = "Não foi possível gerar áudio ou acessar a chave."
+                    if (action == "sample") voiceSampleStatus = status
+                }
                 finally { working = false }
             }
         }) { Text("Continuar") } },
-        dismissButton = { TextButton(onClick = { confirmation = "" }) { Text("Voltar") } })
+        dismissButton = { TextButton(onClick = {
+            confirmation = ""; pendingSampleVoiceId = null
+        }) { Text("Voltar") } })
 }

@@ -38,6 +38,21 @@ class GeminiVoiceCompactPickerTest {
         assertEquals("Authoritative Advisor 10", result.single().name)
     }
 
+    @Test fun femaleFilterNeverConfirmsPreviouslySelectedMaleVoice() {
+        val visibleFemale = GeminiVoiceSearch.byGender(voices, "Femininas")
+        assertEquals(1, visibleFemale.size)
+        assertEquals(null, GeminiVoiceChoice.visibleChoice(visibleFemale, "pt-br-advisor-10"))
+        assertEquals(null, GeminiVoiceChoice.visibleIdOrNull(visibleFemale, "pt-br-advisor-10"))
+        assertEquals("pt-br-advisor-1", GeminiVoiceChoice.visibleIdOrNull(visibleFemale, "pt-br-advisor-1"))
+        assertEquals("female", GeminiVoiceChoice.visibleChoice(visibleFemale, "pt-br-advisor-1")?.gender)
+        assertEquals("pt-br-advisor-1", GeminiVoiceChoice.visibleChoice(visibleFemale, "pt-br-advisor-1")?.id)
+    }
+
+    @Test fun hiddenVoiceAfterSearchCannotBeConfirmed() {
+        val visibleFemale = GeminiVoiceSearch.byGender(GeminiVoiceSearch.filter(voices, "Conselheiro de tom firme 1"), "Femininas")
+        assertEquals(null, GeminiVoiceChoice.visibleChoice(visibleFemale, "pt-br-advisor-10"))
+    }
+
     @Test fun confirmationIsExplicitAndDoesNotGuessFirstVoice() {
         assertEquals(null, GeminiVoiceChoice.confirmed(voices, null))
         assertEquals(null, GeminiVoiceChoice.confirmed(voices, "unlisted"))

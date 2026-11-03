@@ -1,3 +1,11 @@
+## Versão 0.1.107 · versionCode 108 (02/11/2026)
+
+- Seleção de voz agora é invalidada quando pesquisa ou filtro escondem a voz anterior, prevenindo confirmar voz masculina sob filtro Femininas (e vice-versa).
+- O RadioButton é acionável, o cartão exibe estado selecionado e a confirmação exige uma voz da lista visível.
+- Nova amostra opcional dentro do seletor; respeita a voz marcada, cache por voz/modelo/estilo, consentimento de cota, e não troca a voz confirmada se o usuário cancelar.
+- Testes para seleção feminina versus escolha masculina anterior, busca, retorno ao editor, versão e metadados.
+- Compilação Gradle/Android e teste de timbre com chave real pendentes.
+
 ## Versão 0.1.106 · versionCode 107 (02/11/2026)
 
 - Seletor de vozes enxuto, pesquisa por nome/ID/perfil e filtros de gênero sem adivinhar características não informadas.

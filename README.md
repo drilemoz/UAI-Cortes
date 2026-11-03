@@ -1,3 +1,11 @@
+## Versão 0.1.107 · versionCode 108 (02/11/2026)
+
+- Corrigido o seletor Gemini para não confirmar uma voz previamente marcada quando ela estiver oculta pelo filtro Femininas/Masculinas ou pela pesquisa. Trocar o filtro limpa uma escolha incompatível; somente uma voz visível pode ser confirmada.
+- O círculo de seleção (radio) também responde ao toque, assim como a linha, e o cartão indica claramente a escolha.
+- Botão **Ouvir voz marcada** no seletor permite escutar a voz escolhida antes de confirmar. Usa cache local quando disponível; caso contrário exige confirmação explícita de possível consumo de cota antes de chamar o Gemini. A prévia não altera a seleção confirmada, nem cria faixa de áudio.
+- Confirmar voz mantém o comportamento anterior: retorna ao editor de vídeo e retoma a prévia sem gerar narração automaticamente. A geração da narração e a inclusão na timeline continuam exigindo confirmações independentes.
+- Limite de validação: testes Kotlin isolados e checagens estáticas não garantem timbre feminino no áudio real; requer teste com chave Gemini no Android e build no GitHub Actions.
+
 ## Versão 0.1.106 · versionCode 107 (02/11/2026)
 
 - O catálogo de vozes do Gemini foi redesenhado: cartões compactos com nome legível, resumo curto em português, campo de busca e filtros Todas/Femininas/Masculinas baseados somente nos metadados recebidos da API.

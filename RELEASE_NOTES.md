@@ -1,3 +1,11 @@
+# Uai Cortes v0.1.107 — Seleção feminina e teste de voz
+
+- Corrige o caso em que o filtro Femininas mostrava somente vozes femininas, mas uma voz masculina marcada anteriormente ainda poderia ser confirmada.
+- Tocar no círculo agora marca a voz explicitamente; a seleção fica visível no cartão.
+- Botão Ouvir voz marcada permite testar a voz antes de confirmar. Se não houver amostra local, a síntese exige autorização e pode consumir cota.
+- Escolher uma voz retorna ao editor de vídeo sem gerar narração; a geração e inclusão de áudio permanecem sob confirmação.
+- GitHub Manager e versionamento sincronizados em 0.1.107 / versionCode 108. Testar no APK real.
+
 # Uai Cortes v0.1.106 — Seleção de vozes simplificada
 
 - Lista compacta: nome em português quando conhecido, características oficiais resumidas e opções Todas/Femininas/Masculinas.
