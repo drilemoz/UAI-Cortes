@@ -454,6 +454,10 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                         // A nova faixa deve aparecer na tela Áudio; sair só por ação do usuário.
                         // Nunca considerar salvo se ProjectStore recusar a gravação.
                         write(changed)
+                    },
+                    onSaveAndReturn = { changed ->
+                        // Revalida a persistência antes de sair, sem modificar a mixagem.
+                        if (write(changed)) { screen = "editor"; true } else false
                     }) }
                 "pip" -> project?.let { current -> PipScreen(current, selectedOverlayId,
                     onSelect = { selectedOverlayId = it }, back = ::back,

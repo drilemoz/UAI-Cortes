@@ -14,4 +14,11 @@ class AudioScreenLabelsTest {
         assertEquals("Faixa de áudio",AudioScreenLabels.readableFileName(""))
         assertEquals("Narracao",AudioScreenLabels.readableFileName("Narracao.mp3"))
     }
+    @Test fun videoClipWithGeneratedIdHasReadableName() {
+        assertEquals("Vídeo 1 · Áudio original",
+            AudioScreenLabels.readableVideoClip("461698779_1793733324232480.mp4", 0))
+        assertEquals("Vídeo 2 · Ovos Natal.mp4",
+            AudioScreenLabels.readableVideoClip("Ovos Natal.mp4", 1))
+        assertEquals("Vídeo 1 · Áudio original", AudioScreenLabels.readableVideoClip("", 0))
+    }
 }

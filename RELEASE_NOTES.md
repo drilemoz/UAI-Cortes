@@ -1,3 +1,10 @@
+# Uai Cortes v0.1.110 — Salvar e voltar ao vídeo + ajustes visuais de Áudio
+
+- Botão de salvamento explícito e fixo no rodapé da tela Áudio, com retorno ao editor somente se a persistência do projeto funcionar; corte pendente impede saída até ser aplicado ou cancelado.
+- Rótulos de vídeos de nomes automáticos agora ficam compreensíveis na mixagem, sem alterar títulos gravados. Cartões têm espaçamento menor e mensagens podem ser descartadas.
+- Não altera níveis de áudio, prévia, ExportEngine ou API Gemini. Esquema do projeto 4 preservado, versão Android e GitHub Manager sincronizados.
+- Compilação Android e teste físico da interface ainda pendentes.
+
 # Uai Cortes v0.1.109 — Gemini na mixagem e volume de prévia
 
 - Corrigida a navegação da narração Gemini mostrada no vídeo de teste: confirmar a voz mantém a janela de geração aberta; após consentir com a chamada de IA, uma resposta WAV válida é gravada e adicionada à tela Áudio, sem navegação automática. Falhas de gravação preservam o WAV para nova tentativa sem repetir a síntese.

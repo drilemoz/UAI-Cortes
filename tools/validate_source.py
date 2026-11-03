@@ -1354,5 +1354,7 @@ assert 'ReleaseSummary("0.1.108", listOf(' in notes
 print('OK: extração recolhida e salvamento confirmado da narração na tela Áudio')
 from test_voice_return_contract import *
 from test_editor_preview_volume_contract import *
+assert 'ReleaseSummary("0.1.110", listOf(' in notes
 assert 'ReleaseSummary("0.1.109", listOf(' in notes
-print('OK: v0.1.109 navegação de voz, mixagem audível e volume somente de prévia')
+print('OK: v0.1.110 retorno de Áudio, além de mixagem e volume somente de prévia')
+from test_audio_save_return_contract import *

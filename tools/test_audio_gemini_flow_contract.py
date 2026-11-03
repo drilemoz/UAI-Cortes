@@ -25,9 +25,9 @@ assert 'val previewClip = if (extractionExpanded)' in audio
 
 # Após confirmar geração, o WAV válido entra na tela Áudio, sem navegação automática.
 assert 'onSaveGeminiToAudio = { changed ->' in main
-callback = main[main.index('onSaveGeminiToAudio = { changed ->'):]
+callback = main[main.index('onSaveGeminiToAudio = { changed ->'):main.index('onSaveAndReturn = { changed ->')]
 assert 'write(changed)' in callback
-assert 'screen = "editor"' not in callback.split('}) }',1)[0]
+assert 'screen = "editor"' not in callback
 assert 'onSaveToAudio = { changed ->' in audio
 assert 'if (onSaveToAudio(changed)) {' in voice
 assert 'if (onSaveToAudio(changed)) {' in voice[voice.index('if (addTimelineConfirm) {'):]

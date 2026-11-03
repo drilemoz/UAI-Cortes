@@ -34,7 +34,8 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                         onExternalVideoConsumed:()->Unit = {},
                         timelinePositionMs: Long = 0L, onOpenGeminiSettings: () -> Unit = {},
                         narrationDraft: GeminiNarrationDraft? = null,
-                        onSaveGeminiToAudio: (VideoProject) -> Boolean = { false }) {
+                        onSaveGeminiToAudio: (VideoProject) -> Boolean = { false },
+                        onSaveAndReturn: (VideoProject) -> Boolean = { false }) {
     val context = LocalContext.current
     val mixPlayer = remember(p.id) { diagnosticPlayer(context) }
     var mixPlaying by remember(p.id) { mutableStateOf(false) }
@@ -86,6 +87,7 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
     val engine = remember { AudioExtractionEngine(context) }
     var sourceIndex by remember(p.id) { mutableIntStateOf(-1) } // -1 = all clips
     var message by remember { mutableStateOf("") }
+    var saveReturnError by remember(p.id) { mutableStateOf("") }
     // A extração é uma ferramenta opcional: não ocupa a tela inteira ao abrir Áudio.
     var extractionExpanded by remember(p.id) { mutableStateOf(false) }
     var volumesExpanded by remember(p.id) { mutableStateOf(p.clips.size <= 2) }
@@ -228,8 +230,9 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
     }
     DisposableEffect(engine) { onDispose { engine.cancel() } }
     val pageScroll = rememberScrollState()
-    Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(pageScroll)
-        .padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+    Column(Modifier.fillMaxSize().statusBarsPadding()) {
+    Column(Modifier.weight(1f).verticalScroll(pageScroll)
+        .padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Heading("Áudio",back)
         AudioPanelCard {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
@@ -284,8 +287,9 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                             Icon(Icons.Default.PlayCircleOutline,null,tint=MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.width(8.dp))
-                            Text(clip.title.ifBlank { "Vídeo ${index+1}" },modifier=Modifier.weight(1f),
-                                maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=13.sp)
+                            Text(AudioScreenLabels.readableVideoClip(clip.title, index),
+                                modifier=Modifier.weight(1f),maxLines=1,
+                                overflow=TextOverflow.Ellipsis,fontSize=13.sp)
                             Text("${(clip.volume*100).toInt()}%",fontSize=12.sp,
                                 color=MaterialTheme.colorScheme.primary)
                         }
@@ -613,9 +617,47 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                 }
                 } // As opções são exibidas somente após a expansão manual.
         }
-        if(message.isNotBlank()) Text(message,color=MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.height(20.dp))
+        if(message.isNotBlank()) {
+            Surface(color=MaterialTheme.colorScheme.surfaceVariant,
+                shape=androidx.compose.foundation.shape.RoundedCornerShape(12.dp)) {
+                Row(Modifier.fillMaxWidth().padding(start=12.dp,top=4.dp,bottom=4.dp),
+                    verticalAlignment=Alignment.CenterVertically) {
+                    Icon(Icons.Default.Info,contentDescription=null,
+                        tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(17.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(message,modifier=Modifier.weight(1f),
+                        style=MaterialTheme.typography.bodySmall,maxLines=3,
+                        overflow=TextOverflow.Ellipsis)
+                    IconButton(onClick={message=""},modifier=Modifier.size(40.dp)) {
+                        Icon(Icons.Default.Close,contentDescription="Dispensar mensagem",
+                            modifier=Modifier.size(18.dp))
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(6.dp))
     }
+    HorizontalDivider()
+    Column(Modifier.fillMaxWidth().navigationBarsPadding()
+        .padding(horizontal=16.dp,vertical=9.dp),
+        verticalArrangement=Arrangement.spacedBy(6.dp)) {
+        if(saveReturnError.isNotBlank()) {
+            Text(saveReturnError,color=MaterialTheme.colorScheme.error,
+                style=MaterialTheme.typography.bodySmall)
+        }
+        Button(onClick={
+            saveReturnError = when {
+                editingAudioId != null -> "Finalize o corte com Salvar corte ou Cancelar antes de sair."
+                !onSaveAndReturn(p) -> "Falha ao salvar o projeto. Continue nesta tela e tente novamente."
+                else -> ""
+            }
+        },enabled=!exporting,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)) {
+            Icon(Icons.Default.Save,contentDescription=null,modifier=Modifier.size(19.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Salvar e voltar ao vídeo",fontWeight=FontWeight.SemiBold)
+        }
+    }
+    } // Conteúdo rolável e ação fixa no rodapé da tela Áudio.
     pendingAudioDeleteId?.let { id ->
         val candidate=p.audioTracks.firstOrNull { it.id==id }
         if(candidate!=null) AlertDialog(onDismissRequest={pendingAudioDeleteId=null},

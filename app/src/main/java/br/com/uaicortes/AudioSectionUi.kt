@@ -16,7 +16,7 @@ internal fun AudioPanelCard(content: @Composable ColumnScope.() -> Unit) {
     Surface(shape=RoundedCornerShape(20.dp),color=MaterialTheme.colorScheme.surface,
         tonalElevation=2.dp,border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),
         modifier=Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(10.dp),content=content)
+        Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(9.dp),content=content)
     }
 }
 
@@ -26,7 +26,7 @@ internal fun AudioTrackCard(content: @Composable ColumnScope.() -> Unit) {
         color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.35f),
         border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),
         modifier=Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(horizontal=10.dp,vertical=6.dp),content=content)
+        Column(Modifier.padding(horizontal=10.dp,vertical=4.dp),content=content)
     }
 }
 

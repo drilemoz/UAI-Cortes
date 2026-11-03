@@ -1,3 +1,10 @@
+## Versão 0.1.110 · versionCode 111 (03/11/2026)
+
+- Novo botão fixo **Salvar e voltar ao vídeo** na tela Áudio; persistência é confirmada antes da navegação, impedindo saída quando falha, durante extração ou com corte ainda não aplicado.
+- Mixagem com títulos mais legíveis para arquivos de vídeo com nomes numéricos gerados automaticamente, cartões mais compactos e avisos dispensáveis, mantendo volumes e títulos originais intactos no projeto.
+- Pré-escuta, edição das faixas, extração e narração Gemini preservadas; esquema do projeto continua versão 4.
+- Testes locais e validação de ZIP não substituem build Android nem teste visual/áudio em aparelho.
+
 ## Versão 0.1.109 · versionCode 110 (03/11/2026)
 
 - Corrigida a navegação da narração Gemini mostrada no vídeo de teste: confirmar a voz mantém a janela de geração aberta; após consentir com a chamada de IA, uma resposta WAV válida é gravada e adicionada à tela Áudio, sem navegação automática. Falhas de gravação preservam o WAV para nova tentativa sem repetir a síntese.
