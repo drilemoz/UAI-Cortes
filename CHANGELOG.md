@@ -1,3 +1,11 @@
+## Versão 0.1.111 · versionCode 112 (03/11/2026)
+
+- **Reutilizar legendas:** modo Sincronizada por trechos ou Contínua. O modo temporal preserva os instantes de cada legenda, permite edição individual sem alterar o texto original e exige confirmação antes das chamadas Gemini.
+- Até 12 falas por geração; cada fala usa uma chamada TTS. Em falha/cancelamento, os WAVs já gravados são mantidos e as falas inalteradas não são solicitadas novamente nesta sessão.
+- Antes da inserção, revisão mostra a duração real de cada WAV, conflitos com legendas/vozes seguintes e excedentes do fim do vídeo. Excedente final bloqueia a inclusão; sobreposições dentro do vídeo exigem aprovação expressa. Nenhum áudio é cortado automaticamente.
+- Faixas sincronizadas são salvas em uma única atualização do projeto após aprovação. Sem mudanças no JSON/schemaVersion 4, nos clipes, legendas ou exportador; a narração contínua permanece disponível e também não é mais truncada silenciosamente.
+- **Pendente:** compilação Android completa, teste com Gemini real, sincronização de preview/exportação no aparelho e interrupções do Android.
+
 ## Versão 0.1.110 · versionCode 111 (03/11/2026)
 
 - Novo botão fixo **Salvar e voltar ao vídeo** na tela Áudio; persistência é confirmada antes da navegação, impedindo saída quando falha, durante extração ou com corte ainda não aplicado.

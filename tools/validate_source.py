@@ -1358,3 +1358,19 @@ assert 'ReleaseSummary("0.1.110", listOf(' in notes
 assert 'ReleaseSummary("0.1.109", listOf(' in notes
 print('OK: v0.1.110 retorno de Áudio, além de mixagem e volume somente de prévia')
 from test_audio_save_return_contract import *
+
+# v0.1.111: sincronismo a partir das legendas já salvas, sem cortar áudio por engano.
+timed = (app_files/'SubtitleNarrationTimeline.kt').read_text()
+assert 'MAX_SEGMENTS = 12' in timed and 'PROJECT_OVERFLOW' in timed
+assert 'NEXT_SPEECH_OVERLAP' in timed and 'SUBTITLE_TOO_SHORT' in timed
+assert 'timedLines = SubtitleNarrationReuse.eligible(reuseSnapshot)' in narration
+assert '"generate_sync"' in narration and 'GeminiTimedFile(' in narration
+assert 'startMs = result.segment.startMs, durationMs = result.durationMs' in narration
+assert 'timedReview = true' in narration and 'Checkbox(checked = approveOverrun' in narration
+assert 'onSaveToAudio(changed)' in narration
+assert 'if (playable < 250L || playable < duration)' in narration
+assert (root/'app/src/test/java/br/com/uaicortes/SubtitleNarrationTimelineTest.kt').exists()
+assert (root/'tools/test_narration_sync_contract.py').exists()
+assert (root/'docs/VALIDATION_0.1.111.md').exists()
+assert 'ReleaseSummary("0.1.111", listOf(' in notes
+print('OK: v0.1.111 geração por trechos, alinhamento, revisão, cota e sem corte silencioso')

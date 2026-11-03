@@ -15,8 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      VERSION: '0.1.110'
-      VERSION_CODE: '111'
+      VERSION: '0.1.111'
+      VERSION_CODE: '112'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -63,6 +63,7 @@ jobs:
         run: |
           python3 tools/validate_source.py
           python3 tools/test_version_sync.py
+          python3 tools/test_narration_sync_contract.py
       - name: Testes, Lint e compilar Release
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
