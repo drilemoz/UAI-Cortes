@@ -5,6 +5,9 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -19,6 +22,9 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 
 /** Referência local, opcional e guiada. Não envia o áudio ao Gemini e não clona a voz. */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
@@ -39,6 +45,12 @@ internal fun AudioReferenceAlignmentDialog(
     var externalOffset by remember(project.id) { mutableLongStateOf(0L) }
     var marks by remember(project.id) { mutableStateOf(NarrationReferenceAlignment.cleaned(segments, initialStarts)) }
     var feedback by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+    var selectedCueId by remember(project.id) { mutableStateOf(segments.firstOrNull()?.cueId) }
+    var analyzed by remember(project.id) { mutableStateOf<ReferenceAudioActivity.Result?>(null) }
+    var analysisBusy by remember { mutableStateOf(false) }
+    var analysisFeedback by remember { mutableStateOf("") }
+    var analysisJob by remember { mutableStateOf<Job?>(null) }
     var currentMs by remember { mutableLongStateOf(0L) }
     var playing by remember { mutableStateOf(false) }
     val referencePlayer = remember(context) { diagnosticPlayer(context) }
@@ -58,7 +70,48 @@ internal fun AudioReferenceAlignmentDialog(
             } else feedback = "Não foi possível verificar a duração deste áudio. Escolha outro arquivo."
         }
     }
-    DisposableEffect(referencePlayer) { onDispose { referencePlayer.release() } }
+    DisposableEffect(referencePlayer) { onDispose {
+        analysisJob?.cancel()
+        referencePlayer.release()
+    } }
+    LaunchedEffect(source, trackId, importedUri, externalOffset, project.id) {
+        analysisJob?.cancel()
+        analysisBusy = false
+        analyzed = null
+        analysisFeedback = ""
+    }
+    val selectedSegment = segments.firstOrNull { it.cueId == selectedCueId }
+        ?: segments.firstOrNull()
+    fun analyzeSelected() {
+        val selected = selectedSegment ?: return
+        if (analysisBusy || project.durationMs <= 0L) return
+        analysisJob?.cancel()
+        analyzed = null
+        analysisFeedback = ""
+        analysisBusy = true
+        val window = ReferenceAudioActivity.window(selected.startMs, selected.subtitleEndMs,
+            project.durationMs)
+        val slices = when (source) {
+            "project" -> ReferenceAudioProbe.projectSlices(project, window)
+            "track" -> chosenTrack?.let { ReferenceAudioProbe.trackSlices(it, window) }.orEmpty()
+            else -> importedUri?.let { ReferenceAudioProbe.externalSlices(it,
+                externalOffset, importedDuration, window) }.orEmpty()
+        }
+        analysisJob = scope.launch {
+            try {
+                val result = ReferenceAudioProbe.analyze(context, slices, window, selected.startMs)
+                analyzed = result
+                analysisFeedback = if (result.regions.isEmpty())
+                    "Nenhuma região de atividade sonora contínua foi identificada. Faça a marcação manual."
+                else "${result.regions.size} região(ões) de atividade sonora detectada(s); podem incluir música ou efeitos."
+            } catch (_: CancellationException) {
+                // Troca de fonte ou saída da tela: não exibir falso erro.
+            } catch (error: Exception) {
+                analysisFeedback = "Não foi possível analisar esta referência: " +
+                    (error.message?.take(130) ?: "áudio indisponível")
+            } finally { analysisBusy = false }
+        }
+    }
     LaunchedEffect(source, trackId, importedUri, project.clips, project.id) {
         playing = false
         referencePlayer.pause()
@@ -198,6 +251,41 @@ internal fun AudioReferenceAlignmentDialog(
                         "permanecem nas legendas.", style = MaterialTheme.typography.bodySmall)
                 } else Text("Selecione uma origem de áudio antes de marcar os tempos.",
                     style = MaterialTheme.typography.bodySmall)
+                if (available && selectedSegment != null) {
+                    HorizontalDivider()
+                    Text("Atividade sonora · análise local", style = MaterialTheme.typography.titleSmall)
+                    Text("Selecione uma fala abaixo e toque em Analisar. A forma de onda mostra " +
+                        "energia do áudio, não identifica palavras nem garante que seja voz.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Text("Fala selecionada: ${selectedSegment.text}", maxLines = 2,
+                        overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelMedium)
+                    OutlinedButton(onClick = { analyzeSelected() }, enabled = !analysisBusy) {
+                        Icon(Icons.Default.GraphicEq, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(if (analysisBusy) "Analisando..." else "Analisar região desta fala")
+                    }
+                    if (analysisBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                    analyzed?.let { activity ->
+                        ReferenceActivityWaveform(activity, selectedSegment.startMs)
+                        Text("Janela: ${NarrationReferenceAlignment.timeLabel(activity.fromMs)} até " +
+                            NarrationReferenceAlignment.timeLabel(activity.untilMs),
+                            style = MaterialTheme.typography.labelSmall)
+                        activity.suggestedStartMs?.let { suggestion ->
+                            Text("Sugestão aproximada: ${NarrationReferenceAlignment.timeLabel(suggestion)} " +
+                                "(legenda: ${NarrationReferenceAlignment.timeLabel(selectedSegment.startMs)})",
+                                style = MaterialTheme.typography.bodySmall)
+                            OutlinedButton(onClick = {
+                                marks = NarrationReferenceAlignment.cleaned(segments,
+                                    marks + (selectedSegment.cueId to suggestion))
+                                analysisFeedback = "Sugestão marcada no rascunho. Use Aplicar horários para confirmar."
+                            }) { Text("Usar sugestão neste trecho") }
+                        } ?: Text("Nenhuma sugestão confiável. Use Marcar aqui para ajustar manualmente.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (analysisFeedback.isNotBlank()) Text(analysisFeedback,
+                        style = MaterialTheme.typography.bodySmall)
+                    HorizontalDivider()
+                }
                 segments.forEach { segment ->
                     val actual = NarrationReferenceAlignment.start(segment, marks)
                     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -206,6 +294,14 @@ internal fun AudioReferenceAlignmentDialog(
                         Text("Legenda: ${NarrationReferenceAlignment.timeLabel(segment.startMs)} · " +
                             "Voz: ${NarrationReferenceAlignment.timeLabel(actual)}",
                             style = MaterialTheme.typography.labelSmall)
+                        OutlinedButton(enabled = available && selectedCueId != segment.cueId, onClick = {
+                            analysisJob?.cancel()
+                            analysisBusy = false
+                            selectedCueId = segment.cueId
+                            analyzed = null
+                            analysisFeedback = ""
+                            seekToProjectPosition(segment.startMs)
+                        }) { Text(if (selectedCueId == segment.cueId) "Selecionada para análise" else "Selecionar para análise") }
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             OutlinedButton(enabled = available, onClick = {
                                 seekToProjectPosition(segment.startMs)
@@ -233,4 +329,39 @@ internal fun AudioReferenceAlignmentDialog(
         }, enabled = problems == null) { Text("Aplicar horários") } },
         dismissButton = { TextButton(onClick = { referencePlayer.pause(); onDismiss() }) { Text("Cancelar") } }
     )
+}
+
+/** Mostra apenas energia decodificada nesta região; gráfico local e sem conexão externa. */
+@Composable
+private fun ReferenceActivityWaveform(activity: ReferenceAudioActivity.Result, originalMs: Long) {
+    val primary = MaterialTheme.colorScheme.primary
+    val suggestionColor = MaterialTheme.colorScheme.tertiary
+    val originalColor = MaterialTheme.colorScheme.error
+    Canvas(Modifier.fillMaxWidth().height(90.dp)) {
+        val levels = activity.levels
+        if (levels.isEmpty()) return@Canvas
+        val n = levels.size
+        val peak = levels.maxOrNull()?.coerceAtLeast(0.02f) ?: 1f
+        val barWidth = size.width / n
+        levels.forEachIndexed { i, level ->
+            val halfHeight = (level / peak).coerceIn(0f, 1f) * (size.height * 0.47f)
+            val x = (i + 0.5f) * barWidth
+            drawLine(primary.copy(alpha = 0.75f), Offset(x, size.height / 2 - halfHeight),
+                Offset(x, size.height / 2 + halfHeight), strokeWidth = (barWidth * 0.70f).coerceAtLeast(1f))
+        }
+        fun marker(ms: Long, color: Color) {
+            if (ms in activity.fromMs..activity.untilMs) {
+                val x = (ms - activity.fromMs).toFloat() /
+                    (activity.untilMs - activity.fromMs).coerceAtLeast(1L) * size.width
+                drawLine(color, Offset(x, 0f), Offset(x, size.height), strokeWidth = 2.dp.toPx())
+            }
+        }
+        marker(originalMs, originalColor)
+        activity.suggestedStartMs?.let { marker(it, suggestionColor) }
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Text("● Legenda", color = originalColor, style = MaterialTheme.typography.labelSmall)
+        Text("● Sugestão", color = suggestionColor, style = MaterialTheme.typography.labelSmall)
+    }
 }

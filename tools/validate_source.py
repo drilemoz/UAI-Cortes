@@ -1334,7 +1334,7 @@ print('OK: v0.1.105 prévia proporcional, qualidade configurável e ampliação,
 voice_ui = (app_files/'GeminiNarrationUi.kt').read_text()
 voice_search = (app_files/'GeminiVoiceSearch.kt').read_text()
 voice_presentation = (app_files/'GeminiVoicePresentation.kt').read_text()
-assert 'if (expanded && !voicePicker && !referenceDialog) Dialog(' in voice_ui
+assert 'if (expanded && !voicePicker && !referenceDialog && compareCueId == null) Dialog(' in voice_ui
 assert 'if (voicePicker && expanded) Dialog(' in voice_ui
 assert 'GeminiVoiceSearch.byGender(searched, voiceGenderFilter)' in voice_ui
 assert 'GeminiVoicePresentation.shortDetails(voice)' in voice_ui
@@ -1387,3 +1387,23 @@ assert (root/'docs/VALIDATION_0.1.112.md').exists()
 assert 'ReleaseSummary("0.1.112", listOf(' in notes
 from test_audio_reference_contract import *
 print('OK: v0.1.112 referência sonora local e alinhamento com confirmação')
+
+# v0.1.113: análise local do trecho selecionado, visualização de energia e sugestão confirmada.
+activity = (root/'app/src/main/java/br/com/uaicortes/ReferenceAudioActivity.kt').read_text()
+probe = (root/'app/src/main/java/br/com/uaicortes/ReferenceAudioProbe.kt').read_text()
+reference_ui = (root/'app/src/main/java/br/com/uaicortes/AudioReferenceAlignmentUi.kt').read_text()
+assert 'MediaExtractor()' in probe and 'MediaCodec.createDecoderByType' in probe
+assert 'Dispatchers.IO' in probe and 'currentCoroutineContext().ensureActive()' in probe
+assert 'fun detect(' in activity and 'MIN_REGION_MS' in activity
+assert 'ReferenceActivityWaveform(activity' in reference_ui
+assert '"Usar sugestão neste trecho"' in reference_ui and '"Aplicar horários"' in reference_ui
+assert (root/'app/src/test/java/br/com/uaicortes/ReferenceAudioActivityTest.kt').exists()
+assert (root/'docs/VALIDATION_0.1.113.md').exists()
+assert 'ReleaseSummary("0.1.113", listOf(' in notes
+from test_reference_activity_contract import *
+print('OK: v0.1.113 waveform local e sugestão opcional sem nova transcrição')
+
+# v0.1.114: comparar A/B e regenerar um segmento sem substituir WAV em falha.
+from test_narration114_contract import *
+assert 'ReleaseSummary("0.1.114", listOf(' in notes
+print('OK: v0.1.114 comparação de áudio, meta temporal aproximada e refazer fala individual')

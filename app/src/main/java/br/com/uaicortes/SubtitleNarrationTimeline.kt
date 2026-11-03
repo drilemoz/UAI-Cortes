@@ -14,13 +14,13 @@ internal object SubtitleNarrationTimeline {
 
     data class Recorded(val segment: Segment, val audioDurationMs: Long)
 
-    enum class Issue { SUBTITLE_TOO_SHORT, NEXT_SPEECH_OVERLAP, PROJECT_OVERFLOW }
+    enum class Issue { SUBTITLE_TOO_SHORT, NEXT_SPEECH_OVERLAP, PROJECT_OVERFLOW, AUDIO_TOO_SHORT }
     data class Inspection(
         val segment: Segment,
         val audioDurationMs: Long,
         val issues: Set<Issue>
     ) {
-        val blocking get() = Issue.PROJECT_OVERFLOW in issues
+        val blocking get() = Issue.PROJECT_OVERFLOW in issues || Issue.AUDIO_TOO_SHORT in issues
         val needsApproval get() = issues.isNotEmpty()
     }
 
@@ -53,8 +53,8 @@ internal object SubtitleNarrationTimeline {
             if (item.audioDurationMs > s.subtitleEndMs - s.startMs) issues += Issue.SUBTITLE_TOO_SHORT
             if (index + 1 < recorded.size && item.audioDurationMs > recorded[index + 1].segment.startMs - s.startMs)
                 issues += Issue.NEXT_SPEECH_OVERLAP
-            if (item.audioDurationMs > remaining || item.audioDurationMs < MIN_AUDIO_MS)
-                issues += Issue.PROJECT_OVERFLOW
+            if (item.audioDurationMs > remaining) issues += Issue.PROJECT_OVERFLOW
+            if (item.audioDurationMs < MIN_AUDIO_MS) issues += Issue.AUDIO_TOO_SHORT
             Inspection(s, item.audioDurationMs, issues)
         }
 }

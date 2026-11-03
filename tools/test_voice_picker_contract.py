@@ -5,7 +5,7 @@ base = Path(__file__).resolve().parents[1]
 ui = (base/'app/src/main/java/br/com/uaicortes/GeminiNarrationUi.kt').read_text()
 search = (base/'app/src/main/java/br/com/uaicortes/GeminiVoiceSearch.kt').read_text()
 presentation = (base/'app/src/main/java/br/com/uaicortes/GeminiVoicePresentation.kt').read_text()
-assert 'if (expanded && !voicePicker && !referenceDialog) Dialog(' in ui
+assert 'if (expanded && !voicePicker && !referenceDialog && compareCueId == null) Dialog(' in ui
 assert 'if (voicePicker && expanded) Dialog(' in ui
 assert 'GeminiVoiceSearch.byGender(searched, voiceGenderFilter)' in ui
 assert 'GeminiVoicePresentation.shortDetails(voice)' in ui

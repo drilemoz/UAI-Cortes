@@ -33,6 +33,14 @@ class SubtitleNarrationTimelineTest {
             SubtitleNarrationTimeline.Recorded(a, 1600), SubtitleNarrationTimeline.Recorded(b, 1200)), 5000)
         assertTrue(SubtitleNarrationTimeline.Issue.NEXT_SPEECH_OVERLAP in report.first().issues)
     }
+    @Test fun tooShortIsNotMisreportedAsProjectOverflow() {
+        val line = s("a", 1200, 2400)
+        val report = SubtitleNarrationTimeline.inspect(listOf(
+            SubtitleNarrationTimeline.Recorded(line, 200)), 10000).single()
+        assertTrue(report.blocking)
+        assertTrue(SubtitleNarrationTimeline.Issue.AUDIO_TOO_SHORT in report.issues)
+        assertFalse(SubtitleNarrationTimeline.Issue.PROJECT_OVERFLOW in report.issues)
+    }
     @Test fun invalidOrOversizedBatchesAreRejectedBeforeNetwork() {
         val lines = (0 until 13).map { s("$it", it * 1000L, it * 1000L + 500) }
         assertNotNull(SubtitleNarrationTimeline.validate(lines, 16000))

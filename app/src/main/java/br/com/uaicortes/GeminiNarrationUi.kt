@@ -56,13 +56,16 @@ internal class GeminiNarrationDraft {
     val timedFiles = mutableStateOf<List<GeminiTimedFile>>(emptyList())
     /** Marcação manual com referência sonora; não modifica as legendas. */
     val referenceStarts = mutableStateOf<Map<String, Long>>(emptyMap())
+    /** Metas opcionais por fala; não alteram a duração do WAV nem a timeline. */
+    val durationGoals = mutableStateOf<Map<String, Long>>(emptyMap())
 }
 
 internal data class GeminiTimedFile(
     val segment: SubtitleNarrationTimeline.Segment,
     val file: File,
     val durationMs: Long,
-    val settingsKey: String
+    val settingsKey: String,
+    val durationGoalMs: Long? = null
 )
 
 
@@ -103,6 +106,9 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
     var useTimedSubtitles by currentDraft.useTimedSubtitles
     var timedFiles by currentDraft.timedFiles
     var referenceStarts by currentDraft.referenceStarts
+    var durationGoals by currentDraft.durationGoals
+    var compareCueId by remember(project.id) { mutableStateOf<String?>(null) }
+    var regenerateCueId by remember(project.id) { mutableStateOf<String?>(null) }
     var referenceDialog by remember(project.id) { mutableStateOf(false) }
     var timedReview by remember(project.id) { mutableStateOf(false) }
     val styleInstruction = GeminiNarrationStyling.instruction(style, pace, expressiveness, pitch)
@@ -203,7 +209,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
         // Abrir a janela nunca faz chamadas de rede ou escolhe uma voz automaticamente.
     },modifier=modifier)
     // Apenas uma janela visível: ao escolher voz, oculta a narração sob o seletor.
-    if (expanded && !voicePicker && !referenceDialog) Dialog(
+    if (expanded && !voicePicker && !referenceDialog && compareCueId == null) Dialog(
         onDismissRequest = {
             if (!working) {
                 if (loading) { job?.cancel(); api.cancel() }
@@ -256,7 +262,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                         text = it.take(SubtitleNarrationReuse.MAX_CHARACTERS)
                         // Texto digitado livremente não conserva alinhamento com as legendas.
                         timedLines = emptyList(); useTimedSubtitles = false
-                        timedFiles = emptyList(); referenceStarts = emptyMap()
+                        timedFiles = emptyList(); referenceStarts = emptyMap(); durationGoals = emptyMap()
                         generated = null; duration = 0L; addedUri = null
                     }, modifier = Modifier.fillMaxWidth(), minLines = 3, maxLines = 7,
                         readOnly = useTimedSubtitles, enabled = !working,
@@ -297,6 +303,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                                         it.copy(text = newText.take(SubtitleNarrationReuse.MAX_CHARACTERS)) else it }
                                     text = timedLines.joinToString("\n") { it.text.trim() }
                                     timedFiles = timedFiles.filterNot { it.segment.cueId == line.cueId }
+                                    durationGoals = durationGoals - line.cueId
                                 }, label = { Text("${formatMs(line.startMs)} – ${formatMs(line.subtitleEndMs)}") },
                                     modifier = Modifier.fillMaxWidth(), maxLines = 3, enabled = !working)
                             }
@@ -310,20 +317,66 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                                 Text("Áudios preparados: ${timedReady.size}/${timedLines.size}",
                                     style = MaterialTheme.typography.labelMedium)
                                 timedReady.forEach { result ->
+                                    val start = NarrationReferenceAlignment.start(result.segment, referenceStarts)
                                     val report = SubtitleNarrationTimeline.inspect(
                                         listOf(SubtitleNarrationTimeline.Recorded(
                                             NarrationReferenceAlignment.placed(result.segment, referenceStarts), result.durationMs)),
                                         project.durationMs).single()
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("${formatMs(NarrationReferenceAlignment.start(result.segment, referenceStarts))} · " +
-                                            "${formatMs(result.durationMs)}" +
-                                            if (report.needsApproval) " · revisar" else " · ok",
-                                            modifier = Modifier.weight(1f),
-                                            style = MaterialTheme.typography.bodySmall)
-                                        TextButton(onClick = {
-                                            player.setMediaItem(MediaItem.fromUri(Uri.fromFile(result.file)))
-                                            player.prepare(); player.play()
-                                        }, enabled = !working && !loading) { Text("Ouvir") }
+                                    val defaultGoal = NarrationDurationAssist.defaultTarget(start,
+                                        result.segment.subtitleEndMs, project.durationMs)
+                                    val goal = durationGoals[result.segment.cueId] ?: defaultGoal
+                                    Surface(shape = RoundedCornerShape(12.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
+                                        modifier = Modifier.fillMaxWidth()) {
+                                        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                            Text("${NarrationReferenceAlignment.timeLabel(start)} · " +
+                                                "duração real ${NarrationReferenceAlignment.timeLabel(result.durationMs)}" +
+                                                if (report.needsApproval) " · revisar" else " · ok",
+                                                style = MaterialTheme.typography.bodySmall)
+                                            Text(result.segment.text, maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
+                                                style = MaterialTheme.typography.bodySmall)
+                                            Row(verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                Text("Meta: ${NarrationReferenceAlignment.timeLabel(goal)}",
+                                                    modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
+                                                TextButton(onClick = {
+                                                    val adjusted = NarrationDurationAssist.adjust(goal,
+                                                        -NarrationDurationAssist.STEP_MS, start, project.durationMs)
+                                                    if (adjusted > 0L) durationGoals = durationGoals +
+                                                        (result.segment.cueId to adjusted)
+                                                }, enabled = !working && !loading && goal > NarrationDurationAssist.MIN_TARGET_MS) {
+                                                    Text("−0,25 s")
+                                                }
+                                                TextButton(onClick = {
+                                                    val adjusted = NarrationDurationAssist.adjust(goal,
+                                                        NarrationDurationAssist.STEP_MS, start, project.durationMs)
+                                                    if (adjusted > 0L) durationGoals = durationGoals +
+                                                        (result.segment.cueId to adjusted)
+                                                }, enabled = !working && !loading &&
+                                                    goal < (project.durationMs - start).coerceAtMost(NarrationDurationAssist.MAX_TARGET_MS)) {
+                                                    Text("+0,25 s")
+                                                }
+                                            }
+                                            val deviation = NarrationDurationAssist.difference(result.durationMs, goal)
+                                            Text("Diferença da meta: ${if (deviation > 0L) "+" else ""}${deviation} ms. " +
+                                                "A meta só orienta a próxima síntese; o WAV atual não é modificado.",
+                                                style = MaterialTheme.typography.bodySmall)
+                                            Row(Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                OutlinedButton(onClick = {
+                                                    player.pause(); compareCueId = result.segment.cueId
+                                                }, enabled = !working && !loading) {
+                                                    Text("Comparar A/B")
+                                                }
+                                                OutlinedButton(onClick = {
+                                                    regenerateCueId = result.segment.cueId
+                                                    confirmation = "regenerate_one"
+                                                }, enabled = !working && !loading && selectedVoice != null) {
+                                                    Text("Refazer fala")
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -847,7 +900,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                                     .map { SubtitleNarrationTimeline.Segment(it.id,
                                         it.text.trim().replace(Regex("\\s+"), " "), it.startMs, it.endMs) }
                                 useTimedSubtitles = true
-                                timedFiles = emptyList(); referenceStarts = emptyMap()
+                                timedFiles = emptyList(); referenceStarts = emptyMap(); durationGoals = emptyMap()
                                 generated = null; duration = 0L; addedUri = null
                                 status = "$selectedCount trechos reutilizados localmente. " +
                                     "Agora consulte as vozes, escolha uma e confirme a geração quando quiser."
@@ -908,6 +961,17 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                     "A próxima geração usará esses horários; o áudio de referência não é enviado à API."
             }, onDismiss = { referenceDialog = false })
     }
+    compareCueId?.let { cueId ->
+        val seg = timedLines.firstOrNull { it.cueId == cueId }
+        val result = timedReady.firstOrNull { it.segment.cueId == cueId }
+        if (seg != null && result != null) {
+            GeminiNarrationComparisonDialog(latestProject, seg,
+                NarrationReferenceAlignment.start(seg, referenceStarts),
+                result.file, result.durationMs, onDismiss = { compareCueId = null })
+        } else {
+            LaunchedEffect(cueId) { compareCueId = null }
+        }
+    }
     if (timedReview) {
         val current = latestProject
         val ready = timedLines.mapNotNull { seg ->
@@ -939,7 +1003,9 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                         if (SubtitleNarrationTimeline.Issue.NEXT_SPEECH_OVERLAP in item.issues)
                             add("alcança a próxima fala")
                         if (SubtitleNarrationTimeline.Issue.PROJECT_OVERFLOW in item.issues)
-                            add("ultrapassa o fim do vídeo ou é curto demais")
+                            add("ultrapassa o fim do vídeo")
+                        if (SubtitleNarrationTimeline.Issue.AUDIO_TOO_SHORT in item.issues)
+                            add("áudio curto demais")
                     }
                     Text("${formatMs(item.segment.startMs)} · ${formatMs(item.audioDurationMs)}" +
                         if (reason.isEmpty()) " · dentro do intervalo" else " · ${reason.joinToString(", ")}",
@@ -984,7 +1050,16 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
         confirmation = ""; pendingSampleVoiceId = null
     },
         title = { Text("Confirmar solicitação Gemini") },
-        text = { Text(if (confirmation == "generate_sync")
+        text = { Text(if (confirmation == "regenerate_one") {
+            val line = timedLines.firstOrNull { it.cueId == regenerateCueId }
+            val start = line?.let { NarrationReferenceAlignment.start(it, referenceStarts) } ?: 0L
+            val target = line?.let { durationGoals[it.cueId] ?:
+                NarrationDurationAssist.defaultTarget(start, it.subtitleEndMs, project.durationMs) } ?: 0L
+            "Refazer apenas esta fala usando a voz selecionada e meta aproximada de " +
+                "${NarrationReferenceAlignment.timeLabel(target)}? " +
+                "Esta ação faz uma nova chamada Gemini e pode consumir cota. O WAV anterior " +
+                "será mantido se a solicitação falhar; não existe duração exata garantida."
+        } else if (confirmation == "generate_sync")
             "Gerar ${timedLines.size} falas separadas usando os horários das legendas? " +
                 "Cada fala ainda não gerada exige uma chamada à API e pode consumir cota. " +
                 "O áudio será revisado antes de inserir na timeline; não haverá corte automático."
@@ -1005,7 +1080,45 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                 try {
                     val key = withContext(Dispatchers.IO) { creds.read() }
                         ?: throw IllegalStateException("Chave ausente")
-                    if (action == "generate_sync") {
+                    if (action == "regenerate_one") {
+                        val requestedId = regenerateCueId
+                        val segment = timedLines.firstOrNull { it.cueId == requestedId }
+                            ?: throw IllegalStateException("Selecione a fala novamente.")
+                        val current = latestProject
+                        if (current.id != project.id || current.subtitles.none { cue ->
+                                cue.id == segment.cueId && cue.startMs == segment.startMs &&
+                                    cue.endMs == segment.subtitleEndMs
+                            }) throw IllegalStateException("Legenda alterada. Importe a versão atual antes de refazer.")
+                        val voice = selectedVoice ?: throw IllegalStateException("Escolha a voz antes de refazer.")
+                        val start = NarrationReferenceAlignment.start(segment, referenceStarts)
+                        val target = durationGoals[segment.cueId] ?:
+                            NarrationDurationAssist.defaultTarget(start, segment.subtitleEndMs, current.durationMs)
+                        if (NarrationReferenceAlignment.validate(timedLines, referenceStarts, current.durationMs) != null ||
+                            target !in NarrationDurationAssist.MIN_TARGET_MS..NarrationDurationAssist.MAX_TARGET_MS ||
+                            target > current.durationMs - start)
+                            throw IllegalStateException("Horário ou meta de duração inválidos.")
+                        val settings = "$model|${voice.id}|$styleInstruction"
+                        status = "Refazendo somente a fala marcada. O áudio anterior permanece até o sucesso."
+                        val wave = api.synthesize(key, model, voice.id,
+                            styleInstruction + "\n" + NarrationDurationAssist.instruction(target),
+                            segment.text)
+                        val saved = withContext(Dispatchers.IO) {
+                            coroutineContext.ensureActive()
+                            GeminiAudioFiles.save(ctx, wave)
+                        }
+                        // Somente depois de um WAV válido e salvo substituir a referência do trecho.
+                        if (latestProject.id != current.id || timedLines.none { it == segment }) {
+                            status = "O projeto mudou. WAV salvo, mas a seleção não foi substituída."
+                        } else {
+                            timedFiles = timedFiles.filterNot { it.segment.cueId == segment.cueId } +
+                                GeminiTimedFile(segment, saved, wave.durationMs, settings, target)
+                            val difference = NarrationDurationAssist.difference(wave.durationMs, target)
+                            status = "Fala refeita; duração real ${NarrationReferenceAlignment.timeLabel(wave.durationMs)} " +
+                                "(${if (difference > 0) "+" else ""}$difference ms da meta). " +
+                                "Compare e revise a sincronização antes de inserir."
+                        }
+                        regenerateCueId = null
+                    } else if (action == "generate_sync") {
                         val segments = timedLines.toList()
                         val current = latestProject
                         val failure = SubtitleNarrationTimeline.validate(segments, current.durationMs)

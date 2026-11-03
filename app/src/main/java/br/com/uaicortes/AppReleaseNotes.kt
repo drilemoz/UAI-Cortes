@@ -16,11 +16,27 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.112"
-    const val VERSION_CODE = 113
+    const val VERSION_NAME = "0.1.114"
+    const val VERSION_CODE = 115
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.114", listOf(
+            ReleaseFeature("gemini-compare-ab", "Comparar voz original e Gemini",
+                "Ouça separadamente o áudio do vídeo e o WAV da fala selecionada antes de inserir na linha do tempo.", "film"),
+            ReleaseFeature("gemini-duration-goal", "Meta de duração por fala",
+                "Ajuste o tempo desejado de 0,25 em 0,25 segundo; o Gemini recebe uma sugestão de ritmo, não um corte do WAV.", "check"),
+            ReleaseFeature("gemini-regenerate-one", "Refazer uma única fala",
+                "Confirme uma nova geração só para o trecho escolhido, preservando a versão anterior se falhar.", "check")
+        )),
+        ReleaseSummary("0.1.113", listOf(
+            ReleaseFeature("reference-waveform", "Onda sonora na referência de áudio",
+                "Visualize energia do áudio próximo à legenda selecionada, sem enviar o som a servidores.", "film"),
+            ReleaseFeature("reference-activity-suggestions", "Sugestão local de início da fala",
+                "Análise aproximada de atividade sonora; revise antes de usar, pois música e efeitos podem confundir.", "check"),
+            ReleaseFeature("reference-limited-decoding", "Análise sob demanda e limitada",
+                "Decodifica apenas região curta da fala escolhida e preserva texto, tempo e arquivos originais.", "check")
+        )),
         ReleaseSummary("0.1.112", listOf(
             ReleaseFeature("narration-audio-reference", "Áudio de referência para sincronizar falas",
                 "Escute o som do vídeo, uma faixa adicional ou arquivo externo e marque o começo de cada fala sem retranscrever legendas.", "film"),

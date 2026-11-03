@@ -1,3 +1,18 @@
+## Versão 0.1.114 · versionCode 115 (03/11/2026)
+
+- Na narração sincronizada, cada WAV preparado tem **Comparar A/B**: ouvir o som original do vídeo na janela correspondente e ouvir o WAV Gemini separadamente. Player local, sem efeito sobre o projeto ou exportação.
+- Nova **meta de duração** individual, com ajustes de 250 ms, enviada como orientação opcional de ritmo na regeneração. A API não garante duração exata: sempre comparar com a duração medida do WAV, sem cortar ou fazer time-stretch implícito.
+- **Refazer fala** faz uma solicitação Gemini apenas para o segmento escolhido, com confirmação de possível cota. O WAV anterior só deixa de ser usado após novo áudio válido e salvo; falhas preservam os anteriores.
+- Diagnóstico de áudio abaixo de 250 ms separado de ultrapassar o fim do projeto, evitando orientação incorreta durante a revisão.
+- Mantidas revisão de sobreposição/excesso do vídeo, reutilização das legendas, alinhamento de referência sem upload, schemaVersion 4 e mixagem existente. **Pendências:** compilação Gradle/Android, áudio real da API e teste da prévia/exportação em aparelhos.
+
+## Versão 0.1.113 · versionCode 114 (03/11/2026)
+
+- Referência de áudio agora inclui análise local sob demanda (Android MediaExtractor/MediaCodec) de até 15 segundos em torno da fala selecionada e forma de onda por energia RMS.
+- Mostra regiões de atividade sonora e um possível começo próximo da legenda. Música/efeitos também podem produzir picos; não é reconhecimento de fala nem alinhamento por palavra. Sugestões são opcionais e dependem de duas ações explícitas: **Usar sugestão** no rascunho e **Aplicar horários**.
+- Processamento limitado em tempo, fora da thread principal, cancelável, sem enviar áudio ao Gemini ou modificar os arquivos originais. Suporta referência do vídeo, faixas existentes e arquivo SAF conforme disponibilidade do decoder.
+- `schemaVersion=4` preservado, sem nova transcrição nem geração de voz automática. **Pendente:** compilação Android/CI e testes em aparelhos com mídias reais, formatos variados e vídeos com vários clipes.
+
 ## Versão 0.1.112 · versionCode 113 (03/11/2026)
 
 - Na geração por trechos, novo botão **Usar áudio como referência de tempo**: ouvir o vídeo do projeto, uma faixa adicional ou importar áudio local pelo seletor Android.
