@@ -156,6 +156,20 @@ data class AudioTrack(
         j.optLong("clipSourceAnchorMs", 0L).coerceAtLeast(0L)) }
 }
 
+/** Rascunho de publicação vinculado ao ID do projeto (nenhuma mídia ou chave de API).
+ * Rascunhos incompletos também são salvos; copiar exige as regras de VideoCaptionPolicy.
+ */
+data class VideoPublicationDraft(val description: String = "", val hashtags: String = "") {
+    fun json(): JSONObject = JSONObject().put("description", description).put("hashtags", hashtags)
+    companion object {
+        const val MAX_FIELD_LENGTH = 400
+        fun read(json: JSONObject?): VideoPublicationDraft? = json?.let {
+            VideoPublicationDraft(it.optString("description").take(MAX_FIELD_LENGTH),
+                it.optString("hashtags").take(MAX_FIELD_LENGTH))
+        }
+    }
+}
+
 data class VideoProject(
     val id: String = UUID.randomUUID().toString(), val title: String = "Meu vídeo",
     val updated: Long = System.currentTimeMillis(),
@@ -165,7 +179,8 @@ data class VideoProject(
     val transitions: List<ClipTransition> = emptyList(),
     val audioTracks: List<AudioTrack> = emptyList(),
     val lastTrimCutClipId: String? = null, val lastTrimCutSourceMs: Long? = null,
-    val textWatermark: TextWatermark? = null
+    val textWatermark: TextWatermark? = null,
+    val publicationDraft: VideoPublicationDraft? = null
 ) {
     val durationMs get() = clips.sumOf { it.durationMs }
     val pip: Overlay? get() = overlays.firstOrNull() // acesso legado somente leitura
@@ -179,6 +194,7 @@ data class VideoProject(
         .put("audioTracks", JSONArray().also { a -> audioTracks.forEach { a.put(it.json()) } })
         .put("lastTrimCutClipId", lastTrimCutClipId).put("lastTrimCutSourceMs", lastTrimCutSourceMs)
         .put("textWatermark", textWatermark?.json())
+        .put("publicationDraft", publicationDraft?.json())
     companion object {
         fun read(j: JSONObject): VideoProject {
             val a = j.optJSONArray("clips") ?: JSONArray()
@@ -202,7 +218,8 @@ data class VideoProject(
                 } ?: emptyList(),
                 j.optString("lastTrimCutClipId").takeIf { it.isNotBlank() },
                 if (j.isNull("lastTrimCutSourceMs")) null else j.optLong("lastTrimCutSourceMs"),
-                j.optJSONObject("textWatermark")?.let(TextWatermark::read))
+                j.optJSONObject("textWatermark")?.let(TextWatermark::read),
+                VideoPublicationDraft.read(j.optJSONObject("publicationDraft")))
         }
     }
 }

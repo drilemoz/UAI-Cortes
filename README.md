@@ -1,3 +1,21 @@
+## Versão 0.1.123 · versionCode 124 (04/11/2026)
+
+- **Etapa 5 — descrição persistente por projeto:** novo `VideoProject.publicationDraft` armazena somente textos, inclusive rascunhos incompletos, em JSON local; exportação/importação do backup preserva automaticamente o campo. Sem migrar schemaVersion 4; projetos antigos leem campo ausente como `null`.
+- **Tela "Vídeo salvo":** recupera rascunho anterior, salva alterações automaticamente após 650 ms de inatividade, e sincroniza ao fechar/voltar ao editor. Falhas de armazenamento são apresentadas e impedem fechar com alterações não salvas.
+- **Editor → Descrição:** tela independente para revisar, editar, copiar e salvar sem reexportação e sem enviar chamadas Gemini. Cópia continua restrita a descrição + exatamente cinco hashtags distintas, dentro de 100 caracteres, sem emojis.
+- **Animar imagens:** ao escolher "Editar com áudio, legendas e PiP", o rascunho digitado é transferido para o projeto criado/atualizado. Ao apenas fechar a exportação avulsa não há projeto ao qual associar o texto.
+- Criados `ProjectPublicationDraftTest.kt` e `tools/test_publication_draft_contract.py` para serialização, backups, compatibilidade legada e ligação de UI. Build completo Android e teste no aparelho ainda pendentes.
+- Media3 1.11.1, Gemini, arquivos de vídeo, cinco variantes Release e assinatura não foram modificados.
+
+## Versão 0.1.122 · versionCode 123 (04/11/2026)
+
+- **Etapa 4 — descrições com Gemini:** consulta voluntária de modelos via `GET /v1beta/models`, filtrando `supportedGenerationMethods=generateContent` e removendo famílias TTS/live/imagem/embedding. Listagem depende da chave configurada e não realiza geração de conteúdo nem expõe contexto; não garante suporte a JSON até a primeira geração.
+- **Modelo selecionável:** campo na tela Vídeo salvo, atualização manual da lista, escolha persistida apenas em preferências privadas locais. Em instalação antiga mantém `gemini-2.5-flash` até o usuário consultar e selecionar outro; nenhuma escolha é imposta sem consultar a chave.
+- **JSON estruturado:** `generationConfig.responseJsonSchema` para frase e exatamente cinco hashtags; mantém validação local rígida de 100 caracteres, cinco hashtags distintas e proibição de emojis/emoticons. Respostas inválidas são rejeitadas, sem tentar chamadas adicionais automaticamente.
+- **Erros e privacidade:** respostas de rede com tamanho limitado, mensagem contextual por HTTP (401/403, 404, 429, 5xx) sem vazar corpos completos, token, prompts ou chave. Consentimento permanece antes de enviar texto; nunca enviar MP4, quadros, URI ou áudio.
+- Incluídos testes `GeminiCaptionModelPolicyTest.kt` e `tools/test_gemini_caption_models_contract.py`. Build Gradle completo, teste com chave real, rede e API Gemini em aparelho **pendentes**; nenhuma cota foi consumida nesta implementação.
+- Preservados Media3 1.11.1, schemaVersion 4, cinco APKs Release e assinatura.
+
 ## Versão 0.1.121 · versionCode 122 (03/11/2026)
 
 - **Correção do workflow 100:** removido o import top-level `androidx.compose.ui.test.assertExists` em `HomeAboutPreviewAndroidTest.kt`. O método `.assertExists()` permanece nas interações semânticas do Compose; não altera os testes nem a UI.

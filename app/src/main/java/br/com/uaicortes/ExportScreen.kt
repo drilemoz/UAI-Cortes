@@ -31,7 +31,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 // Extraído da MainActivity na v0.1.53 para reutilização de componentes.
 
 @Composable
-internal fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
+internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
+    onPublicationDraftSave: (VideoPublicationDraft) -> Boolean) {
     val context=LocalContext.current
     val exportVm: ExportTaskViewModel = viewModel()
     val exportState = exportVm.task
@@ -312,7 +313,9 @@ internal fun ExportScreen(p:VideoProject,defaultQuality:Int,back:()->Unit) {
                     if (subtitleText.isNotBlank()) append("Legendas do vídeo: $subtitleText")
                 }
             },
-            onEdit={exportVm.dismissSaved();back()},onClose={exportVm.dismissSaved()})
+            initialPublicationDraft=p.publicationDraft,
+            onPublicationDraftSave=onPublicationDraftSave,
+            onEdit={ _ -> exportVm.dismissSaved();back()},onClose={exportVm.dismissSaved()})
     }
 
 }

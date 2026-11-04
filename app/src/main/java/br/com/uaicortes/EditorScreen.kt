@@ -322,6 +322,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             Triple("Transição", Icons.Default.AutoAwesomeMotion, "transition"),
             Triple("Legendas", Icons.Default.ClosedCaption, "subtitles"),
             Triple("Marca d'água", Icons.Default.TextFields, "watermark"),
+            Triple("Descrição", Icons.Default.Description, "publication"),
             Triple("Animar Imagens", Icons.Default.AutoAwesomeMotion, "animate")
         ) }
         val carouselStart = (Int.MAX_VALUE / 2 / actions.size) * actions.size

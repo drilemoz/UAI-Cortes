@@ -5,11 +5,11 @@ internal object EditorNavigation {
     private val routes = setOf(
         "home", "projects", "settings", "gemini_settings", "general", "backup_settings", "appearance", "about", "whats_new", "diagnostics", "speech_model",
         "editor", "media", "animate", "pip", "audio", "clip_audio", "trim", "transition", "subtitles",
-        "watermark", "export", "autosubtitle"
+        "watermark", "publication", "publication", "export", "autosubtitle"
     )
     private val projectRoutes = setOf(
         "editor", "pip", "audio", "clip_audio", "trim", "transition", "subtitles", "watermark",
-        "export", "autosubtitle"
+        "publication", "export", "autosubtitle"
     )
 
     fun knownRoute(value: String): String = value.takeIf { it in routes } ?: "home"
@@ -31,7 +31,7 @@ internal object EditorNavigation {
         "general", "backup_settings", "appearance", "about", "diagnostics" -> "settings"
         "whats_new" -> if (previous == "settings" || previous == "about") previous else "home"
         "speech_model" -> if (previous == "autosubtitle") "autosubtitle" else "settings"
-        "pip", "audio", "clip_audio", "trim", "transition", "subtitles", "watermark", "export" -> "editor"
+        "pip", "audio", "clip_audio", "trim", "transition", "subtitles", "watermark", "publication", "export" -> "editor"
         "autosubtitle" -> "subtitles"
         else -> knownRoute(previous)
     }

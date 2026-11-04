@@ -548,7 +548,7 @@ assert 'SharedPreferences' not in draft or 'getSharedPreferences' in draft
 assert all(t in draft for t in ['fun load()', 'fun save(', 'ImageAnimationDraftCodec.prepareWrite(', 'editor.commit()'])
 assert all(t in (root/'app/src/main/java/br/com/uaicortes/ImageAnimationDraftCodec.kt').read_text() for t in ['images', 'secondsPerImage', 'transition'])
 assert all(t in anim for t in ['Voltar à tela inicial?', 'confirmExit', 'VideoSavedDialog(', 'onSaveDraft(', 'EditorOptionRow(', 'Text("Rascunho"'])
-assert 'progress!!' not in anim and 'onUseInEditor(uri)' in anim
+assert 'progress!!' not in anim and 'onUseInEditor(uri, draft)' in anim
 assert 'VideoSavedDialog(uri=savedUri' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/ImageAnimationDraftRulesTest.kt').is_file()
 print('OK: v0.1.64 / versionCode 74, rascunho, voltar, sucesso compartilhado e ajustes padronizados')

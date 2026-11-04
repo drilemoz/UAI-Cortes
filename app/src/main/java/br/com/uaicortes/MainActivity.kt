@@ -371,16 +371,25 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     onBack = ::back,
                     onOrderChanged = { reordered -> animationImages.clear();animationImages.addAll(reordered) },
                     onSaveDraft = { chosen, opts -> animationDraftStore.save(chosen,opts) },
-                    onUseInEditor = { uri ->
-                        val duration = mediaDuration(context,uri)
+                    onUseInEditor = { uri, publicationDraft ->
+                        val duration = mediaDuration(context, uri)
                         if (duration > 0L) {
                             val clip = Clip(uri=uri.toString(),title="Vídeo animado",sourceDurationMs=duration)
-                            val target=if(animationDestination=="append") project ?: VideoProject()
+                            val target = if(animationDestination=="append") project ?: VideoProject()
                                 else VideoProject()
-                            if (write(target.copy(clips=target.clips+clip))) {
-                                selectedClip=clip.id; screen="editor"
-                            }
-                        } else android.widget.Toast.makeText(context,"MP4 ainda não está disponível",android.widget.Toast.LENGTH_LONG).show()
+                            if (write(target.copy(clips=target.clips+clip,
+                                    publicationDraft=publicationDraft.takeUnless {
+                                        it.description.isBlank() && it.hashtags.isBlank()
+                                    } ?: target.publicationDraft))) {
+                                selectedClip=clip.id
+                                screen="editor"
+                                true
+                            } else false
+                        } else {
+                            android.widget.Toast.makeText(context,"MP4 ainda não está disponível",
+                                android.widget.Toast.LENGTH_LONG).show()
+                            false
+                        }
                     })
                 "projects" -> ProjectsScreen(projects, { back() }, { openProject(it.id) },
                     { pendingProjectDelete = it })
@@ -528,7 +537,12 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 "subtitles" -> project?.let { SubtitleScreen(it, ::back, { write(it) }, selectedSubtitleId,
                     onSaveEditor = { if (write(it)) screen = "editor" },
                     onAutoSubtitles = { screen = "autosubtitle" }) }
-                "export" -> project?.let { ExportScreen(it, store.quality(), ::back) }
+                "publication" -> project?.let { current -> ProjectPublicationScreen(current,
+                    onSave = { draft -> projectSession.project?.takeIf { it.id == current.id }
+                        ?.let { write(it.copy(publicationDraft = draft)) } ?: false }, back = ::back) }
+                "export" -> project?.let { current -> ExportScreen(current, store.quality(), ::back,
+                    onPublicationDraftSave = { draft -> projectSession.project?.takeIf { it.id == current.id }
+                        ?.let { write(it.copy(publicationDraft = draft)) } ?: false }) }
             }
         }
         if (projectSession.storageWarning != null && !catalogAlertDismissed) {

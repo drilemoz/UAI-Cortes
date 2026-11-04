@@ -48,7 +48,7 @@ import kotlin.math.abs
 @Composable
 internal fun AnimateImagesScreen(
     selected: List<Uri>, onChoose: () -> Unit, onBack: () -> Unit,
-    onOrderChanged: (List<Uri>) -> Unit, onUseInEditor: (Uri) -> Unit,
+    onOrderChanged: (List<Uri>) -> Unit, onUseInEditor: (Uri, VideoPublicationDraft) -> Boolean,
     onSaveDraft: (List<Uri>, ImageAnimationOptions) -> Boolean
 ) {
     val context = LocalContext.current
@@ -477,7 +477,7 @@ internal fun AnimateImagesScreen(
     }
     animationVm.savedVideo?.let { uri ->
         VideoSavedDialog(uri=uri,name="",editLabel="Editar com áudio, legendas e PiP",
-            onEdit={ animationVm.dismissSaved(); onUseInEditor(uri) },
+            onEdit={ draft -> if (onUseInEditor(uri, draft)) animationVm.dismissSaved() },
             onClose={ animationVm.dismissSaved() })
     }
 }

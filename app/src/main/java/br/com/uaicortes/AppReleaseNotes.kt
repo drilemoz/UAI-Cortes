@@ -16,11 +16,27 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.121"
-    const val VERSION_CODE = 122
+    const val VERSION_NAME = "0.1.123"
+    const val VERSION_CODE = 124
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.123", listOf(
+            ReleaseFeature("publication-project-draft", "Descrições salvas junto ao projeto",
+                "Descrição e hashtags permanecem no projeto local e nos backups, sem consumir nova cota Gemini.", "check"),
+            ReleaseFeature("publication-editor", "Descrição acessível pelo editor",
+                "Nova ferramenta para revisar, editar e copiar o texto de publicação sem exportar o vídeo novamente.", "check"),
+            ReleaseFeature("publication-recovery", "Rascunho recuperável",
+                "Salvamento automático após a edição e na saída, preservando projetos antigos e cinco hashtags com limite de 100 caracteres.", "check")
+        )),
+        ReleaseSummary("0.1.122", listOf(
+            ReleaseFeature("caption-gemini-models", "Modelos Gemini consultados na sua chave",
+                "Escolha entre modelos que suportam generateContent, com consulta manual e preferência local.", "check"),
+            ReleaseFeature("caption-json-schema", "Descrição JSON mais consistente",
+                "Formato estruturado e validação final de cinco hashtags únicas em até 100 caracteres sem emojis.", "check"),
+            ReleaseFeature("caption-errors-privacy", "Falhas explicadas sem repetir chamadas",
+                "Mensagens específicas para chave, modelo e limites; a confirmação ainda envia só o texto autorizado.", "check")
+        )),
         ReleaseSummary("0.1.121", listOf(
             ReleaseFeature("ci100-androidtest-import", "Compilação dos testes Android corrigida",
                 "Corrigido o import inválido de assertExists no teste Home/Sobre que interrompia o workflow 100.", "check"),
