@@ -35,7 +35,7 @@ internal fun SubtitleVisualPreview(draft: SubtitleCue) {
     var playing by remember(draft.id) { mutableStateOf(true) }
     var actualDuration by remember(draft.id) { mutableStateOf(false) }
     val previewDuration = if (actualDuration)
-        (draft.endMs-draft.startMs).coerceAtLeast(600L) else 3000L
+        (draft.endMs-draft.startMs).coerceAtLeast(1L) else 3000L
     LaunchedEffect(draft.id,draft.animation,draft.animationSpeed,draft.text,previewDuration) {
         sampleMs=0L
     }
@@ -45,7 +45,8 @@ internal fun SubtitleVisualPreview(draft: SubtitleCue) {
             sampleMs=(sampleMs+90L)%previewDuration
         }
     }
-    val sample=SubtitleAnimations.frame(draft.copy(startMs=0L,endMs=previewDuration),sampleMs)
+    val sample=SubtitleAnimations.frame(
+        SubtitleWordTimingEditorPolicy.previewCue(draft,previewDuration),sampleMs)
     val thumbnail=draft.copy(sizeSp=(12+(draft.sizeSp-12)/3).coerceIn(12,24))
     Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
         Box(Modifier.fillMaxWidth().height(83.dp)
@@ -207,7 +208,7 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
                 SubtitleValueSlider("Velocidade", "${"%.1f".format(java.util.Locale.US,draft.animationSpeed)}×",
                     draft.animationSpeed,.5f..2f,5,onChange={onChange(draft.copy(animationSpeed=it))})
                 Text(if(draft.animation==SubtitleAnimations.KARAOKE && draft.wordTimings.isNotEmpty())
-                    "Destaque sincronizado pelos horários reconhecidos."
+                    "Destaque usa os horários salvos de cada palavra."
                     else "Sem horários individuais, a animação distribui as palavras pelo intervalo.",
                     color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
             }

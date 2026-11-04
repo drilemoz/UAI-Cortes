@@ -630,6 +630,7 @@ internal fun SubtitleEditDialog(cue: SubtitleCue,totalMs: Long,number: Int,
     onDismiss: () -> Unit,onDelete: () -> Unit,
     onSave: (SubtitleCue,SubtitleStyles.CopyOptions?) -> Unit) {
     var draft by remember(cue.id) { mutableStateOf(cue) }
+    var wordTimingOpen by remember(cue.id) { mutableStateOf(false) }
     val valid=draft.text.isNotBlank() && draft.startMs>=0L &&
         draft.endMs>draft.startMs && draft.endMs<=totalMs
     Dialog(onDismissRequest=onDismiss,properties=DialogProperties(usePlatformDefaultWidth=false)) {
@@ -665,6 +666,19 @@ internal fun SubtitleEditDialog(cue: SubtitleCue,totalMs: Long,number: Int,
                             onCommit={draft=draft.copy(endMs=it,wordTimings=emptyList())},
                             modifier=Modifier.weight(1f),compact=true)
                     }
+                    Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Karaokê por palavra",fontWeight=FontWeight.Medium,fontSize=13.sp)
+                            Text(if(draft.wordTimings.isEmpty()) "Sem horários individuais"
+                                else "${draft.wordTimings.size} palavras com horários salvos",
+                                fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        OutlinedButton(onClick={wordTimingOpen=true},
+                            enabled=SubtitleWordTimingEditorPolicy.editable(draft),
+                            contentPadding=PaddingValues(horizontal=9.dp)) {
+                            Text("Sincronizar",fontSize=12.sp)
+                        }
+                    }
                     SubtitleVisualControls(draft=draft,onChange={draft=it})
                 }
                 if(!valid) Text("Informe texto e horários válidos.",fontSize=11.sp,
@@ -677,6 +691,12 @@ internal fun SubtitleEditDialog(cue: SubtitleCue,totalMs: Long,number: Int,
             }
         }
     }
+    if(wordTimingOpen) SubtitleWordTimingEditor(draft,
+        onDismiss={wordTimingOpen=false},
+        onSave={times ->
+            draft=draft.copy(wordTimings=times,animation=SubtitleAnimations.KARAOKE)
+            wordTimingOpen=false
+        })
 }
 
 /** Botões compactos e consistentes em celulares estreitos, sem formato de cápsula. */

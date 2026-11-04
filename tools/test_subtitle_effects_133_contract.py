@@ -24,5 +24,7 @@ assert 'wordColors: Boolean = false' in s and 'matchingWordColors(' in s
 assert 'wordColors=if (options.wordColors)' in s
 assert 'batchUndoMessage=copyOptions.summary(all.size)' in p
 assert 'status=batchUndoMessage' in p
-assert 'versionCode = 134' in (r/'app/build.gradle.kts').read_text()
+from check_version_sync import check
+version, code = check(r)
+assert code >= 134
 print('OK: efeitos novos, seleção, preview, cópia segura, status e release 0.1.133')

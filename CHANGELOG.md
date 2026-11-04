@@ -1,3 +1,8 @@
+## Versão 0.1.134 · versionCode 135 (04/11/2026)
+- Adicionado ajuste manual das fronteiras das palavras, com distribuição opcional e marcadamente estimada, seleção e passos de 100 ms.
+- Corrigida prévia do karaokê: escalonamento dos horários absolutos ao mostrar demonstração de três segundos, sem inventar reconhecimento de áudio.
+- Adicionados testes Kotlin e contrato CI; versionamento e documentação sincronizados, JSON schema 4 e Media3 preservados. Build Android e conferência MP4 ainda pendentes.
+
 ## Versão 0.1.133 · versionCode 134 (04/11/2026)
 - Corrigida cópia em lote de cores por palavra usando correspondência por palavra e ocorrência; opção desligada por padrão. Grupos e desfazer agora comunicam o conteúdo alterado.
 - Corrigido texto fictício da prévia em quadros vazios; pausar/reiniciar/demo versus duração de cada legenda.

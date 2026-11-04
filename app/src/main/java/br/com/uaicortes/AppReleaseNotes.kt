@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.133"
-    const val VERSION_CODE = 134
+    const val VERSION_NAME = "0.1.134"
+    const val VERSION_CODE = 135
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.134", listOf(
+            ReleaseFeature("word-sync-manual-134", "Karaokê ajustável por palavra",
+                "Defina manualmente as fronteiras entre palavras com passos de 0,1 s ou digitação; a distribuição é opcional e aproximada.", "captions"),
+            ReleaseFeature("word-sync-preview-134", "Prévia do karaokê corrigida",
+                "Os horários absolutos são convertidos corretamente para a demonstração de três segundos ou tempo real.", "check"),
+            ReleaseFeature("word-sync-safe-134", "Preservação dos horários reconhecidos",
+                "Sem mudança automática em textos, cores, projetos antigos ou horários recebidos; salvar é explícito.", "check")
+        )),
         ReleaseSummary("0.1.133", listOf(
             ReleaseFeature("subtitle-batch-clarity-133", "Editar todas: seleção e cores corretas",
                 "Cópia opcional de cores apenas para palavras iguais, resumo da alteração e desfazer com texto específico.", "captions"),

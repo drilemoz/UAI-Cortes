@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.134 (04/11/2026)
+
+## Legendas · Karaokê com sincronização manual
+
+- Na edição individual, **Sincronizar** permite distribuir tempos por palavra como ponto de partida **explicitamente estimado**, selecionar palavras e ajustar a divisão por 0,1 s ou digitando horários. Não realiza detecção de voz; horários vindos de ASR não são substituídos sem ação.
+- Na prévia de 3 s, horários absolutos são escalados para a demonstração mantendo pausas; no modo duração real, mantêm a proporção original. A confirmação ativa o karaokê sem alterar textos, cor, posição ou IDs.
+- Limite de edição manual: 40 palavras e duração mínima de 60 ms por palavra. Projetos JSON antigos (`schemaVersion=4`) permanecem compatíveis. O vídeo exportado e a sincronização efetiva com áudio exigem teste Android.
+
 # Uai Cortes · versão 0.1.133 (04/11/2026)
 
 ## Legendas: inconsistências corrigidas e efeitos novos

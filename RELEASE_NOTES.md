@@ -1,3 +1,8 @@
+## Versão 0.1.134 · versionCode 135 (04/11/2026)
+- Legendas: sincronização manual do destaque por palavra, com distribuição inicial opcional, ajuste das fronteiras, hora digitável e prévia ilustrativa.
+- Correção da prévia de karaokê quando os horários são absolutos; preserva intervalos de ASR, projetos antigos e exportação já existente.
+- Testar compilação Gradle e vídeo real; nenhuma compatibilidade com áudio foi presumida sem teste em aparelho.
+
 ## Versão 0.1.133 · versionCode 134 (04/11/2026)
 - Legendas: edição em lote mais clara, com opção explícita de copiar cores apenas para palavras correspondentes.
 - Mais opções visuais: agora 22 modelos prontos e 19 tipos de animação no catálogo, organizados por categoria.
