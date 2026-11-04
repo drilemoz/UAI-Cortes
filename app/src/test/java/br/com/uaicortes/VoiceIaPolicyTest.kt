@@ -2,6 +2,8 @@ package br.com.uaicortes
 
 import org.junit.Assert.*
 import org.junit.Test
+import java.io.File
+import java.net.URI
 
 class VoiceIaPolicyTest {
     private val cue = SubtitleCue(id = "fala1", text = "Olá!", startMs = 1_000, endMs = 2_000)
@@ -13,6 +15,15 @@ class VoiceIaPolicyTest {
         assertFalse(VoiceIaPolicy.matches(prepared, cue.copy(text = "Outra!"), "voz", GeminiModels.LITE, "estilo"))
         assertFalse(VoiceIaPolicy.matches(prepared, cue.copy(startMs = 900), "voz", GeminiModels.LITE, "estilo"))
         assertFalse(VoiceIaPolicy.matches(prepared, cue, "outra voz", GeminiModels.LITE, "estilo"))
+    }
+
+    /** Regressão CI118: o mockable android.jar de JVM não executa Uri.fromFile(). */
+    @Test fun geminiFileUriCanBeBuiltWithoutAndroidAndEscapesUnicode() {
+        val path = "/tmp/voz com acento á.wav"
+        val result = GeminiAudioFiles.uri(File(path))
+        assertEquals("file:///tmp/voz%20com%20acento%20%C3%A1.wav", result)
+        assertEquals(path, URI(result).path)
+        assertEquals("file:///tmp/a.wav", GeminiAudioFiles.uri(File("/tmp/a.wav")))
     }
 
     @Test fun insertAndReplaceKeepOnlyOneVoiceWithoutTouchingMusic() {

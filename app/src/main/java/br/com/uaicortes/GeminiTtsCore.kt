@@ -1,7 +1,6 @@
 package br.com.uaicortes
 
 import android.content.Context
-import android.net.Uri
 import android.os.StatFs
 import android.util.Base64
 import kotlinx.coroutines.CancellationException
@@ -254,5 +253,6 @@ internal object GeminiAudioFiles {
             return target
         } finally { temp.delete() }
     }
-    fun uri(file: File): String = Uri.fromFile(file).toString()
+    /** URI file:///... gerada só com JDK: funciona no Android e em testes JVM locais. */
+    fun uri(file: File): String = java.net.URI("file", "", file.absolutePath, null).toASCIIString()
 }

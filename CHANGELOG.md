@@ -1,3 +1,13 @@
+# Uai Cortes · versão 0.1.141 (04/11/2026)
+
+## Correção CI118 — teste unitário de Vozes IA
+
+- O GitHub Actions 118 compilou Kotlin Debug/Release e executou 456 testes unitários, mas a etapa `:app:testDebugUnitTest` falhou em um teste: `VoiceIaPolicyTest.insertAndReplaceKeepOnlyOneVoiceWithoutTouchingMusic`, na chamada de `VoiceIaPolicy.merge` (linha 24).
+- A geração da URI do WAV usava `android.net.Uri.fromFile()` dentro do código chamado pelo teste JVM. A API do Android não é implementada no mockable `android.jar` usado por testes locais; o método foi substituído por `java.net.URI` padrão, preservando URIs `file:///...` e percent-encoding de espaços e caracteres acentuados.
+- Regressão JUnit adicionada para URI de arquivo local sem Android, incluindo nomes com espaços e acentos; testes existentes continuam verificando inserção/substituição de voz e preservação de faixas tradicionais.
+- Sem alterações no contrato da Gemini, chave, legendas, motor de exportação ou esquema de projetos. Código-fonte v0.1.141 com `versionCode=142` e workflow sincronizado.
+- A execução integral de Gradle, lint, publicação dos cinco APKs e testes reais de reprodução/exportação continuam pendentes do GitHub Actions.
+
 # Uai Cortes · versão 0.1.140 (04/11/2026)
 
 ## Correção do workflow 117 — inclusão do GitHub Actions no ZIP

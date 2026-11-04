@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.140"
-    const val VERSION_CODE = 141
+    const val VERSION_NAME = "0.1.141"
+    const val VERSION_CODE = 142
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.141", listOf(
+            ReleaseFeature("ci118-voice-uri-jvm", "CI118: conversão de arquivo compatível",
+                "URI da voz Gemini agora funciona nos testes JVM e no Android sem chamar a API Android na política.", "check"),
+            ReleaseFeature("ci118-voice-regression", "Regressão de Vozes IA reforçada",
+                "Teste de inserção da voz preserva a música e verifica nomes de arquivos com espaço e acentos.", "check")
+        )),
         ReleaseSummary("0.1.140", listOf(
             ReleaseFeature("ci117-source-zip-workflow", "CI117: pacote de fonte completo",
                 "Incluído o workflow GitHub Actions no ZIP para não manter a versão antiga ao importar o projeto.", "check"),
