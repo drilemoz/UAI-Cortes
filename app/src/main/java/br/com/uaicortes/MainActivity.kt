@@ -108,8 +108,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     val activeProjectId = projectSession.activeProjectId
     val projects = projectSession.projects
     val project = projectSession.project
-    // Estado da narração acompanha o projeto enquanto o editor estiver aberto,
-    // mesmo após retornar à prévia. Não armazena tokens ou áudios em memória.
+    // Narração acompanha o projeto sem reter credenciais.
     val narrationDraft = remember(project?.id) { GeminiNarrationDraft() }
     var resumeVideoPreview by remember { mutableStateOf(false) }
     ProjectBackupLifecycle(backupStore, activeProjectId, screen)
@@ -365,7 +364,9 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     onDelete = { pendingProjectDelete = it },
                     onDeleteAll = { pendingDeleteAll = true },
                     onSettings = { previous = "home"; screen = "settings" },
-                    onTab = { if (it == "settings") previous = "home"; screen = it })
+                    onTab = { if (it == "settings") previous = "home"; screen = it },
+                    onFlow = { navTo("flow_workspace") })
+                "flow_workspace" -> FlowWorkspaceScreen(::back)
                 "animate" -> AnimateImagesScreen(animationImages.toList(),
                     onChoose = { openGallery("animate","animate_images") },
                     onBack = ::back,
@@ -460,12 +461,9 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     onOpenGeminiSettings = { previous = "audio"; screen = "gemini_settings" },
                     narrationDraft = narrationDraft,
                     onSaveGeminiToAudio = { changed ->
-                        // A nova faixa deve aparecer na tela Áudio; sair só por ação do usuário.
-                        // Nunca considerar salvo se ProjectStore recusar a gravação.
                         write(changed)
                     },
                     onSaveAndReturn = { changed ->
-                        // Revalida a persistência antes de sair, sem modificar a mixagem.
                         if (write(changed)) { screen = "editor"; true } else false
                     }) }
                 "pip" -> project?.let { current -> PipScreen(current, selectedOverlayId,
@@ -537,6 +535,9 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 "subtitles" -> project?.let { SubtitleScreen(it, ::back, { write(it) }, selectedSubtitleId,
                     onSaveEditor = { if (write(it)) screen = "editor" },
                     onAutoSubtitles = { screen = "autosubtitle" }) }
+                "flow_prompt" -> project?.let { current -> FlowPromptScreen(current,
+                    onSave = { draft -> projectSession.project?.takeIf { it.id == current.id }
+                        ?.let { write(it.copy(flowPromptDraft = draft)) } ?: false }, back = ::back) }
                 "publication" -> project?.let { current -> ProjectPublicationScreen(current,
                     onSave = { draft -> projectSession.project?.takeIf { it.id == current.id }
                         ?.let { write(it.copy(publicationDraft = draft)) } ?: false }, back = ::back) }

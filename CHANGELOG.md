@@ -1,3 +1,12 @@
+## Versão 0.1.126 · versionCode 127 (04/11/2026)
+
+- **Marca d'água reformulada:** arrastar texto na prévia, nove posições rápidas, botões +/- para tamanho e opacidade (0–100%), guias opcionais, cores, três fontes locais, contorno e sombra. Remover exige confirmação. A posição e aparência seguem o mesmo `SubtitleCue` da prévia/exportação.
+- **Modelo de marca reutilizável:** salvar/carregar configurações em preferências locais privadas; nenhum projeto antigo recebe marca automaticamente. Campos opcionais permanecem compatíveis com JSON `schemaVersion=4`.
+- **Prompts Flow:** acesso pela tela inicial sem vídeo importado (até 30 conjuntos locais independentes) e pelo editor de vídeo. Estilo-base 3D fixo editável por aparelho, contexto comum e até 12 cenas separadas por conjunto, com modo texto→vídeo ou transformação de referência. Cada cena tem prompt próprio para copiar; configuração 9:16 é feita no Google Flow.
+- **Gemini opcional:** apenas após confirmação envia descrição e contexto textual da cena usando a chave local existente; não envia MP4, frames, áudio, URI ou prompt-base. Mostra sugestão para revisão antes de substituir o texto. Não repete chamadas automaticamente.
+- **Compatibilidade:** `VideoProject.flowPromptDraft` opcional em projetos e backups JSON, schema 4 preservado. Conjuntos avulsos de Flow e estilos-base permanecem nas preferências do aparelho e não integram backup de vídeos. Media3 1.11.1, 5 APKs Release e demais ferramentas mantidos.
+- **Validação:** testes de contrato/estrutura e sintaxe do código; ainda pendentes build Android real, teste visual da marca d'água e chamadas Gemini com chave válida.
+
 ## Versão 0.1.125 · versionCode 126 (04/11/2026)
 
 - **Etapa 7 — modelos pessoais de legendas:** a galeria preexistente de 12 estilos foi mantida. Agora é possível salvar uma combinação personalizada de fonte, tamanho, cor, fundo, contorno, sombra, alinhamento, espaçamento, destaque e animação, reutilizável em outros projetos.

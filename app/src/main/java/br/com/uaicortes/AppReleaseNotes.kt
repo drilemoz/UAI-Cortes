@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.125"
-    const val VERSION_CODE = 126
+    const val VERSION_NAME = "0.1.126"
+    const val VERSION_CODE = 127
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.126", listOf(
+            ReleaseFeature("watermark-v126", "Marca d'água mais fácil de posicionar",
+                "Arraste o texto na prévia, use posições rápidas, controle opacidade, fonte, cor, contorno e sombra.", "film"),
+            ReleaseFeature("watermark-profile-v126", "Modelo pessoal de marca d'água",
+                "Salve e reutilize um padrão local, sem alterar outros projetos automaticamente.", "check"),
+            ReleaseFeature("flow-prompt-v126", "Prompts para Google Flow",
+                "Monte cenas com estilo visual fixo a partir da Home ou editor; Gemini é opcional e exige aprovação.", "film")
+        )),
         ReleaseSummary("0.1.125", listOf(
             ReleaseFeature("subtitle-personal-styles", "Modelos pessoais de legendas",
                 "Guarde combinações de fonte, tamanho, cor, contorno, sombra e animação para outros projetos, sem copiar texto ou horários.", "captions"),

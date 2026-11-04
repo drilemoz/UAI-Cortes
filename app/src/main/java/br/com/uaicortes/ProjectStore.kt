@@ -180,7 +180,8 @@ data class VideoProject(
     val audioTracks: List<AudioTrack> = emptyList(),
     val lastTrimCutClipId: String? = null, val lastTrimCutSourceMs: Long? = null,
     val textWatermark: TextWatermark? = null,
-    val publicationDraft: VideoPublicationDraft? = null
+    val publicationDraft: VideoPublicationDraft? = null,
+    val flowPromptDraft: FlowPromptDraft? = null
 ) {
     val durationMs get() = clips.sumOf { it.durationMs }
     val pip: Overlay? get() = overlays.firstOrNull() // acesso legado somente leitura
@@ -195,6 +196,7 @@ data class VideoProject(
         .put("lastTrimCutClipId", lastTrimCutClipId).put("lastTrimCutSourceMs", lastTrimCutSourceMs)
         .put("textWatermark", textWatermark?.json())
         .put("publicationDraft", publicationDraft?.json())
+        .put("flowPromptDraft", flowPromptDraft?.json())
     companion object {
         fun read(j: JSONObject): VideoProject {
             val a = j.optJSONArray("clips") ?: JSONArray()
@@ -219,7 +221,8 @@ data class VideoProject(
                 j.optString("lastTrimCutClipId").takeIf { it.isNotBlank() },
                 if (j.isNull("lastTrimCutSourceMs")) null else j.optLong("lastTrimCutSourceMs"),
                 j.optJSONObject("textWatermark")?.let(TextWatermark::read),
-                VideoPublicationDraft.read(j.optJSONObject("publicationDraft")))
+                VideoPublicationDraft.read(j.optJSONObject("publicationDraft")),
+                FlowPromptDraft.read(j.optJSONObject("flowPromptDraft")))
         }
     }
 }

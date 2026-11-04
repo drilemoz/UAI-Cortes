@@ -4,12 +4,12 @@ package br.com.uaicortes
 internal object EditorNavigation {
     private val routes = setOf(
         "home", "projects", "settings", "gemini_settings", "general", "backup_settings", "appearance", "about", "whats_new", "diagnostics", "speech_model",
-        "editor", "media", "animate", "pip", "audio", "clip_audio", "trim", "transition", "subtitles",
-        "watermark", "publication", "publication", "export", "autosubtitle"
+        "editor", "media", "animate", "flow_workspace", "pip", "audio", "clip_audio", "trim", "transition", "subtitles",
+        "watermark", "publication", "flow_prompt", "export", "autosubtitle"
     )
     private val projectRoutes = setOf(
         "editor", "pip", "audio", "clip_audio", "trim", "transition", "subtitles", "watermark",
-        "publication", "export", "autosubtitle"
+        "publication", "flow_prompt", "export", "autosubtitle"
     )
 
     fun knownRoute(value: String): String = value.takeIf { it in routes } ?: "home"
@@ -26,12 +26,13 @@ internal object EditorNavigation {
         "editor", "home", "projects" -> "home"
         "settings" -> if (previous == "audio") "audio" else "home"
         "media" -> knownRoute(mediaOrigin)
+        "flow_workspace" -> "home"
         "animate" -> "home" // Voltar sempre leva à tela inicial; adicionar ao editor é outra ação.
         "gemini_settings" -> if (previous == "audio") "audio" else "settings"
         "general", "backup_settings", "appearance", "about", "diagnostics" -> "settings"
         "whats_new" -> if (previous == "settings" || previous == "about") previous else "home"
         "speech_model" -> if (previous == "autosubtitle") "autosubtitle" else "settings"
-        "pip", "audio", "clip_audio", "trim", "transition", "subtitles", "watermark", "publication", "export" -> "editor"
+        "pip", "audio", "clip_audio", "trim", "transition", "subtitles", "watermark", "publication", "flow_prompt", "export" -> "editor"
         "autosubtitle" -> "subtitles"
         else -> knownRoute(previous)
     }

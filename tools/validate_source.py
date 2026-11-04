@@ -483,7 +483,7 @@ print('OK: diagnóstico TXT mostra versão instalada, não valor legado fixo')
 # v0.1.52: marca d'água de texto independente das legendas e persistente no projeto.
 watermark = (root/'app/src/main/java/br/com/uaicortes/TextWatermark.kt').read_text()
 assert 'data class TextWatermark(' in watermark and 'fun toSubtitle(durationMs: Long)' in watermark
-assert 'opacity.coerceIn(0.1f, 1f)' in watermark and 'text.trim().take(80)' in watermark
+assert 'opacity.coerceIn(0f, 1f)' in watermark and 'text.trim().take(80)' in watermark
 assert 'val textWatermark: TextWatermark? = null' in model
 assert '.put("textWatermark", textWatermark?.json())' in model
 assert 'j.optJSONObject("textWatermark")?.let(TextWatermark::read)' in model
@@ -1260,7 +1260,7 @@ from check_version_sync import check
 assert check(root) == (current_version, current_code)
 home = (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
 assert 'internal fun HomePrimaryActions(' in home
-assert 'HomePrimaryActions(onCreate, onAnimate)' in home
+assert 'HomePrimaryActions(onCreate, onAnimate, onFlow = onFlow)' in home
 assert 'HomePrimaryActions(onCreate = {}, onAnimate = {}, preview = true)' in home
 assert 'AppVersionLabel()' in home and home.count('AppVersionLabel()') >= 3
 assert 'Testar visual da Home' in home

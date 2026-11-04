@@ -72,7 +72,7 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
 }
 
 @Composable internal fun HomePrimaryActions(onCreate: () -> Unit, onAnimate: () -> Unit,
-    preview: Boolean = false) {
+    preview: Boolean = false, onFlow: () -> Unit = {}) {
     Surface(color = Blue, shape = RoundedCornerShape(24.dp)) {
         Column(Modifier.fillMaxWidth().padding(22.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Icon(Icons.Default.MovieCreation, null, tint = Color.White, modifier = Modifier.size(32.dp))
@@ -91,11 +91,14 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
     Spacer(Modifier.height(16.dp))
     ItemCard(Icons.Default.AutoAwesomeMotion, "Animar Imagens",
         "Crie um MP4 animado offline com suas fotos", enabled = !preview) { onAnimate() }
+    Spacer(Modifier.height(10.dp))
+    ItemCard(Icons.Default.MovieFilter, "Prompts para Google Flow",
+        "Um estilo de animação e cenas independentes", enabled = !preview) { onFlow() }
 }
 
 @Composable internal fun MainHome(projects: List<VideoProject>, onCreate: () -> Unit, onAnimate: () -> Unit,
     onOpen: (VideoProject)->Unit, onDelete: (VideoProject)->Unit, onDeleteAll: ()->Unit,
-    onSettings: ()->Unit, onTab:(String)->Unit) {
+    onSettings: ()->Unit, onTab:(String)->Unit, onFlow: () -> Unit = {}) {
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Movie, null, tint = Blue, modifier = Modifier.size(30.dp))
@@ -107,7 +110,7 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
             IconButton(onClick = onSettings) { Icon(Icons.Default.Settings, "Configurações") }
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal=20.dp)) {
-            HomePrimaryActions(onCreate, onAnimate)
+            HomePrimaryActions(onCreate, onAnimate, onFlow = onFlow)
             Spacer(Modifier.height(24.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("Edições recentes",fontSize=21.sp, fontWeight=FontWeight.SemiBold,
