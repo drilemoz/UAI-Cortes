@@ -1,3 +1,13 @@
+# Uai Cortes · versão 0.1.135 (04/11/2026)
+
+## Correção do workflow 113 — testes de presets de legendas
+
+- O teste `SubtitleStylesTest.presetOnlyChangesAppearance` usava `presets.last()`, que antes era o modelo **Etiqueta**. Após a inclusão de 10 presets na v0.1.133, o último passou a ser **Ritmo rosa**, mas as expectativas de cores do teste permaneceram as de Etiqueta.
+- O teste agora localiza **Etiqueta** pelo nome e verifica suas propriedades sem depender da ordem da galeria.
+- Nova regressão JVM percorre todos os 22 modelos em ordem inversa e verifica que aplicar aparência não altera ID, texto, horários, posição ou tamanho. Novo contrato `tools/test_ci113_subtitle_preset_contract.py` também detecta testes dependentes da ordem.
+- **Sem alteração no código de produção:** os 22 estilos, 19 animações, sincronização por palavra, formato JSON v4 e exportador Media3 permanecem intactos.
+- No workflow 113, `compileDebugKotlin`, `compileReleaseKotlin` e `compileDebugAndroidTestKotlin` passaram; `:app:testDebugUnitTest` falhou em 1 de 448 testes e interrompeu o build antes de gerar os cinco APKs. A compilação e execução completa da v0.1.135 requer novo GitHub Actions.
+
 ## Versão 0.1.134 · versionCode 135 (04/11/2026)
 - Adicionado ajuste manual das fronteiras das palavras, com distribuição opcional e marcadamente estimada, seleção e passos de 100 ms.
 - Corrigida prévia do karaokê: escalonamento dos horários absolutos ao mostrar demonstração de três segundos, sem inventar reconhecimento de áudio.

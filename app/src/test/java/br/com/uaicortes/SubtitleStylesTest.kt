@@ -17,7 +17,7 @@ class SubtitleStylesTest {
     @Test fun presetOnlyChangesAppearance() {
         val old = SubtitleCue(id="sample",text="Olá",startMs=105,endMs=2500,
             x=.3f,y=.45f,sizeSp=31)
-        val updated=SubtitleStyles.applyToCue(old,SubtitleStyles.presets.last())
+        val updated=SubtitleStyles.applyToCue(old, SubtitleStyles.presets.first { it.name == "Etiqueta" })
         assertEquals("sample", updated.id)
         assertEquals(old.text,updated.text)
         assertEquals(old.startMs,updated.startMs)
@@ -27,6 +27,25 @@ class SubtitleStylesTest {
         assertEquals(31,updated.sizeSp)
         assertEquals(SubtitleStyles.LIGHT_BACKGROUND,updated.backgroundColor)
         assertEquals(0xFF000000.toInt(),updated.color)
+    }
+
+    @Test fun everyPresetPreservesContentTimingPositionAndSizeRegardlessOfOrdering() {
+        val source = SubtitleCue(id="preserved", text="Teste com legenda", startMs=125,
+            endMs=2450, x=.2f, y=.85f, sizeSp=31)
+        val presets = SubtitleStyles.presets
+        assertEquals("Nomes de estilos devem ser únicos", presets.size, presets.map { it.name }.toSet().size)
+        for (preset in presets.reversed()) {
+            val updated = SubtitleStyles.applyToCue(source, preset)
+            assertEquals(preset.name, source.id, updated.id)
+            assertEquals(preset.name, source.text, updated.text)
+            assertEquals(preset.name, source.startMs, updated.startMs)
+            assertEquals(preset.name, source.endMs, updated.endMs)
+            assertEquals(preset.name, source.x, updated.x, 0f)
+            assertEquals(preset.name, source.y, updated.y, 0f)
+            assertEquals(preset.name, source.sizeSp, updated.sizeSp)
+            assertEquals(preset.name, preset.foreground, updated.color)
+            assertEquals(preset.name, preset.background, updated.backgroundColor)
+        }
     }
 
     @Test fun copyToAllPreservesIdTextsTimingAndPositions() {

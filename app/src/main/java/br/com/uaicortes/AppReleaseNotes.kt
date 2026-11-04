@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.134"
-    const val VERSION_CODE = 135
+    const val VERSION_NAME = "0.1.135"
+    const val VERSION_CODE = 136
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.135", listOf(
+            ReleaseFeature("ci113-subtitle-stable-preset", "Teste de modelos de legenda corrigido",
+                "Corrigido o teste que dependia do último modelo da galeria; agora identifica Etiqueta pelo nome.", "check"),
+            ReleaseFeature("ci113-subtitle-preserve-fields", "Regressão para todos os modelos",
+                "A verificação protege texto, IDs, horários, posição e tamanho mesmo após reorganizar os presets.", "captions")
+        )),
         ReleaseSummary("0.1.134", listOf(
             ReleaseFeature("word-sync-manual-134", "Karaokê ajustável por palavra",
                 "Defina manualmente as fronteiras entre palavras com passos de 0,1 s ou digitação; a distribuição é opcional e aproximada.", "captions"),
