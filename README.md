@@ -1,5 +1,7 @@
-# Uai Cortes · versão 0.1.137 (04/11/2026)
-**Versão atual: 0.1.137**
+# Uai Cortes · versão 0.1.138 (04/11/2026)
+**Versão atual: 0.1.138**
+
+- CI115: testes de karaokê não fixam mais versionCode/versionName de uma versão histórica; o código de vídeo e legendas permanece intacto.
 
 - Legendas: Desfazer movido para a barra principal, tempo duplicado removido da barra do player e cabeçalho da linha do tempo mais compacto.
 - Mudança focada em ergonomia; não altera formato dos projetos nem exportação.

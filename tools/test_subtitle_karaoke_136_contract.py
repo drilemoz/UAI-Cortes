@@ -23,5 +23,7 @@ assert 'SubtitleAnimations.isKaraoke' in (s/'SubtitleVisualEditor.kt').read_text
 assert 'SubtitleAnimations.isKaraoke(cue.animation)' in (s/'SubtitleWordTimingEditor.kt').read_text()
 from check_version_sync import check
 version, code=check(root)
-assert version=='0.1.136' and code==137
+# A conferência geral garante que todos os metadados batem com o Gradle.
+# Este contrato é histórico: deve funcionar também nas versões seguintes.
+assert tuple(map(int, version.split('.'))) >= (0, 1, 136) and code >= 137
 print('OK: variantes de karaokê, prévia, exportação, cache e versão')

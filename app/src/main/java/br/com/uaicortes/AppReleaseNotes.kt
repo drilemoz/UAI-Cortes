@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.137"
-    const val VERSION_CODE = 138
+    const val VERSION_NAME = "0.1.138"
+    const val VERSION_CODE = 139
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.138", listOf(
+            ReleaseFeature("ci115-karaoke-version-contract", "Teste histórico de karaokê corrigido",
+                "O teste de regressão continua verificando os efeitos sem exigir a versão antiga do aplicativo.", "check"),
+            ReleaseFeature("ci115-build-validation", "Validação inicial restaurada",
+                "Corrigida a verificação que bloqueou o workflow 115 antes da compilação Android.", "captions")
+        )),
         ReleaseSummary("0.1.137", listOf(
             ReleaseFeature("subtitle-toolbar-undo-137", "Desfazer na barra principal",
                 "O comando Desfazer agora fica ao lado de Salvar, Apagar todas e Buscar, liberando espaço para ver mais legendas.", "captions"),

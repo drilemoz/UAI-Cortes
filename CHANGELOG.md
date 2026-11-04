@@ -1,3 +1,12 @@
+# Uai Cortes · versão 0.1.138 (04/11/2026)
+
+## Correção CI115 — teste de karaokê com versionamento dinâmico
+
+- O workflow 115 falhou antes do Gradle em `tools/test_subtitle_karaoke_136_contract.py`: o teste da versão 0.1.136 ainda exigia exatamente `version=='0.1.136' and code==137` quando a versão do aplicativo já era 0.1.137/138.
+- O contrato histórico continua verificando os efeitos de karaokê, a prévia e a exportação, mas agora exige somente a versão mínima em que o recurso nasceu (`>= 0.1.136`, `versionCode >= 137`) e chama `check_version_sync.check()` para confirmar sincronização da versão atual.
+- Novo contrato `tools/test_ci115_karaoke_version_contract.py` detecta essa regressão e bloqueia outros contratos históricos do mesmo formato com versão fixa.
+- Sem alteração no renderizador, no editor de legendas, no Media3, no formato JSON (schemaVersion 4), nas credenciais ou na assinatura. A geração dos cinco APKs ainda requer CI Android.
+
 # Uai Cortes · versão 0.1.137 (04/11/2026)
 
 ## Legendas · barra mais compacta e menos repetição
