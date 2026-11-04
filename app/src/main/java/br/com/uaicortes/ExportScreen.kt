@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import android.media.MediaMetadataRetriever
@@ -29,6 +30,64 @@ import kotlinx.coroutines.delay
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 // Extraído da MainActivity na v0.1.53 para reutilização de componentes.
+
+@Composable
+private fun CompactExportLabel(label: String, icon: ImageVector) {
+    Row(verticalAlignment=Alignment.CenterVertically) {
+        Icon(icon,contentDescription=null,modifier=Modifier.size(17.dp),tint=Blue)
+        Spacer(Modifier.width(6.dp))
+        Text(label,fontSize=14.sp,fontWeight=FontWeight.SemiBold)
+    }
+}
+
+/** Componentes pequenos, mantendo área tocável de pelo menos 42 dp. */
+@Composable
+private fun CompactExportOption(label: String,icon: ImageVector?,selected: Boolean,
+    enabled: Boolean,modifier: Modifier=Modifier,horizontal: Boolean=false,onSelect:()->Unit) {
+    Surface(onClick=onSelect,enabled=enabled,modifier=modifier,
+        color=if(selected) Blue.copy(alpha=.08f) else MaterialTheme.colorScheme.surface,
+        shape=RoundedCornerShape(10.dp),border=BorderStroke(if(selected)2.dp else 1.dp,
+            if(selected)Blue else MaterialTheme.colorScheme.outlineVariant)) {
+        if(horizontal) {
+            Row(Modifier.fillMaxSize().padding(horizontal=3.dp),
+                verticalAlignment=Alignment.CenterVertically,
+                horizontalArrangement=Arrangement.Center) {
+                if(icon!=null) {
+                    Icon(icon,contentDescription=null,modifier=Modifier.size(16.dp),
+                        tint=if(selected)Blue else MaterialTheme.colorScheme.onSurface)
+                    Spacer(Modifier.width(4.dp))
+                }
+                Text(label,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis,
+                    fontWeight=if(selected)FontWeight.SemiBold else FontWeight.Normal)
+            }
+        } else {
+            Column(Modifier.fillMaxSize(),horizontalAlignment=Alignment.CenterHorizontally,
+                verticalArrangement=Arrangement.Center) {
+                if(icon!=null) Icon(icon,contentDescription=null,modifier=Modifier.size(20.dp),
+                    tint=if(selected)Blue else MaterialTheme.colorScheme.onSurface)
+                Text(label,fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis,
+                    fontWeight=if(selected)FontWeight.SemiBold else FontWeight.Normal)
+            }
+        }
+    }
+}
+
+/** Diagrama ilustrativo, sem capturas de redes sociais ou falsas margens exatas. */
+@Composable
+private fun ExportFrameIllustration(crop: Boolean) {
+    Column(horizontalAlignment=Alignment.CenterHorizontally) {
+        Box(Modifier.width(77.dp).height(132.dp).clip(RoundedCornerShape(7.dp))
+            .background(Color(0xFF192332)),contentAlignment=Alignment.Center) {
+            Box(Modifier.fillMaxWidth(if(crop)1f else .96f)
+                .fillMaxHeight(if(crop)1f else .37f)
+                .background(Color(0xFF607F9C)),contentAlignment=Alignment.Center) {
+                Icon(Icons.Default.Person,contentDescription=null,tint=Color.White,
+                    modifier=Modifier.size(if(crop)58.dp else 29.dp))
+            }
+        }
+        Text(if(crop)"Preencher" else "Mostrar tudo",fontSize=12.sp)
+    }
+}
 
 @Composable
 internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
@@ -83,6 +142,15 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
     var quality by rememberSaveable(p.id) {mutableIntStateOf(defaultQuality.takeIf { it == 720 || it == 1080 } ?: 1080)}
     var bitratePresetName by rememberSaveable(p.id) { mutableStateOf(ExportBitratePreset.HIGH.name) }
     var qualityHelpExpanded by rememberSaveable(p.id) { mutableStateOf(false) }
+    var framingHelpExpanded by rememberSaveable(p.id) { mutableStateOf(false) }
+    var previewExpanded by rememberSaveable(p.id) { mutableStateOf(false) }
+    var guideKind by rememberSaveable(p.id) { mutableStateOf("BOTH") }
+    LaunchedEffect(previewExpanded) {
+        if (!previewExpanded) {
+            previewPlayer.pause()
+            previewPlaying = false
+        }
+    }
     val bitratePreset = ExportBitratePreset.fromId(bitratePresetName)
     var sourceShortSide by remember(p.id, p.clips) { mutableStateOf<Int?>(null) }
     // Só consulta metadados locais em IO: não bloqueia a tela e não faz upload da mídia.
@@ -105,213 +173,302 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
         }
     }
     var confirmCancelExport by remember {mutableStateOf(false)}
-    Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal=20.dp)) {
-        Heading("Exportar vídeo",{if(!working)back() else confirmCancelExport=true},
-            accessory={Icon(Icons.Default.Movie,tint=Blue,contentDescription=null)})
-        Spacer(Modifier.height(8.dp))
-        InlineVideoPreview(previewAspect) {
-            AndroidView(factory={previewPlayer(it).apply {
-                    player=previewPlayer; useController=false
-                    configureExportPreviewFrame(this,
-                        destination.isVertical && frameMode == VerticalFrameMode.CENTER_CROP)
-                }},
-                modifier=Modifier.fillMaxSize(),update={
-                    it.player=previewPlayer
-                    configureExportPreviewFrame(it,
-                        destination.isVertical && frameMode == VerticalFrameMode.CENTER_CROP)
-                })
-            // Mesma camada visual do editor: renderize o PROJETO, não só o arquivo original.
-            p.clips.getOrNull(exportClipIndex)?.let { clip ->
-                val clipStart = p.clips.take(exportClipIndex).sumOf { it.durationMs }
-                val local = (exportPreviewMs-clipStart).coerceIn(0L,clip.durationMs)
-                val previous = EditFeatures.boundary(p,exportClipIndex-1)
-                val next = EditFeatures.boundary(p,exportClipIndex)
-                val fadeIn = EditFeatures.transitionMs(previous,
-                    p.clips.getOrElse(exportClipIndex-1){clip}.durationMs,clip.durationMs)
-                val fadeOut = EditFeatures.transitionMs(next,clip.durationMs,
-                    p.clips.getOrElse(exportClipIndex+1){clip}.durationMs)
-                TransitionPreviewTint(previous, fadeIn, next, fadeOut,
-                    local, clip.durationMs)
+    // Conteúdo rolável e ação principal fixa. Em telas pequenas/alto zoom, as opções
+    // permanecem acessíveis sem esconder o botão de exportação.
+    Column(Modifier.fillMaxSize().statusBarsPadding()) {
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
+            .padding(horizontal=16.dp)) {
+            Row(Modifier.fillMaxWidth().height(46.dp), verticalAlignment=Alignment.CenterVertically) {
+                IconButton(onClick={ if(!working) back() else confirmCancelExport=true }) {
+                    Icon(Icons.Default.ArrowBack, "Voltar")
+                }
+                Text("Exportar vídeo",style=MaterialTheme.typography.titleMedium,
+                    fontWeight=FontWeight.SemiBold,modifier=Modifier.weight(1f))
+                Icon(Icons.Default.MovieCreation,contentDescription=null,tint=Blue)
             }
-            p.overlays.forEach { pip ->
-                if(exportPreviewMs >= pip.startAtMs && exportPreviewMs < pip.startAtMs+pip.durationMs) {
-                    key(pip.id) {
-                        PipLayer(pip,exportPreviewMs-pip.startAtMs,previewPlayer.isPlaying,
-                            editable=false) { }
+            Text("Nome do arquivo", style=MaterialTheme.typography.labelMedium,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(4.dp))
+            OutlinedTextField(value=name,onValueChange={name=it},singleLine=true,
+                modifier=Modifier.fillMaxWidth(),textStyle=MaterialTheme.typography.bodyMedium,
+                leadingIcon={Icon(Icons.Default.Description,contentDescription=null,modifier=Modifier.size(19.dp))},
+                shape=RoundedCornerShape(12.dp),enabled=!working)
+            Spacer(Modifier.height(12.dp))
+            CompactExportLabel("Destino",Icons.Default.MovieFilter)
+            Spacer(Modifier.height(5.dp))
+            Row(horizontalArrangement=Arrangement.spacedBy(5.dp),modifier=Modifier.fillMaxWidth()) {
+                listOf(
+                    Triple(ExportDestination.ORIGINAL,Icons.Default.Movie,"Original"),
+                    Triple(ExportDestination.SHORTS,Icons.Default.PlayCircle,"Shorts"),
+                    Triple(ExportDestination.REELS,Icons.Default.Videocam,"Reels"),
+                    Triple(ExportDestination.TIKTOK,Icons.Default.MusicNote,"TikTok")
+                ).forEach { (item, icon, label) ->
+                    CompactExportOption(label,icon,destination==item,!working,
+                        Modifier.weight(1f).height(50.dp)) {
+                        destinationId=item.name
+                        bitratePresetName=SocialExportPolicy.recommendedBitrate(item).name
                     }
                 }
             }
-            p.subtitles.firstOrNull { cue ->
-                exportPreviewMs >= cue.startMs && exportPreviewMs < cue.endMs && cue.text.isNotBlank()
-            }?.let { cue -> SubtitleOverlayOnFrame(cue,editable=false,playbackMs=exportPreviewMs) }
-            p.textWatermark?.toSubtitle(p.durationMs)?.let { watermark ->
-                SubtitleOverlayOnFrame(watermark, editable=false, playbackMs=exportPreviewMs)
-            }
-            if (destination.isVertical && showFrameGuides) {
-                Box(Modifier.fillMaxSize(), contentAlignment=Alignment.Center) {
-                    Box(Modifier.fillMaxWidth(0.86f).fillMaxHeight(0.75f)
-                        .border(1.dp, Color.White.copy(alpha = 0.65f), RoundedCornerShape(9.dp)))
+            Spacer(Modifier.height(10.dp))
+            if (destination.isVertical) {
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
+                    horizontalArrangement=Arrangement.SpaceBetween) {
+                    CompactExportLabel("Enquadramento",Icons.Default.AspectRatio)
+                    Text("9:16 vertical",style=MaterialTheme.typography.labelSmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-            }
-            Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) {
-                IconButton(onClick={
-                    previewPlaying=!previewPlaying
-                    if(previewPlaying) previewPlayer.play() else previewPlayer.pause()
-                }) {Icon(if(previewPlaying)Icons.Default.PauseCircle else Icons.Default.PlayCircle,
-                    "Reproduzir prévia",tint=Color.White,modifier=Modifier.size(52.dp))}
-            }
-        }
-        if(p.subtitles.isNotEmpty() || p.overlays.isNotEmpty() || p.textWatermark != null) {
-            Text("Prévia: legendas, PiPs e transições. Confira o MP4 final para validar áudio e efeitos.",
-                style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier=Modifier.padding(top=7.dp))
-        }
-        Spacer(Modifier.height(20.dp))
-        Text("Nome do arquivo",color=MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(8.dp))
-        OutlinedTextField(value=name,onValueChange={name=it},singleLine=true,modifier=Modifier.fillMaxWidth(),
-            shape=RoundedCornerShape(15.dp),enabled=!working)
-        Spacer(Modifier.height(20.dp))
-        Text("Destino do vídeo", fontSize=19.sp, fontWeight=FontWeight.SemiBold)
-        Spacer(Modifier.height(9.dp))
-        Row(horizontalArrangement=Arrangement.spacedBy(6.dp), modifier=Modifier.fillMaxWidth()) {
-            ExportDestination.values().forEach { candidate ->
-                val selected = destination == candidate
-                Surface(onClick={
-                        destinationId = candidate.name
-                        bitratePresetName = SocialExportPolicy.recommendedBitrate(candidate).name
-                    }, enabled=!working, modifier=Modifier.weight(1f).height(50.dp),
-                    shape=RoundedCornerShape(13.dp),
-                    border=BorderStroke(if(selected) 2.dp else 1.dp,
-                        if(selected) Blue else MaterialTheme.colorScheme.outlineVariant)) {
-                    Box(contentAlignment=Alignment.Center) {
-                        Text(candidate.label, fontSize=13.sp, fontWeight=if(selected)
-                            FontWeight.Bold else FontWeight.Normal)
+                Spacer(Modifier.height(5.dp))
+                Row(horizontalArrangement=Arrangement.spacedBy(7.dp),modifier=Modifier.fillMaxWidth()) {
+                    CompactExportOption("Mostrar tudo",Icons.Default.AspectRatio,
+                        frameMode==VerticalFrameMode.FIT,!working,
+                        Modifier.weight(1f).height(42.dp), horizontal=true) {
+                        frameModeId=VerticalFrameMode.FIT.name
+                    }
+                    CompactExportOption("Preencher",Icons.Default.CenterFocusStrong,
+                        frameMode==VerticalFrameMode.CENTER_CROP,!working,
+                        Modifier.weight(1f).height(42.dp),horizontal=true) {
+                        frameModeId=VerticalFrameMode.CENTER_CROP.name
                     }
                 }
+                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
+                    horizontalArrangement=Arrangement.SpaceBetween) {
+                    Row(verticalAlignment=Alignment.CenterVertically) {
+                        Checkbox(checked=showFrameGuides,onCheckedChange={
+                            showFrameGuides=it
+                            if(it) previewExpanded=true
+                        },
+                            enabled=!working,modifier=Modifier.size(38.dp))
+                        Text("Guias na prévia",style=MaterialTheme.typography.labelMedium)
+                    }
+                    TextButton(onClick={framingHelpExpanded=true},enabled=!working,
+                        contentPadding=PaddingValues(horizontal=4.dp,vertical=0.dp)) {
+                        Icon(Icons.Default.HelpOutline,contentDescription=null,modifier=Modifier.size(17.dp))
+                        Spacer(Modifier.width(3.dp))
+                        Text("Ver exemplos",fontSize=12.sp)
+                    }
+                }
+                if (frameMode==VerticalFrameMode.CENTER_CROP) {
+                    Text("Atenção: o corte central pode ocultar pessoas ou legendas nas bordas.",
+                        fontSize=11.sp,color=MaterialTheme.colorScheme.tertiary,
+                        lineHeight=14.sp)
+                }
             }
-        }
-        Spacer(Modifier.height(8.dp))
-        Text(if(destination.isVertical)
-            "${destination.label} · MP4 vertical 9:16 · sem envio automático à rede social"
-            else "Original · mantém a proporção dos arquivos e a qualidade escolhida",
-            style=MaterialTheme.typography.bodySmall,
-            color=MaterialTheme.colorScheme.onSurfaceVariant)
-        if(destination.isVertical) {
-            Spacer(Modifier.height(14.dp))
-            Text("Enquadramento vertical", fontWeight=FontWeight.SemiBold)
-            Spacer(Modifier.height(7.dp))
-            Row(horizontalArrangement=Arrangement.spacedBy(8.dp), modifier=Modifier.fillMaxWidth()) {
-                VerticalFrameMode.values().forEach { mode ->
-                    val selected = frameMode == mode
-                    Surface(onClick={frameModeId=mode.name}, enabled=!working,
-                        modifier=Modifier.weight(1f).height(48.dp),
-                        shape=RoundedCornerShape(13.dp),
-                        border=BorderStroke(if(selected) 2.dp else 1.dp,
-                            if(selected) Blue else MaterialTheme.colorScheme.outlineVariant)) {
-                        Box(contentAlignment=Alignment.Center) {
-                            Text(mode.label, fontSize=13.sp, fontWeight=if(selected)
-                                FontWeight.Bold else FontWeight.Normal)
+            Surface(onClick={previewExpanded=!previewExpanded},
+                modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(10.dp),
+                color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.48f)) {
+                Row(Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=8.dp),
+                    verticalAlignment=Alignment.CenterVertically) {
+                    Icon(Icons.Default.Visibility,contentDescription=null,modifier=Modifier.size(18.dp),tint=Blue)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Prévia do enquadramento",fontSize=12.sp,
+                        modifier=Modifier.weight(1f),fontWeight=FontWeight.Medium)
+                    Icon(if(previewExpanded)Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription=if(previewExpanded)"Recolher prévia" else "Expandir prévia",
+                        modifier=Modifier.size(20.dp))
+                }
+            }
+            if(previewExpanded) {
+                Spacer(Modifier.height(8.dp))
+                if(destination.isVertical && showFrameGuides) {
+                    Row(horizontalArrangement=Arrangement.spacedBy(5.dp),
+                        modifier=Modifier.fillMaxWidth()) {
+                        listOf("TEXT" to "Legendas", "UI" to "Interface", "BOTH" to "Ambas").forEach { (key,label) ->
+                            FilterChip(selected=guideKind==key,onClick={guideKind=key},
+                                label={Text(label,fontSize=11.sp)},modifier=Modifier.height(32.dp),
+                                enabled=!working)
+                        }
+                    }
+                }
+                Box(Modifier.fillMaxWidth(),contentAlignment=Alignment.Center) {
+                    Box(Modifier.width(if(destination.isVertical) 204.dp else 300.dp)) {
+                    InlineVideoPreview(previewAspect) {
+                        AndroidView(factory={previewPlayer(it).apply {
+                                player=previewPlayer; useController=false
+                                configureExportPreviewFrame(this,
+                                    destination.isVertical && frameMode==VerticalFrameMode.CENTER_CROP)
+                            }},modifier=Modifier.fillMaxSize(),update={
+                                it.player=previewPlayer
+                                configureExportPreviewFrame(it,
+                                    destination.isVertical && frameMode==VerticalFrameMode.CENTER_CROP)
+                            })
+                        p.clips.getOrNull(exportClipIndex)?.let { clip ->
+                            val clipStart=p.clips.take(exportClipIndex).sumOf { it.durationMs }
+                            val local=(exportPreviewMs-clipStart).coerceIn(0L,clip.durationMs)
+                            val previous=EditFeatures.boundary(p,exportClipIndex-1)
+                            val next=EditFeatures.boundary(p,exportClipIndex)
+                            val fadeIn=EditFeatures.transitionMs(previous,
+                                p.clips.getOrElse(exportClipIndex-1){clip}.durationMs,clip.durationMs)
+                            val fadeOut=EditFeatures.transitionMs(next,clip.durationMs,
+                                p.clips.getOrElse(exportClipIndex+1){clip}.durationMs)
+                            TransitionPreviewTint(previous, fadeIn, next, fadeOut,
+                                local, clip.durationMs)
+                        }
+                        p.overlays.forEach { pip ->
+                            if(exportPreviewMs>=pip.startAtMs && exportPreviewMs<pip.startAtMs+pip.durationMs) {
+                                key(pip.id) {
+                                    PipLayer(pip,exportPreviewMs-pip.startAtMs,previewPlayer.isPlaying,
+                                        editable=false) { }
+                                }
+                            }
+                        }
+                        p.subtitles.firstOrNull { cue ->
+                            exportPreviewMs>=cue.startMs && exportPreviewMs<cue.endMs && cue.text.isNotBlank()
+                        }?.let { cue -> SubtitleOverlayOnFrame(cue,editable=false,playbackMs=exportPreviewMs) }
+                        p.textWatermark?.toSubtitle(p.durationMs)?.let { watermark ->
+                            SubtitleOverlayOnFrame(watermark,editable=false,playbackMs=exportPreviewMs)
+                        }
+                        if(destination.isVertical && showFrameGuides) {
+                            if(guideKind != "UI") {
+                                Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) {
+                                    Box(Modifier.fillMaxWidth(.82f).fillMaxHeight(.72f).border(
+                                        1.dp,Color(0xFF5ED1E6),RoundedCornerShape(6.dp)))
+                                }
+                            }
+                            if(guideKind != "TEXT") {
+                                Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                                    .height(29.dp).background(Color.Black.copy(alpha=.47f)))
+                                Box(Modifier.align(Alignment.CenterEnd).width(24.dp)
+                                    .fillMaxHeight(.42f).background(Color.Black.copy(alpha=.30f)))
+                            }
+                        }
+                        Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) {
+                            IconButton(onClick={
+                                previewPlaying=!previewPlaying
+                                if(previewPlaying)previewPlayer.play() else previewPlayer.pause()
+                            }) {
+                                Icon(if(previewPlaying)Icons.Default.PauseCircle else Icons.Default.PlayCircle,
+                                    "Reproduzir prévia",tint=Color.White,
+                                    modifier=Modifier.size(45.dp))
+                            }
+                        }
+                    }
+                    }
+                }
+                Text("Guias ilustrativas não entram no MP4; confira o arquivo final. " +
+                    "A interface das plataformas muda e a prévia de efeitos pode ser aproximada.",
+                    style=MaterialTheme.typography.labelSmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    CompactExportLabel("Resolução",Icons.Default.AspectRatio)
+                    Spacer(Modifier.height(5.dp))
+                    Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                        listOf(720,1080).forEach { q ->
+                            CompactExportOption("${q}p",Icons.Default.Movie,
+                                q==quality,!working,Modifier.weight(1f).height(44.dp),horizontal=true) {
+                                quality=q
+                            }
                         }
                     }
                 }
             }
-            Text(SocialExportPolicy.framingDescription(frameMode),
-                style=MaterialTheme.typography.bodySmall,
-                color=if(frameMode == VerticalFrameMode.CENTER_CROP)
-                    MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier=Modifier.padding(top=7.dp))
-            Row(verticalAlignment=Alignment.CenterVertically) {
-                Checkbox(checked=showFrameGuides,onCheckedChange={showFrameGuides=it})
-                Text("Mostrar guias de margem na prévia", style=MaterialTheme.typography.bodySmall)
-            }
-            Text("Guias ilustrativas, não exportadas. Áreas cobertas por botões variam entre plataformas.",
-                style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Spacer(Modifier.height(22.dp));Text("Qualidade",fontSize=21.sp,fontWeight=FontWeight.Medium)
-        Spacer(Modifier.height(14.dp))
-        Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            listOf(720,1080).forEach {q->
-                Surface(onClick={quality=q},enabled=!working,modifier=Modifier.weight(1f).height(104.dp),
-                    shape=RoundedCornerShape(18.dp),border=BorderStroke(if(q==quality)2.dp else 1.dp,
-                        if(q==quality)Blue else MaterialTheme.colorScheme.outlineVariant)) {
-                    Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center) {
-                        Text(if (destination.isVertical) "${q} × ${q * 16 / 9}"
-                             else "${q}p",fontSize=18.sp)
-                        Text("${VideoExportQuality.videoBitrateBps(q,bitratePreset)/1_000_000} Mb/s",fontSize=13.sp,
-                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(11.dp))
+            CompactExportLabel("Compressão",Icons.Default.Tune)
+            Spacer(Modifier.height(5.dp))
+            Row(horizontalArrangement=Arrangement.spacedBy(6.dp),modifier=Modifier.fillMaxWidth()) {
+                ExportBitratePreset.values().forEach { preset ->
+                    val mbps=VideoExportQuality.videoBitrateBps(quality,preset)/1_000_000
+                    CompactExportOption("${preset.label} · ${mbps}M",null,
+                        bitratePreset==preset,!working,Modifier.weight(1f).height(42.dp),horizontal=true) {
+                        bitratePresetName=preset.name
                     }
                 }
             }
+            ExportSourceQualityPolicy.warning(sourceShortSide, quality)?.let { notice ->
+                Text(notice,fontSize=11.sp,color=MaterialTheme.colorScheme.tertiary,
+                    modifier=Modifier.padding(top=5.dp))
+            }
+            TextButton(onClick={qualityHelpExpanded=!qualityHelpExpanded},
+                modifier=Modifier.fillMaxWidth(),enabled=!working,
+                contentPadding=PaddingValues(vertical=2.dp)) {
+                Icon(Icons.Default.Tune,contentDescription=null,modifier=Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(if(qualityHelpExpanded)"Ocultar detalhes técnicos" else "Detalhes e compatibilidade",
+                    fontSize=12.sp)
+                Spacer(Modifier.width(5.dp))
+                Icon(if(qualityHelpExpanded)Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription=null,modifier=Modifier.size(16.dp))
+            }
+            if(qualityHelpExpanded) {
+                Text("Resolução e bitrate são solicitações ao encoder; o MP4 real pode diferir. " +
+                    "Bitrate elevado não recupera detalhes que a origem não tem. " +
+                    "O arquivo fica na galeria e não é enviado à plataforma selecionada. " +
+                    "Referência: ~${VideoExportQuality.estimatedMiBPerMinute(quality,true,bitratePreset)} MiB/min.",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Solicitado: ${SocialExportPolicy.requestedLabel(destination,quality)} · " +
+                    "H.264/AAC · keyframe ~${VideoExportQuality.REQUESTED_KEYFRAME_INTERVAL_SECONDS}s",
+                    style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if(result.isNotBlank()) Text(result,modifier=Modifier.padding(vertical=5.dp),
+                color=if(result.startsWith("Erro"))MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurface)
+            qualityReport?.let { report ->
+                Spacer(Modifier.height(5.dp))
+                Text("Último MP4 · diagnóstico",fontWeight=FontWeight.SemiBold)
+                report.lines().forEach { line ->
+                    Text(line,style=MaterialTheme.typography.bodySmall,
+                        color=if(report.fellBackInResolution && line.startsWith("Aviso:"))
+                            MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Spacer(Modifier.height(10.dp))
         }
-        Spacer(Modifier.height(16.dp))
-        Text("Taxa de vídeo", fontWeight=FontWeight.SemiBold)
-        Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement=Arrangement.spacedBy(8.dp), modifier=Modifier.fillMaxWidth()) {
-            ExportBitratePreset.values().forEach { preset ->
-                val selected = bitratePreset == preset
-                Surface(onClick={bitratePresetName=preset.name},enabled=!working,
-                    modifier=Modifier.weight(1f).height(60.dp),
+        Surface(shadowElevation=8.dp,color=MaterialTheme.colorScheme.surface) {
+            Column(Modifier.fillMaxWidth().navigationBarsPadding()
+                .padding(horizontal=16.dp,vertical=7.dp)) {
+                Text("${SocialExportPolicy.requestedLabel(destination,quality)} · " +
+                    "${VideoExportQuality.videoBitrateBps(quality,bitratePreset)/1_000_000} Mb/s · MP4",
+                    fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Estimativa: ~${VideoExportQuality.estimatedMiBForDuration(p.durationMs,quality,true,bitratePreset)} MiB para este projeto",
+                    fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(5.dp))
+                Button(onClick={
+                    if(name.isNotBlank() && p.clips.isNotEmpty() && !working) {
+                        previewPlayer.pause()
+                        previewPlaying=false
+                        exportVm.start(p, quality, name, bitratePreset, destination, frameMode)
+                    }
+                },enabled=!working && name.isNotBlank() && p.clips.isNotEmpty(),
+                    modifier=Modifier.fillMaxWidth().height(48.dp),
                     shape=RoundedCornerShape(14.dp),
-                    border=BorderStroke(if(selected) 2.dp else 1.dp,
-                        if(selected) Blue else MaterialTheme.colorScheme.outlineVariant)) {
-                    Column(horizontalAlignment=Alignment.CenterHorizontally,
-                        verticalArrangement=Arrangement.Center) {
-                        Text(preset.label,style=MaterialTheme.typography.labelLarge)
-                        Text("${VideoExportQuality.videoBitrateBps(quality,preset)/1_000_000} Mb/s",
-                            style=MaterialTheme.typography.bodySmall,
-                            color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+                    colors=ButtonDefaults.buttonColors(containerColor=Blue)) {
+                    Icon(Icons.Default.SaveAlt,contentDescription=null,modifier=Modifier.size(19.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Salvar vídeo",fontWeight=FontWeight.SemiBold)
                 }
             }
         }
-        Text("Saída solicitada: ${SocialExportPolicy.requestedLabel(destination,quality)}",
-            style=MaterialTheme.typography.bodySmall,
-            color=MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("Estimativa: ~${VideoExportQuality.estimatedMiBForDuration(p.durationMs,quality,true,bitratePreset)} MiB " +
-            "para este projeto · ~${VideoExportQuality.estimatedMiBPerMinute(quality,true,bitratePreset)} MiB/min.",
-            style=MaterialTheme.typography.bodySmall,
-            color=MaterialTheme.colorScheme.onSurfaceVariant)
-        TextButton(onClick={qualityHelpExpanded=!qualityHelpExpanded},enabled=!working) {
-            Text(if(qualityHelpExpanded) "Ocultar explicação" else "Entender qualidade e compatibilidade")
-        }
-        if(qualityHelpExpanded) {
-            Text("O bitrate, o intervalo de 2 s entre quadros-chave e a resolução são solicitações " +
-                "ao encoder. Os valores reais podem variar. Maior bitrate aumenta o arquivo, " +
-                "mas não recupera nitidez perdida na origem. 720p e 1080p representam o lado " +
-                "menor do vídeo. As legendas são renderizadas após o dimensionamento.",
-                style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        ExportSourceQualityPolicy.warning(sourceShortSide, quality)?.let { notice ->
-            Spacer(Modifier.height(8.dp))
-            Text(notice, color=MaterialTheme.colorScheme.tertiary,
-                style=MaterialTheme.typography.bodySmall)
-        }
-        Spacer(Modifier.height(18.dp))
-        BlueButton("↓ Salvar vídeo",onClick={
-            if(name.isNotBlank() && p.clips.isNotEmpty() && !working) {
-                previewPlayer.pause()
-                previewPlaying = false
-                exportVm.start(p, quality, name, bitratePreset, destination, frameMode)
-            }
-        },modifier=Modifier.fillMaxWidth(),enabled=!working && name.isNotBlank()&&p.clips.isNotEmpty())
-        if(result.isNotBlank()) Text(result,modifier=Modifier.padding(vertical=15.dp),
-            color=if(result.startsWith("Erro"))MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
-        qualityReport?.let { report ->
-            Spacer(Modifier.height(14.dp))
-            Text("Diagnóstico da última exportação",fontWeight=FontWeight.SemiBold,
-                style=MaterialTheme.typography.titleMedium)
-            report.lines().forEach { line ->
-                Text(line, style=MaterialTheme.typography.bodySmall,
-                    color=if(report.fellBackInResolution && line.startsWith("Aviso:"))
-                        MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        Spacer(Modifier.height(14.dp));Text("MP4 · H.264/AAC solicitados · Salvamento local.",
-            color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
+    }
+    if(framingHelpExpanded) {
+        AlertDialog(onDismissRequest={framingHelpExpanded=false},
+            title={Text("Enquadramento e margens")},
+            text={Column(verticalArrangement=Arrangement.spacedBy(9.dp)) {
+                Row(horizontalArrangement=Arrangement.SpaceEvenly,modifier=Modifier.fillMaxWidth()) {
+                    ExportFrameIllustration(false)
+                    ExportFrameIllustration(true)
+                }
+                Text("Mostrar tudo: mantém o quadro completo, com barras quando a proporção muda.",
+                    style=MaterialTheme.typography.bodySmall)
+                Text("Preencher: usa a altura e a largura de 9:16, mas corta as laterais (ou topo/baixo) da origem.",
+                    style=MaterialTheme.typography.bodySmall)
+                Text("Guias de legendas: contorno central indica área sugerida. " +
+                    "Guias de interface: faixas sombreadas simulam botões e descrição. " +
+                    "As margens reais variam por rede e podem mudar.",
+                    style=MaterialTheme.typography.bodySmall)
+            }},
+            confirmButton={TextButton(onClick={
+                showFrameGuides=true
+                previewExpanded=true
+                framingHelpExpanded=false
+            }) {Text("Ver guias na prévia")}},
+            dismissButton={TextButton(onClick={framingHelpExpanded=false}) {Text("Fechar")}})
     }
     // Enquanto o Media3 processa, a tela de exportação fica inteira visível.
     // Sem percentual disponível, usar indicador indeterminado em vez de inventar progresso.

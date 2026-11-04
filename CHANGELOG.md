@@ -1,3 +1,11 @@
+## Versão 0.1.128 · versionCode 129 (04/11/2026)
+
+- **Exportação repaginada:** ícones, grupos de destino/enquadramento/resolução/compressão compactos, botão Salvar fixo e estimativa do tamanho do projeto no rodapé.
+- **Ajuda visível:** exemplos desenhados para Mostrar tudo e Preencher, aviso de corte central, guias para legendas e regiões ilustrativas ocupadas por interfaces; guias não exportadas.
+- **Prévia opcional com mídia real:** painel expansível usa PlayerView FIT/ZOOM já existente; elementos da composição são aproximados e exigem verificação do MP4 final.
+- **Sem mudança do exportador:** preserva Media3 1.11.1, Original padrão, 9:16, cinco APKs Release e schemaVersion 4.
+- **Validação:** testes estáticos e de contrato locais; build e comparação visual em dispositivo pendentes.
+
 ## Versão 0.1.127 · versionCode 128 (04/11/2026)
 
 - **Correção CI105:** `FlowPromptDraft` deixa de ser `internal` para compatibilidade com a propriedade pública `VideoProject.flowPromptDraft`; o erro do compilador Kotlin `public function exposes its internal parameter type` foi registrado nos logs Debug e Release.

@@ -1,3 +1,10 @@
+## Versão 0.1.128 · versionCode 129 (04/11/2026)
+
+- Nova tela compacta de exportação com ícones, seletores menores, compressão sem bitrate duplicado nos cartões de resolução e botão Salvar fixo.
+- Ajuda visual com dois exemplos de enquadramento; opções de guias de legendas e interface somente na prévia.
+- Prévia expansível conserva PlayerView local, FIT/ZOOM e camadas do projeto; requer validação Android e comparação do MP4 antes de declarar fidelidade.
+- Formatos MP4, versão Media3 e dados dos projetos permanecem inalterados.
+
 ## Versão 0.1.127 · versionCode 128 (04/11/2026)
 
 - **Correção CI105:** `FlowPromptDraft` deixa de ser `internal` para compatibilidade com a propriedade pública `VideoProject.flowPromptDraft`; o erro do compilador Kotlin `public function exposes its internal parameter type` foi registrado nos logs Debug e Release.

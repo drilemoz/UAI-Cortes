@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.127"
-    const val VERSION_CODE = 128
+    const val VERSION_NAME = "0.1.128"
+    const val VERSION_CODE = 129
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.128", listOf(
+            ReleaseFeature("export-compact-ui-v128", "Exportação compacta e com ícones",
+                "Destinos, resolução e compressão em controles menores; resumo do MP4 e botão Salvar fixos.", "film"),
+            ReleaseFeature("export-examples-v128", "Exemplos visuais de enquadramento",
+                "Compare Mostrar tudo e Preencher, com avisos de corte e guias opcionais para texto e interface.", "check"),
+            ReleaseFeature("export-preview-v128", "Prévia local expansível",
+                "Confira o enquadramento com vídeo real; guias não entram no MP4 e a fidelidade total precisa ser validada em Android.", "film")
+        )),
         ReleaseSummary("0.1.127", listOf(
             ReleaseFeature("flow-prompt-visibility-ci105", "Correção de compilação do Flow",
                 "Corrigida a visibilidade do rascunho de prompts do Flow usada nos projetos, sem alterar os dados salvos.", "check")

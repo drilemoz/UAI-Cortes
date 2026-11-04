@@ -1,3 +1,7 @@
+# Uai Cortes · versão 0.1.128 (04/11/2026)
+
+A exportação agora usa controles compactos com ícones e ações rápidas para destino, 9:16, resolução e compressão. A prévia local foi mantida em painel expansível com guias opcionais para legenda e elementos de interface; há exemplos visuais de Mostrar tudo vs Preencher. O resumo estimado e Salvar ficam no rodapé fixo. Sem alterações no motor Media3, projeto JSON, assinatura ou formatos. Ainda exige build Android e teste físico para confirmar a composição visual.
+
 ## Versão 0.1.127 · versionCode 128 (04/11/2026)
 
 - **Correção CI105:** `FlowPromptDraft` deixa de ser `internal` para compatibilidade com a propriedade pública `VideoProject.flowPromptDraft`; o erro do compilador Kotlin `public function exposes its internal parameter type` foi registrado nos logs Debug e Release.
