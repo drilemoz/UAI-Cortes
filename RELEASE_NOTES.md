@@ -1,3 +1,30 @@
+## Versão 0.1.120 · versionCode 121 (03/11/2026)
+
+- **Etapa 3 — Media3 estável:** migrados juntos `media3-exoplayer`, `media3-ui`, `media3-transformer`, `media3-effect` e `media3-common` de 1.10.1 para 1.11.1, sem dependências alpha. Mantidos compileSdk/targetSdk 36 e Kotlin/AGP atuais.
+- **Medição da velocidade:** tempo real de processamento e tempo de cópia MediaStore medidos separadamente via `SystemClock.elapsedRealtime`. Fator estimado (duração do vídeo / tempo de processamento) aparece apenas quando ambas as medidas são positivas. Não inventar ganho de velocidade.
+- **Cópia local mais econômica em chamadas:** `GalleryVideoSaver` usa blocos de 256 KiB em vez de 8 KiB por operação; mesma verificação de bytes, pendência MediaStore e rollback.
+- **Cortes rápidos:** não habilitada a otimização experimental indiscriminadamente. O fluxo aplica redimensionamento, bitrate escolhido, áudio, legendas e PiP, frequentemente incompatíveis com trim otimizado. MP4 edit-list também pode reter conteúdo que o usuário pensou ter apagado. É necessário criar futuramente modo de corte simples, elegibilidade restrita e testes em aparelhos antes de usar essa opção.
+- **Testes:** contrato Python para versão alinhada, tempos medidos e proteção contra edição experimental; JUnit para exibição de métricas. Compilação completa, lint, smoke Android real e benchmark antes/depois pendentes.
+- `schemaVersion=4`, cinco APKs, assinatura persistente, efeitos, legendas, PiP, narração, projetos legados e arquivos originais preservados.
+
+## Versão 0.1.119 · versionCode 120 (03/11/2026)
+
+- **Etapa 2 — fidelidade entre prévia e MP4:** quando há PiP, legendas e marca d'água agora são efeitos da composição inteira, aplicados após o compositor de vídeo (`Composition.Builder.setEffects`), mantendo-os acima das janelas PiP. Sem PiP, permanece o processamento anterior por clipe.
+- **Ordem de sobreposição PiP:** normalização da lista de camadas para compensar a regra Media3 (primeira entrada no topo) em relação ao Compose (última camada desenhada no topo), sem alterar a ordem gravada no projeto.
+- **Prévia de transições:** zoom cinematográfico, recuo suave e pan usam a mesma curva temporal (`TransitionEffects.motionAt`) na prévia e no `ClipMotionTransitionEffect` do exportador; camadas PiP/legendas permanecem independentes do movimento do vídeo principal.
+- **Legendas vazias/sobrepostas:** editor e exportador escolhem a primeira legenda não vazia no instante, evitando que uma legenda em branco esconda outra. Sobreposições válidas ainda requerem inspeção visual.
+- **Testes:** JUnit para ordem das camadas, seleção de legenda e curvas de movimento; smoke Android complementar com composição PiP + legenda; verificações estáticas para impedir regressões.
+- **Limites:** prévia de efeitos sépia/preto-e-branco e tonalidades ainda é aproximada; compilação Gradle, smoke test Android real e comparação quadro a quadro/áudio continuam pendentes. Não afirmar fidelidade integral sem esses testes.
+- `schemaVersion=4`, cinco variantes de APK Release, exportação 720p/1080p, assinatura, imagens, TTS, Gemini e arquivos originais preservados.
+
+## Versão 0.1.118 · versionCode 119 (03/11/2026)
+
+- **Etapa 1 — testes de exportação:** incluído MP4 de teste H.264/AAC de 1,6 segundo (320×180, ~29 KiB) somente nos assets do AndroidTest; fixture real reproduzível e validável por `ffprobe`.
+- Incluído `ExportPipelineSmokeAndroidTest`: testa a exportação Media3 com recorte, áudio e legenda, aguarda confirmação de gravação no MediaStore e confere faixas de vídeo/áudio, resolução, duração e abertura do MP4; apaga arquivos temporários e saída de teste ao terminar.
+- **CI:** todos os contratos Python `tools/test_*.py` e as verificações de compatibilidade Kotlin/Media3 agora são executados em cada build; `compileDebugAndroidTestKotlin` compila testes instrumentados, mas não os executa.
+- **Limite da validação:** testes Python/estrutura executados localmente. Compilação Gradle/Android e execução do teste MP4 em aparelho/emulador ainda pendentes, portanto não afirmar que a exportação real está aprovada.
+- Editor, Gemini, MP4 do usuário, schemaVersion=4, chaves e assinatura preservados. Não foi adicionado serviço nem envio de mídia.
+
 ## Versão 0.1.117 · versionCode 118 (03/11/2026)
 
 - A confirmação **Vídeo salvo** foi redesenhada: estado compacto, miniatura quando o Android fornecer, nome e qualidade em resumo, pasta de destino, compartilhamento prioritário e opções Abrir/Voltar/Fechar. Informações técnicas ficam recolhidas por padrão.

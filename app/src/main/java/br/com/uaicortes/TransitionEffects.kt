@@ -36,6 +36,22 @@ object TransitionEffects {
     fun motionX(kind: String, strength: Float): Float =
         if (kind == PAN) 0.06f * strength.coerceIn(0f, 1f) else 0f
 
+    data class Motion(val scale: Float, val panX: Float)
+
+    /** Mesma curva para a prévia Compose e a matriz de exportação Media3. */
+    fun motionAt(localMs: Long, clipMs: Long,
+        incomingKind: String, incomingMs: Long,
+        outgoingKind: String, outgoingMs: Long): Motion {
+        val t = localMs.coerceIn(0L, clipMs.coerceAtLeast(0L))
+        val entering = if (incomingMs > 0L) intensity(incomingKind,
+            (incomingMs - t).toFloat() / incomingMs) else 0f
+        val leaving = if (outgoingMs > 0L) intensity(outgoingKind,
+            (t - (clipMs - outgoingMs)).toFloat() / outgoingMs) else 0f
+        val kind = if (entering >= leaving) incomingKind else outgoingKind
+        val strength = maxOf(entering, leaving)
+        return Motion(motionScale(kind, strength), motionX(kind, strength))
+    }
+
     fun description(kind: String): String = when (kind) {
         CUT -> "Troca imediata de um vídeo para o próximo, sem efeito."
         BLACK -> "Escurece até preto na junção e clareia no clipe seguinte."

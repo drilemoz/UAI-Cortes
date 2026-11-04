@@ -12,6 +12,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -151,28 +153,35 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             val fit=AdaptiveVideoLayout.fit(maxWidth.value,maxHeight.value,actualAspect)
             val videoW=fit.width.dp
             val videoH=fit.height.dp
-            Box(Modifier.width(videoW).height(videoH)) {
+            Box(Modifier.width(videoW).height(videoH).clipToBounds()) {
+                val index = activeIndex
+                val clip = p.clips.getOrNull(index)
+                val before = p.clips.take(index.coerceAtLeast(0)).sumOf { it.durationMs }
+                val incoming = if (clip != null) EditFeatures.boundary(p, index - 1) else null
+                val outgoing = if (clip != null) EditFeatures.boundary(p, index) else null
+                val inMs = if (clip != null) EditFeatures.transitionMs(incoming,
+                    p.clips.getOrElse(index - 1) { clip }.durationMs, clip.durationMs) else 0L
+                val outMs = if (clip != null) EditFeatures.transitionMs(outgoing,
+                    clip.durationMs, p.clips.getOrElse(index + 1) { clip }.durationMs) else 0L
+                val local = (currentMs - before).coerceIn(0L, clip?.durationMs ?: 0L)
+                // Apenas o vídeo principal sofre o movimento: PiP e textos são
+                // camadas independentes, como no Transformer.
+                val motion = if (clip != null) TransitionEffects.motionAt(local, clip.durationMs,
+                    incoming?.kind ?: TransitionEffects.CUT, inMs,
+                    outgoing?.kind ?: TransitionEffects.CUT, outMs)
+                    else TransitionEffects.Motion(1f, 0f)
                 AndroidView(factory = { ctx -> previewPlayer(ctx).apply {
                     this.player = player
                     useController = false
-                } }, update = { it.player = player }, modifier = Modifier.fillMaxSize())
-                // Fade preview uses the same boundary IDs and durations as the exporter.
-                val index = p.clips.indexOfFirst { clip ->
-                    val first = p.clips.takeWhile { it.id != clip.id }.sumOf { it.durationMs }
-                    currentMs in first until (first + clip.durationMs)
-                }.coerceAtLeast(0)
-                p.clips.getOrNull(index)?.let { clip ->
-                    val before = p.clips.take(index).sumOf { it.durationMs }
-                    val incoming = EditFeatures.boundary(p, index - 1)
-                    val outgoing = EditFeatures.boundary(p, index)
-                    val inMs = EditFeatures.transitionMs(incoming,
-                        p.clips.getOrElse(index-1) { clip }.durationMs, clip.durationMs)
-                    val outMs = EditFeatures.transitionMs(outgoing, clip.durationMs,
-                        p.clips.getOrElse(index+1) { clip }.durationMs)
-                    val local = (currentMs - before).coerceIn(0L,clip.durationMs)
-                    TransitionPreviewTint(incoming, inMs, outgoing, outMs,
-                        local, clip.durationMs)
-                }
+                } }, update = { it.player = player }, modifier = Modifier.fillMaxSize()
+                    .graphicsLayer {
+                        scaleX = motion.scale
+                        scaleY = motion.scale
+                        translationX = motion.panX * size.width / 2f
+                    })
+                // Prévia de tintura ainda aproximada em efeitos monocromáticos/sépia.
+                if (clip != null) TransitionPreviewTint(incoming, inMs, outgoing, outMs,
+                    local, clip.durationMs)
                 p.overlays.forEach { pip ->
                     if (currentMs >= pip.startAtMs && currentMs < pip.startAtMs + pip.durationMs) {
                         key(pip.id) {
@@ -182,7 +191,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                         }
                     }
                 }
-                p.subtitles.firstOrNull { currentMs >= it.startMs && currentMs < it.endMs }?.let { cue ->
+                SubtitlePreviewPolicy.firstAt(p.subtitles, currentMs)?.let { cue ->
                     SubtitleOverlayOnFrame(cue, editable = false, playbackMs=currentMs)
                 }
                 p.textWatermark?.toSubtitle(p.durationMs)?.let { watermark ->

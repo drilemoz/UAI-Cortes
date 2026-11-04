@@ -29,6 +29,14 @@ class SubtitlePreviewPolicyTest {
             SubtitlePreviewPolicy.activeAt(listOf(first,overlapping,second),1_700))
     }
 
+    @Test fun firstValidCueMatchesExporterEvenWhenFirstIsBlank() {
+        val blank=SubtitleCue(id="blank",text="  ",startMs=0,endMs=10_000)
+        val cues=listOf(blank,first,second)
+        assertEquals(first, SubtitlePreviewPolicy.firstAt(cues,1_500))
+        assertEquals(second, SubtitlePreviewPolicy.firstAt(cues,2_000))
+        assertNull(SubtitlePreviewPolicy.firstAt(cues,9_000))
+    }
+
     @Test fun invalidEmptyCuesAreNotDisplayed() {
         val invalid=SubtitleCue(id="e",text="Inválida",startMs=3_000,endMs=3_000)
         val blank=SubtitleCue(id="f",text="   ",startMs=0,endMs=10_000)

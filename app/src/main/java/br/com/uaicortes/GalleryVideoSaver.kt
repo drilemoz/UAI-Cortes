@@ -13,6 +13,9 @@ import java.io.File
  * Em erro, descarta a entrada parcial. Chamador deve executar fora da thread UI.
  */
 internal object GalleryVideoSaver {
+    /** Cópia local em blocos: menos operações de I/O para MP4s grandes, memória limitada. */
+    internal const val COPY_BUFFER_BYTES = 256 * 1024
+
     fun save(context: Context, source: File, displayName: String): Uri {
         require(source.isFile && source.length() > 0L) {
             "O arquivo MP4 temporário está vazio ou não foi gerado."
@@ -31,7 +34,7 @@ internal object GalleryVideoSaver {
             ?: error("Não foi possível criar o arquivo na galeria")
         try {
             val copied = resolver.openOutputStream(target, "w")?.use { output ->
-                source.inputStream().use { input -> input.copyTo(output, DEFAULT_BUFFER_SIZE) }
+                source.inputStream().use { input -> input.copyTo(output, COPY_BUFFER_BYTES) }
             } ?: error("Não foi possível gravar o vídeo")
             check(copied == source.length()) { "A cópia do MP4 para a galeria está incompleta" }
             val finished = resolver.update(target, ContentValues().apply {

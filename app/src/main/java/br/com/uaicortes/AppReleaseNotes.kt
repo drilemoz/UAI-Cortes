@@ -16,11 +16,33 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.117"
-    const val VERSION_CODE = 118
+    const val VERSION_NAME = "0.1.120"
+    const val VERSION_CODE = 121
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.120", listOf(
+            ReleaseFeature("media3-stable-1111", "Media3 estável atualizado",
+                "ExoPlayer, efeitos e Transformer alinhados na versão 1.11.1; testar no Android.", "film"),
+            ReleaseFeature("export-duration-metrics", "Medições de desempenho da exportação",
+                "Detalhes do vídeo exibem o tempo real de processamento e cópia para a galeria, sem supor aceleração.", "check"),
+            ReleaseFeature("gallery-buffer-copy", "Cópia de vídeo otimizada",
+                "Cópia local em blocos de 256 KiB, preservando verificação de tamanho e limpeza em caso de erro.", "film")
+        )),
+        ReleaseSummary("0.1.119", listOf(
+            ReleaseFeature("pip-caption-layer-parity", "Legendas acima de PiP no MP4",
+                "Composição final aplica legendas e marca d'água sobre as janelas PiP, como na prévia do editor.", "film"),
+            ReleaseFeature("pip-overlap-order", "Ordem consistente das janelas PiP",
+                "Na sobreposição de PiPs, a última janela do editor permanece acima na exportação.", "check"),
+            ReleaseFeature("transition-motion-parity", "Zoom e pan na prévia",
+                "A prévia do editor compartilha a curva de movimento das transições com o exportador.", "film")
+        )),
+        ReleaseSummary("0.1.118", listOf(
+            ReleaseFeature("export-smoke-android-test", "Teste real de exportação preparado",
+                "Cenário Android de recorte, áudio e legenda com verificação de MP4. Sua execução em aparelho permanece pendente.", "film"),
+            ReleaseFeature("export-regressions-ci", "Mais verificações automáticas no CI",
+                "Compilação dos testes Android e execução de todos os contratos Python antes de publicar os APKs.", "check")
+        )),
         ReleaseSummary("0.1.117", listOf(
             ReleaseFeature("saved-video-compact", "Vídeo salvo com visual mais claro",
                 "Confirmação compacta com miniatura local, resumo do MP4, compartilhamento e detalhes técnicos recolhidos.", "film"),

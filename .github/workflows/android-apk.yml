@@ -15,8 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      VERSION: '0.1.117'
-      VERSION_CODE: '118'
+      VERSION: '0.1.120'
+      VERSION_CODE: '121'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -59,17 +59,22 @@ jobs:
             echo 'ERRO: Release requer os 4 Secrets de assinatura estável. Sem eles, a atualização Android não é confiável.' >&2
             exit 1
           fi
-      - name: Validar código-fonte e política de publicação
+      - name: Validar código-fonte e regressões locais
+        shell: bash
         run: |
+          set -euo pipefail
           python3 tools/validate_source.py
-          python3 tools/test_version_sync.py
-          python3 tools/test_narration_sync_contract.py
+          for test_script in tools/test_*.py; do
+            python3 "$test_script"
+          done
+          python3 tools/ci70_kotlin_visibility_test.py
+          python3 tools/ci72_media3_optin_test.py
       - name: Testes, Lint e compilar Release
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleRelease
+        run: gradle --no-daemon :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin :app:lintDebug :app:assembleRelease
       - name: Preparar e verificar cada APK
         shell: bash
         run: |

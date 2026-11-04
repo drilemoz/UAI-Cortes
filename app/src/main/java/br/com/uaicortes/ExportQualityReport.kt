@@ -15,7 +15,9 @@ internal data class ExportQualityReport(
     val videoMimeType: String?,
     val encoderName: String?,
     val requestedVideoBitrateBps: Int = 0,
-    val presetLabel: String? = null
+    val presetLabel: String? = null,
+    val encodeElapsedMs: Long = -1L,
+    val galleryCopyElapsedMs: Long = -1L
 ) {
     val resolution: String get() = if (width > 0 && height > 0) "${width} × ${height}" else "Não informada"
     val effectiveBitrate: String get() = if (videoBitrateBps > 0)
@@ -34,6 +36,13 @@ internal data class ExportQualityReport(
     val averageFps: String get() = if (frames > 0 && durationMs > 0 && durationMs != Long.MAX_VALUE)
         String.format(Locale.forLanguageTag("pt-BR"), "%.1f (média estimada)", frames * 1000.0 / durationMs)
         else "Não informado"
+    /** Metrica real de relógio monotônico; fator estimado com duração reportada. */
+    val encodeSpeedFactor: Double? get() = if (
+        durationMs > 0L && durationMs != Long.MAX_VALUE && encodeElapsedMs > 0L
+    ) durationMs.toDouble() / encodeElapsedMs.toDouble() else null
+    private fun formatElapsed(elapsedMs: Long): String = String.format(
+        Locale.forLanguageTag("pt-BR"), "%.1f s", elapsedMs / 1000.0
+    )
     val fellBackInResolution: Boolean get() = width > 0 && height > 0 &&
         minOf(width, height) != requestedShortSide
 
@@ -48,6 +57,13 @@ internal data class ExportQualityReport(
             add("Nota: bitrate medido abaixo de metade do solicitado. Cenas simples e ajustes do encoder podem explicar; compare visualmente o MP4.")
         add("Taxa de quadros: $averageFps")
         add("Tamanho do arquivo: $fileSize")
+        if (encodeElapsedMs >= 0L) {
+            add("Tempo de processamento: ${formatElapsed(encodeElapsedMs)}")
+            encodeSpeedFactor?.let { factor -> add("Velocidade de exportação: " +
+                String.format(Locale.forLanguageTag("pt-BR"), "%.2f× a duração do vídeo (estimada)", factor)) }
+        }
+        if (galleryCopyElapsedMs >= 0L)
+            add("Tempo de cópia para a galeria: ${formatElapsed(galleryCopyElapsedMs)}")
         add("Codec de vídeo: ${videoMimeType?.takeIf { it.isNotBlank() } ?: "Não informado"}")
         if (audioBitrateBps > 0) add("Bitrate de áudio medido: ${audioBitrateBps / 1000} kb/s")
         encoderName?.takeIf { it.isNotBlank() }?.let { add("Codificador: $it") }

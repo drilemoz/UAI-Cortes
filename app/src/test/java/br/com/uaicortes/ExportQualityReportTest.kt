@@ -41,6 +41,21 @@ class ExportQualityReportTest {
         assertEquals("Não informado", value.averageFps)
         assertFalse(value.fellBackInResolution)
     }
+    @Test fun actualElapsedTimesAreSeparatedAndNeverInvented() {
+        val missing = ExportQualityReport(1080,1920,1080,12_000_000,192_000,
+            8_000,240,12_000_000,"video/avc",null)
+        assertNull(missing.encodeSpeedFactor)
+        assertFalse(missing.lines().any { it.startsWith("Tempo de processamento:") })
+        val measured = missing.copy(encodeElapsedMs=4_000L, galleryCopyElapsedMs=400L)
+        assertEquals(2.0, measured.encodeSpeedFactor!!, 0.00001)
+        assertTrue(measured.lines().any { it.contains("Tempo de processamento: 4,0 s") })
+        assertTrue(measured.lines().any { it.contains("Tempo de cópia para a galeria: 0,4 s") })
+        assertTrue(measured.lines().any { it.contains("2,00×") })
+        val unmeasuredVideo = measured.copy(durationMs = -1L)
+        assertNull(unmeasuredVideo.encodeSpeedFactor)
+        assertFalse(unmeasuredVideo.lines().any { it.startsWith("Velocidade de exportação:") })
+    }
+
     @Test fun portraitFullHdDoesNotTriggerFalseFallback() {
         val portrait = ExportQualityReport(1080,1080,1920,18_000_000,192_000,
             8000,240,18_000_000,"video/avc",null)

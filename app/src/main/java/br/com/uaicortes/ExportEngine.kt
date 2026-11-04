@@ -30,6 +30,7 @@ import androidx.media3.transformer.VideoEncoderSettings
 import androidx.media3.transformer.AudioEncoderSettings
 import androidx.media3.common.VideoCompositorSettings
 import android.net.Uri
+import android.os.SystemClock
 import android.util.Log
 import java.io.FileNotFoundException
 import java.io.File
@@ -188,6 +189,8 @@ class ExportEngine(private val context: Context) {
         require(project.overlays.size <= OverlayPlacement.MAX_PIPS) { "O limite é de 4 PiPs" }
         cancel()
         validateSources(project)
+        val pipsTopFirst = ExportLayerOrder.media3TopFirst(project.overlays.take(OverlayPlacement.MAX_PIPS))
+        val postCompositionText = pipsTopFirst.isNotEmpty()
         var globalStartMs = 0L
         val mainItems = project.clips.mapIndexed { index, clip ->
             val item = MediaItem.Builder().setUri(clip.uri).setClippingConfiguration(
@@ -219,14 +222,17 @@ class ExportEngine(private val context: Context) {
                     videoEffects += ClipColorTransitionEffect(clip.durationMs,
                         entering, fadeIn, leaving, fadeOut)
             }
-            // Marca d'água e legendas são camadas INDEPENDENTES no projeto e no MP4.
-            val textLayers = mutableListOf<androidx.media3.effect.TextureOverlay>()
-            if (project.subtitles.isNotEmpty())
-                textLayers += TimedSubtitleOverlay(project.subtitles, globalStartMs)
-            project.textWatermark?.toSubtitle(project.durationMs)?.let { watermarkCue ->
-                textLayers += TimedSubtitleOverlay(listOf(watermarkCue), globalStartMs)
+            // Sem PiP mantém a estratégia antiga. Com PiP, o texto é aplicado
+            // DEPOIS da composição, para ficar sobre todas as janelas como na prévia.
+            if (!postCompositionText) {
+                val textLayers = mutableListOf<androidx.media3.effect.TextureOverlay>()
+                if (project.subtitles.isNotEmpty())
+                    textLayers += TimedSubtitleOverlay(project.subtitles, globalStartMs)
+                project.textWatermark?.toSubtitle(project.durationMs)?.let { watermarkCue ->
+                    textLayers += TimedSubtitleOverlay(listOf(watermarkCue), globalStartMs)
+                }
+                if (textLayers.isNotEmpty()) videoEffects += OverlayEffect(textLayers)
             }
-            if (textLayers.isNotEmpty()) videoEffects += OverlayEffect(textLayers)
             globalStartMs += clip.durationMs
             // Media3: duração de EditedMediaItem é a duração ORIGINAL, não do recorte.
             // Para vídeo com duração intrínseca, Transformer a descobre; omitir evita
@@ -238,7 +244,7 @@ class ExportEngine(private val context: Context) {
         val mainSequence = EditedMediaItemSequence.withAudioAndVideoFrom(mainItems)
         val sequences = mutableListOf<EditedMediaItemSequence>()
         // Ordem estável das entradas de vídeo; áudio é adicionado DEPOIS do vídeo principal.
-        for (pip in project.overlays.take(OverlayPlacement.MAX_PIPS)) {
+        for (pip in pipsTopFirst) {
             val media = if (pip.isImage) MediaItem.Builder().setUri(pip.uri)
                 .setImageDurationMs(pip.durationMs).build()
                 else MediaItem.Builder().setUri(pip.uri).setClippingConfiguration(
@@ -253,7 +259,7 @@ class ExportEngine(private val context: Context) {
             sequences += overlayTrack.build()
         }
         sequences += mainSequence
-        for (pip in project.overlays.take(OverlayPlacement.MAX_PIPS)) {
+        for (pip in pipsTopFirst) {
             if (pip.isImage || pip.muted || pip.volume <= 0f) continue
             val media = MediaItem.Builder().setUri(pip.uri).setClippingConfiguration(
                 MediaItem.ClippingConfiguration.Builder().setEndPositionMs(pip.durationMs).build()).build()
@@ -288,10 +294,22 @@ class ExportEngine(private val context: Context) {
             sequences += EditedMediaItemSequence.withAudioFrom(listOf(track))
                 .buildUpon().setIsLooping(true).build()
         }
-        // A transformação da resolução acontece no clipe principal, antes da
-        // renderização do texto, e NÃO após a composição final dos PiPs/legendas.
+        // Resolução é ajustada no clipe principal, antes do compositor PiP;
+        // quando há PiP, textos passam para os efeitos finais da composição.
         val composition = Composition.Builder(sequences).apply {
-            if (project.overlays.isNotEmpty()) setVideoCompositorSettings(PipCompositor(project.overlays.take(4)))
+            if (pipsTopFirst.isNotEmpty()) {
+                setVideoCompositorSettings(PipCompositor(pipsTopFirst))
+                // DefaultGlFrameProcessor: efeitos por clipe -> compositor -> efeitos
+                // por composição. Tempos das legendas são ABSOLUTOS no projeto.
+                val textLayers = mutableListOf<androidx.media3.effect.TextureOverlay>()
+                if (project.subtitles.isNotEmpty())
+                    textLayers += TimedSubtitleOverlay(project.subtitles, 0L)
+                project.textWatermark?.toSubtitle(project.durationMs)?.let { watermarkCue ->
+                    textLayers += TimedSubtitleOverlay(listOf(watermarkCue), 0L)
+                }
+                if (textLayers.isNotEmpty()) setEffects(Effects(emptyList(),
+                    listOf(OverlayEffect(textLayers))))
+            }
         }.build()
         val target = File(context.cacheDir, "uai-export-${System.currentTimeMillis()}.mp4")
         tempFile = target
@@ -307,12 +325,15 @@ class ExportEngine(private val context: Context) {
                 .setBitrate(VideoExportQuality.AUDIO_BITRATE_BPS).build())
             .setEnableFallback(true)
             .build()
+        var encodeStartedAtMs = 0L
         transformer = Transformer.Builder(context)
             .setVideoMimeType(MimeTypes.VIDEO_H264)
             .setAudioMimeType(MimeTypes.AUDIO_AAC)
             .setEncoderFactory(encoderFactory)
             .addListener(object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                    val encodeElapsedMs = (SystemClock.elapsedRealtime() - encodeStartedAtMs)
+                        .coerceAtLeast(0L)
                     Log.i("UaiCortesExport", "MP4: ${exportResult.width}x${exportResult.height}, " +
                         "bitrate de vídeo medido=${exportResult.averageVideoBitrate} bps, " +
                         "solicitado=$bitrateBps bps, quadros=${exportResult.videoFrameCount}")
@@ -329,16 +350,21 @@ class ExportEngine(private val context: Context) {
                         frames = exportResult.videoFrameCount,
                         fileBytes = exportResult.fileSizeBytes.takeIf { it > 0 } ?: target.length(),
                         videoMimeType = exportResult.videoMimeType,
-                        encoderName = exportResult.videoEncoderName
+                        encoderName = exportResult.videoEncoderName,
+                        encodeElapsedMs = encodeElapsedMs
                     )
                     // Transformer terminou a renderização, mas a cópia MediaStore ainda não.
                     isSavingToGallery = true
                     onSaving()
                     Thread {
                         var savedUri: Uri? = null
+                        val copyStartedAtMs = SystemClock.elapsedRealtime()
+                        var copyElapsedMs = -1L
                         var saveError: Exception? = null
                         try {
                             savedUri = saveToGallery(target, requestedName)
+                            copyElapsedMs = (SystemClock.elapsedRealtime() - copyStartedAtMs)
+                                .coerceAtLeast(0L)
                         } catch (e: Exception) {
                             DiagnosticRecorder.exception("export_gallery", e)
                             saveError = e
@@ -349,7 +375,9 @@ class ExportEngine(private val context: Context) {
                                 transformer = null
                                 isSavingToGallery = false
                                 if (saveError != null) onError(saveError?.message ?: "Falha ao salvar vídeo")
-                                else savedUri?.let { onSuccess(it, report) }
+                                else savedUri?.let { onSuccess(it, report.copy(
+                                    galleryCopyElapsedMs = copyElapsedMs
+                                )) }
                                     ?: onError("Não foi possível confirmar o vídeo salvo.")
                             }
                         }
@@ -363,6 +391,7 @@ class ExportEngine(private val context: Context) {
                     onError(describeExportError(exportException))
                 }
             }).build()
+        encodeStartedAtMs = SystemClock.elapsedRealtime()
         transformer!!.start(composition, target.absolutePath)
     }
 

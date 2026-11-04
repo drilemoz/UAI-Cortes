@@ -54,7 +54,7 @@ assert 'PipPopup(' not in ui and 'AlertDialog(' in ui
 assert 'onChange(pip.copy(scale = ' in ui and 'onChange(pip.copy(muted = ' in ui
 assert 'MediaBrowser' in ui and 'insertOverlay(' in ui
 assert 'PipCompositor(private val overlays: List<Overlay>)' in source
-assert 'setVideoCompositorSettings(PipCompositor(project.overlays.take(4)))' in source
+assert 'setVideoCompositorSettings(PipCompositor(pipsTopFirst))' in source
 assert 'sequences += mainSequence' in source and 'pip.muted' in source
 assert 'import androidx.media3.common.VideoCompositorSettings' in source
 assert 'import androidx.media3.common.OverlaySettings' in source

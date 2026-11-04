@@ -8,4 +8,10 @@ package br.com.uaicortes
 internal object SubtitlePreviewPolicy {
     fun activeAt(cues: List<SubtitleCue>, projectMs: Long): List<SubtitleCue> =
         cues.filter { it.startMs <= projectMs && projectMs < it.endMs && it.text.isNotBlank() }
+
+    /** A exportação TextOverlay desenha a PRIMEIRA legenda válida por instante.
+     * Usa-se a mesma regra na prévia; cue vazia não pode ocultar a seguinte.
+     */
+    fun firstAt(cues: List<SubtitleCue>, projectMs: Long): SubtitleCue? =
+        cues.firstOrNull { it.startMs <= projectMs && projectMs < it.endMs && it.text.isNotBlank() }
 }

@@ -227,7 +227,7 @@ class TimedSubtitleOverlay(
 
     private fun cue(us: Long): SubtitleCue? {
         val t = clipStartInProjectMs + us / 1000L
-        return cues.firstOrNull { t >= it.startMs && t < it.endMs && it.text.isNotBlank() }
+        return SubtitlePreviewPolicy.firstAt(cues, t)
     }
     override fun getText(presentationTimeUs: Long): SpannableString {
         val active = cue(presentationTimeUs)
