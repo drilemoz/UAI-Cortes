@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.129"
-    const val VERSION_CODE = 130
+    const val VERSION_NAME = "0.1.130"
+    const val VERSION_CODE = 131
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.130", listOf(
+            ReleaseFeature("gemini-multiple-keys", "Várias chaves Gemini protegidas",
+                "Cadastre até oito credenciais no Android Keystore, nomeie seus projetos Google Cloud, escolha a chave ativa e teste a conexão sem gerar texto.", "check"),
+            ReleaseFeature("gemini-project-fallback", "Alternância de projeto após erro 429",
+                "Com autorização explícita, pausa o projeto limitado e tenta uma única vez em cada projeto distinto disponível; cotas são por projeto, não por chave.", "check"),
+            ReleaseFeature("gemini-legacy-compat", "Compatível com a chave já cadastrada",
+                "A chave anterior continua protegida e funcional. Narração, legendas, descrições e prompts Flow aproveitam as chaves cadastradas.", "check")
+        )),
         ReleaseSummary("0.1.129", listOf(
             ReleaseFeature("home-three-equal-cards", "Três atalhos compactos na Home",
                 "Novo projeto, Animar fotos e Prompts Flow aparecem lado a lado em cartões azuis com ícones, mantendo os fluxos originais.", "film"),

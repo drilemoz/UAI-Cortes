@@ -1,5 +1,7 @@
 package br.com.uaicortes
 
+import android.content.Context
+
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -16,7 +18,8 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.coroutineContext
 
 /** Somente texto autorizado é usado em generateContent. A listagem de modelos não envia contexto. */
-internal class GeminiVideoCaptionClient {
+internal class GeminiVideoCaptionClient(context: Context? = null) {
+    private val failover = context?.let { GeminiKeyFailover(it) }
     private val connection = AtomicReference<HttpURLConnection?>(null)
     fun cancel() { connection.getAndSet(null)?.disconnect() }
 
@@ -124,7 +127,11 @@ Cena: ${scene.take(1800)}"""
         result
     }
 
-    private suspend fun requestJson(url: URL, validKey: String, payload: JSONObject?): JSONObject {
+    private suspend fun requestJson(url: URL, validKey: String, payload: JSONObject?): JSONObject =
+        if (failover == null) requestJsonOnce(url, validKey, payload)
+        else failover.run(validKey) { credential -> requestJsonOnce(url, credential, payload) }
+
+    private suspend fun requestJsonOnce(url: URL, validKey: String, payload: JSONObject?): JSONObject {
         val http = (url.openConnection() as HttpURLConnection).apply {
             requestMethod = if (payload == null) "GET" else "POST"
             connectTimeout = 15000
@@ -149,7 +156,7 @@ Cena: ${scene.take(1800)}"""
                 val apiStatus = runCatching { http.errorStream?.bufferedReader()?.use {
                     JSONObject(it.readTextLimited(4096)).optJSONObject("error")?.optString("status")
                 } }.getOrNull().orEmpty()
-                throw IOException(messageForStatus(status, apiStatus))
+                throw GeminiHttpException(status, messageForStatus(status, apiStatus))
             }
             val body = http.inputStream.bufferedReader().use { it.readTextLimited(131072) }
             coroutineContext.ensureActive()

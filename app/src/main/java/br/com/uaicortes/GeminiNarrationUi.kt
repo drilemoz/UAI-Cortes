@@ -87,7 +87,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
     val ctx = LocalContext.current
     val checkpoint = remember(ctx, project.id) { GeminiNarrationCheckpoint(ctx, project.id) }
     val creds = remember(ctx) { GeminiCredentialStore(ctx) }
-    val api = remember { GeminiTtsClient() }
+    val api = remember(ctx) { GeminiTtsClient(ctx) }
     val previewCache = remember(ctx) { GeminiVoicePreviewCache(ctx) }
     val scope = rememberCoroutineScope()
     var expanded by remember(project.id) { mutableStateOf(false) }

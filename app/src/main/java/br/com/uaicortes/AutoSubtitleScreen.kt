@@ -31,7 +31,7 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val geminiStore = remember(context) { GeminiCredentialStore(context) }
-    val geminiClient = remember { GeminiSubtitleClient() }
+    val geminiClient = remember(context) { GeminiSubtitleClient(context) }
     var geminiConfirm by remember { mutableStateOf(false) }
     val geminiConfigured = geminiStore.hasKey()
     DisposableEffect(geminiClient) { onDispose {geminiClient.cancel()} }

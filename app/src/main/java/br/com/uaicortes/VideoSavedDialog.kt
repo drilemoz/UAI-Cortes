@@ -47,7 +47,7 @@ internal fun VideoSavedDialog(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val generator = remember(uri) { GeminiVideoCaptionClient() }
+    val generator = remember(uri) { GeminiVideoCaptionClient(context) }
     val captionPrefs = remember(context) {
         context.applicationContext.getSharedPreferences("caption_model_preferences", android.content.Context.MODE_PRIVATE)
     }

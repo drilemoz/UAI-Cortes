@@ -33,7 +33,7 @@ internal fun FlowPromptScreen(project: VideoProject,
     var message by remember { mutableStateOf("") }
     var saveError by remember { mutableStateOf(false) }
     val latestSave by rememberUpdatedState(onSave)
-    val gemini = remember(project.id) { GeminiVideoCaptionClient() }
+    val gemini = remember(project.id) { GeminiVideoCaptionClient(context) }
     val scope = rememberCoroutineScope()
     DisposableEffect(gemini) { onDispose { gemini.cancel() } }
     var consent by remember(project.id) { mutableStateOf(false) }

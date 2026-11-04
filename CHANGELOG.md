@@ -1,4 +1,11 @@
-## Versão 0.1.129 · versionCode 130 (04/11/2026)
+## Versão 0.1.130 · versionCode 131 (04/11/2026)
+
+- **Múltiplas chaves Gemini:** até oito credenciais AES-GCM/Android Keystore, cada uma com nome, identificador do projeto Google Cloud, seleção de ativa, edição e exclusão confirmada.
+- **Alternância opcional:** após erro HTTP 429 RESOURCE_EXHAUSTED, pausa o projeto por dez minutos e tenta, no máximo uma vez por outro projeto identificado e não pausado, sem retentar erro de cobrança, autenticação ou indisponibilidade. Exige consentimento explícito.
+- **APIs conectadas:** narração TTS, transcrição de legendas, geração de descrições e refinamento de cenas Flow utilizam o mesmo gerenciador; a operação autorizada pelo usuário não roda em segundo plano.
+- **Limites e segurança:** as cotas são por projeto Google Cloud e não por chave; cadastrar duas chaves do mesmo projeto NÃO duplica cotas. O app não cria contas nem projetos e não garante créditos. IDs são informados pelo usuário e não são comprovados automaticamente; usar apenas projetos autorizados, respeitando termos e orçamento. O backup do Android exclui credenciais.
+- **Compatibilidade:** chave única anterior preservada; nenhuma modificação nos vídeos, projetos ou sistema Media3. Faltam Gradle/Android CI e teste com projetos reais distintos antes de declarar a alternância operacional.
+
 
 - **Home compacta:** três cartões azuis uniformes lado a lado com ícones; atalhos renomeados para Novo projeto, Animar fotos e Prompts Flow. Os mesmos callbacks anteriores são mantidos.
 - **Projetos recentes:** cabeçalho mais leve, cartão para lista vazia e Ver todos quando houver projetos. Sem alterar persistência nem excluir dados.

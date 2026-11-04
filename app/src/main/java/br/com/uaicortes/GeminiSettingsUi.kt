@@ -34,7 +34,7 @@ import kotlinx.coroutines.withContext
 internal fun GeminiSettingsSection() {
     val ctx = LocalContext.current
     val store = remember(ctx) { GeminiCredentialStore(ctx) }
-    val api = remember { GeminiTtsClient() }
+    val api = remember(ctx) { GeminiTtsClient(ctx) }
     val scope = rememberCoroutineScope()
     var key by remember { mutableStateOf("") }
     var hasKey by remember { mutableStateOf(store.hasKey()) }
@@ -44,6 +44,7 @@ internal fun GeminiSettingsSection() {
     var pendingImport by remember { mutableStateOf<String?>(null) }
     var confirm by remember { mutableStateOf("") }
     var privacyExpanded by remember { mutableStateOf(false) }
+    var keysRevision by remember { mutableIntStateOf(0) }
     val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
             busy = true
@@ -135,11 +136,11 @@ internal fun GeminiSettingsSection() {
         Button(onClick = {
             try {
                 store.save(key); hasKey = true; key = ""; show = false
-                feedback = "Chave armazenada com criptografia no dispositivo."
+                feedback = "Chave ativa atualizada e protegida no dispositivo."; keysRevision++
             } catch (_: Exception) { feedback = "A chave é inválida ou não foi possível protegê-la." }
         }, enabled = !busy && key.isNotBlank(), modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
             Icon(Icons.Default.Save, null, Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp)); Text("Salvar chave", maxLines = 1, fontSize = 13.sp)
+            Spacer(Modifier.width(6.dp)); Text(if (hasKey) "Atualizar ativa" else "Salvar chave", maxLines = 1, fontSize = 13.sp)
         }
     }
     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -161,6 +162,7 @@ internal fun GeminiSettingsSection() {
         "a área de transferência e arquivos exportados ainda podem expô-la. " +
         "Para distribuir um aplicativo com credenciais administradas pelo desenvolvedor, use backend seguro.",
         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    androidx.compose.runtime.key(keysRevision) { GeminiKeyPoolSettings(store) { hasKey = store.hasKey() } }
     if (confirm.isNotEmpty()) AlertDialog(onDismissRequest = { confirm = ""; pendingImport = null },
         title = { Text(when (confirm) {
             "import" -> "Importar chave?"; "copy" -> "Copiar credencial?"; "export" -> "Exportar chave?"
@@ -178,11 +180,11 @@ internal fun GeminiSettingsSection() {
             when (action) {
                 "import" -> {
                     try { store.save(pendingImport ?: ""); hasKey = true; key = ""; show = false
-                        feedback = "Chave importada e protegida." }
+                        feedback = "Chave importada e protegida."; keysRevision++ }
                     catch (_: Exception) { feedback = "Falha ao armazenar chave importada." }
                     finally { pendingImport = null }
                 }
-                "remove" -> try { store.remove(); hasKey = false; key = ""; feedback = "Chave removida." }
+                "remove" -> try { store.remove(); hasKey = false; key = ""; feedback = "Chave removida."; keysRevision++ }
                     catch (_: Exception) { feedback = "Falha ao remover a chave." }
                 "export" -> exportPicker.launch("Gemini-API-KEY.env")
                 "copy" -> {

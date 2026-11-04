@@ -19,7 +19,8 @@ import java.net.SocketTimeoutException
 import java.util.concurrent.atomic.AtomicReference
 
 /** Gemini ASR opcional: só envia áudio após confirmação visível. Não reutiliza o TTS. */
-internal class GeminiSubtitleClient {
+internal class GeminiSubtitleClient(context: Context? = null) {
+    private val failover = context?.let { GeminiKeyFailover(it) }
     private val active = AtomicReference<HttpURLConnection?>(null)
     fun cancel() { active.getAndSet(null)?.disconnect() }
 
@@ -67,7 +68,7 @@ internal class GeminiSubtitleClient {
                 in 500..599 -> "Servidor Gemini indisponível."
                 else -> "Servidor retornou HTTP $code."
             }
-            throw IOException(name)
+            throw GeminiHttpException(code, name)
         }
         return JSONObject(limited(conn.inputStream).toString(Charsets.UTF_8))
     }
@@ -174,6 +175,11 @@ internal class GeminiSubtitleClient {
     }
 
     suspend fun transcribe(context: Context, project: VideoProject, key: String,
+        onProgress: suspend (Int?,String) -> Unit): List<SubtitleCue> =
+        if (failover == null) transcribeOnce(context, project, key, onProgress)
+        else failover.run(key) { credential -> transcribeOnce(context, project, credential, onProgress) }
+
+    private suspend fun transcribeOnce(context: Context, project: VideoProject, key: String,
         onProgress: suspend (Int?,String) -> Unit): List<SubtitleCue> = withContext(Dispatchers.IO) {
         val valid=GeminiKeyParser.validate(key)
         val wav=SubtitleAudioCache.getOrPrepare(context,project,onProgress)
