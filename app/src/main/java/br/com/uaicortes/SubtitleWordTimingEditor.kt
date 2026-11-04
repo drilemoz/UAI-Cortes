@@ -31,7 +31,9 @@ internal fun SubtitleWordTimingEditor(cue: SubtitleCue,
     var message by remember(cue.id) { mutableStateOf("") }
     var seekMs by remember(cue.id) { mutableLongStateOf(cue.startMs) }
     val ready = policy.valid(cue, intervals)
-    val previewCue = cue.copy(animation = SubtitleAnimations.KARAOKE,
+    val previewCue = cue.copy(
+        animation = if (SubtitleAnimations.isKaraoke(cue.animation)) cue.animation
+            else SubtitleAnimations.KARAOKE,
         wordTimings = if (ready) intervals else emptyList())
 
     Dialog(onDismissRequest=onDismiss,properties=DialogProperties(usePlatformDefaultWidth=false)) {
@@ -72,6 +74,8 @@ internal fun SubtitleWordTimingEditor(cue: SubtitleCue,
                             contentAlignment=Alignment.Center) {
                             SubtitleStyledSample(previewCue.copy(sizeSp=18),frame,compact=true)
                         }
+                        Text("Prévia: ${SubtitleAnimations.label(previewCue.animation)}",
+                            fontSize=11.sp,color=MaterialTheme.colorScheme.primary)
                         Text("Toque em uma palavra para conferir o destaque. " +
                             "Ajuste a divisão entre palavras com − / + ou digite o horário.",
                             fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)

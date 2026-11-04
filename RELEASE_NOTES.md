@@ -1,3 +1,23 @@
+# Uai Cortes · versão 0.1.137 (04/11/2026)
+
+## Legendas · barra mais compacta e menos repetição
+
+- O comando **Desfazer** saiu da área entre os blocos de ação e a lista de legendas. Agora fica na mesma linha de **Salvar**, **Apagar todas** e **Buscar**, usando ícone de retorno para liberar espaço vertical.
+- A informação de tempo selecionado foi reduzida para um único resumo acima da timeline: **Legenda: início – fim**. O tempo duplicado ao lado dos controles do player foi removido.
+- A faixa **Linha do tempo** ficou mais próxima da prévia do vídeo, com cabeçalho mais compacto e ajuda menor, melhorando a leitura da tela.
+- O comportamento de desfazer continua cobrindo remoção total de legendas e a última edição em lote, sem alterar projetos antigos, posições, efeitos, Media3 ou o formato JSON atual.
+- Novo contrato `tools/test_subtitle_actions_137_contract.py` verifica a presença do atalho Desfazer na barra principal e previne o retorno do tempo duplicado na barra do player. Build Android completo e teste manual da ergonomia ainda dependem do próximo GitHub Actions.
+
+# Uai Cortes · versão 0.1.136 (04/11/2026)
+
+## Novos destaques por palavra nas legendas
+
+- Três opções na categoria Texto: **Pulso de cor**, **Palavra forte** e **Sublinhar palavra**. São variantes do karaokê existente, compatíveis com a sincronização manual da v0.1.134 e horários reconhecidos previamente.
+- O pulso é uma **animação de cor quantizada**, sem mudar tamanho ou posição dos caracteres. Palavra forte usa negrito e Sublinhar palavra usa sublinhado apenas na palavra ativa. Três novos modelos prontos somam **25 estilos e 22 animações**.
+- `SubtitleAnimations.Frame` descreve o destaque em um único lugar. Prévia Compose, miniaturas de estilos e MP4 Media3 aplicam os mesmos intervalos, cores e opções de negrito/sublinhado; a chave do bitmap inclui a fase do pulso e os atributos do `SubtitleCue` para evitar imagem desatualizada.
+- Sem horários individuais, o efeito distribui o tempo por palavra apenas como estimativa e **não altera** o projeto automaticamente. `schemaVersion=4`, IDs, textos, áudio, posição e horários já salvos permanecem intactos.
+- Novos testes JVM `SubtitleKaraokeAccentsTest` e contrato Python `test_subtitle_karaoke_136_contract.py`; testes locais não substituem build Android, comparação visual de prévia/MP4 e sincronização real com áudio.
+
 # Uai Cortes · versão 0.1.135 (04/11/2026)
 
 ## Correção do workflow 113 — testes de presets de legendas

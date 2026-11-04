@@ -1103,7 +1103,7 @@ assert 'val italic: Boolean = false' in model
 assert 'SubtitleWordEffects.activeWordIndex(cue, absoluteMs)' in sub_animation
 assert 'wordTimings = selected.map' in auto and 'animation = SubtitleAnimations.KARAOKE' in auto
 assert 'SubtitleWordEffects.colors(cue,animationFrame.text' in (app_files/'SubtitleScreen.kt').read_text()
-assert 'SubtitleWordEffects.colors(active,rendered,frame.highlighted)' in fx
+assert 'SubtitleWordEffects.colors(active,rendered,frame.highlighted,' in fx and 'frame.highlightColorOverride ?: active.highlightColor' in fx
 assert 'SubtitleStyleGallery(draft,onChange)' in (app_files/'SubtitleVisualEditor.kt').read_text() and 'SubtitleWordColorEditor(draft,onChange)' in (app_files/'SubtitleVisualEditor.kt').read_text()
 assert 'val presets = listOf(' in styles and 'Itálico amarelo' in styles
 assert '"animate" -> "home"' in nav and 'onBack = ::back,' in main

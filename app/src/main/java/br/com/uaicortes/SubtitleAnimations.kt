@@ -12,6 +12,9 @@ object SubtitleAnimations {
     const val TYPEWRITER = "typewriter"
     const val PHRASES = "phrases"
     const val KARAOKE = "karaoke"
+    const val KARAOKE_PULSE = "karaoke_pulse"
+    const val KARAOKE_BOLD = "karaoke_bold"
+    const val KARAOKE_UNDERLINE = "karaoke_underline"
     const val POP = "pop"
     const val FADE = "fade"
     const val SLIDE = "slide"
@@ -30,6 +33,8 @@ object SubtitleAnimations {
     val choices = listOf(
         NONE to "Sem efeito", TYPEWRITER to "Letra por letra",
         PHRASES to "Frase por frase", KARAOKE to "Palavra destacada",
+        KARAOKE_PULSE to "Pulso de cor", KARAOKE_BOLD to "Palavra forte",
+        KARAOKE_UNDERLINE to "Sublinhar palavra",
         POP to "Pop / zoom", FADE to "Aparecer / sumir", SLIDE to "Deslizar",
         BOUNCE to "Bounce", PULSE to "Pulsar", ZOOM_OUT to "Zoom reverso",
         RISE to "Subir", DROP to "Descer",
@@ -40,16 +45,20 @@ object SubtitleAnimations {
     /** A organização por categorias evita uma única lista horizontal com dezenas de efeitos. */
     val groups: List<Pair<String, List<String>>> = listOf(
         "Entrada" to listOf(NONE, POP, FADE, SLIDE, ZOOM_OUT, RISE, DROP, SLIDE_LEFT, SLIDE_RIGHT, ELASTIC),
-        "Texto" to listOf(TYPEWRITER, PHRASES, WORD_REVEAL, KARAOKE),
+        "Texto" to listOf(TYPEWRITER, PHRASES, WORD_REVEAL, KARAOKE,
+            KARAOKE_PULSE, KARAOKE_BOLD, KARAOKE_UNDERLINE),
         "Movimento" to listOf(BOUNCE, PULSE, FLOAT, SWAY, SOFT_SHAKE)
     )
     fun label(id: String): String = choices.firstOrNull { it.first == id }?.second ?: "Sem efeito"
+    fun isKaraoke(id: String): Boolean = normalize(id) in setOf(
+        KARAOKE, KARAOKE_PULSE, KARAOKE_BOLD, KARAOKE_UNDERLINE)
     fun normalize(value: String): String = if (choices.any { it.first == value }) value else NONE
     fun speed(value: Float): Float = if (value.isFinite()) value.coerceIn(.5f, 2f) else 1f
 
     data class Frame(val text: String, val highlighted: IntRange? = null,
         val alpha: Float = 1f, val scale: Float = 1f, val slideY: Float = 0f,
-        val slideX: Float = 0f)
+        val slideX: Float = 0f, val highlightColorOverride: Int? = null,
+        val boldActiveWord: Boolean = false, val underlineActiveWord: Boolean = false)
 
     fun frame(cue: SubtitleCue, absoluteMs: Long): Frame {
         val text = cue.text
@@ -70,12 +79,31 @@ object SubtitleAnimations {
                 val idx = ((ratio * rate).coerceIn(0f, .999999f) * parts.size).toInt()
                 Frame(parts.getOrElse(idx) { "" })
             }
-            KARAOKE -> {
+            KARAOKE, KARAOKE_PULSE, KARAOKE_BOLD, KARAOKE_UNDERLINE -> {
                 val words = Regex("\\S+").findAll(text).toList()
                 if (words.isEmpty()) Frame(text) else {
                     val exact = SubtitleWordEffects.activeWordIndex(cue, absoluteMs)
-                    val idx = exact ?: ((ratio * rate).coerceIn(0f, .999999f) * words.size).toInt()
-                    Frame(text, words[idx.coerceIn(0,words.lastIndex)].range)
+                    val idx = (exact ?: ((ratio * rate).coerceIn(0f, .999999f) * words.size).toInt())
+                        .coerceIn(0, words.lastIndex)
+                    val mode = normalize(cue.animation)
+                    // O pulso altera a COR, não a largura do texto; evita quebras ou saltos na linha.
+                    // Quantização reduz reconstruções de bitmap no Media3 durante o efeito.
+                    val pulseColor = if (mode == KARAOKE_PULSE) {
+                        val timing = cue.wordTimings.getOrNull(idx)?.takeIf {
+                            cue.wordTimings.size == words.size &&
+                                SubtitleWordEffects.activeWordIndex(cue, absoluteMs) != null
+                        }
+                        val progress = if (timing != null) {
+                            ((absoluteMs - timing.startMs).toFloat() /
+                                (timing.endMs - timing.startMs).coerceAtLeast(1L)).coerceIn(0f, 1f)
+                        } else ((ratio * rate * words.size) - idx).coerceIn(0f, 1f)
+                        val beat = (0.5f - 0.5f * kotlin.math.cos(progress * 2f * PI).toFloat())
+                        val step = (beat * 6f).roundToInt() / 6f
+                        SubtitleWordEffects.blendColor(cue.color, cue.highlightColor, 0.4f + 0.6f * step)
+                    } else null
+                    Frame(text, words[idx].range, highlightColorOverride=pulseColor,
+                        boldActiveWord=mode == KARAOKE_BOLD,
+                        underlineActiveWord=mode == KARAOKE_UNDERLINE)
                 }
             }
             WORD_REVEAL -> {

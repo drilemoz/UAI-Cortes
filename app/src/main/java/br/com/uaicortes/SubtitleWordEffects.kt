@@ -28,7 +28,20 @@ object SubtitleWordEffects {
 
     fun wordRanges(text: String): List<IntRange> = wordPattern.findAll(text).map { it.range }.toList()
 
-    fun colors(cue: SubtitleCue, visibleText: String, activeWord: IntRange?): List<ColorRange> {
+    /** Mistura ARGB de forma determinística; não depende de Android ou do FPS. */
+    fun blendColor(from: Int, to: Int, fraction: Float): Int {
+        val amount = if (fraction.isFinite()) fraction.coerceIn(0f, 1f) else 0f
+        fun channel(shift: Int): Int {
+            val a = (from ushr shift) and 0xFF
+            val b = (to ushr shift) and 0xFF
+            return (a + (b - a) * amount).toInt().coerceIn(0, 255)
+        }
+        return (channel(24) shl 24) or (channel(16) shl 16) or
+            (channel(8) shl 8) or channel(0)
+    }
+
+    fun colors(cue: SubtitleCue, visibleText: String, activeWord: IntRange?,
+        activeColor: Int = cue.highlightColor): List<ColorRange> {
         val words = wordRanges(visibleText)
         val result = cue.wordColors.asSequence()
             .filter { it.index in words.indices }
@@ -36,7 +49,7 @@ object SubtitleWordEffects {
         if (activeWord != null && activeWord.first >= 0 && activeWord.last < visibleText.length) {
             // A palavra falada tem prioridade sobre a coloração fixa.
             result.removeAll { it.range == activeWord }
-            result += ColorRange(activeWord, cue.highlightColor)
+            result += ColorRange(activeWord, activeColor)
         }
         return result
     }

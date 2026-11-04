@@ -81,7 +81,13 @@ object SubtitleStyles {
         SubtitleStylePreset("Reação", 0xFFFEFB6B.toInt(), NO_BACKGROUND,
             outlineWidth=4,animation=SubtitleAnimations.SOFT_SHAKE),
         SubtitleStylePreset("Ritmo rosa", 0xFFFFA5E7.toInt(), NO_BACKGROUND,
-            outlineWidth=3,shadowOffsetDp=2,animation=SubtitleAnimations.PULSE)
+            outlineWidth=3,shadowOffsetDp=2,animation=SubtitleAnimations.PULSE),
+        SubtitleStylePreset("Karaokê pulso", -1, NO_BACKGROUND, outlineWidth=3,
+            highlightColor=0xFFFFC928.toInt(),animation=SubtitleAnimations.KARAOKE_PULSE),
+        SubtitleStylePreset("Karaokê forte", -1, NO_BACKGROUND, outlineWidth=3,
+            highlightColor=0xFF00E5FF.toInt(),animation=SubtitleAnimations.KARAOKE_BOLD),
+        SubtitleStylePreset("Karaokê linha", -1, NO_BACKGROUND, outlineWidth=3,
+            highlightColor=0xFF9FFF56.toInt(),animation=SubtitleAnimations.KARAOKE_UNDERLINE)
     )
 
     fun matches(cue: SubtitleCue, preset: SubtitleStylePreset): Boolean =

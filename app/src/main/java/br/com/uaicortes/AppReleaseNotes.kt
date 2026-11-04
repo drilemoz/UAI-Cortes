@@ -16,11 +16,23 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.135"
-    const val VERSION_CODE = 136
+    const val VERSION_NAME = "0.1.137"
+    const val VERSION_CODE = 138
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.137", listOf(
+            ReleaseFeature("subtitle-toolbar-undo-137", "Desfazer na barra principal",
+                "O comando Desfazer agora fica ao lado de Salvar, Apagar todas e Buscar, liberando espaço para ver mais legendas.", "captions"),
+            ReleaseFeature("subtitle-time-compact-137", "Tempo duplicado removido",
+                "A tela mostra um único resumo da legenda selecionada acima da timeline e limpa a repetição ao lado do player.", "check")
+        )),
+        ReleaseSummary("0.1.136", listOf(
+            ReleaseFeature("subtitle-karaoke-accents-136", "Três destaques por palavra",
+                "Karaokê com pulso de cor, palavra em negrito ou sublinhada, mantendo os horários existentes.", "captions"),
+            ReleaseFeature("subtitle-karaoke-preview-export-136", "Efeitos na prévia e MP4",
+                "Uma única regra de cor e destaque é usada no Compose e no Media3; conferir o resultado no aparelho.", "check")
+        )),
         ReleaseSummary("0.1.135", listOf(
             ReleaseFeature("ci113-subtitle-stable-preset", "Teste de modelos de legenda corrigido",
                 "Corrigido o teste que dependia do último modelo da galeria; agora identifica Etiqueta pelo nome.", "check"),

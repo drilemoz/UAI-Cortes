@@ -94,8 +94,17 @@ internal fun SubtitleStyledSample(cue: SubtitleCue, frame: SubtitleAnimations.Fr
     val shown=frame.text
     val colored=buildAnnotatedString {
         append(shown)
-        SubtitleWordEffects.colors(cue,shown,frame.highlighted).forEach { span ->
+        SubtitleWordEffects.colors(cue,shown,frame.highlighted,
+            frame.highlightColorOverride ?: cue.highlightColor).forEach { span ->
             addStyle(SpanStyle(color=Color(span.color)),span.range.first,span.range.last+1)
+        }
+        frame.highlighted?.takeIf { it.first >= 0 && it.last < shown.length }?.let { selected ->
+            if (frame.boldActiveWord || frame.underlineActiveWord)
+                addStyle(SpanStyle(
+                    fontWeight=if(frame.boldActiveWord) FontWeight.Bold else null,
+                    textDecoration=if(frame.underlineActiveWord)
+                        androidx.compose.ui.text.style.TextDecoration.Underline else null
+                ),selected.first,selected.last+1)
         }
     }
     val weight=if(cue.bold) FontWeight.Bold else FontWeight.Normal

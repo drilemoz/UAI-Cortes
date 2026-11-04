@@ -78,7 +78,7 @@ class SubtitlePresentationTest {
     @Test fun presetsDoNotErasePresentationOptions() {
         val cue=SubtitleCue(text="Olá",startMs=0,endMs=500,
             shadowOffsetDp=2,lineSpacingPercent=130,textAlignment=SubtitleStyles.ALIGN_RIGHT)
-        val edited=SubtitleStyles.applyToCue(cue,SubtitleStyles.presets.last())
+        val edited=SubtitleStyles.applyToCue(cue,SubtitleStyles.presets.first { it.name == "Etiqueta" })
         assertEquals(cue.shadowOffsetDp,edited.shadowOffsetDp)
         assertEquals(cue.lineSpacingPercent,edited.lineSpacingPercent)
         assertEquals(cue.textAlignment,edited.textAlignment)

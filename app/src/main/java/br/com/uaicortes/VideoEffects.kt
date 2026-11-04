@@ -12,6 +12,7 @@ import android.text.SpannableString
 import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
+import android.text.style.UnderlineSpan
 import android.text.style.AlignmentSpan
 import android.text.style.LineHeightSpan
 import android.text.StaticLayout
@@ -196,7 +197,10 @@ class TimedSubtitleOverlay(
         val active = cue(presentationTimeUs)
         val frame = active?.let { SubtitleAnimations.frame(it, clipStartInProjectMs + presentationTimeUs / 1000L) }
         if (!SubtitleOverlayTextSafety.isVisible(frame?.text.orEmpty())) return emptyBitmap
-        val contentKey = "${active?.id}:${frame?.text}:${frame?.highlighted}:${active?.wordColors}:${active?.highlightColor}:$videoWidth"
+        // Inclui o estilo animado e a aparência na chave: evita reutilizar bitmap desatualizado.
+        val contentKey = "${active?.hashCode()}:${frame?.text}:${frame?.highlighted}:" +
+            "${frame?.highlightColorOverride}:${frame?.boldActiveWord}:" +
+            "${frame?.underlineActiveWord}:$videoWidth"
         if (cachedKey == contentKey) cachedBitmap?.let { return it }
         val styled = getText(presentationTimeUs)
         val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textSize = TextOverlay.TEXT_SIZE_PIXELS.toFloat() }
@@ -244,7 +248,8 @@ class TimedSubtitleOverlay(
         }
         if (active != null && frame != null) {
             text.setSpan(ForegroundColorSpan(active.color), 0, text.length, 0)
-            SubtitleWordEffects.colors(active,rendered,frame.highlighted).forEach { colored ->
+            SubtitleWordEffects.colors(active,rendered,frame.highlighted,
+                frame.highlightColorOverride ?: active.highlightColor).forEach { colored ->
                 text.setSpan(ForegroundColorSpan(colored.color),colored.range.first,
                     colored.range.last+1,0)
             }
@@ -261,6 +266,12 @@ class TimedSubtitleOverlay(
                 else -> "sans-serif"
             }
             text.setSpan(TypefaceSpan(family), 0, text.length, 0)
+            frame.highlighted?.takeIf { it.first >= 0 && it.last < text.length }?.let { selected ->
+                if (frame.boldActiveWord) text.setSpan(StyleSpan(if(active.italic)
+                    Typeface.BOLD_ITALIC else Typeface.BOLD),selected.first,selected.last+1,0)
+                if (frame.underlineActiveWord) text.setSpan(UnderlineSpan(),
+                    selected.first,selected.last+1,0)
+            }
             val fontPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
                 textSize = TextOverlay.TEXT_SIZE_PIXELS.toFloat()
                 typeface = Typeface.create(family, when {

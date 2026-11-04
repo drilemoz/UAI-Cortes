@@ -207,9 +207,11 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
             if(draft.animation!=SubtitleAnimations.NONE) {
                 SubtitleValueSlider("Velocidade", "${"%.1f".format(java.util.Locale.US,draft.animationSpeed)}×",
                     draft.animationSpeed,.5f..2f,5,onChange={onChange(draft.copy(animationSpeed=it))})
-                Text(if(draft.animation==SubtitleAnimations.KARAOKE && draft.wordTimings.isNotEmpty())
+                Text(if(SubtitleAnimations.isKaraoke(draft.animation) && draft.wordTimings.isNotEmpty())
                     "Destaque usa os horários salvos de cada palavra."
-                    else "Sem horários individuais, a animação distribui as palavras pelo intervalo.",
+                    else if (SubtitleAnimations.isKaraoke(draft.animation))
+                    "Sem sincronização manual, o destaque divide o tempo igualmente (estimativa)."
+                    else "A velocidade muda a animação; confira na prévia antes de exportar.",
                     color=MaterialTheme.colorScheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
             }
         }

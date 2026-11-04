@@ -172,11 +172,22 @@ internal fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
                 }
                 val animatedText=buildAnnotatedString {
                     append(animationFrame.text)
-                    SubtitleWordEffects.colors(cue,animationFrame.text,animationFrame.highlighted)
+                    SubtitleWordEffects.colors(cue,animationFrame.text,animationFrame.highlighted,
+                        animationFrame.highlightColorOverride ?: cue.highlightColor)
                         .forEach { colored ->
                             addStyle(SpanStyle(color=Color(colored.color)),
                                 colored.range.first,colored.range.last+1)
                         }
+                    animationFrame.highlighted?.takeIf {
+                        it.first >= 0 && it.last < animationFrame.text.length
+                    }?.let { selected ->
+                        if (animationFrame.boldActiveWord || animationFrame.underlineActiveWord)
+                            addStyle(SpanStyle(
+                                fontWeight=if (animationFrame.boldActiveWord) FontWeight.Bold else null,
+                                textDecoration=if (animationFrame.underlineActiveWord)
+                                    androidx.compose.ui.text.style.TextDecoration.Underline else null
+                            ),selected.first,selected.last+1)
+                    }
                 }
                 Text(animatedText,color=Color(cue.color),fontSize=previewFontSp.sp,
                     fontFamily=family,fontWeight=textWeight,fontStyle=fontStyle,textAlign=alignment,
@@ -279,8 +290,6 @@ internal fun SubtitlePositionPreview(p:VideoProject,cue:SubtitleCue,
             IconButton(enabled=hasNext,onClick=onNext,modifier=Modifier.size(36.dp)) {
                 Icon(Icons.Default.ChevronRight,"Próxima legenda",modifier=Modifier.size(25.dp))
             }
-            Text("${formatPipMs(cue.startMs)}–${formatPipMs(cue.endMs)}",
-                fontSize=11.sp,maxLines=1,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -346,6 +355,33 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
         p.subtitles.sortedWith(compareBy<SubtitleCue> { it.startMs }.thenBy { it.id })
     }
     var batchUndoMessage by remember(p.id) { mutableStateOf("") }
+    val canUndoDeleted = deletedSnapshot != null && p.subtitles.isEmpty()
+    val canUndoBatch = batchUndo != null && batchUndo?.updated == p.subtitles
+    val undoAvailable = canUndoDeleted || canUndoBatch
+    val undoDescription = when {
+        canUndoDeleted -> "Desfazer remoção de legendas"
+        canUndoBatch -> "Desfazer última edição em lote"
+        else -> "Desfazer"
+    }
+    fun undoLatestChange() {
+        when {
+            canUndoDeleted -> {
+                val restore = deletedSnapshot
+                if (restore != null && update(p.copy(subtitles = restore))) {
+                    selectedId = restore.firstOrNull()?.id.orEmpty()
+                    deletedSnapshot = null
+                    status = "Legendas restauradas"
+                }
+            }
+            canUndoBatch -> {
+                val restored = batchUndo?.restoreIfCurrent(p.subtitles)
+                if (restored != null && update(p.copy(subtitles = restored))) {
+                    batchUndo = null
+                    status = "Estilos anteriores restaurados"
+                }
+            }
+        }
+    }
     val selected=p.subtitles.firstOrNull{it.id==selectedId}
     val selectedIndex=sorted.indexOfFirst { it.id==selectedId }
     var editorOpen by remember(p.id) { mutableStateOf(false) }
@@ -394,18 +430,19 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
             contentAlignment=Alignment.Center) {
             Text("Adicione uma legenda para visualizar o quadro",color=Color.White,fontSize=12.sp)
         }
-        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,
+        Row(Modifier.fillMaxWidth().padding(top=2.dp),horizontalArrangement=Arrangement.SpaceBetween,
             verticalAlignment=Alignment.CenterVertically) {
             Row(verticalAlignment=Alignment.CenterVertically) {
                 Text("Linha do tempo",fontSize=13.sp,fontWeight=FontWeight.SemiBold)
-                IconButton(onClick={helpPosition=true},modifier=Modifier.size(32.dp)) {
+                IconButton(onClick={helpPosition=true},modifier=Modifier.size(28.dp)) {
                     Icon(Icons.Default.HelpOutline,"Ajuda para posicionar legendas",
-                        modifier=Modifier.size(18.dp))
+                        modifier=Modifier.size(17.dp))
                 }
             }
-            Text(if(selected==null)"Sem seleção" else
-                "${formatPipMs(selected.startMs)} – ${formatPipMs(selected.endMs)}",
-                fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(if(selected==null)"Toque em uma legenda" else
+                "Legenda: ${formatPipMs(selected.startMs)} – ${formatPipMs(selected.endMs)}",
+                fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines=1,overflow=TextOverflow.Ellipsis)
         }
         SubtitleCompactTimeline(sorted,p.durationMs,selectedId,
             onSelect={ id -> selectedId=id;editorOpen=false })
@@ -424,6 +461,13 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                 Icon(Icons.Default.DeleteSweep,"Apagar todas as legendas",
                     tint=if(p.subtitles.isNotEmpty()) MaterialTheme.colorScheme.error
                         else MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.size(21.dp))
+            }
+            IconButton(onClick={ if(undoAvailable) undoLatestChange() },enabled=undoAvailable,
+                modifier=Modifier.size(40.dp)) {
+                Icon(Icons.Default.Undo,undoDescription,
+                    tint=if(undoAvailable) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier=Modifier.size(20.dp))
             }
             IconButton(onClick={searchOpen=!searchOpen; if(!searchOpen) searchQuery=""},
                 modifier=Modifier.size(40.dp)) {
@@ -458,32 +502,6 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                     Modifier.weight(1f)) { exportMenu=true }
                 SubtitleToolButton(Icons.Default.Tune,"Editar todas",p.subtitles.isNotEmpty(),
                     Modifier.weight(1f)) { batchOpen=true }
-            }
-        }
-        if (deletedSnapshot != null && p.subtitles.isEmpty()) {
-            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                Text("Legendas removidas",fontSize=11.sp,modifier=Modifier.weight(1f))
-                TextButton(onClick={
-                    val restore=deletedSnapshot
-                    if(restore!=null && update(p.copy(subtitles=restore))) {
-                        selectedId=restore.firstOrNull()?.id.orEmpty()
-                        deletedSnapshot=null
-                        status="Legendas restauradas"
-                    }
-                }) { Text("Desfazer") }
-            }
-        }
-        if(batchUndo != null && batchUndo?.updated == p.subtitles) {
-            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                Text(batchUndoMessage,fontSize=11.sp,
-                    modifier=Modifier.weight(1f))
-                TextButton(onClick={
-                    val restored=batchUndo?.restoreIfCurrent(p.subtitles)
-                    if(restored != null && update(p.copy(subtitles=restored))) {
-                        batchUndo=null
-                        status="Estilos anteriores restaurados"
-                    }
-                }) { Text("Desfazer") }
             }
         }
         if(searchOpen) {

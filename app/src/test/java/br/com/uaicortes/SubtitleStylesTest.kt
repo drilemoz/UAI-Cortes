@@ -5,7 +5,7 @@ import org.junit.Test
 
 class SubtitleStylesTest {
     @Test fun presetsContainDistinctAppearanceAndOriginalDefault() {
-        assertEquals(22, SubtitleStyles.presets.size)
+        assertEquals(25, SubtitleStyles.presets.size)
         val classic = SubtitleStyles.presets.first()
         assertEquals(0xFFFFFFFF.toInt(), classic.foreground)
         assertEquals(SubtitleStyles.DEFAULT_BACKGROUND, classic.background)

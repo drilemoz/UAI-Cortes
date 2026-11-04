@@ -1,3 +1,18 @@
+# Uai Cortes · versão 0.1.137 (04/11/2026)
+**Versão atual: 0.1.137**
+
+- Legendas: Desfazer movido para a barra principal, tempo duplicado removido da barra do player e cabeçalho da linha do tempo mais compacto.
+- Mudança focada em ergonomia; não altera formato dos projetos nem exportação.
+
+
+## Novos destaques por palavra nas legendas
+
+- Três opções na categoria Texto: **Pulso de cor**, **Palavra forte** e **Sublinhar palavra**. São variantes do karaokê existente, compatíveis com a sincronização manual da v0.1.134 e horários reconhecidos previamente.
+- O pulso é uma **animação de cor quantizada**, sem mudar tamanho ou posição dos caracteres. Palavra forte usa negrito e Sublinhar palavra usa sublinhado apenas na palavra ativa. Três novos modelos prontos somam **25 estilos e 22 animações**.
+- `SubtitleAnimations.Frame` descreve o destaque em um único lugar. Prévia Compose, miniaturas de estilos e MP4 Media3 aplicam os mesmos intervalos, cores e opções de negrito/sublinhado; a chave do bitmap inclui a fase do pulso e os atributos do `SubtitleCue` para evitar imagem desatualizada.
+- Sem horários individuais, o efeito distribui o tempo por palavra apenas como estimativa e **não altera** o projeto automaticamente. `schemaVersion=4`, IDs, textos, áudio, posição e horários já salvos permanecem intactos.
+- Novos testes JVM `SubtitleKaraokeAccentsTest` e contrato Python `test_subtitle_karaoke_136_contract.py`; testes locais não substituem build Android, comparação visual de prévia/MP4 e sincronização real com áudio.
+
 # Uai Cortes · versão 0.1.135 (04/11/2026)
 
 ## Correção do workflow 113 — testes de presets de legendas
