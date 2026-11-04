@@ -1,3 +1,10 @@
+## Versão 0.1.127 · versionCode 128 (04/11/2026)
+
+- **Correção CI105:** `FlowPromptDraft` deixa de ser `internal` para compatibilidade com a propriedade pública `VideoProject.flowPromptDraft`; o erro do compilador Kotlin `public function exposes its internal parameter type` foi registrado nos logs Debug e Release.
+- **Teste preventivo:** `tools/test_ci105_flow_visibility_contract.py` verifica a assinatura pública e a persistência JSON. A execução automática já ocorre no laço de `tools/test_*.py` do GitHub Actions.
+- **Sem alterações no editor/exportador:** preservados marca d'água, prompts Flow, media3 1.11.1, schemaVersion 4, assinatura e cinco saídas Release por ABI.
+- **Validação:** verificações de código/contratos locais; compilação Android real da versão corrigida e testes físicos permanecem pendentes.
+
 ## Versão 0.1.126 · versionCode 127 (04/11/2026)
 
 - **Marca d'água reformulada:** arrastar texto na prévia, nove posições rápidas, botões +/- para tamanho e opacidade (0–100%), guias opcionais, cores, três fontes locais, contorno e sombra. Remover exige confirmação. A posição e aparência seguem o mesmo `SubtitleCue` da prévia/exportação.

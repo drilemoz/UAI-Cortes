@@ -3,7 +3,7 @@ package br.com.uaicortes
 import org.json.JSONArray
 import org.json.JSONObject
 
-internal data class FlowPromptDraft(
+data class FlowPromptDraft(
     val context: String = "",
     val scenes: List<String> = listOf(""),
     val mode: String = "create"

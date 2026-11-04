@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.126"
-    const val VERSION_CODE = 127
+    const val VERSION_NAME = "0.1.127"
+    const val VERSION_CODE = 128
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.127", listOf(
+            ReleaseFeature("flow-prompt-visibility-ci105", "Correção de compilação do Flow",
+                "Corrigida a visibilidade do rascunho de prompts do Flow usada nos projetos, sem alterar os dados salvos.", "check")
+        )),
         ReleaseSummary("0.1.126", listOf(
             ReleaseFeature("watermark-v126", "Marca d'água mais fácil de posicionar",
                 "Arraste o texto na prévia, use posições rápidas, controle opacidade, fonte, cor, contorno e sombra.", "film"),
