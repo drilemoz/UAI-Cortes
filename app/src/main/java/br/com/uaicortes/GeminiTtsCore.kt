@@ -110,6 +110,7 @@ internal object GeminiWaveParser {
 /** Rede: uma única solicitação por ação, sem retry automático; nenhum texto ou chave em logs. */
 internal class GeminiTtsClient(context: Context? = null) {
     private val failover = context?.let { GeminiKeyFailover(it) }
+    private val usage = context?.let { GeminiUsageLedger(it) }
     private val active = AtomicReference<HttpURLConnection?>(null)
     fun cancel() { active.getAndSet(null)?.disconnect() }
     private suspend fun request(path: String, key: String, body: JSONObject? = null, max: Int = 1024 * 1024): JSONObject =
@@ -147,11 +148,16 @@ internal class GeminiTtsClient(context: Context? = null) {
                             codes.joinToString(" ")
                         }
                     }.getOrNull().orEmpty()
+                    if (path == "interactions") usage?.safeRecord(key, body?.optString("model").orEmpty(),
+                        "narracao", status = if (status == 429) "429" else "erro_$status")
                     throw GeminiApiError(status, safeCode)
                 }
                 val result = conn.inputStream.use { readLimit(it, max) }
                 coroutineContext.ensureActive()
-                JSONObject(result.toString(Charsets.UTF_8))
+                JSONObject(result.toString(Charsets.UTF_8)).also { response ->
+                    if (path == "interactions") usage?.safeRecord(key, body?.optString("model").orEmpty(),
+                        "narracao", response)
+                }
             } catch (e: UnknownHostException) { throw IOException("Sem conexão com a internet.") }
             catch (e: SocketTimeoutException) { throw IOException("A conexão com Gemini excedeu o tempo limite.") }
             finally { active.compareAndSet(conn, null); conn.disconnect() }

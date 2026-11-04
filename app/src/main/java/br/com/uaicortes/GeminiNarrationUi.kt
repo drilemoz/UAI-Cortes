@@ -176,6 +176,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
     val syncedIssue = if (syncedMode) SubtitleNarrationTimeline.validate(timedLines, project.durationMs) else null
     var advancedStylesOpen by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("") }
+    var usageResult by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
     var working by remember { mutableStateOf(false) }
     val generationIssues = NarrationGenerationEligibility.blockingReasons(
@@ -709,6 +710,9 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                                 }
                             }
                         }
+                        if (usageResult.isNotBlank()) Text("Última geração: $usageResult",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                         if (status.isNotBlank()) Surface(color = MaterialTheme.colorScheme.surfaceVariant,
                             shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
                             Text(status, Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
@@ -1203,7 +1207,8 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
         confirmation = ""; pendingSampleVoiceId = null
     },
         title = { Text("Confirmar solicitação Gemini") },
-        text = { Text(if (confirmation == "regenerate_one") {
+        text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(if (confirmation == "regenerate_one") {
             val line = timedLines.firstOrNull { it.cueId == regenerateCueId }
             val start = line?.let { NarrationReferenceAlignment.start(it, referenceStarts) } ?: 0L
             val target = line?.let { durationGoals[it.cueId] ?:
@@ -1224,12 +1229,16 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
             else "Gerar a narração pela API pode consumir cota ou gerar cobrança. " +
                 "Se a geração e o salvamento forem bem-sucedidos, o áudio será incluído na " +
                 "mixagem do projeto e ficará visível na tela Áudio. O arquivo original não será alterado. " +
-                "Não haverá repetição automática em caso de falha.") },
+                "Não haverá repetição automática em caso de falha.")
+            GeminiUsageHint("narração", inputChars = if (confirmation == "sample")
+                GeminiPreviewIdentity.TEXT.length else text.length, model = model)
+        } },
         confirmButton = { TextButton(onClick = {
             val action = confirmation; confirmation = ""
             if (working || loading) return@TextButton
             job = scope.launch {
                 working = true
+                usageResult = ""
                 status = "Solicitando áudio ao Gemini..."
                 try {
                     val key = withContext(Dispatchers.IO) { creds.read() }
@@ -1256,6 +1265,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                         val wave = api.synthesize(key, model, voice.id,
                             styleInstruction + "\n" + NarrationDurationAssist.instruction(target),
                             segment.text)
+                        usageResult = GeminiUsageLedger(ctx).lastMessage("narracao")
                         val saved = withContext(Dispatchers.IO) {
                             coroutineContext.ensureActive()
                             GeminiAudioFiles.save(ctx, wave)
@@ -1299,6 +1309,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                                     "Falhas não repetem a chamada automaticamente."
                                 val wave = api.synthesize(key, model, chosenVoice.id,
                                     styleInstruction, line.text)
+                                usageResult = GeminiUsageLedger(ctx).lastMessage("narracao")
                                 val saved = withContext(Dispatchers.IO) {
                                     coroutineContext.ensureActive()
                                     GeminiAudioFiles.save(ctx, wave)
@@ -1336,6 +1347,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                         // pode ser rejeitado por permissão mesmo quando a síntese funciona.
                         val input = if (action == "sample") GeminiPreviewIdentity.TEXT else text.trim()
                         val wave = api.synthesize(key, model, voice.id, instruction, input)
+                        usageResult = GeminiUsageLedger(ctx).lastMessage("narracao")
                         file = withContext(Dispatchers.IO) {
                             coroutineContext.ensureActive()
                             if (action == "sample") {

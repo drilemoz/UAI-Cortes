@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.130"
-    const val VERSION_CODE = 131
+    const val VERSION_NAME = "0.1.131"
+    const val VERSION_CODE = 132
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.131", listOf(
+            ReleaseFeature("gemini-real-token-monitor", "Consumo real da IA em Configurações",
+                "Histórico local por projeto e modelo; mede tokens quando o Gemini informa e distingue resultados sem medição.", "check"),
+            ReleaseFeature("gemini-preflight-estimate", "Previsão antes de usar a IA",
+                "Descrição, Flow, narração e legendas exibem avisos simples; texto tem estimativa local de entrada.", "check"),
+            ReleaseFeature("gemini-count-tokens-optional", "Conferir tokens com Gemini",
+                "Para texto/Flow, consulte opcionalmente os tokens de entrada antes de gerar; não promete saldo ou preço.", "check")
+        )),
         ReleaseSummary("0.1.130", listOf(
             ReleaseFeature("gemini-multiple-keys", "Várias chaves Gemini protegidas",
                 "Cadastre até oito credenciais no Android Keystore, nomeie seus projetos Google Cloud, escolha a chave ativa e teste a conexão sem gerar texto.", "check"),

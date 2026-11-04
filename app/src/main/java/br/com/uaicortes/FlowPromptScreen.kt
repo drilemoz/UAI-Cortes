@@ -37,6 +37,8 @@ internal fun FlowPromptScreen(project: VideoProject,
     val scope = rememberCoroutineScope()
     DisposableEffect(gemini) { onDispose { gemini.cancel() } }
     var consent by remember(project.id) { mutableStateOf(false) }
+    var countedInput by remember(project.id) { mutableStateOf<String?>(null) }
+    var countingInput by remember(project.id) { mutableStateOf(false) }
     var busy by remember(project.id) { mutableStateOf(false) }
     var suggestion by remember(project.id) { mutableStateOf<String?>(null) }
     var suggestionIndex by remember(project.id) { mutableIntStateOf(0) }
@@ -52,7 +54,29 @@ internal fun FlowPromptScreen(project: VideoProject,
     BackHandler { exit() }
     if (consent) AlertDialog(onDismissRequest = { consent = false },
         title = { Text("Enviar cena ao Gemini?") },
-        text = { Text("Somente a descrição da cena e seu contexto serão enviados. Nenhum MP4, áudio, imagem, URI ou estilo-base será enviado. Pode consumir cota da sua API Gemini.") },
+        text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Somente a descrição da cena e seu contexto serão enviados. Nenhum MP4, áudio, imagem, URI ou estilo-base será enviado.")
+            GeminiUsageHint("refinar cena Flow", draft.scenes[selected].length + draft.context.length)
+            OutlinedButton(onClick = {
+                countingInput = true
+                countedInput = "Consultando entrada no Gemini…"
+                scope.launch {
+                    try {
+                        val key = GeminiCredentialStore(context).read()
+                            ?: error("Configure uma chave Gemini.")
+                        val pref = context.applicationContext.getSharedPreferences(
+                            "caption_model_preferences", Context.MODE_PRIVATE)
+                        val model = GeminiCaptionModelPolicy.selectedOrDefault(pref.getString("model", null))
+                        val tokens = gemini.countFlowInput(key, draft.scenes[selected], draft.context,
+                            draft.mode, model)
+                        countedInput = "$tokens tokens de entrada contados; resposta adicional."
+                    } catch (cancel: CancellationException) { throw cancel }
+                    catch (_: Exception) { countedInput = "Contagem indisponível; a geração continua disponível." }
+                    finally { countingInput = false }
+                }
+            }, enabled = !countingInput) { Text("Conferir tokens de entrada") }
+            countedInput?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+        } },
         confirmButton = { TextButton(onClick = {
             consent = false
             if (!busy) {
@@ -71,14 +95,15 @@ internal fun FlowPromptScreen(project: VideoProject,
                         val result = gemini.refineFlowScene(key, oldScene, sceneContext, sceneMode, model)
                         suggestionIndex = at
                         suggestion = result
-                        message = "Revise a sugestão antes de aplicar."
+                        message = "Revise a sugestão antes de aplicar. " +
+                            GeminiUsageLedger(context).lastMessage("flow")
                     } catch (cancel: CancellationException) { throw cancel }
                     catch (failure: Exception) {
                         message = failure.message?.take(220) ?: "Falha ao consultar Gemini."
                     } finally { busy = false }
                 }
             }
-        }) { Text("Enviar texto") } },
+        }, enabled = !countingInput) { Text("Enviar texto") } },
         dismissButton = { TextButton(onClick = { consent = false }) { Text("Cancelar") } })
     suggestion?.let { proposed -> AlertDialog(onDismissRequest = { suggestion = null },
         title = { Text("Revisar cena ${suggestionIndex + 1}") },
@@ -170,7 +195,7 @@ internal fun FlowPromptScreen(project: VideoProject,
                     Icon(Icons.Default.DeleteOutline, null); Text(" Excluir")
                 }
             }
-            OutlinedButton(onClick = { consent = true },
+            OutlinedButton(onClick = { countedInput = null; consent = true },
                 enabled = !busy && draft.scenes[selected].isNotBlank(), modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.AutoAwesome, null)
                 Text(if (busy) " Aguarde Gemini..." else " Aprimorar cena com Gemini")

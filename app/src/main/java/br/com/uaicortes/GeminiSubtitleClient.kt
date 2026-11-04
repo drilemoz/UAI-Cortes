@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicReference
 /** Gemini ASR opcional: só envia áudio após confirmação visível. Não reutiliza o TTS. */
 internal class GeminiSubtitleClient(context: Context? = null) {
     private val failover = context?.let { GeminiKeyFailover(it) }
+    private val usage = context?.let { GeminiUsageLedger(it) }
     private val active = AtomicReference<HttpURLConnection?>(null)
     fun cancel() { active.getAndSet(null)?.disconnect() }
 
@@ -195,10 +196,15 @@ internal class GeminiSubtitleClient(context: Context? = null) {
             currentCoroutineContext().ensureActive()
             onProgress(null,"Transcrevendo fala e identificando horários…")
             val response=interaction(uri,valid)
+            usage?.safeRecord(valid, "gemini-3.5-transcribe", "legendas", response)
             currentCoroutineContext().ensureActive()
             val cues=GeminiSubtitleParser.parse(response,project.durationMs)
             onProgress(100,"Transcrição concluída")
             cues
+        } catch(e: GeminiHttpException) {
+            usage?.safeRecord(valid, "gemini-3.5-transcribe", "legendas",
+                status = if (e.statusCode == 429) "429" else "erro_${e.statusCode}")
+            throw e
         } catch(e: UnknownHostException) {throw IOException("Sem conexão com a internet.")}
         catch(e: SocketTimeoutException) {throw IOException("O Gemini demorou a responder.")}
         finally {

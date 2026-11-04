@@ -227,6 +227,7 @@ internal fun GeminiSettingsScreen(back: () -> Unit) {
         .padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Heading("Google Gemini", back)
         GeminiSettingsSection()
+        GeminiUsagePanel()
         Spacer(Modifier.height(12.dp))
     }
 }

@@ -1,3 +1,12 @@
+## Versão 0.1.131 · versionCode 132 (04/11/2026)
+
+- **Medição real:** descrição e Flow (`usageMetadata` de `generateContent`), narração e transcrição (`usage` de `interactions`) agora registram, quando informados, entrada, saída, raciocínio, cache e total oficial; total nunca é somado novamente aos subtotais.
+- **Painel Gemini:** Configurações > Google Gemini > Consumo da IA, com 24 horas / 7 dias / 30 dias, histórico por projeto informado e modelo, registros sem medição, 429 e limpeza confirmada. Até 500 registros dos últimos 90 dias, somente neste aparelho.
+- **Previsão acessível:** avisos breves antes de gerar descrições, Flow, TTS e legendas; para texto, faixa de estimativa local; para áudio, duração informativa, sem inventar tokens ou custos. Após geração, total real apresentado quando fornecido.
+- **Contagem mais precisa opcional:** botões `Conferir tokens de entrada` em descrição/Flow usam `models.countTokens` somente sob ação expressa; não gera resposta, não prevê saída e não alterna projetos automaticamente. Erro de consulta não bloqueia geração.
+- **Limitações e privacidade:** sem saldo de créditos ou custo estimado sem dados oficiais do plano; API 429 indica limite e não prova saldo esgotado. Histórico não armazena conteúdo, chave, URL, WAV ou resposta bruta. Continua com Media3 1.11.1 e schemaVersion 4.
+- **Validação:** testes unitários e contratos adicionados. Não considerar build Android nem uso da API real aprovados até execução no CI e aparelho com chave autorizada.
+
 ## Versão 0.1.130 · versionCode 131 (04/11/2026)
 
 - **Múltiplas chaves Gemini:** até oito credenciais AES-GCM/Android Keystore, cada uma com nome, identificador do projeto Google Cloud, seleção de ativa, edição e exclusão confirmada.

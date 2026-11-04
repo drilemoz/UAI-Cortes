@@ -210,12 +210,13 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
     }
     if(geminiConfirm) AlertDialog(onDismissRequest={geminiConfirm=false},
         title={Text("Enviar áudio ao Google Gemini?")},
-        text={Text("O Uai Cortes extrairá o áudio dos clipes deste projeto (até 10 minutos) " +
-            "e enviará à API Gemini, usando a chave salva neste celular. " +
-            "O processamento depende de internet e pode consumir cota ou gerar custos. " +
-            "O vídeo original não será enviado. O WAV extraído poderá ficar no cache " +
-            "privado por até 3 horas para reutilização. " +
-            "Confirmar não substitui legendas existentes.")},
+        text={Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("O Uai Cortes enviará somente o áudio extraído (até 10 minutos) ao Gemini após confirmar. " +
+                "O vídeo não será enviado. O WAV poderá ficar em cache privado por até 3 horas. " +
+                "Confirmar não substitui legendas existentes.")
+            GeminiUsageHint("legendas automáticas", durationMs = project.durationMs,
+                model = "gemini-3.5-transcribe")
+        }},
         confirmButton={TextButton(onClick={
             geminiConfirm=false
             task=scope.launch {
@@ -232,7 +233,8 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                     }
                     results=generated
                     message=if(generated.isEmpty()) "Nenhuma palavra reconhecida."
-                        else "${generated.size} legendas geradas por Gemini. Revise antes de aplicar."
+                        else "${generated.size} legendas geradas por Gemini. Revise antes de aplicar. " +
+                            GeminiUsageLedger(context).lastMessage("legendas")
                     progress=100
                 } catch(_: CancellationException) {
                     message="Envio/transcrição cancelados. Nenhuma legenda foi aplicada."

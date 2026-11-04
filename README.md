@@ -1,4 +1,11 @@
-# Uai Cortes · versão 0.1.130 (04/11/2026)
+# Uai Cortes · versão 0.1.131 (04/11/2026)
+
+
+## Monitor Gemini de tokens · v0.1.131
+
+O painel Configurações > Google Gemini > Consumo da IA registra somente consumo **informado pela API** e tentativas locais, com consulta por projeto/modelo e opção Limpar histórico. Antes de descrição, Flow, narração ou legendas, mostra aviso simples e previsão limitada. Em descrição e Flow, `countTokens` é opcional por toque. Isso não oferece acesso ao saldo de créditos nem calcula preços de faturamento automaticamente. Não transmite dados de mídia fora das gerações explicitamente autorizadas. Ver `docs/GEMINI_USAGE_MONITORING.md`.
+
+## Recursos da v0.1.130
 
 - **Múltiplas chaves Gemini:** até oito credenciais AES-GCM/Android Keystore, cada uma com nome, identificador do projeto Google Cloud, seleção de ativa, edição e exclusão confirmada.
 - **Alternância opcional:** após erro HTTP 429 RESOURCE_EXHAUSTED, pausa o projeto por dez minutos e tenta, no máximo uma vez por outro projeto identificado e não pausado, sem retentar erro de cobrança, autenticação ou indisponibilidade. Exige consentimento explícito.
