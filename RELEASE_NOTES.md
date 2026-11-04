@@ -1,3 +1,9 @@
+## Versão 0.1.133 · versionCode 134 (04/11/2026)
+- Legendas: edição em lote mais clara, com opção explícita de copiar cores apenas para palavras correspondentes.
+- Mais opções visuais: agora 22 modelos prontos e 19 tipos de animação no catálogo, organizados por categoria.
+- Prévia controlável: pausa, reinício e visualização no tempo real da legenda; sem texto substituto enganoso.
+- Preservados projetos existentes, animações antigas e exportação local. Testar APK e MP4 antes de confirmar fidelidade visual.
+
 ## Versão 0.1.132 · versionCode 133 (04/11/2026)
 
 - **Correção workflow 110:** adicionado o import `androidx.compose.foundation.horizontalScroll` em `GeminiUsageUi.kt`, resolvendo `Unresolved reference horizontalScroll` nas tarefas Debug/Release.

@@ -5,7 +5,7 @@ import org.junit.Test
 
 class SubtitleStylesTest {
     @Test fun presetsContainDistinctAppearanceAndOriginalDefault() {
-        assertEquals(12, SubtitleStyles.presets.size)
+        assertEquals(22, SubtitleStyles.presets.size)
         val classic = SubtitleStyles.presets.first()
         assertEquals(0xFFFFFFFF.toInt(), classic.foreground)
         assertEquals(SubtitleStyles.DEFAULT_BACKGROUND, classic.background)
@@ -55,5 +55,36 @@ class SubtitleStylesTest {
         val loaded=SubtitleCue.read(legacy)
         assertEquals(SubtitleStyles.DEFAULT_BACKGROUND,loaded.backgroundColor)
         assertTrue(loaded.bold)
+    }
+
+    @Test fun copyingWordColorsRequiresExplicitConsentAndMatchesWordsNotIndexes() {
+        val source=SubtitleCue(id="s",text="Cachaça sim!",startMs=0,endMs=2100,
+            wordColors=listOf(SubtitleWordColor(0,0xFF00CCFF.toInt())))
+        val target=SubtitleCue(id="t",text="Hoje sim, cachaça",startMs=3100,endMs=5200,
+            wordColors=listOf(SubtitleWordColor(0,0xFFFF0000.toInt())))
+        val original=SubtitleStyles.applySelectedToAll(listOf(target),source,
+            SubtitleStyles.CopyOptions(appearance=true,animation=false,wordColors=false)).single()
+        assertEquals(target.wordColors,original.wordColors)
+        val copied=SubtitleStyles.applySelectedToAll(listOf(target),source,
+            SubtitleStyles.CopyOptions(appearance=true,animation=false,wordColors=true)).single()
+        assertEquals(target.wordColors.first(),copied.wordColors.first())
+        assertEquals(0xFF00CCFF.toInt(),copied.wordColors.first { it.index==2 }.color)
+        assertEquals(target.text,copied.text)
+        assertEquals(target.startMs,copied.startMs)
+        assertEquals(target.id,copied.id)
+    }
+
+    @Test fun duplicatedWordsTransferColorsByOccurrenceIncludingUncoloredOnes() {
+        val source=SubtitleCue(text="sim sim",startMs=0,endMs=3000,
+            wordColors=listOf(SubtitleWordColor(1,0xFF88AAFF.toInt())))
+        val target=SubtitleCue(text="SIM! sim",startMs=5000,endMs=7000)
+        val colors=SubtitleStyles.matchingWordColors(source,target)
+        assertEquals(1,colors.size)
+        assertEquals(1,colors.single().index)
+    }
+
+    @Test fun batchMessagesDescribeRealGroups() {
+        val options=SubtitleStyles.CopyOptions(appearance=false,animation=true,position=false)
+        assertEquals("Aplicado: animação em 4 legendas",options.summary(4))
     }
 }

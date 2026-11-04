@@ -303,7 +303,7 @@ class TimedSubtitleOverlay(
         val centerX = SubtitleExportSizing.centerX(active?.x ?: .5f, textWidth,
             videoWidth, frame?.scale ?: 1f)
         return StaticOverlaySettings.Builder()
-            .setBackgroundFrameAnchor((centerX-.5f)*2f,
+            .setBackgroundFrameAnchor(((centerX-.5f)*2f + (frame?.slideX ?: 0f)*2f).coerceIn(-1f,1f),
                 (1f - (active?.y ?: .85f)*2f - (frame?.slideY ?: 0f)*2f).coerceIn(-1f,1f))
             .setOverlayFrameAnchor(0f,-1f)
             .setScale(frame?.scale ?: 1f,frame?.scale ?: 1f)

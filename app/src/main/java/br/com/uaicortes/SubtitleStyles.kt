@@ -60,7 +60,28 @@ object SubtitleStyles {
             outlineWidth=3,italic=true,highlightColor=0xFFFFFF00.toInt(),animation=SubtitleAnimations.ZOOM_OUT),
         SubtitleStylePreset("Cinemático",-1,NO_BACKGROUND,
             outlineWidth=2,shadowOffsetDp=4,fontFamily=FONT_SERIF,animation=SubtitleAnimations.FADE),
-        SubtitleStylePreset("Etiqueta", 0xFF000000.toInt(), LIGHT_BACKGROUND,animation=SubtitleAnimations.TYPEWRITER)
+        SubtitleStylePreset("Etiqueta", 0xFF000000.toInt(), LIGHT_BACKGROUND,animation=SubtitleAnimations.TYPEWRITER),
+        // Modelos novos usam as MESMAS curvas na prévia Compose e no Media3.
+        SubtitleStylePreset("Neon verde", 0xFF9DFF57.toInt(), NO_BACKGROUND,
+            outlineWidth=3,shadowOffsetDp=2,animation=SubtitleAnimations.ELASTIC),
+        SubtitleStylePreset("Subida limpa", -1, NO_BACKGROUND,
+            outlineWidth=2,shadowOffsetDp=2,animation=SubtitleAnimations.RISE),
+        SubtitleStylePreset("Caiu na cena", 0xFFFFFF53.toInt(), NO_BACKGROUND,
+            outlineWidth=3,animation=SubtitleAnimations.DROP),
+        SubtitleStylePreset("Esquerda pop", -1, 0xBB142638.toInt(),
+            outlineWidth=2,animation=SubtitleAnimations.SLIDE_LEFT),
+        SubtitleStylePreset("Direita neon", 0xFFB6F3FF.toInt(), NO_BACKGROUND,
+            outlineWidth=3,animation=SubtitleAnimations.SLIDE_RIGHT),
+        SubtitleStylePreset("Uma palavra", 0xFFFFFFFF.toInt(), DARK_BACKGROUND,
+            highlightColor=0xFFFFFF00.toInt(),animation=SubtitleAnimations.WORD_REVEAL),
+        SubtitleStylePreset("Flutuante", 0xFFFFFFFF.toInt(), 0x990B183A.toInt(),
+            shadowOffsetDp=3,animation=SubtitleAnimations.FLOAT),
+        SubtitleStylePreset("Balanceado", 0xFFFFE2FD.toInt(), NO_BACKGROUND,
+            outlineWidth=2,animation=SubtitleAnimations.SWAY),
+        SubtitleStylePreset("Reação", 0xFFFEFB6B.toInt(), NO_BACKGROUND,
+            outlineWidth=4,animation=SubtitleAnimations.SOFT_SHAKE),
+        SubtitleStylePreset("Ritmo rosa", 0xFFFFA5E7.toInt(), NO_BACKGROUND,
+            outlineWidth=3,shadowOffsetDp=2,animation=SubtitleAnimations.PULSE)
     )
 
     fun matches(cue: SubtitleCue, preset: SubtitleStylePreset): Boolean =
@@ -80,7 +101,45 @@ object SubtitleStyles {
             animation=preset.animation ?: cue.animation)
 
     data class CopyOptions(val appearance: Boolean = true, val position: Boolean = false,
-        val animation: Boolean = true)
+        val animation: Boolean = true, val wordColors: Boolean = false) {
+        fun summary(count: Int): String {
+            val parts = buildList {
+                if (appearance) add("estilo")
+                if (animation) add("animação")
+                if (position) add("posição")
+                if (appearance && wordColors) add("cores de palavras iguais")
+            }
+            return "Aplicado: ${parts.joinToString(", ")} em $count legendas"
+        }
+    }
+
+    /** Cópia explícita por palavra normalizada e sua ocorrência, jamais por índice bruto.
+     * Mantém as cores da legenda de destino nas palavras sem correspondência.
+     */
+    fun matchingWordColors(source: SubtitleCue, target: SubtitleCue): List<SubtitleWordColor> {
+        fun words(cue: SubtitleCue): List<String> = SubtitleWordEffects.wordRanges(cue.text)
+            .map { range -> cue.text.substring(range).trim { !it.isLetterOrDigit() }.lowercase() }
+        val srcWords = words(source)
+        val dstWords = words(target)
+        val colored = source.wordColors.associateBy { it.index }
+        val mappings = mutableMapOf<String, MutableList<Int?>>()
+        srcWords.forEachIndexed { index, word ->
+            if (word.isNotBlank()) {
+                // Mantém a ordem inclusive quando a primeira ocorrência não tem cor.
+                mappings.getOrPut(word) { mutableListOf() }.add(colored[index]?.color)
+            }
+        }
+        val visited = mutableMapOf<String, Int>()
+        val result = target.wordColors.associateBy { it.index }.toMutableMap()
+        dstWords.forEachIndexed { index, word ->
+            val colors = mappings[word].orEmpty()
+            val ordinal = visited.getOrDefault(word, 0)
+            visited[word] = ordinal + 1
+            if (ordinal < colors.size && colors[ordinal] != null)
+                result[index] = SubtitleWordColor(index, colors[ordinal]!!)
+        }
+        return result.values.sortedBy { it.index }
+    }
 
     /** Copia as propriedades selecionadas sem tocar nos textos, IDs ou horários. */
     fun applySelectedToAll(cues: List<SubtitleCue>, source: SubtitleCue,
@@ -93,7 +152,7 @@ object SubtitleStyles {
             shadowOffsetDp=source.shadowOffsetDp,shadowColor=source.shadowColor,
             lineSpacingPercent=source.lineSpacingPercent,textAlignment=source.textAlignment,
             italic=source.italic,highlightColor=source.highlightColor,
-            wordColors=cue.wordColors)
+            wordColors=if (options.wordColors) matchingWordColors(source,cue) else cue.wordColors)
         if (options.position) result = result.copy(x=source.x,y=source.y)
         if (options.animation) result = result.copy(animation=source.animation,
             animationSpeed=source.animationSpeed)

@@ -1,3 +1,14 @@
+# Uai Cortes · versão 0.1.133 (04/11/2026)
+
+## Legendas: inconsistências corrigidas e efeitos novos
+
+- No modal **Editar todas**, os grupos Estilo, Animação e Posição são independentes; agora há opção separada para copiar cores de **palavras iguais**, sem misturar índices entre frases. As demais palavras mantêm suas cores.
+- Texto de confirmação e desfazer descreve os grupos realmente aplicados; sem seleção, o aplicativo orienta o usuário.
+- A prévia de animação não inventa texto quando um quadro está vazio; permite **Pausar**, **Reiniciar** e testar o ritmo em **3 s** ou na duração da legenda.
+- **Nove efeitos adicionais**: subir, descer, entrar pela esquerda/direita, palavra por palavra, elástico, flutuar, balançar e tremor suave. **Dez estilos prontos adicionais**, totalizando 22. Efeitos organizados em Entrada / Texto / Movimento.
+- As curvas de movimento são compartilhadas entre Compose e Media3, com deslocamento horizontal aplicado nas duas saídas. A equivalência visual exata depende de teste em aparelho Android.
+- Projetos antigos preservados (`schemaVersion=4`), com novos IDs de efeito opcionais e normalização compatível. Sem serviços externos, sem mudança no motor de mídia.
+
 # Uai Cortes · versão 0.1.132 (04/11/2026)
 
 

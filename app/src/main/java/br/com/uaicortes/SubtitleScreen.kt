@@ -148,6 +148,7 @@ internal fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
                     scaleX=animationFrame.scale
                     scaleY=animationFrame.scale
                     translationY=animationFrame.slideY * frameSize.height
+                    translationX=animationFrame.slideX * frameSize.width
                 }
                 .then(if (editable) Modifier.pointerInput(cue.id,frameSize) {
                     detectDragGestures(
@@ -344,6 +345,7 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
     val sorted = remember(p.subtitles) {
         p.subtitles.sortedWith(compareBy<SubtitleCue> { it.startMs }.thenBy { it.id })
     }
+    var batchUndoMessage by remember(p.id) { mutableStateOf("") }
     val selected=p.subtitles.firstOrNull{it.id==selectedId}
     val selectedIndex=sorted.indexOfFirst { it.id==selectedId }
     var editorOpen by remember(p.id) { mutableStateOf(false) }
@@ -473,7 +475,7 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
         }
         if(batchUndo != null && batchUndo?.updated == p.subtitles) {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                Text("Estilo aplicado a ${p.subtitles.size} legendas",fontSize=11.sp,
+                Text(batchUndoMessage,fontSize=11.sp,
                     modifier=Modifier.weight(1f))
                 TextButton(onClick={
                     val restored=batchUndo?.restoreIfCurrent(p.subtitles)
@@ -558,8 +560,9 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                 val all=SubtitleStyles.applySelectedToAll(updated,draft,copyOptions)
                 if(update(p.copy(subtitles=all))) {
                     batchUndo=SubtitleBatchUndo(updated,all)
+                    batchUndoMessage=copyOptions.summary(all.size)
                     batchOpen=false
-                    status="Estilos e animações aplicados a ${all.size} legendas"
+                    status=batchUndoMessage
                 }
             })
     }

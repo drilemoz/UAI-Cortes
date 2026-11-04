@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.132"
-    const val VERSION_CODE = 133
+    const val VERSION_NAME = "0.1.133"
+    const val VERSION_CODE = 134
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.133", listOf(
+            ReleaseFeature("subtitle-batch-clarity-133", "Editar todas: seleção e cores corretas",
+                "Cópia opcional de cores apenas para palavras iguais, resumo da alteração e desfazer com texto específico.", "captions"),
+            ReleaseFeature("subtitle-animations-133", "Novos efeitos e modelos de legendas",
+                "Nove animações adicionais, dez estilos prontos e catálogo dividido em categorias.", "film"),
+            ReleaseFeature("subtitle-demo-133", "Prévia controlável",
+                "Pausar, reiniciar e conferir a duração da legenda; quadros vazios não exibem texto inventado.", "check")
+        )),
         ReleaseSummary("0.1.132", listOf(
             ReleaseFeature("ci110-gemini-scroll", "Painel de consumo Gemini corrigido",
                 "Corrigido o import de rolagem horizontal que impedia a compilação do painel de consumo.", "check"),

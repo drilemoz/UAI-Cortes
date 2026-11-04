@@ -34,7 +34,7 @@ internal fun SubtitleStyleGallery(current: SubtitleCue, onChange: (SubtitleCue) 
         while (true) { delay(80L); sampleMs = (sampleMs + 80L) % 2500L }
     }
     Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
-        Text("Deslize para a direita ou esquerda · 12 modelos com animação",
+        Text("Deslize para os lados · ${SubtitleStyles.presets.size} modelos de legendas",
             style=MaterialTheme.typography.labelSmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
         LazyRow(horizontalArrangement=Arrangement.spacedBy(9.dp),
@@ -69,6 +69,7 @@ internal fun SubtitleStyleGallery(current: SubtitleCue, onChange: (SubtitleCue) 
                                 alpha=frame.alpha
                                 scaleX=frame.scale;scaleY=frame.scale
                                 translationY=frame.slideY*65f
+                                translationX=frame.slideX*142f
                             }) { SubtitleStyledSample(example,frame,compact=true) }
                         }
                         Text(preset.name,style=MaterialTheme.typography.labelMedium,
@@ -88,7 +89,9 @@ internal fun SubtitleStyleGallery(current: SubtitleCue, onChange: (SubtitleCue) 
 @Composable
 internal fun SubtitleStyledSample(cue: SubtitleCue, frame: SubtitleAnimations.Frame,
     compact: Boolean = false) {
-    val shown=frame.text.ifBlank { "Prévia da legenda" }
+    // Não inventar texto quando o efeito (ex.: máquina de escrever) ainda está vazio.
+    if (frame.text.isBlank()) return
+    val shown=frame.text
     val colored=buildAnnotatedString {
         append(shown)
         SubtitleWordEffects.colors(cue,shown,frame.highlighted).forEach { span ->

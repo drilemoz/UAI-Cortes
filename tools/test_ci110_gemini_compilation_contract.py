@@ -16,5 +16,5 @@ assert re.search(r"private suspend fun countInput\([^)]*\): Long = withContext\(
 assert 'return@withContext result.getLong("totalTokens").coerceAtLeast(0L)' in client
 assert not re.search(r'(?m)^\s*return\s+result\.getLong\("totalTokens"\)', client)
 assert ":countTokens" in client and "requestJsonOnce" in client
-assert (root / "VERSION").read_text().strip() == "0.1.132"
+assert (root / "VERSION").read_text().strip() == "0.1.133"
 print("OK: CI110 — import horizontalScroll e retorno rotulado em withContext; countTokens sob demanda preservado")

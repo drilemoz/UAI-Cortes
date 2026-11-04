@@ -53,7 +53,8 @@ class SubtitleAnimationsTest {
                 val f=SubtitleAnimations.frame(item,ms)
                 assertTrue(f.alpha in 0f..1f)
                 assertTrue(f.scale in .60f..1.31f)
-                assertTrue(f.slideY in 0f.. .2f)
+                assertTrue(f.slideY in -.2f.. .2f)
+                assertTrue(f.slideX in -.2f.. .2f)
             }
         }
     }
@@ -84,5 +85,25 @@ class SubtitleAnimationsTest {
         assertEquals(other.x,result[1].x,.001f)
         assertEquals(other.sizeSp,result[1].sizeSp)
         assertEquals(SubtitleAnimations.FADE,result[1].animation)
+    }
+
+    @Test fun newEffectsPreserveTextAndHaveFiniteMotion() {
+        assertEquals(19,SubtitleAnimations.choices.size)
+        val known=SubtitleAnimations.groups.flatMap { it.second }.toSet()
+        assertEquals(known.size,SubtitleAnimations.choices.size)
+        assertTrue(known.contains(SubtitleAnimations.WORD_REVEAL))
+        for(id in known) {
+            val test=cue.copy(animation=id)
+            for(ms in 1000L..5000L step 53L) {
+                val f=SubtitleAnimations.frame(test,ms)
+                assertTrue(f.alpha.isFinite())
+                assertTrue(f.scale.isFinite())
+                assertTrue(f.slideX.isFinite())
+                assertTrue(f.slideY.isFinite())
+            }
+        }
+        val words=cue.copy(animation=SubtitleAnimations.WORD_REVEAL)
+        assertEquals("",SubtitleAnimations.frame(words,1000L).text)
+        assertEquals(cue.text,SubtitleAnimations.frame(words,5000L).text)
     }
 }

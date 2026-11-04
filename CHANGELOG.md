@@ -1,3 +1,10 @@
+## Versão 0.1.133 · versionCode 134 (04/11/2026)
+- Corrigida cópia em lote de cores por palavra usando correspondência por palavra e ocorrência; opção desligada por padrão. Grupos e desfazer agora comunicam o conteúdo alterado.
+- Corrigido texto fictício da prévia em quadros vazios; pausar/reiniciar/demo versus duração de cada legenda.
+- Nove animações e dez modelos de aparência extras, categorizados, com deslocamento horizontal calculado pelo mesmo `SubtitleAnimations.frame` da prévia e do overlay Media3.
+- Adicionados testes de regressão Kotlin e estáticos; compilação Android e teste em aparelho ainda pendentes.
+- Versão/CI/metadados sincronizados; schema JSON 4, assinatura e cinco APKs Release previstos preservados.
+
 ## Versão 0.1.132 · versionCode 133 (04/11/2026)
 
 - **Correção workflow 110:** adicionado o import `androidx.compose.foundation.horizontalScroll` em `GeminiUsageUi.kt`, resolvendo `Unresolved reference horizontalScroll` nas tarefas Debug/Release.

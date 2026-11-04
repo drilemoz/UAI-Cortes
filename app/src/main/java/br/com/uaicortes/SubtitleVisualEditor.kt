@@ -32,22 +32,44 @@ import kotlinx.coroutines.delay
 @Composable
 internal fun SubtitleVisualPreview(draft: SubtitleCue) {
     var sampleMs by remember(draft.id) { mutableLongStateOf(0L) }
-    LaunchedEffect(draft.id,draft.animation,draft.animationSpeed,draft.text) {
+    var playing by remember(draft.id) { mutableStateOf(true) }
+    var actualDuration by remember(draft.id) { mutableStateOf(false) }
+    val previewDuration = if (actualDuration)
+        (draft.endMs-draft.startMs).coerceAtLeast(600L) else 3000L
+    LaunchedEffect(draft.id,draft.animation,draft.animationSpeed,draft.text,previewDuration) {
         sampleMs=0L
-        while (true) { delay(90L);sampleMs=(sampleMs+90L)%3000L }
     }
-    val sample=SubtitleAnimations.frame(draft.copy(startMs=0L,endMs=3000L),sampleMs)
-    // Miniatura adaptativa: não extrapola a área fixa com frases grandes.
-    // O tamanho verdadeiro fica salvo no draft e é visto sobre o vídeo principal.
+    LaunchedEffect(draft.id,draft.animation,draft.animationSpeed,previewDuration,playing) {
+        while (playing) {
+            delay(90L)
+            sampleMs=(sampleMs+90L)%previewDuration
+        }
+    }
+    val sample=SubtitleAnimations.frame(draft.copy(startMs=0L,endMs=previewDuration),sampleMs)
     val thumbnail=draft.copy(sizeSp=(12+(draft.sizeSp-12)/3).coerceIn(12,24))
-    Box(Modifier.fillMaxWidth().height(90.dp)
-        .background(Color(0xFF13151A),RoundedCornerShape(10.dp))
-        .padding(horizontal=10.dp,vertical=4.dp),contentAlignment=Alignment.Center) {
-        Box(Modifier.graphicsLayer {
-            alpha=sample.alpha
-            scaleX=sample.scale;scaleY=sample.scale
-            translationY=sample.slideY*92f
-        }) { SubtitleStyledSample(thumbnail,sample) }
+    Column(verticalArrangement=Arrangement.spacedBy(4.dp)) {
+        Box(Modifier.fillMaxWidth().height(83.dp)
+            .background(Color(0xFF13151A),RoundedCornerShape(10.dp))
+            .padding(horizontal=10.dp,vertical=4.dp),contentAlignment=Alignment.Center) {
+            Box(Modifier.graphicsLayer {
+                alpha=sample.alpha
+                scaleX=sample.scale;scaleY=sample.scale
+                translationY=sample.slideY*83f
+                translationX=sample.slideX*320f
+            }) { SubtitleStyledSample(thumbnail,sample) }
+        }
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
+            horizontalArrangement=Arrangement.spacedBy(5.dp)) {
+            TextButton(onClick={playing=!playing},contentPadding=PaddingValues(horizontal=6.dp)) {
+                Text(if(playing) "Pausar" else "Reproduzir",fontSize=12.sp)
+            }
+            TextButton(onClick={sampleMs=0L},contentPadding=PaddingValues(horizontal=6.dp)) {
+                Text("Reiniciar",fontSize=12.sp)
+            }
+            Spacer(Modifier.weight(1f))
+            FilterChip(selected=actualDuration,onClick={actualDuration=!actualDuration},
+                label={Text(if(actualDuration) "Tempo real" else "Demo 3s",fontSize=11.sp)})
+        }
     }
 }
 
@@ -87,6 +109,12 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
     var advanced by remember { mutableStateOf(false) }
     var wordColorsOpen by remember { mutableStateOf(false) }
     var positionOpen by remember { mutableStateOf(false) }
+    var animationGroup by remember(draft.id) { mutableStateOf(
+        SubtitleAnimations.groups.firstOrNull { draft.animation in it.second }?.first ?: "Entrada"
+    ) }
+    LaunchedEffect(draft.animation) {
+        animationGroup = SubtitleAnimations.groups.firstOrNull { draft.animation in it.second }?.first ?: "Entrada"
+    }
     Column(Modifier.fillMaxWidth().padding(horizontal=2.dp),
         verticalArrangement=Arrangement.spacedBy(7.dp)) {
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(7.dp)) {
@@ -157,12 +185,24 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
                     5,onChange={onChange(draft.copy(lineSpacingPercent=it.toInt()))})
             }
         } else {
-            Text("Animações · deslize para o lado",fontWeight=FontWeight.SemiBold)
-            SubtitleTwoColumnChoices(SubtitleAnimations.choices.map{it.second},
-                selected={label->SubtitleAnimations.choices.any{it.second==label && draft.animation==it.first}},
-                choose={label->SubtitleAnimations.choices.firstOrNull{it.second==label}?.let{
-                    onChange(draft.copy(animation=it.first))
+            Text("Efeitos prontos · escolha uma categoria",fontWeight=FontWeight.SemiBold)
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)) {
+                SubtitleAnimations.groups.forEach { group ->
+                    FilterChip(selected=animationGroup==group.first,
+                        onClick={animationGroup=group.first},
+                        label={Text(group.first,fontSize=11.sp)},
+                        modifier=Modifier.weight(1f))
+                }
+            }
+            val ids=SubtitleAnimations.groups.firstOrNull { it.first==animationGroup }?.second.orEmpty()
+            SubtitleTwoColumnChoices(ids.map(SubtitleAnimations::label),
+                selected={label->draft.animation in ids && SubtitleAnimations.label(draft.animation)==label},
+                choose={label-> ids.firstOrNull { SubtitleAnimations.label(it)==label }?.let { id ->
+                    onChange(draft.copy(animation=id))
                 }})
+            Text("Use Reproduzir, Reiniciar e Tempo real para conferir a animação acima.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
             if(draft.animation!=SubtitleAnimations.NONE) {
                 SubtitleValueSlider("Velocidade", "${"%.1f".format(java.util.Locale.US,draft.animationSpeed)}×",
                     draft.animationSpeed,.5f..2f,5,onChange={onChange(draft.copy(animationSpeed=it))})
@@ -212,6 +252,7 @@ internal fun SubtitleBatchEditDialog(source:SubtitleCue,count:Int,onDismiss:()->
     var applyStyle by remember { mutableStateOf(true) }
     var applyAnimation by remember { mutableStateOf(true) }
     var applyPosition by remember { mutableStateOf(false) }
+    var applyWordColors by remember { mutableStateOf(false) }
     var confirm by remember { mutableStateOf(false) }
     Dialog(onDismissRequest=onDismiss,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Surface(Modifier.fillMaxWidth(.96f)
@@ -245,6 +286,21 @@ internal fun SubtitleBatchEditDialog(source:SubtitleCue,count:Int,onDismiss:()->
                                 label={Text("Posição",fontSize=12.sp)},shape=RoundedCornerShape(8.dp))
                         }
                     }
+                    if (applyStyle) {
+                        Row(verticalAlignment=Alignment.CenterVertically) {
+                            Checkbox(checked=applyWordColors,onCheckedChange={applyWordColors=it})
+                            Column {
+                                Text("Copiar cores das mesmas palavras",fontSize=12.sp)
+                                Text("Opcional: combina palavras iguais, não posições. " +
+                                    "Outras cores são preservadas.",fontSize=11.sp,
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                    if (!applyStyle && !applyAnimation && !applyPosition) {
+                        Text("Selecione pelo menos um grupo para aplicar.",fontSize=12.sp,
+                            color=MaterialTheme.colorScheme.error)
+                    }
                     Text("Texto, início, fim e identificação de cada legenda serão preservados.",
                         style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -259,11 +315,12 @@ internal fun SubtitleBatchEditDialog(source:SubtitleCue,count:Int,onDismiss:()->
     }
     if(confirm) AlertDialog(onDismissRequest={confirm=false},
         title={Text("Alterar $count legendas?")},
-        text={Text("Os estilos, animações e/ou posições selecionados serão substituídos nas $count legendas. Textos e tempos não mudam. Será possível desfazer após aplicar.")},
+        text={Text("${SubtitleStyles.CopyOptions(appearance=applyStyle, position=applyPosition, animation=applyAnimation, wordColors=applyWordColors).summary(count)}. Textos, horários e IDs não mudam. Você poderá desfazer.")},
         confirmButton={TextButton(onClick={
             confirm=false
             onApply(draft,SubtitleStyles.CopyOptions(appearance=applyStyle,
-                position=applyPosition,animation=applyAnimation))
+                position=applyPosition,animation=applyAnimation,
+                wordColors=applyStyle && applyWordColors))
         }) {Text("Aplicar")}},
         dismissButton={TextButton(onClick={confirm=false}) {Text("Cancelar")}})
 }
