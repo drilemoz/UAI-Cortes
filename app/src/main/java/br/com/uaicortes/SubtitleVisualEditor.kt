@@ -102,6 +102,7 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
         }
         if(tab==0) {
             SubtitleStyleGallery(draft,onChange)
+            SubtitleUserPresetPanel(draft,onChange)
             SubtitleTypographyBar(draft,onChange)
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)) {
                 listOf(

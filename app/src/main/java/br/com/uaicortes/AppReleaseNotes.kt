@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.124"
-    const val VERSION_CODE = 125
+    const val VERSION_NAME = "0.1.125"
+    const val VERSION_CODE = 126
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.125", listOf(
+            ReleaseFeature("subtitle-personal-styles", "Modelos pessoais de legendas",
+                "Guarde combinações de fonte, tamanho, cor, contorno, sombra e animação para outros projetos, sem copiar texto ou horários.", "captions"),
+            ReleaseFeature("subtitle-style-management", "Renomear ou excluir modelos",
+                "Biblioteca local de até 20 modelos com confirmação de exclusão e aviso se não for possível salvar.", "check"),
+            ReleaseFeature("subtitle-apply-existing", "Aplicar modelo com prévia",
+                "Toque para testar e salve a legenda; Editar todas aplica em lote mediante confirmação, preservando posição e sincronização.", "film")
+        )),
         ReleaseSummary("0.1.124", listOf(
             ReleaseFeature("social-destinations", "Exportação para Shorts, Reels e TikTok",
                 "Opções de saída 9:16 em 720×1280 ou 1080×1920, mantendo Original como padrão e sem envio automático.", "film"),

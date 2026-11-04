@@ -1,3 +1,11 @@
+## Versão 0.1.125 · versionCode 126 (04/11/2026)
+
+- **Etapa 7 — modelos pessoais de legendas:** a galeria preexistente de 12 estilos foi mantida. Agora é possível salvar uma combinação personalizada de fonte, tamanho, cor, fundo, contorno, sombra, alinhamento, espaçamento, destaque e animação, reutilizável em outros projetos.
+- **Biblioteca local:** até 20 modelos com nome único (até 32 caracteres), renomear e excluir com confirmação. Os estilos são armazenados em SharedPreferences privadas com gravação verificada; erros não apagam automaticamente a biblioteca anterior.
+- **Aplicação segura:** escolher um modelo altera apenas o rascunho visual; Salvar legenda confirma alterações individuais. O fluxo já existente Editar todas continua aplicando estilo/animação em lote com confirmação e desfazer. Modelos não armazenam nem substituem texto, IDs, tempos, posição ou cores específicas de palavras.
+- **Compatibilidade:** não modifica JSON/backup dos projetos (`schemaVersion=4`), Media3 1.11.1, exportador, assinatura, cinco APKs e seleção de redes sociais. A biblioteca é local ao dispositivo, não incluída nos backups de projetos.
+- **Testes:** `SubtitleUserPresetTest.kt` e `tools/test_subtitle_user_presets_contract.py` cobrem isolamento de texto, serialização, nomes duplicados e aplicação. O Gradle/Android e a prévia/exportação visual real ainda precisam ser validados em aparelho.
+
 ## Versão 0.1.124 · versionCode 125 (04/11/2026)
 
 - **Etapa 6 — perfis sociais opcionais:** Exportar oferece Original, Shorts, Reels e TikTok. Original permanece selecionado por padrão e não modifica o fluxo antigo. Os perfis sociais solicitam resolução fixa 9:16 (720×1280 ou 1080×1920) via `Presentation.createForWidthAndHeight`, preservando MP4 H.264/AAC e o ajuste manual de bitrate.
