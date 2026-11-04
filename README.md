@@ -1,3 +1,10 @@
+## Versão 0.1.121 · versionCode 122 (03/11/2026)
+
+- **Correção do workflow 100:** removido o import top-level `androidx.compose.ui.test.assertExists` em `HomeAboutPreviewAndroidTest.kt`. O método `.assertExists()` permanece nas interações semânticas do Compose; não altera os testes nem a UI.
+- Adicionada proteção `tools/test_ci100_compose_import_contract.py`, executada pelo loop de regressão do CI, para impedir a reintrodução desse import inválido nos testes Android.
+- Compilação do código principal, os demais avisos de ícones obsoletos e o Media3 1.11.1 não causaram a falha mostrada nos logs. As cinco variantes de Release e a assinatura continuam configuradas, mas ainda exigem um build completo bem-sucedido.
+- Sem modificações no exportador, projetos, vídeos, IA, permissões ou `schemaVersion=4`.
+
 ## Versão 0.1.120 · versionCode 121 (03/11/2026)
 
 - **Etapa 3 — Media3 estável:** migrados juntos `media3-exoplayer`, `media3-ui`, `media3-transformer`, `media3-effect` e `media3-common` de 1.10.1 para 1.11.1, sem dependências alpha. Mantidos compileSdk/targetSdk 36 e Kotlin/AGP atuais.

@@ -1,3 +1,7 @@
+## v0.1.121 (versionCode 122): correção do build CI100
+
+- Ver `docs/VALIDATION_0.1.121.md`: remoção do import inválido de `assertExists` em AndroidTest; build Android completo e execução instrumentada ainda pendentes.
+
 ## v0.1.117 (versionCode 118): confirmação do vídeo e descrição para redes sociais
 
 - Ver `docs/VALIDATION_0.1.117.md` para verificações locais e testes Android ainda necessários.

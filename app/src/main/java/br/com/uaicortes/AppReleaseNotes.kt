@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.120"
-    const val VERSION_CODE = 121
+    const val VERSION_NAME = "0.1.121"
+    const val VERSION_CODE = 122
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.121", listOf(
+            ReleaseFeature("ci100-androidtest-import", "Compilação dos testes Android corrigida",
+                "Corrigido o import inválido de assertExists no teste Home/Sobre que interrompia o workflow 100.", "check"),
+            ReleaseFeature("ci-androidtest-import-check", "Regressão protegida no CI",
+                "Nova verificação detecta imports inválidos no teste Compose antes de executar o Gradle.", "check")
+        )),
         ReleaseSummary("0.1.120", listOf(
             ReleaseFeature("media3-stable-1111", "Media3 estável atualizado",
                 "ExoPlayer, efeitos e Transformer alinhados na versão 1.11.1; testar no Android.", "film"),

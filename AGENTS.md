@@ -304,3 +304,5 @@
 
 
 - v0.1.120: cinco módulos Media3 (ExoPlayer/UI/Transformer/Effect/Common) na mesma versão estável 1.11.1. Nunca habilitar MP4 edit-list trim sem considerar risco de expor quadros ocultos; trim optimization só pode ser discutido para single-asset MP4 sem efeitos e com contrato de qualidade preservado. `ExportQualityReport` separa tempo real de codificação e cópia MediaStore (relógio monotônico) e não promete aceleração sem benchmark. `GalleryVideoSaver` usa blocos de 256 KiB e deve conservar contagem integral, `IS_PENDING` e rollback. CI precisa validar Media3, sem alegar build ou teste Android até execução real. VersionCode 121, schemaVersion 4, cinco APKs mantidos.
+
+- v0.1.121: o CI100 falhou em `:app:compileDebugAndroidTestKotlin` por `import androidx.compose.ui.test.assertExists` inexistente. `assertExists()` é membro da interação semântica; não importar o nome top-level. Preservar `HomeAboutPreviewAndroidTest`, rodar `tools/test_ci100_compose_import_contract.py` no loop do CI e confirmar o Gradle completo antes de afirmar que APKs Release foram gerados. VersionCode 122, schemaVersion 4, Media3 1.11.1, cinco APKs e assinatura inalterados.
