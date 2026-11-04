@@ -81,6 +81,73 @@ class ExportPipelineSmokeAndroidTest {
         }
     }
 
+    /** Vídeo 16:9 convertido explicitamente para Shorts em 9:16 com corte central.
+     * Compilar o teste no CI não o executa: requer encoder H.264 e OpenGL reais. */
+    @Test fun exportSocialPortraitWithCenterCropProducesPortraitMp4() {
+        exportSocialPortrait(VerticalFrameMode.CENTER_CROP)
+    }
+
+    @Test fun exportSocialPortraitWithFitProducesPortraitMp4() {
+        exportSocialPortrait(VerticalFrameMode.FIT)
+    }
+
+    private fun exportSocialPortrait(mode: VerticalFrameMode) {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val input = File.createTempFile("uai-social-smoke-", ".mp4", context.cacheDir)
+        val saved = AtomicReference<Uri?>(null)
+        val error = AtomicReference<String?>(null)
+        val completed = CountDownLatch(1)
+        var engine: ExportEngine? = null
+        try {
+            instrumentation.context.assets.open("export_smoke_16x9.mp4").use { original ->
+                input.outputStream().use { destination -> original.copyTo(destination) }
+            }
+            val project = VideoProject(
+                title = "Teste vertical local",
+                clips = listOf(Clip(uri = Uri.fromFile(input).toString(), title = "Fonte 16:9",
+                    sourceDurationMs = 1600L, startMs = 0L, endMs = 1400L)),
+                subtitles = listOf(SubtitleCue(text = "Teste social", startMs=0L, endMs=1200L))
+            )
+            instrumentation.runOnMainSync {
+                engine = ExportEngine(context)
+                try {
+                    engine!!.start(project, 720, "UaiCortes_Test_Social_${mode.name}.mp4",
+                        preset=ExportBitratePreset.COMPACT,
+                        destination=ExportDestination.SHORTS, frameMode=mode,
+                        onSuccess={ uri, report ->
+                            if (report.fellBackInResolution)
+                                error.set("Saída diferente dos 720×1280 solicitados: ${report.resolution}")
+                            saved.set(uri)
+                            completed.countDown()
+                        },
+                        onError={ reason -> error.set(reason); completed.countDown() })
+                } catch (failure: Exception) {
+                    error.set(failure.message ?: failure.javaClass.simpleName)
+                    completed.countDown()
+                }
+            }
+            assertTrue("Saída vertical não terminou em 180 s: ${error.get()}",
+                completed.await(180, TimeUnit.SECONDS))
+            assertNull("Saída vertical ${mode.name}: ${error.get()}", error.get())
+            val output = requireNotNull(saved.get()) { "MediaStore não confirmou saída vertical" }
+            val retriever = MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(context, output)
+                val width = retriever.extractMetadata(
+                    MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)?.toIntOrNull() ?: 0
+                val height = retriever.extractMetadata(
+                    MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)?.toIntOrNull() ?: 0
+                assertTrue("Resolução social inválida: ${width}x${height}",
+                    width == 720 && height == 1280)
+            } finally { retriever.release() }
+        } finally {
+            saved.get()?.let { runCatching { context.contentResolver.delete(it, null, null) } }
+            instrumentation.runOnMainSync { engine?.cancel() }
+            input.delete()
+        }
+    }
+
     @Test fun exportClippedVideoWithAudioAndSubtitleProducesReadableMp4() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext

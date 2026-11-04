@@ -64,6 +64,12 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
     val exportPreviewAspect=remember(exportPreviewUri) {
         exportPreviewUri?.let { mediaAspect(context,it,false) } ?: 16f/9f
     }
+    var destinationId by rememberSaveable(p.id) { mutableStateOf(ExportDestination.ORIGINAL.name) }
+    var frameModeId by rememberSaveable(p.id) { mutableStateOf(VerticalFrameMode.FIT.name) }
+    var showFrameGuides by rememberSaveable(p.id) { mutableStateOf(false) }
+    val destination = ExportDestination.fromId(destinationId)
+    val frameMode = VerticalFrameMode.fromId(frameModeId)
+    val previewAspect = if (destination.isVertical) 9f / 16f else exportPreviewAspect
     DisposableEffect(previewPlayer) { onDispose {previewPlayer.release()} }
     LaunchedEffect(p.clips) {
         previewPlayer.setMediaItems(p.clips.map { clip ->
@@ -103,9 +109,17 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
         Heading("Exportar vídeo",{if(!working)back() else confirmCancelExport=true},
             accessory={Icon(Icons.Default.Movie,tint=Blue,contentDescription=null)})
         Spacer(Modifier.height(8.dp))
-        InlineVideoPreview(exportPreviewAspect) {
-            AndroidView(factory={previewPlayer(it).apply { player=previewPlayer;useController=false }},
-                modifier=Modifier.fillMaxSize(),update={it.player=previewPlayer})
+        InlineVideoPreview(previewAspect) {
+            AndroidView(factory={previewPlayer(it).apply {
+                    player=previewPlayer; useController=false
+                    configureExportPreviewFrame(this,
+                        destination.isVertical && frameMode == VerticalFrameMode.CENTER_CROP)
+                }},
+                modifier=Modifier.fillMaxSize(),update={
+                    it.player=previewPlayer
+                    configureExportPreviewFrame(it,
+                        destination.isVertical && frameMode == VerticalFrameMode.CENTER_CROP)
+                })
             // Mesma camada visual do editor: renderize o PROJETO, não só o arquivo original.
             p.clips.getOrNull(exportClipIndex)?.let { clip ->
                 val clipStart = p.clips.take(exportClipIndex).sumOf { it.durationMs }
@@ -133,6 +147,12 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
             p.textWatermark?.toSubtitle(p.durationMs)?.let { watermark ->
                 SubtitleOverlayOnFrame(watermark, editable=false, playbackMs=exportPreviewMs)
             }
+            if (destination.isVertical && showFrameGuides) {
+                Box(Modifier.fillMaxSize(), contentAlignment=Alignment.Center) {
+                    Box(Modifier.fillMaxWidth(0.86f).fillMaxHeight(0.75f)
+                        .border(1.dp, Color.White.copy(alpha = 0.65f), RoundedCornerShape(9.dp)))
+                }
+            }
             Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) {
                 IconButton(onClick={
                     previewPlaying=!previewPlaying
@@ -152,6 +172,64 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(value=name,onValueChange={name=it},singleLine=true,modifier=Modifier.fillMaxWidth(),
             shape=RoundedCornerShape(15.dp),enabled=!working)
+        Spacer(Modifier.height(20.dp))
+        Text("Destino do vídeo", fontSize=19.sp, fontWeight=FontWeight.SemiBold)
+        Spacer(Modifier.height(9.dp))
+        Row(horizontalArrangement=Arrangement.spacedBy(6.dp), modifier=Modifier.fillMaxWidth()) {
+            ExportDestination.values().forEach { candidate ->
+                val selected = destination == candidate
+                Surface(onClick={
+                        destinationId = candidate.name
+                        bitratePresetName = SocialExportPolicy.recommendedBitrate(candidate).name
+                    }, enabled=!working, modifier=Modifier.weight(1f).height(50.dp),
+                    shape=RoundedCornerShape(13.dp),
+                    border=BorderStroke(if(selected) 2.dp else 1.dp,
+                        if(selected) Blue else MaterialTheme.colorScheme.outlineVariant)) {
+                    Box(contentAlignment=Alignment.Center) {
+                        Text(candidate.label, fontSize=13.sp, fontWeight=if(selected)
+                            FontWeight.Bold else FontWeight.Normal)
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(if(destination.isVertical)
+            "${destination.label} · MP4 vertical 9:16 · sem envio automático à rede social"
+            else "Original · mantém a proporção dos arquivos e a qualidade escolhida",
+            style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
+        if(destination.isVertical) {
+            Spacer(Modifier.height(14.dp))
+            Text("Enquadramento vertical", fontWeight=FontWeight.SemiBold)
+            Spacer(Modifier.height(7.dp))
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp), modifier=Modifier.fillMaxWidth()) {
+                VerticalFrameMode.values().forEach { mode ->
+                    val selected = frameMode == mode
+                    Surface(onClick={frameModeId=mode.name}, enabled=!working,
+                        modifier=Modifier.weight(1f).height(48.dp),
+                        shape=RoundedCornerShape(13.dp),
+                        border=BorderStroke(if(selected) 2.dp else 1.dp,
+                            if(selected) Blue else MaterialTheme.colorScheme.outlineVariant)) {
+                        Box(contentAlignment=Alignment.Center) {
+                            Text(mode.label, fontSize=13.sp, fontWeight=if(selected)
+                                FontWeight.Bold else FontWeight.Normal)
+                        }
+                    }
+                }
+            }
+            Text(SocialExportPolicy.framingDescription(frameMode),
+                style=MaterialTheme.typography.bodySmall,
+                color=if(frameMode == VerticalFrameMode.CENTER_CROP)
+                    MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier=Modifier.padding(top=7.dp))
+            Row(verticalAlignment=Alignment.CenterVertically) {
+                Checkbox(checked=showFrameGuides,onCheckedChange={showFrameGuides=it})
+                Text("Mostrar guias de margem na prévia", style=MaterialTheme.typography.bodySmall)
+            }
+            Text("Guias ilustrativas, não exportadas. Áreas cobertas por botões variam entre plataformas.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         Spacer(Modifier.height(22.dp));Text("Qualidade",fontSize=21.sp,fontWeight=FontWeight.Medium)
         Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
@@ -160,7 +238,8 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                     shape=RoundedCornerShape(18.dp),border=BorderStroke(if(q==quality)2.dp else 1.dp,
                         if(q==quality)Blue else MaterialTheme.colorScheme.outlineVariant)) {
                     Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center) {
-                        Text("${q}p",fontSize=19.sp)
+                        Text(if (destination.isVertical) "${q} × ${q * 16 / 9}"
+                             else "${q}p",fontSize=18.sp)
                         Text("${VideoExportQuality.videoBitrateBps(q,bitratePreset)/1_000_000} Mb/s",fontSize=13.sp,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -188,6 +267,9 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                 }
             }
         }
+        Text("Saída solicitada: ${SocialExportPolicy.requestedLabel(destination,quality)}",
+            style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
         Text("Estimativa: ~${VideoExportQuality.estimatedMiBForDuration(p.durationMs,quality,true,bitratePreset)} MiB " +
             "para este projeto · ~${VideoExportQuality.estimatedMiBPerMinute(quality,true,bitratePreset)} MiB/min.",
             style=MaterialTheme.typography.bodySmall,
@@ -213,7 +295,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
             if(name.isNotBlank() && p.clips.isNotEmpty() && !working) {
                 previewPlayer.pause()
                 previewPlaying = false
-                exportVm.start(p, quality, name, bitratePreset)
+                exportVm.start(p, quality, name, bitratePreset, destination, frameMode)
             }
         },modifier=Modifier.fillMaxWidth(),enabled=!working && name.isNotBlank()&&p.clips.isNotEmpty())
         if(result.isNotBlank()) Text(result,modifier=Modifier.padding(vertical=15.dp),
@@ -270,7 +352,8 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                         Text("Tempo decorrido: ${ExportProgressUi.elapsedLabel(elapsedSeconds)}",
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(10.dp))
-                        Text("Qualidade: ${exportState.quality}p · ${bitratePreset.label} · MP4",style=MaterialTheme.typography.bodySmall,
+                        Text("${SocialExportPolicy.requestedLabel(destination,exportState.quality)} · " +
+                            "${bitratePreset.label} · MP4",style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Column(horizontalAlignment=Alignment.CenterHorizontally,

@@ -284,7 +284,8 @@ assert 'fun inline(' in layout and 'fun fit(' in layout and 'fun activeClipIndex
 assert 'InlineVideoPreview(aspect)' in ui
 assert 'InlineVideoPreview(videoAspect)' in ui
 assert 'InlineVideoPreview(canvasAspect)' in ui
-assert 'InlineVideoPreview(exportPreviewAspect)' in ui
+assert 'InlineVideoPreview(previewAspect)' in ui
+assert 'val previewAspect = if (destination.isVertical) 9f / 16f else exportPreviewAspect' in ui
 assert 'val fit=AdaptiveVideoLayout.fit(' in ui
 assert 'previewSubtitleScale(cue,textLimitPx.toInt(),' in ui
 assert 'frameWidthDp * .94f' in ui
@@ -691,7 +692,8 @@ export_vm = (app_files/'ExportTaskViewModel.kt').read_text()
 export_tasks = (app_files/'ExportTaskCoordinator.kt').read_text()
 engine = (app_files/'ExportEngine.kt').read_text()
 assert 'val exportVm: ExportTaskViewModel = viewModel()' in export_screen
-assert 'exportVm.start(p, quality, name, bitratePreset)' in export_screen
+assert 'exportVm.start(p, quality, name, bitratePreset, destination, frameMode)' in export_screen
+assert 'destination = destination, frameMode = frameMode' in export_vm
 assert 'exportVm.cancel()' in export_screen
 assert 'DisposableEffect(engine)' not in export_screen
 assert 'class ExportTaskViewModel(application: Application)' in export_vm
@@ -1016,7 +1018,8 @@ assert 'enum class ExportBitratePreset' in quality and 'MAXIMUM' in quality and 
 assert 'videoBitrateBps(height, preset)' in export
 assert 'project.durationMs, height, true, preset' in export
 assert 'setiFrameIntervalSeconds(VideoExportQuality.REQUESTED_KEYFRAME_INTERVAL_SECONDS)' in export
-assert 'exportVm.start(p, quality, name, bitratePreset)' in export_screen
+assert 'exportVm.start(p, quality, name, bitratePreset, destination, frameMode)' in export_screen
+assert 'destination = destination, frameMode = frameMode' in export_vm
 assert 'estimatedMiBPerMinute(quality,true,bitratePreset)' in export_screen
 assert 'engine.start(project, quality, requestedName, preset = preset' in viewmodel_export
 assert 'requestedVideoBitrateBps' in report_export and 'bitrateWellBelowRequest' in report_export

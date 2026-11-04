@@ -17,7 +17,10 @@ internal data class ExportQualityReport(
     val requestedVideoBitrateBps: Int = 0,
     val presetLabel: String? = null,
     val encodeElapsedMs: Long = -1L,
-    val galleryCopyElapsedMs: Long = -1L
+    val galleryCopyElapsedMs: Long = -1L,
+    val requestedFrameWidth: Int = 0,
+    val requestedFrameHeight: Int = 0,
+    val destinationLabel: String? = null
 ) {
     val resolution: String get() = if (width > 0 && height > 0) "${width} × ${height}" else "Não informada"
     val effectiveBitrate: String get() = if (videoBitrateBps > 0)
@@ -43,11 +46,17 @@ internal data class ExportQualityReport(
     private fun formatElapsed(elapsedMs: Long): String = String.format(
         Locale.forLanguageTag("pt-BR"), "%.1f s", elapsedMs / 1000.0
     )
-    val fellBackInResolution: Boolean get() = width > 0 && height > 0 &&
-        minOf(width, height) != requestedShortSide
+    val fellBackInResolution: Boolean get() = width > 0 && height > 0 && (
+        if (requestedFrameWidth > 0 && requestedFrameHeight > 0)
+            width != requestedFrameWidth || height != requestedFrameHeight
+        else minOf(width, height) != requestedShortSide
+    )
 
     fun lines(): List<String> = buildList {
-        add("Resolução obtida: $resolution (lado menor solicitado: ${requestedShortSide}px)")
+        val requested = if (requestedFrameWidth > 0 && requestedFrameHeight > 0)
+            "${requestedFrameWidth} × ${requestedFrameHeight}" else "lado menor ${requestedShortSide}px"
+        add("Resolução obtida: $resolution (solicitada: $requested)")
+        destinationLabel?.takeIf { it.isNotBlank() }?.let { add("Destino de exportação: $it") }
         if (requestedVideoBitrateBps > 0) {
             add("Bitrate solicitado: $requestedBitrate" +
                 (presetLabel?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""))

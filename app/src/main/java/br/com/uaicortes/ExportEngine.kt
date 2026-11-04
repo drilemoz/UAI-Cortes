@@ -176,11 +176,14 @@ class ExportEngine(private val context: Context) {
 
     internal fun start(project: VideoProject, height: Int, fileName: String,
               preset: ExportBitratePreset = ExportBitratePreset.HIGH,
+              destination: ExportDestination = ExportDestination.ORIGINAL,
+              frameMode: VerticalFrameMode = VerticalFrameMode.FIT,
               onSaving: () -> Unit = {},
               onSuccess: (Uri, ExportQualityReport) -> Unit, onError: (String) -> Unit) {
         require(!isSavingToGallery) { "Aguarde a conclusão do salvamento anterior." }
         require(project.clips.isNotEmpty()) { "Projeto sem vídeos" }
         val bitrateBps = VideoExportQuality.videoBitrateBps(height, preset)
+        val portraitSize = SocialExportPolicy.dimensions(destination, height)
         require(context.cacheDir.usableSpace > VideoExportQuality.minimumFreeBytes(
             project.durationMs, height, true, preset)) {
             "Espaço livre insuficiente para exportar em ${height}p no perfil ${preset.label}. " +
@@ -209,9 +212,17 @@ class ExportEngine(private val context: Context) {
             // Quando a composição era reescalada por último, textos nascidos de uma
             // fonte 480p/720p também eram ampliados como bitmap até a saída 1080p.
             // A ordem é relevante: vídeo -> dimensão final -> transições -> texto.
-            val videoEffects = mutableListOf<androidx.media3.common.Effect>(
+            val presentation = if (portraitSize == null) {
                 Presentation.createForShortSide(height)
-            )
+            } else {
+                Presentation.createForWidthAndHeight(
+                    portraitSize.first, portraitSize.second,
+                    if (frameMode == VerticalFrameMode.CENTER_CROP)
+                        Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP
+                    else Presentation.LAYOUT_SCALE_TO_FIT
+                )
+            }
+            val videoEffects = mutableListOf<androidx.media3.common.Effect>(presentation)
             if (fadeIn > 0 || fadeOut > 0) {
                 val entering = previous?.kind ?: TransitionEffects.CUT
                 val leaving = next?.kind ?: TransitionEffects.CUT
@@ -340,6 +351,9 @@ class ExportEngine(private val context: Context) {
                     // Dados medidos pelo Transformer; indisponíveis ficam como "não informado".
                     val report = ExportQualityReport(
                         requestedShortSide = height,
+                        requestedFrameWidth = portraitSize?.first ?: 0,
+                        requestedFrameHeight = portraitSize?.second ?: 0,
+                        destinationLabel = if (destination.isVertical) destination.label else null,
                         width = exportResult.width,
                         height = exportResult.height,
                         videoBitrateBps = exportResult.averageVideoBitrate,

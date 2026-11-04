@@ -1,3 +1,11 @@
+## Versão 0.1.124 · versionCode 125 (04/11/2026)
+
+- **Etapa 6 — perfis sociais opcionais:** Exportar oferece Original, Shorts, Reels e TikTok. Original permanece selecionado por padrão e não modifica o fluxo antigo. Os perfis sociais solicitam resolução fixa 9:16 (720×1280 ou 1080×1920) via `Presentation.createForWidthAndHeight`, preservando MP4 H.264/AAC e o ajuste manual de bitrate.
+- **Enquadramento consciente:** Mostrar tudo usa `LAYOUT_SCALE_TO_FIT` (pode gerar barras); Preencher tela usa `LAYOUT_SCALE_TO_FIT_WITH_CROP` (corte central, pode perder conteúdo lateral/superior/inferior). Não distorce a imagem nem realiza rastreamento automático de pessoas. A prévia usa FIT/ZOOM e exibe guias ilustrativas opcionais, não incorporadas ao vídeo.
+- **Compressão:** ao escolher perfil social, sugere a taxa Compacta já existente (5 Mb/s em 720p, 10 Mb/s em 1080p); o usuário pode selecionar Alta/Máxima. São parâmetros solicitados ao encoder, não requisitos garantidos de cada rede.
+- **Diagnóstico:** `ExportQualityReport` compara largura/altura exatas solicitadas para perfis verticais e mostra a rede selecionada. Preservados PiPs, legendas, marca d'água, áudio, backup, schemaVersion 4 e a exportação sem rede.
+- **Testes:** novas regras puras `SocialExportPolicyTest`, contrato `tools/test_social_export_contract.py` e cenários instrumentados de FIT/CROP com fonte 16:9, ainda não executados em Android. Compilação Gradle e fidelidade visual/áudio em aparelho permanecem pendentes.
+
 ## Versão 0.1.123 · versionCode 124 (04/11/2026)
 
 - **Etapa 5 — descrição persistente por projeto:** novo `VideoProject.publicationDraft` armazena somente textos, inclusive rascunhos incompletos, em JSON local; exportação/importação do backup preserva automaticamente o campo. Sem migrar schemaVersion 4; projetos antigos leem campo ausente como `null`.

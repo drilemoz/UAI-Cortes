@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.123"
-    const val VERSION_CODE = 124
+    const val VERSION_NAME = "0.1.124"
+    const val VERSION_CODE = 125
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.124", listOf(
+            ReleaseFeature("social-destinations", "Exportação para Shorts, Reels e TikTok",
+                "Opções de saída 9:16 em 720×1280 ou 1080×1920, mantendo Original como padrão e sem envio automático.", "film"),
+            ReleaseFeature("social-framing", "Mostrar tudo ou preencher tela",
+                "Escolha entre barras para preservar o quadro ou corte central com aviso de conteúdo perdido; guias visuais opcionais.", "check"),
+            ReleaseFeature("social-compression", "Perfil de compressão equilibrado",
+                "Ao selecionar rede social, sugere Compacta sem impedir mudar a taxa; diagnóstico compara resolução solicitada e obtida.", "film")
+        )),
         ReleaseSummary("0.1.123", listOf(
             ReleaseFeature("publication-project-draft", "Descrições salvas junto ao projeto",
                 "Descrição e hashtags permanecem no projeto local e nos backups, sem consumir nova cota Gemini.", "check"),

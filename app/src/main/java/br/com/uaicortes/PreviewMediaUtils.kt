@@ -69,3 +69,10 @@ internal fun previewPlayer(
         setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
         if (transparentShutter) setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
     }
+
+/** Enquadramento apenas da prévia de exportação; não altera o editor nem o MP4. */
+@OptIn(UnstableApi::class)
+internal fun configureExportPreviewFrame(view: PlayerView, crop: Boolean) {
+    view.resizeMode = if (crop) AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+        else AspectRatioFrameLayout.RESIZE_MODE_FIT
+}
