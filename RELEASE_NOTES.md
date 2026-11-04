@@ -1,3 +1,11 @@
+## Versão 0.1.132 · versionCode 133 (04/11/2026)
+
+- **Correção workflow 110:** adicionado o import `androidx.compose.foundation.horizontalScroll` em `GeminiUsageUi.kt`, resolvendo `Unresolved reference horizontalScroll` nas tarefas Debug/Release.
+- **Correção Kotlin:** alterado o retorno de `countInput` em `GeminiVideoCaptionClient.kt` para `return@withContext`, evitando `return is prohibited here` na consulta opcional `models.countTokens`.
+- **Regressão preventiva:** `tools/test_ci110_gemini_compilation_contract.py` verifica essas duas construções e sua preservação nas próximas versões; executado automaticamente pelo loop de contratos do CI.
+- **Preservação:** sem mudanças na contagem de tokens, gerenciamento de chaves, alternância de projetos, histórico Gemini, exportação, `schemaVersion=4`, Media3 1.11.1 ou assinatura dos cinco APKs.
+- **Validação:** contratos locais e verificações Kotlin executados; build Android completo da versão corrigida precisa ser repetido no GitHub Actions.
+
 ## Versão 0.1.131 · versionCode 132 (04/11/2026)
 
 - **Medição real:** descrição e Flow (`usageMetadata` de `generateContent`), narração e transcrição (`usage` de `interactions`) agora registram, quando informados, entrada, saída, raciocínio, cache e total oficial; total nunca é somado novamente aos subtotais.

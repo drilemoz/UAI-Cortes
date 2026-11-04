@@ -1,5 +1,10 @@
-# Uai Cortes · versão 0.1.131 (04/11/2026)
+# Uai Cortes · versão 0.1.132 (04/11/2026)
 
+
+## Correção do workflow 110 · v0.1.132
+
+- Compilação Debug/Release: import `horizontalScroll` restaurado ao painel Gemini e retorno de `countTokens` marcado com `return@withContext`.
+- Contrato CI110 previne regressões; histórico, estimativas, failover e proteção das chaves mantidos. Compilação Android ainda requer validação em CI.
 
 ## Monitor Gemini de tokens · v0.1.131
 

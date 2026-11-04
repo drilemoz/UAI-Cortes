@@ -29,3 +29,7 @@ O histórico representa exclusivamente chamadas deste aplicativo neste aparelho.
 - https://ai.google.dev/api/tokens
 - https://ai.google.dev/gemini-api/docs/rate-limits
 - https://ai.google.dev/gemini-api/docs/billing
+
+## Correção de compilação 0.1.132 (CI110)
+
+O workflow 110 da versão 0.1.131 apontou dois erros Kotlin na interface de histórico e na contagem sob demanda. A correção importa `horizontalScroll` e rotula o retorno de `countInput` com `return@withContext`. A API, semântica de consumo e privacidade não foram alteradas. O CI precisa compilar Debug e Release antes de considerar o recurso aprovado no Android.

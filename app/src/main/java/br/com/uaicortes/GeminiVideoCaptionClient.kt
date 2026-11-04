@@ -94,7 +94,7 @@ Cena: ${scene.take(1800)}"""
             "https://generativelanguage.googleapis.com/v1beta/models/$model:countTokens"),
             GeminiKeyParser.validate(key), payload)
         if (!result.has("totalTokens")) throw IOException("O modelo não retornou a contagem de entrada.")
-        return result.getLong("totalTokens").coerceAtLeast(0L)
+        return@withContext result.getLong("totalTokens").coerceAtLeast(0L)
     }
 
     suspend fun generate(key: String, contextText: String,

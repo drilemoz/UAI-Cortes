@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.131"
-    const val VERSION_CODE = 132
+    const val VERSION_NAME = "0.1.132"
+    const val VERSION_CODE = 133
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.132", listOf(
+            ReleaseFeature("ci110-gemini-scroll", "Painel de consumo Gemini corrigido",
+                "Corrigido o import de rolagem horizontal que impedia a compilação do painel de consumo.", "check"),
+            ReleaseFeature("ci110-gemini-count-tokens", "Contagem de tokens compilável",
+                "Corrigido o retorno da consulta opcional countTokens, mantendo consentimento e as regras de privacidade.", "check")
+        )),
         ReleaseSummary("0.1.131", listOf(
             ReleaseFeature("gemini-real-token-monitor", "Consumo real da IA em Configurações",
                 "Histórico local por projeto e modelo; mede tokens quando o Gemini informa e distingue resultados sem medição.", "check"),
