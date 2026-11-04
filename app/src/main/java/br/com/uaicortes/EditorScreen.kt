@@ -308,6 +308,13 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 }))
                 feedback = "Posição da faixa atualizada."
             }, onLegacyClick = { onEdit("audio") })
+        InteractiveAudioTimeline(p, onSelectTrack = onSelectAudio,
+            onMoveTrack = { trackId, start ->
+                onUpdate(p.copy(audioTracks = p.audioTracks.map { audio ->
+                    if (audio.id == trackId) audio.copy(startMs = start) else audio
+                }))
+                feedback = "Posição da voz atualizada."
+            }, onLegacyClick = { onEdit("voices") }, trackKind = VoiceIaPolicy.KIND)
         SubtitleOverviewTimeline(p.subtitles,p.durationMs,onSelectSubtitle,
             onOpen={onEdit("subtitles")})
         Spacer(Modifier.height(5.dp));HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
@@ -319,6 +326,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             Triple("Unir", Icons.Default.Add, "add"),
             Triple("PiP", Icons.Default.Layers, "pip"),
             Triple("Áudio", Icons.Default.MusicNote, "audio"),
+            Triple("Vozes IA", Icons.Default.RecordVoiceOver, "voices"),
             Triple("Transição", Icons.Default.AutoAwesomeMotion, "transition"),
             Triple("Legendas", Icons.Default.ClosedCaption, "subtitles"),
             Triple("Marca d'água", Icons.Default.TextFields, "watermark"),

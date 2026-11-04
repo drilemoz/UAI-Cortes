@@ -115,6 +115,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     ProjectMediaAlert(if (screen == "editor") project else null)
     var selectedClip by workspace::selectedClip
     var selectedAudioTrackId by workspace::selectedAudioTrackId
+    var selectedVoiceCueId by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedSubtitleId by workspace::selectedSubtitleId
     var positionMs by workspace::positionMs
     var pendingPicker by rememberSaveable { mutableStateOf("") }
@@ -415,7 +416,10 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                             animationImages.clear()
                             animationImages.addAll(animationDraftStore.load()?.images.orEmpty())
                             screen = "animate"
-                        } else navTo(it)
+                        } else {
+                            if (it == "voices") selectedVoiceCueId = null
+                            navTo(it)
+                        }
                     }, onUpdate = { write(it) },
                     onAddVideo = { pendingPicker = "append"; openGallery("editor", "append") },
                     onPiP = {
@@ -425,7 +429,11 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     onAudio = { audioPicker.launch(arrayOf("audio/*")) },
                     onSelectAudio = { id ->
                         val bound = project?.audioTracks?.firstOrNull { it.id == id }?.clipId
-                        if (bound != null) { selectedClip = bound; navTo("clip_audio") }
+                        val track = project?.audioTracks?.firstOrNull { it.id == id }
+                        if (track?.kind == VoiceIaPolicy.KIND) {
+                            selectedVoiceCueId = track.subtitleId
+                            navTo("voices")
+                        } else if (bound != null) { selectedClip = bound; navTo("clip_audio") }
                         else { selectedAudioTrackId = id; navTo("audio") }
                     },
                     onSelectSubtitle = { id -> selectedSubtitleId = id; navTo("subtitles") },
@@ -466,6 +474,10 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     onSaveAndReturn = { changed ->
                         if (write(changed)) { screen = "editor"; true } else false
                     }) }
+                "voices" -> project?.let { current -> VoiceIaScreen(current,
+                    back = ::back, onSave = { write(it) },
+                    openGeminiSettings = { previous = "voices"; screen = "gemini_settings" },
+                    initialCueId = selectedVoiceCueId) }
                 "pip" -> project?.let { current -> PipScreen(current, selectedOverlayId,
                     onSelect = { selectedOverlayId = it }, back = ::back,
                     onChange = { changed ->

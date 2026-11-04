@@ -16,12 +16,20 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.138"
-    const val VERSION_CODE = 139
+    const val VERSION_NAME = "0.1.139"
+    const val VERSION_CODE = 140
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
-        ReleaseSummary("0.1.138", listOf(
+        ReleaseSummary("0.1.139", listOf(
+            ReleaseFeature("voice-ia-editor", "Vozes IA por legenda",
+                "Nova tela acessada pelo menu rolável do editor: legendar, escolher voz Gemini, gerar e ouvir antes de inserir.", "captions"),
+            ReleaseFeature("voice-ia-timeline", "Linha Vozes separada",
+                "Narrações geradas ficam em trilha própria, com substituição, remoção e ajustes de posição preservando Áudio.", "check"),
+            ReleaseFeature("voice-ia-batch", "Vozes em lote com retomada",
+                "Permite gerar todas as falas após confirmação e recupera WAVs já preparados, sem refazer chamadas automaticamente.", "check")
+        )),
+        ReleaseSummary("0.1.139", listOf(
             ReleaseFeature("ci115-karaoke-version-contract", "Teste histórico de karaokê corrigido",
                 "O teste de regressão continua verificando os efeitos sem exigir a versão antiga do aplicativo.", "check"),
             ReleaseFeature("ci115-build-validation", "Validação inicial restaurada",

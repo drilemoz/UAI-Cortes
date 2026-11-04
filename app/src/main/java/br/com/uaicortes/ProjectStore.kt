@@ -140,20 +140,36 @@ data class AudioTrack(
     /** Nullable for older project-global tracks; attached audio follows its clip ID. */
     val clipId: String? = null,
     /** Source-video timestamp at which the audio originally began. */
-    val clipSourceAnchorMs: Long = 0L
+    val clipSourceAnchorMs: Long = 0L,
+    /** Tipo visual da faixa; arquivos antigos continuam como áudio comum. */
+    val kind: String = "audio",
+    val subtitleId: String? = null,
+    val voiceId: String? = null,
+    val ttsModel: String? = null,
+    val ttsStyle: String? = null,
+    val subtitleFingerprint: String? = null
 ) {
     fun json() = JSONObject().put("uri", uri).put("title", title)
         .put("startMs", startMs).put("durationMs", durationMs)
         .put("volume", volume.toDouble()).put("id", id)
         .put("sourceStartMs", sourceStartMs)
         .put("clipId", clipId).put("clipSourceAnchorMs", clipSourceAnchorMs)
+        .put("kind", kind).put("subtitleId", subtitleId).put("voiceId", voiceId)
+        .put("ttsModel", ttsModel).put("ttsStyle", ttsStyle)
+        .put("subtitleFingerprint", subtitleFingerprint)
     companion object { fun read(j: JSONObject) = AudioTrack(j.getString("uri"),
         j.optString("title"), j.optLong("startMs"), j.optLong("durationMs"),
         j.optDouble("volume", .35).toFloat().coerceIn(0f,1f),
         j.optString("id").ifBlank { UUID.randomUUID().toString() },
         j.optLong("sourceStartMs", 0L).coerceAtLeast(0L),
         j.optString("clipId").takeIf { it.isNotBlank() && it != "null" },
-        j.optLong("clipSourceAnchorMs", 0L).coerceAtLeast(0L)) }
+        j.optLong("clipSourceAnchorMs", 0L).coerceAtLeast(0L),
+        j.optString("kind", "audio").takeIf { it == VoiceIaPolicy.KIND } ?: "audio",
+        j.optString("subtitleId").takeIf { it.isNotBlank() && it != "null" },
+        j.optString("voiceId").takeIf { it.isNotBlank() && it != "null" },
+        j.optString("ttsModel").takeIf { it.isNotBlank() && it != "null" },
+        j.optString("ttsStyle").takeIf { it.isNotBlank() && it != "null" },
+        j.optString("subtitleFingerprint").takeIf { it.isNotBlank() && it != "null" }) }
 }
 
 /** Rascunho de publicação vinculado ao ID do projeto (nenhuma mídia ou chave de API).

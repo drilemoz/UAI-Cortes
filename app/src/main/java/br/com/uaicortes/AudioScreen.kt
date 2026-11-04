@@ -234,6 +234,10 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
     Column(Modifier.weight(1f).verticalScroll(pageScroll)
         .padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Heading("Áudio",back)
+        Text("Músicas, efeitos e áudios importados ficam aqui. As narrações das legendas " +
+            "ficam em Vozes IA, no menu do editor.",
+            modifier=Modifier.padding(horizontal=16.dp), style=MaterialTheme.typography.bodySmall,
+            color=MaterialTheme.colorScheme.onSurfaceVariant)
         AudioPanelCard {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                 Icon(Icons.Default.Tune,"Mixagem",tint=MaterialTheme.colorScheme.primary)
@@ -316,14 +320,14 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                 }
             }
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                Text("Faixas adicionais (${p.audioTracks.size})",fontWeight=FontWeight.SemiBold,
+                Text("Faixas adicionais (${p.audioTracks.count { it.kind != VoiceIaPolicy.KIND }})",fontWeight=FontWeight.SemiBold,
                     modifier=Modifier.weight(1f),fontSize=14.sp)
             }
-            if(p.audioTracks.isEmpty()) {
+            if(p.audioTracks.none { it.kind != VoiceIaPolicy.KIND }) {
                 Text("Nenhuma faixa adicional. Use a seção Adicionar áudio.",fontSize=12.sp,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            p.audioTracks.forEach { track ->
+            p.audioTracks.filter { it.kind != VoiceIaPolicy.KIND }.forEach { track ->
                 AudioTrackCard {
                     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                         Icon(Icons.Default.GraphicEq,null,tint=MaterialTheme.colorScheme.primary)

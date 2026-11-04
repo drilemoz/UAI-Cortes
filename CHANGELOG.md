@@ -1,3 +1,16 @@
+# Uai Cortes · versão 0.1.139 (04/11/2026)
+
+## Vozes IA por legenda e trilha de voz separada
+
+- Atalho **Vozes IA** no carrossel do editor, entre Áudio e Transição; tela própria com prévia do vídeo e legendas carregadas automaticamente do projeto, somente leitura.
+- Consulta manual do catálogo de vozes Gemini, escolha individual por legenda, estilos de interpretação, modelo, aplicação da mesma voz a todas as falas, geração e escuta de WAV antes da inserção.
+- Botões **Gerar**, **Refazer**, **Gerar todas**, **Ouvir**, **Inserir/Substituir** e **Excluir faixa**. Confirmação explícita antes de chamadas com possível consumo de cota; lotes internos de até 12 e cancelamento entre chamadas.
+- Rascunhos dos WAVs gravados em armazenamento interno durável, com SHA-256 e impressão digital da legenda, para reabrir sem regenerar falas idênticas. Sem transcrever, enviar mídia nem editar legendas originais.
+- **Vozes** aparece como faixa própria no editor com gesto para mover e toque para reabrir Vozes IA. Todas as faixas continuam em `audioTracks` para manter a prévia, a mixagem e o exportador anteriores; metadados opcionais distinguem vozes de faixas tradicionais mantendo JSON `schemaVersion=4`.
+- Inserção só ocorre após confirmação, sem recortar WAV; alerta quando áudio ultrapassa a duração da legenda ou sobrepõe outra voz; bloqueia inserção fora do projeto.
+- Tela Áudio tradicional continua disponível para música, efeitos, extração e narração contínua/avançada. Recurso de imagens na timeline não foi incluído nesta versão.
+- O CI/Gradle e a reprodução/exportação reais no Android ainda precisam ser validados. Sem APK produzido neste ambiente.
+
 # Uai Cortes · versão 0.1.138 (04/11/2026)
 
 ## Correção CI115 — teste de karaokê com versionamento dinâmico

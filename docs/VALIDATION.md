@@ -1,3 +1,7 @@
+## v0.1.139 (versionCode 140): Vozes IA por legenda
+
+- Ver `docs/VALIDATION_0.1.139.md` para escopo e pendências. Não declarar APK Android validado sem GitHub Actions e testes físicos.
+
 ## v0.1.121 (versionCode 122): correção do build CI100
 
 - Ver `docs/VALIDATION_0.1.121.md`: remoção do import inválido de `assertExists` em AndroidTest; build Android completo e execução instrumentada ainda pendentes.

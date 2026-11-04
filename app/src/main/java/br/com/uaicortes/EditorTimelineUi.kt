@@ -169,25 +169,27 @@ internal fun AudioDragSurface(
 @Composable
 internal fun InteractiveAudioTimeline(p: VideoProject,
     onSelectTrack: (String) -> Unit, onMoveTrack: (String, Long) -> Unit,
-    onLegacyClick: () -> Unit) {
+    onLegacyClick: () -> Unit, trackKind: String = "audio") {
+    val voiceTrack = trackKind == VoiceIaPolicy.KIND
+    val trackColor = if (voiceTrack) Purple else Green
     val totalMs = p.durationMs.coerceAtLeast(1L)
     Row(Modifier.fillMaxWidth().height(38.dp).padding(horizontal=12.dp, vertical=2.dp),
         verticalAlignment=Alignment.CenterVertically) {
-        Box(Modifier.width(60.dp).fillMaxHeight().background(Green, RoundedCornerShape(3.dp)),
-            contentAlignment=Alignment.Center) { Text("Áudio", color=Color.White, fontSize=11.sp) }
+        Box(Modifier.width(60.dp).fillMaxHeight().background(trackColor, RoundedCornerShape(3.dp)),
+            contentAlignment=Alignment.Center) { Text(if (voiceTrack) "Vozes" else "Áudio", color=Color.White, fontSize=11.sp) }
         Spacer(Modifier.width(6.dp))
         BoxWithConstraints(Modifier.weight(1f).fillMaxHeight()
-            .clip(RoundedCornerShape(3.dp)).background(Green.copy(alpha=.14f))) {
+            .clip(RoundedCornerShape(3.dp)).background(trackColor.copy(alpha=.14f))) {
             val timelineWidth = maxWidth
             val timelineWidthPx = with(LocalDensity.current) { timelineWidth.toPx() }
-            p.music?.let { music ->
+            if (!voiceTrack) p.music?.let { music ->
                 Box(Modifier.fillMaxSize().background(Green.copy(alpha=.16f))
                     .clickable(onClick=onLegacyClick), contentAlignment=Alignment.CenterStart) {
                     Text(music.title, modifier=Modifier.padding(start=3.dp),
                         fontSize=9.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
                 }
             }
-            ClipAudioBindings.resolved(p).forEach { audio ->
+            ClipAudioBindings.resolved(p).filter { (it.kind == VoiceIaPolicy.KIND) == voiceTrack }.forEach { audio ->
                 key(audio.id) {
                     var candidateStart by remember(audio.id, audio.startMs) { mutableLongStateOf(audio.startMs) }
                     var changed by remember(audio.id, audio.startMs) { mutableStateOf(false) }
@@ -199,7 +201,7 @@ internal fun InteractiveAudioTimeline(p: VideoProject,
                     val drawnX = (timelineWidth*startFraction).coerceAtMost(timelineWidth-drawnWidth)
                     AudioDragSurface(
                         modifier=Modifier.offset(x=drawnX).width(drawnWidth).fillMaxHeight()
-                            .background(Green.copy(alpha=.72f),RoundedCornerShape(3.dp))
+                            .background(trackColor.copy(alpha=.72f),RoundedCornerShape(3.dp))
                             .semantics { contentDescription = if (audio.clipId != null) "${audio.title}: vinculado ao clipe; toque para editar" else "${audio.title}: arrastar para mover; tocar para editar" },
                         totalMs=totalMs, widthPx=timelineWidthPx,
                         onStep={ delta ->

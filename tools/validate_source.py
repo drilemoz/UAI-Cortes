@@ -328,7 +328,7 @@ assert 'onSaveEditor = { if (write(it)) screen = "editor" }' in ui
 assert 'Salvar legendas e voltar ao editor' in ui
 assert 'internal fun SubtitleScreen(p:VideoProject' in ui and 'onSaveEditor: () -> Unit, onAutoSubtitles: () -> Unit)' in ui
 assert 'SubtitleTwoColumnChoices(' in ui and 'LazyRow(' in ui and 'items(options)' in ui
-assert 'Faixas adicionais (${p.audioTracks.size})' in ui
+assert 'Faixas adicionais (${p.audioTracks.count { it.kind != VoiceIaPolicy.KIND }})' in ui
 assert 'if(volumesExpanded)' in ui and 'if(trackVolumeExpandedId==track.id)' in ui
 assert 'Remover faixa de áudio?' in ui and 'pendingAudioDeleteId=track.id' in ui
 assert 'if(editingAudioId==id) editingAudioId=null' in ui
@@ -557,7 +557,8 @@ print('OK: v0.1.64 / versionCode 74, rascunho, voltar, sucesso compartilhado e a
 
 # v0.1.56: contratos de modularização e serviços compartilhados.
 app_files = root/'app/src/main/java/br/com/uaicortes'
-assert len((app_files/'MainActivity.kt').read_text().splitlines()) < 650
+# v139: uma rota de ferramenta foi acrescentada, sem mover a UI para MainActivity.
+assert len((app_files/'MainActivity.kt').read_text().splitlines()) < 675
 assert all('internal fun ' in (app_files/name).read_text() for name in [
     'HomeScreens.kt', 'EditorScreen.kt', 'EditorTimelineUi.kt', 'TrimScreen.kt',
     'AudioScreen.kt', 'PipScreen.kt', 'TransitionScreen.kt', 'SubtitleScreen.kt',
@@ -901,7 +902,7 @@ assert 'clipId: String? = null' in model and 'clipSourceAnchorMs: Long = 0L' in 
 assert '.put("clipId", clipId)' in model and 'j.optString("clipId")' in model
 assert 'ClipAudioBindings.resolved(project).forEach' in source
 assert 'ClipAudioBindings.resolved(p).forEach' in editor
-assert 'ClipAudioBindings.resolved(p).forEach' in (root/'app/src/main/java/br/com/uaicortes/EditorTimelineUi.kt').read_text()
+assert 'ClipAudioBindings.resolved(p).filter { (it.kind == VoiceIaPolicy.KIND) == voiceTrack }.forEach' in (root/'app/src/main/java/br/com/uaicortes/EditorTimelineUi.kt').read_text()
 assert 'ClipAudioTiming.resolve(' in binding and 'fun resolve(' in timing
 assert 'Clone only the audio bound' in binding and 'pruneDeleted' in binding
 assert 'ClipAudioBindings.cloneAttached(' in (root/'app/src/main/java/br/com/uaicortes/TrimTimelineEdit.kt').read_text()
@@ -936,7 +937,7 @@ home=(app_files/'HomeScreens.kt').read_text()
 assert 'GeminiSettingsSection()' not in home
 assert 'onClick("gemini_settings")' in home
 assert '"gemini_settings" -> GeminiSettingsScreen(::back)' in main
-assert '"gemini_settings" -> if (previous == "audio") "audio" else "settings"' in nav
+assert '"gemini_settings" -> if (previous == "audio" || previous == "voices") previous else "settings"' in nav
 assert 'GeminiKeyAction(' in settings and settings.count('GeminiKeyAction(') >= 7
 assert 'Dialog(' in voice_ui and 'LazyColumn(' in voice_ui
 assert 'GeminiVoiceSearch.filter(voices, voiceSearch)' in voice_ui
