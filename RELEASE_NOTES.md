@@ -1,3 +1,12 @@
+# Uai Cortes · versão 0.1.140 (04/11/2026)
+
+## Correção do workflow 117 — inclusão do GitHub Actions no ZIP
+
+- A entrega do código-fonte v0.1.139 foi empacotada sem o diretório oculto `.github`, deixando o workflow antigo (`VERSION=0.1.138`) no repositório após a atualização. O teste `check_version_sync.py` impediu a compilação ainda na validação inicial.
+- O pacote desta versão inclui explicitamente `.github/workflows/android-apk.yml`, agora com `VERSION=0.1.140` e `VERSION_CODE=141`, em sincronia com Gradle, `VERSION`, metadados, Sobre/Novidades e empacotador de APKs.
+- O ZIP é criado por `python3 tools/package_source.py --output <arquivo.zip>`, que verifica arquivos indispensáveis, executa `validate_source.py` sobre conteúdo extraído e rejeita ZIPs incompletos. Novo contrato protege a presença do workflow nesse empacotamento.
+- Sem alterações no código funcional de Vozes IA, áudio, legendas ou exportação. A compilação Android, os cinco APKs Release e testes em aparelho ainda dependem do próximo GitHub Actions.
+
 # Uai Cortes · versão 0.1.139 (04/11/2026)
 
 ## Vozes IA por legenda e trilha de voz separada

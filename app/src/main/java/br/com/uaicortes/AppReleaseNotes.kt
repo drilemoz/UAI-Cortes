@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.139"
-    const val VERSION_CODE = 140
+    const val VERSION_NAME = "0.1.140"
+    const val VERSION_CODE = 141
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.140", listOf(
+            ReleaseFeature("ci117-source-zip-workflow", "CI117: pacote de fonte completo",
+                "Incluído o workflow GitHub Actions no ZIP para não manter a versão antiga ao importar o projeto.", "check"),
+            ReleaseFeature("ci117-version-sync", "Versionamento sincronizado",
+                "Versão do workflow, Gradle e metadados corrigida; nova verificação impede ZIP sem arquivo de CI.", "check")
+        )),
         ReleaseSummary("0.1.139", listOf(
             ReleaseFeature("voice-ia-editor", "Vozes IA por legenda",
                 "Nova tela acessada pelo menu rolável do editor: legendar, escolher voz Gemini, gerar e ouvir antes de inserir.", "captions"),
@@ -29,7 +35,7 @@ internal object AppReleaseNotes {
             ReleaseFeature("voice-ia-batch", "Vozes em lote com retomada",
                 "Permite gerar todas as falas após confirmação e recupera WAVs já preparados, sem refazer chamadas automaticamente.", "check")
         )),
-        ReleaseSummary("0.1.139", listOf(
+        ReleaseSummary("0.1.138", listOf(
             ReleaseFeature("ci115-karaoke-version-contract", "Teste histórico de karaokê corrigido",
                 "O teste de regressão continua verificando os efeitos sem exigir a versão antiga do aplicativo.", "check"),
             ReleaseFeature("ci115-build-validation", "Validação inicial restaurada",

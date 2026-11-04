@@ -1,3 +1,7 @@
+## v0.1.140 (versionCode 141): correção do pacote do workflow 117
+
+- `docs/VALIDATION_0.1.140.md`: workflow antes omitido do ZIP v0.1.139. ZIP desta versão deve incluir `.github/workflows/android-apk.yml` e passar no validador extraído. Compilação Android e 5 APKs pendentes.
+
 ## v0.1.139 (versionCode 140): Vozes IA por legenda
 
 - Ver `docs/VALIDATION_0.1.139.md` para escopo e pendências. Não declarar APK Android validado sem GitHub Actions e testes físicos.
