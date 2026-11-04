@@ -71,57 +71,97 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
         color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
-@Composable internal fun HomePrimaryActions(onCreate: () -> Unit, onAnimate: () -> Unit,
-    preview: Boolean = false, onFlow: () -> Unit = {}) {
-    Surface(color = Blue, shape = RoundedCornerShape(24.dp)) {
-        Column(Modifier.fillMaxWidth().padding(22.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Icon(Icons.Default.MovieCreation, null, tint = Color.White, modifier = Modifier.size(32.dp))
-            Text("Nova edição", fontSize=25.sp, fontWeight=FontWeight.Bold, color=Color.White)
-            Text("Importe seus vídeos e comece a editar.", color=Color.White)
-            Button(onClick=onCreate, enabled = !preview, modifier=Modifier.fillMaxWidth().height(52.dp),
-                colors=ButtonDefaults.buttonColors(containerColor=Color.White,
-                    disabledContainerColor=Color.White.copy(alpha=0.92f)),
-                shape=RoundedCornerShape(30.dp)) {
-                Icon(Icons.Default.Add, null, tint=Blue)
-                Spacer(Modifier.width(8.dp))
-                Text("Criar projeto", color=Blue)
-            }
+/** Ações de tamanho e cor equivalentes: a tela Sobre só mostra a prévia desabilitada. */
+@Composable private fun HomeActionTile(
+    label: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    enabled: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.heightIn(min = 110.dp),
+        shape = RoundedCornerShape(18.dp),
+        color = Blue,
+        contentColor = Color.White,
+        tonalElevation = 0.dp
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(30.dp),
+                tint = Color.White)
+            Spacer(Modifier.height(10.dp))
+            Text(label, color = Color.White, fontSize = 12.sp,
+                lineHeight = 15.sp, fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center, maxLines = 2,
+                overflow = TextOverflow.Ellipsis)
         }
     }
-    Spacer(Modifier.height(16.dp))
-    ItemCard(Icons.Default.AutoAwesomeMotion, "Animar Imagens",
-        "Crie um MP4 animado offline com suas fotos", enabled = !preview) { onAnimate() }
-    Spacer(Modifier.height(10.dp))
-    ItemCard(Icons.Default.MovieFilter, "Prompts para Google Flow",
-        "Um estilo de animação e cenas independentes", enabled = !preview) { onFlow() }
+}
+
+/** Três atalhos lado a lado, sem mudar os fluxos originais de criação/Flow. */
+@Composable internal fun HomePrimaryActions(onCreate: () -> Unit, onAnimate: () -> Unit,
+    preview: Boolean = false, onFlow: () -> Unit = {}) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.Top) {
+        HomeActionTile("Novo projeto", Icons.Default.AddCircleOutline, onCreate,
+            enabled = !preview, modifier = Modifier.weight(1f))
+        HomeActionTile("Animar fotos", Icons.Default.AutoAwesomeMotion, onAnimate,
+            enabled = !preview, modifier = Modifier.weight(1f))
+        HomeActionTile("Prompts Flow", Icons.Default.MovieFilter, onFlow,
+            enabled = !preview, modifier = Modifier.weight(1f))
+    }
 }
 
 @Composable internal fun MainHome(projects: List<VideoProject>, onCreate: () -> Unit, onAnimate: () -> Unit,
     onOpen: (VideoProject)->Unit, onDelete: (VideoProject)->Unit, onDeleteAll: ()->Unit,
     onSettings: ()->Unit, onTab:(String)->Unit, onFlow: () -> Unit = {}) {
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Movie, null, tint = Blue, modifier = Modifier.size(30.dp))
-            Spacer(Modifier.width(12.dp))
+        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Movie, null, tint = Blue, modifier = Modifier.size(28.dp))
+            Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text("Uai Cortes", fontSize = 25.sp, fontWeight = FontWeight.Bold)
+                Text("Uai Cortes", fontSize = 23.sp, fontWeight = FontWeight.Bold)
                 AppVersionLabel()
             }
             IconButton(onClick = onSettings) { Icon(Icons.Default.Settings, "Configurações") }
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal=20.dp)) {
+            Spacer(Modifier.height(8.dp))
             HomePrimaryActions(onCreate, onAnimate, onFlow = onFlow)
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(20.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("Edições recentes",fontSize=21.sp, fontWeight=FontWeight.SemiBold,
+                Text("Edições recentes",fontSize=19.sp, fontWeight=FontWeight.SemiBold,
                     modifier=Modifier.weight(1f))
-                if (projects.isNotEmpty()) IconButton(onClick=onDeleteAll) {
-                    Icon(Icons.Default.DeleteSweep, "Excluir todos os projetos")
+                if (projects.isNotEmpty()) {
+                    TextButton(onClick={ onTab("projects") }) { Text("Ver todos") }
+                    IconButton(onClick=onDeleteAll) {
+                        Icon(Icons.Default.DeleteSweep, "Excluir todos os projetos")
+                    }
                 }
             }
-            Spacer(Modifier.height(10.dp))
-            if(projects.isEmpty()) Text("Seus projetos aparecerão aqui.", color=MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier=Modifier.padding(16.dp))
+            Spacer(Modifier.height(4.dp))
+            if (projects.isEmpty()) {
+                Surface(shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)) {
+                    Row(Modifier.fillMaxWidth().padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Icon(Icons.Default.FolderOpen, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp))
+                        Text("Nenhuma edição ainda. Comece em Novo projeto.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
             projects.take(5).forEach { ProjectItem(it,onOpen,onDelete) }
         }
         MainNav("home", onTab)

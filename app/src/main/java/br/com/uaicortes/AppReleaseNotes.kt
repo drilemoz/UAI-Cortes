@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.128"
-    const val VERSION_CODE = 129
+    const val VERSION_NAME = "0.1.129"
+    const val VERSION_CODE = 130
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.129", listOf(
+            ReleaseFeature("home-three-equal-cards", "Três atalhos compactos na Home",
+                "Novo projeto, Animar fotos e Prompts Flow aparecem lado a lado em cartões azuis com ícones, mantendo os fluxos originais.", "film"),
+            ReleaseFeature("home-recent-state", "Projetos recentes mais organizados",
+                "Cabeçalho compacto, estado vazio mais claro e acesso Ver todos quando existem edições salvas.", "check"),
+            ReleaseFeature("home-about-shared-preview", "Prévia da Home preservada em Sobre",
+                "A prévia reutiliza os três cartões com ações desabilitadas; novos testes conferem os atalhos reais e o bloqueio na prévia.", "check")
+        )),
         ReleaseSummary("0.1.128", listOf(
             ReleaseFeature("export-compact-ui-v128", "Exportação compacta e com ícones",
                 "Destinos, resolução e compressão em controles menores; resumo do MP4 e botão Salvar fixos.", "film"),

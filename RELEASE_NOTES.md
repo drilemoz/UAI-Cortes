@@ -1,3 +1,10 @@
+## Versão 0.1.129 · versionCode 130 (04/11/2026)
+
+- Tela inicial reformulada: **Novo projeto**, **Animar fotos** e **Prompts Flow** em três cartões iguais de cor azul e ícones, numa só fileira.
+- Cabeçalho compacto e seção Edições recentes com estado vazio melhor explicado e acesso Ver todos quando aplicável.
+- Prévia da Home em Sobre usa os mesmos componentes com ações desabilitadas; navegação e armazenamento de projetos preservados.
+- Atualizados testes, versionamento e metadados. Android/Gradle e acessibilidade com fonte ampliada dependem de teste em aparelho.
+
 ## Versão 0.1.128 · versionCode 129 (04/11/2026)
 
 - Nova tela compacta de exportação com ícones, seletores menores, compressão sem bitrate duplicado nos cartões de resolução e botão Salvar fixo.

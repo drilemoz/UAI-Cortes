@@ -1,3 +1,10 @@
+## Versão 0.1.129 · versionCode 130 (04/11/2026)
+
+- **Home compacta:** três cartões azuis uniformes lado a lado com ícones; atalhos renomeados para Novo projeto, Animar fotos e Prompts Flow. Os mesmos callbacks anteriores são mantidos.
+- **Projetos recentes:** cabeçalho mais leve, cartão para lista vazia e Ver todos quando houver projetos. Sem alterar persistência nem excluir dados.
+- **Prévia de Sobre:** continua compartilhando `HomePrimaryActions` com `preview=true`, impedindo ações na demonstração. Testes instrumentados da Home e novo contrato Python atualizados.
+- **Compatibilidade:** versionCode 130, schemaVersion 4, Media3 1.11.1, workflow de cinco APKs e assinatura preservados. Validação estática não substitui build Android nem inspeção visual em aparelhos de tela estreita.
+
 ## Versão 0.1.128 · versionCode 129 (04/11/2026)
 
 - **Exportação repaginada:** ícones, grupos de destino/enquadramento/resolução/compressão compactos, botão Salvar fixo e estimativa do tamanho do projeto no rodapé.

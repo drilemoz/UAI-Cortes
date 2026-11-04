@@ -1,6 +1,11 @@
-# Uai Cortes · versão 0.1.128 (04/11/2026)
+# Uai Cortes · versão 0.1.129 (04/11/2026)
+
+A Home ganhou três cartões azuis compactos, com ícones e funções independentes: **Novo projeto**, **Animar fotos** e **Prompts Flow**. Os três ficam lado a lado, na mesma linha, sem tela intermediária. O cabeçalho foi reduzido e as edições recentes têm um estado vazio explicativo e um atalho Ver todos quando há projetos. A prévia em Sobre continua reutilizando os mesmos componentes, com cliques desabilitados. Não altera o motor de vídeo, armazenamento, schemaVersion=4, assinatura ou as cinco saídas APK do CI. Build Android e validação visual em aparelho ainda pendentes.
+
+## Versão 0.1.128 · versionCode 129 (04/11/2026)
 
 A exportação agora usa controles compactos com ícones e ações rápidas para destino, 9:16, resolução e compressão. A prévia local foi mantida em painel expansível com guias opcionais para legenda e elementos de interface; há exemplos visuais de Mostrar tudo vs Preencher. O resumo estimado e Salvar ficam no rodapé fixo. Sem alterações no motor Media3, projeto JSON, assinatura ou formatos. Ainda exige build Android e teste físico para confirmar a composição visual.
+
 
 ## Versão 0.1.127 · versionCode 128 (04/11/2026)
 

@@ -28,5 +28,7 @@ assert 'ExportDestination.ORIGINAL.name' in s and 'VerticalFrameMode.FIT.name' i
 assert 'exportVm.savedVideo' not in s or 'VideoSavedDialog(' in s
 assert 'Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP' in e and 'Presentation.LAYOUT_SCALE_TO_FIT' in e
 assert 'fun dimensions(' in p and 'fun recommendedBitrate(' in p
-assert re.search(r'versionCode\s*=\s*129\b',(r/'app/build.gradle.kts').read_text())
+from check_version_sync import check
+version, code = check(r)
+assert re.search(rf'versionCode\s*=\s*{code}\b',(r/'app/build.gradle.kts').read_text())
 print('OK: layout compacto, rodapé fixo, prévia local, exemplos, guias e compatibilidade do exportador')
