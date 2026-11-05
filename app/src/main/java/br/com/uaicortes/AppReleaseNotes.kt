@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.141"
-    const val VERSION_CODE = 142
+    const val VERSION_NAME = "0.1.142"
+    const val VERSION_CODE = 143
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.142", listOf(
+            ReleaseFeature("voice-ia-general-settings-142", "Voz e humor para todas as falas",
+                "Buscar vozes, Lite e Voz geral ficam juntos; estilo Humor geral tem aplicação confirmada, sem substituir escolhas individuais silenciosamente.", "captions"),
+            ReleaseFeature("voice-ia-compact-cards-142", "Cartões de voz mais compactos",
+                "Legendas em leitura, escolha de voz e estilo por fala, botões curtos e alerta de WAV além do tempo da legenda.", "check"),
+            ReleaseFeature("voice-ia-preview-times-142", "Prévia e horários consistentes",
+                "Mesma prévia adaptativa de Legendas e horários de início e fim exibidos em décimos de segundo.", "film")
+        )),
         ReleaseSummary("0.1.141", listOf(
             ReleaseFeature("ci118-voice-uri-jvm", "CI118: conversão de arquivo compatível",
                 "URI da voz Gemini agora funciona nos testes JVM e no Android sem chamar a API Android na política.", "check"),

@@ -1,3 +1,14 @@
+# Uai Cortes · versão 0.1.142 (04/11/2026)
+
+## Vozes IA: interface compacta e escolhas gerais
+
+- **Buscar vozes**, seletor de modelo **Lite/Flash** e **Voz geral** reorganizados na mesma barra da ferramenta Vozes IA. Escolher uma voz geral pede confirmação antes de substituir as escolhas individuais e não aciona a API.
+- Botão **Humor** junto a **Gerar todas**, com os estilos existentes do Gemini (Humorística, Sarcástica, Neutra etc.) aplicáveis em lote mediante confirmação. Cada legenda continua permitindo escolha individual de voz e estilo.
+- Removido **Voz para todas** da linha de geração. Cartões menores, texto recolhido em uma linha, seletores compactos e ações **Gerar/Refazer**, **Ouvir** e **Inserir/Substituir** preservadas.
+- Prévia da tela Vozes IA agora reutiliza `InlineVideoPreview`, a geometria adaptativa da tela Legendas, sem editar posição, texto, tamanho ou tempos salvos. Horários em décimos (`00:00.5`) e sinalização em décimos para WAV que ultrapassa a janela original da legenda.
+- Novo `VoiceIaDisplayPolicy` com testes JVM para ultrapassagens e arredondamento visual; nova regressão estática do layout e das decisões de confirmação. Áudio tradicional, timeline Vozes, Gemini TTS, schemaVersion 4, Media3 e cinco saídas Release preservados.
+- A compilação Android, o fluxo Gemini real e a reprodução/exportação precisam ser confirmados no GitHub Actions e em aparelho. Não há APK gerado nesta entrega de fonte.
+
 # Uai Cortes · versão 0.1.141 (04/11/2026)
 
 ## Correção CI118 — teste unitário de Vozes IA
