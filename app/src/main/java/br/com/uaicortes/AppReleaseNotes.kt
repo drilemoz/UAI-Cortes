@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.166"
-    const val VERSION_CODE = 167
+    const val VERSION_NAME = "0.1.167"
+    const val VERSION_CODE = 168
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.167", listOf(
+            ReleaseFeature("meta-pages-167", "Reels no Facebook Página — modo avançado",
+                "Vinculação de Página por token temporário, verificação de identidade e envio confirmado antes de iniciar; perfil pessoal continua assistido.", "check"),
+            ReleaseFeature("tiktok-direct-167", "TikTok com prévia das permissões",
+                "Consulta da conta e privacidade atual, envio em partes mediante confirmação e acompanhamento de processamento por sessão.", "captions"),
+            ReleaseFeature("social-no-duplicate-167", "Publicações sem duplicação automática",
+                "Status persistente antes de enviar, token descartado ao fechar e revisão obrigatória após resultado incerto.", "check")
+        )),
         ReleaseSummary("0.1.166", listOf(
             ReleaseFeature("youtube-oauth-166", "Autorização YouTube pelo Android",
                 "Vincule o ID público do canal após permissão Google; credenciais não são exportadas nem salvas no catálogo.", "check"),

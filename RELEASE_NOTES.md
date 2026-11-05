@@ -1,3 +1,12 @@
+# Uai Cortes · versão 0.1.167 — TikTok e Facebook Página (fase 3)
+
+- **Facebook Página:** vínculo de ID público confirmado pela Graph API v26.0 usando um token OAuth de Página inserido apenas para aquela sessão; START → upload binário → FINISH de Reel, cada envio exige consentimento e a conta deve corresponder à Página vinculada. Recebimento da API não garante processamento/público.
+- **TikTok:** consulta oficial `creator_info` antes do envio para mostrar identidade, opções de privacidade e restrições de interação; seleção consciente, marcação opcional de conteúdo criado com IA, upload `FILE_UPLOAD` dividido em blocos, e consulta manual do status via `publish_id`.
+- **Segurança:** o token OAuth é inserido no modo avançado, não persistido nem exportado; não há App Secret no APK, nem troca automática de tokens ou reenvio silencioso. A conexão não é login OAuth integrado, e o usuário deve obter token autorizado externamente. `UPLOAD_REVIEW` é gravado antes de qualquer POST; falha incerta exige inspeção da plataforma. `REMOTE_SUBMITTED` NÃO é confirmação de publicação pública.
+- **Contas e compatibilidade:** perfil pessoal Facebook e Kwai permanecem manuais. `remotePageId` opcional não altera o schema social 1 nem `VideoProject` schemaVersion 4. Migração de cadastros 0.1.165/166, Gemini, Editor, Wizard e YouTube preservados. Metadados, fluxo de cinco APKs Release e versionCode 168 sincronizados.
+- **Configuração externa:** Meta exige permissões aprovadas `pages_manage_posts`, `pages_read_engagement`/`pages_show_list`; TikTok exige `video.publish` e auditoria para visibilidade pública. No modo atual, tokens são fornecidos por ação, NÃO existe autenticação persistente nem OAuth integrado Meta/TikTok. Não publicar sem permissões reais.
+- **Limites e testes:** nenhum token real, publicação real ou build Android foi validado nesta sessão; o cliente inclui testes de contrato, parser Kotlin, testes instrumentados pendentes e checagens de integridade do pacote. Upload depende de disponibilidade do serviço, formatos aceitos e rede estável; nunca presumir vídeo publicado.
+
 # Uai Cortes · versão 0.1.166 — YouTube OAuth e publicação direta (fase 2)
 
 - **YouTube OAuth:** integração opcional com o AuthorizationClient do Google Play services (escopos `youtube.upload` e `youtube.readonly`). Vincular ID público do canal depois de consulta real e confirmação; nenhum token salvo/exportado.

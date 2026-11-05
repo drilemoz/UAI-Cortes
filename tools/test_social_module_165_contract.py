@@ -34,7 +34,7 @@ assert '"social_publish"' in nav and '"social"' in nav and '"api_center"' in nav
 assert 'MainNav("social", onTab)' in screens and 'Triple("social",Icons.Default.Public,"Redes")' in home
 assert 'onSocialPublish' in saved and 'Publicar nas redes sociais' in saved
 assert 'onSocialPublish' in export and 'onSocialPublish' in animated
-assert 'versionCode = 167' in (root/'app/build.gradle.kts').read_text()
+assert f'versionCode = {__import__("check_version_sync").check(root)[1]}' in (root/'app/build.gradle.kts').read_text()
 assert '.put("schemaVersion", 4)' in (source/'ProjectStore.kt').read_text()
 assert 'class SocialStoreAndroidTest' in (root/'app/src/androidTest/java/br/com/uaicortes/SocialStoreAndroidTest.kt').read_text()
 print('OK: Redes Sociais fase 1: rotas, segurança local, exportação, compartilhamento e APIs honestas.')

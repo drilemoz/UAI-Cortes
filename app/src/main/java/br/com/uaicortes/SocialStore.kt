@@ -14,13 +14,13 @@ import java.util.UUID
  * Dados não são copiados para VideoProject (schemaVersion 4 permanece intacto).
  */
 internal enum class SocialDestination(val label: String, val help: String, val developerUrl: String) {
-    FACEBOOK_PAGE("Facebook · Página", "Publicação por API depende de permissões e revisão da Meta.",
+    FACEBOOK_PAGE("Facebook · Página", "Reels por API exigem token da Página, permissões e aprovação da Meta.",
         "https://developers.facebook.com/docs/video-api/guides/reels-publishing/"),
     FACEBOOK_PROFILE("Facebook · Perfil", "Compartilhamento manual; o app não publica por API em perfis pessoais.",
         "https://www.facebook.com/help/"),
     YOUTUBE("YouTube", "Upload por API depende de OAuth e autorização do canal.",
         "https://developers.google.com/youtube/v3/guides/uploading_a_video"),
-    TIKTOK("TikTok", "Publicação por API depende de OAuth, escopo video.publish e aprovação.",
+    TIKTOK("TikTok", "Envio por API exige token OAuth, escopo video.publish e aprovação do TikTok.",
         "https://developers.tiktok.com/docs/en/content-posting-api-get-started"),
     KWAI("Kwai", "Publicação via compartilhamento manual; API brasileira não validada.",
         "https://www.kwai.com/");
@@ -34,8 +34,9 @@ internal enum class SocialPublicationStatus(val label: String) {
     PREPARED("Preparada"),
     SHARED_UNCONFIRMED("Compartilhamento aberto · confirmar postagem"),
     CONFIRMED_MANUALLY("Publicada · confirmada manualmente"),
-    UPLOAD_REVIEW("Envio iniciado · verificar no YouTube"),
-    CONFIRMED_BY_API("Enviada · confirmada pelo YouTube");
+    UPLOAD_REVIEW("Envio iniciado · verificar na plataforma"),
+    CONFIRMED_BY_API("Enviada · confirmada pelo YouTube"),
+    REMOTE_SUBMITTED("Recebida pela API · verifique o processamento");
     companion object {
         fun parse(value: String): SocialPublicationStatus =
             entries.firstOrNull { it.name == value } ?: PREPARED
@@ -48,17 +49,19 @@ internal data class SocialAccount(
     val label: String,
     val profileUrl: String = "",
     val remoteChannelId: String = "",
+    val remotePageId: String = "",
     val createdAt: Long = System.currentTimeMillis()
 ) {
     fun toJson() = JSONObject().put("id", id).put("destination", destination.name)
         .put("label", label).put("profileUrl", profileUrl)
-        .put("remoteChannelId", remoteChannelId).put("createdAt", createdAt)
+        .put("remoteChannelId", remoteChannelId).put("remotePageId", remotePageId).put("createdAt", createdAt)
     companion object {
         fun fromJson(json: JSONObject): SocialAccount = SocialAccount(
             id = json.getString("id"),
             destination = requireNotNull(SocialDestination.parse(json.getString("destination"))),
             label = json.getString("label"), profileUrl = json.optString("profileUrl"),
-            remoteChannelId = json.optString("remoteChannelId"), createdAt = json.optLong("createdAt", 0L)
+            remoteChannelId = json.optString("remoteChannelId"),
+            remotePageId = json.optString("remotePageId"), createdAt = json.optLong("createdAt", 0L)
         )
     }
 }
@@ -129,6 +132,23 @@ internal object SocialPublicationPolicy {
     fun validChannel(id: String): Boolean =
         id.isBlank() || (id.startsWith("UC") && id.length in 20..64 &&
             id.all { it.isLetterOrDigit() || it == '_' || it == '-' })
+
+    fun validPageId(id: String): Boolean = id.matches(Regex("[0-9]{5,30}"))
+
+    fun validRemoteReference(id: String): Boolean =
+        id.matches(Regex("[A-Za-z0-9_~.:-]{5,120}"))
+
+    fun bindPage(account: SocialAccount, pageId: String): SocialAccount {
+        require(account.destination == SocialDestination.FACEBOOK_PAGE && validPageId(pageId))
+        return account.copy(remotePageId = pageId)
+    }
+
+    /** O servidor recebeu a operação, mas isso não significa vídeo já público. */
+    fun markExternalSubmitted(post: SocialPublication, id: String): SocialPublication {
+        require(post.status == SocialPublicationStatus.UPLOAD_REVIEW && validRemoteReference(id))
+        return post.copy(status = SocialPublicationStatus.REMOTE_SUBMITTED, remoteVideoId = id,
+            updatedAt = System.currentTimeMillis())
+    }
 
     fun validVideoId(id: String): Boolean =
         id.isBlank() || Regex("[A-Za-z0-9_-]{11}").matches(id)
@@ -216,14 +236,21 @@ internal class SocialStore(context: Context) {
         require(data.accounts.all { it.id.isNotBlank() && it.label.length in 1..70 &&
             SocialPublicationPolicy.isSafeHttps(it.profileUrl) &&
             SocialPublicationPolicy.validChannel(it.remoteChannelId) &&
-            (it.remoteChannelId.isBlank() || it.destination == SocialDestination.YOUTUBE) })
+            (it.remoteChannelId.isBlank() || it.destination == SocialDestination.YOUTUBE) &&
+            (it.remotePageId.isBlank() ||
+                (it.destination == SocialDestination.FACEBOOK_PAGE &&
+                    SocialPublicationPolicy.validPageId(it.remotePageId))) })
         val ids = data.accounts.map { it.id }.toSet()
         require(data.publications.all { it.accountId in ids &&
             SocialPublicationPolicy.isShareableVideo(it.videoUri) &&
             it.videoName.length in 1..200 && it.description.length <= 3000 && it.hashtags.length <= 1500 &&
             SocialPublicationPolicy.isSafeHttps(it.postUrl) &&
-            SocialPublicationPolicy.validVideoId(it.remoteVideoId) &&
-            (it.remoteVideoId.isBlank() || it.status == SocialPublicationStatus.CONFIRMED_BY_API) &&
+            (it.remoteVideoId.isBlank() || when (it.status) {
+                SocialPublicationStatus.CONFIRMED_BY_API -> SocialPublicationPolicy.validVideoId(it.remoteVideoId)
+                SocialPublicationStatus.REMOTE_SUBMITTED, SocialPublicationStatus.CONFIRMED_MANUALLY ->
+                    SocialPublicationPolicy.validRemoteReference(it.remoteVideoId)
+                else -> false
+            }) &&
             it.metrics.source in setOf("manual", "youtube_api") &&
             listOf(it.metrics.views,it.metrics.likes,it.metrics.comments,it.metrics.shares)
                 .all { value -> value == null || value >= 0 } })

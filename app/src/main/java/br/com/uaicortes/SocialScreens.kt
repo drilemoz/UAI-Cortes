@@ -62,6 +62,8 @@ internal fun SocialDashboardScreen(
     val scope = rememberCoroutineScope()
     var youtubeBusy by remember { mutableStateOf(false) }
     var channelToBind by remember { mutableStateOf<Pair<SocialAccount, YouTubeSocialApi.Channel>?>(null) }
+    var pageToBind by remember { mutableStateOf<SocialAccount?>(null) }
+    var confirmedPage by remember { mutableStateOf<Pair<SocialAccount, SocialExternalApis.FacebookPage>?>(null) }
     val authorizeYouTube = rememberYouTubeAuthorization { error ->
         youtubeBusy = false
         failure = error
@@ -78,6 +80,7 @@ internal fun SocialDashboardScreen(
     var showAccountDialog by remember { mutableStateOf(false) }
     var deletingAccount by remember { mutableStateOf<SocialAccount?>(null) }
     var selectedPost by remember { mutableStateOf<SocialPublication?>(null) }
+    var tikTokStatusPost by remember { mutableStateOf<SocialPublication?>(null) }
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically) {
@@ -100,8 +103,9 @@ internal fun SocialDashboardScreen(
                         Spacer(Modifier.width(8.dp))
                         Text("Publicação assistida", style = MaterialTheme.typography.titleMedium)
                     }
-                    Text("Prepare uma descrição para várias redes. O envio é feito por compartilhamento " +
-                        "do Android, com confirmação manual em cada destino.",
+                    Text("Prepare a mesma descrição e hashtags para várias contas. " +
+                        "Compartilhamento Android permanece disponível; envios por API exigem " +
+                        "permissões válidas e confirmação individual.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Button(onClick = onCompose, modifier = Modifier.fillMaxWidth(),
@@ -120,8 +124,8 @@ internal fun SocialDashboardScreen(
                         Text(if (metricPosts.isEmpty()) "Sem métricas disponíveis" else
                             "$views visualizações informadas · ${metricPosts.size} publicação(ões) com dados",
                             style = MaterialTheme.typography.bodyMedium)
-                        Text("Somente valores digitados por você nesta fase. Sem conexão às APIs, " +
-                            "não existem dados automáticos nem totais oficiais entre redes.",
+                        Text("Dados manuais ou consultas YouTube autorizadas. Sem sincronização de " +
+                            "métricas TikTok, Meta ou Kwai nesta versão.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -166,6 +170,14 @@ internal fun SocialDashboardScreen(
                                             }
                                         }
                                     }, enabled = !youtubeBusy) { Text("Vincular") }
+                                }
+                            }
+                            if (account.destination == SocialDestination.FACEBOOK_PAGE) {
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(if (account.remotePageId.isBlank()) "Página não vinculada" else "Página vinculada",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    TextButton(onClick = { pageToBind = account }) { Text("Vincular") }
                                 }
                             }
                             IconButton(onClick = { deletingAccount = account }) {
@@ -227,6 +239,13 @@ internal fun SocialDashboardScreen(
                                         }
                                     }
                                 }, enabled = !youtubeBusy) { Text("Atualizar métricas YouTube") }
+                            }
+                            if (account?.destination == SocialDestination.TIKTOK &&
+                                publication.status == SocialPublicationStatus.REMOTE_SUBMITTED &&
+                                publication.remoteVideoId.isNotBlank()) {
+                                TextButton(onClick = { tikTokStatusPost = publication }) {
+                                    Text("Consultar status TikTok")
+                                }
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 OutlinedButton(onClick = {
@@ -299,6 +318,33 @@ internal fun SocialDashboardScreen(
                 channelToBind = null
             }) { Text("Vincular") } },
             dismissButton = { TextButton(onClick = { channelToBind = null }) { Text("Cancelar") } })
+    }
+    pageToBind?.let { account ->
+        SocialFacebookPageBindDialog(onDismiss = { pageToBind = null },
+            onBind = { page ->
+                confirmedPage = account to page
+                pageToBind = null
+            })
+    }
+    confirmedPage?.let { (account, page) ->
+        AlertDialog(onDismissRequest = { confirmedPage = null },
+            title = { Text("Vincular Página verificada?") },
+            text = { Text("${page.name} · ID ${page.id}\n\n" +
+                "O app salva apenas o ID público da Página. O token temporário foi descartado.") },
+            confirmButton = { TextButton(onClick = {
+                data?.let { state ->
+                    if (state.accounts.any { it.id != account.id && it.remotePageId == page.id })
+                        failure = "Esta Página já está vinculada a outro cadastro."
+                    else persist(state.copy(accounts = state.accounts.map {
+                        if (it.id == account.id) SocialPublicationPolicy.bindPage(it, page.id) else it
+                    }))
+                }
+                confirmedPage = null
+            }) { Text("Vincular") } },
+            dismissButton = { TextButton(onClick = { confirmedPage = null }) { Text("Cancelar") } })
+    }
+    tikTokStatusPost?.let { post ->
+        SocialTikTokStatusDialog(post, onDismiss = { tikTokStatusPost = null })
     }
     selectedPost?.let { current ->
         SocialPublicationDetailDialog(current, onDismiss = { selectedPost = null },
@@ -436,6 +482,7 @@ internal fun SocialPublishScreen(initialUri: Uri?, initialName: String,
     var youtubeBusy by remember { mutableStateOf(false) }
     var youtubeProgress by remember { mutableStateOf("") }
     var uploadToConfirm by remember { mutableStateOf<SocialPublication?>(null) }
+    var externalToConfirm by remember { mutableStateOf<SocialPublication?>(null) }
     var uploadPrivacy by remember { mutableStateOf("private") }
     val authorizeYouTube = rememberYouTubeAuthorization { error ->
         failure = error; youtubeBusy = false
@@ -552,6 +599,35 @@ internal fun SocialPublishScreen(initialUri: Uri?, initialName: String,
                                 else -> Unit
                             }
                         }
+                        if (account != null && (account.destination == SocialDestination.FACEBOOK_PAGE ||
+                            account.destination == SocialDestination.TIKTOK)) {
+                            when (publication.status) {
+                                SocialPublicationStatus.PREPARED, SocialPublicationStatus.SHARED_UNCONFIRMED -> {
+                                    Button(onClick = { externalToConfirm = publication },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        enabled = account?.destination != SocialDestination.FACEBOOK_PAGE ||
+                                            account?.remotePageId?.isNotBlank() == true) {
+                                        Icon(Icons.Default.CloudUpload, null)
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(if (account?.destination == SocialDestination.FACEBOOK_PAGE)
+                                            "Enviar Reel à Página (token temporário)" else
+                                            "Enviar ao TikTok (token temporário)")
+                                    }
+                                    if (account?.destination == SocialDestination.FACEBOOK_PAGE &&
+                                        account.remotePageId.isBlank()) Text(
+                                        "Vincule a Página no painel Redes Sociais antes do envio direto.",
+                                        style = MaterialTheme.typography.bodySmall)
+                                }
+                                SocialPublicationStatus.UPLOAD_REVIEW -> Text(
+                                    "Resultado incerto. Confira a rede antes de tentar de novo.",
+                                    style = MaterialTheme.typography.bodySmall)
+                                SocialPublicationStatus.REMOTE_SUBMITTED -> Text(
+                                    "API recebeu a operação ${publication.remoteVideoId}. " +
+                                        "Verifique o processamento e a visibilidade na plataforma.",
+                                    style = MaterialTheme.typography.bodySmall)
+                                else -> Unit
+                            }
+                        }
                         OutlinedButton(onClick = {
                             if (tryShareVideo(context, publication)) {
                                 data?.let { state ->
@@ -576,6 +652,13 @@ internal fun SocialPublishScreen(initialUri: Uri?, initialName: String,
             }
             Spacer(Modifier.height(24.dp))
         }
+    }
+    externalToConfirm?.let { post ->
+        val account = data?.accounts?.firstOrNull { it.id == post.accountId }
+        if (account != null) SocialExternalPublishDialog(account, post, store,
+            onChanged = { data = it; failure = "" },
+            onDismiss = { externalToConfirm = null })
+        else externalToConfirm = null
     }
     uploadToConfirm?.let { post ->
         AlertDialog(onDismissRequest = { if (!youtubeBusy) uploadToConfirm = null },
@@ -689,6 +772,7 @@ internal fun SocialApiCenterScreen(back: () -> Unit, openGemini: () -> Unit) {
     var feedback by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     var testBusy by remember { mutableStateOf(false) }
+    var externalTest by remember { mutableStateOf<SocialDestination?>(null) }
     val authorizeYouTube = rememberYouTubeAuthorization { error ->
         feedback = error; testBusy = false
     }
@@ -724,8 +808,9 @@ internal fun SocialApiCenterScreen(back: () -> Unit, openGemini: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Conexões de serviços", style = MaterialTheme.typography.titleMedium)
             Text("Chaves de desenvolvedor não equivalem a autorização para publicar na conta. " +
-                "YouTube usa autorização Google no Android; Meta/TikTok aguardam " +
-                    "permissões de desenvolvedor. Não há upload automático sem consentimento.",
+                "YouTube usa autorização Google no Android. Meta Página/TikTok têm " +
+                    "modo avançado com token OAuth temporário e exigem permissões aprovadas. " +
+                    "Não existe login automático nessas duas redes nem envio sem confirmação.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             ItemCard(Icons.Default.AutoAwesome, "Google Gemini", "Chaves e testes já existentes") { openGemini() }
@@ -749,7 +834,9 @@ internal fun SocialApiCenterScreen(back: () -> Unit, openGemini: () -> Unit) {
                             }) { Icon(Icons.Default.ContentCopy, null, Modifier.size(16.dp)); Text("Copiar") }
                         }
                         OutlinedButton(onClick = {
-                            if (dest == SocialDestination.YOUTUBE) {
+                            if (dest == SocialDestination.FACEBOOK_PAGE || dest == SocialDestination.TIKTOK) {
+                                externalTest = dest
+                            } else if (dest == SocialDestination.YOUTUBE) {
                                 testBusy = true
                                 authorizeYouTube { token ->
                                     scope.launch {
@@ -760,14 +847,22 @@ internal fun SocialApiCenterScreen(back: () -> Unit, openGemini: () -> Unit) {
                                     }
                                 }
                             }
-                        }, enabled = dest == SocialDestination.YOUTUBE && !testBusy) {
+                        }, enabled = (dest == SocialDestination.YOUTUBE ||
+                            dest == SocialDestination.FACEBOOK_PAGE || dest == SocialDestination.TIKTOK) && !testBusy) {
                             Icon(Icons.Default.CheckCircleOutline, null, Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp)); Text(if (dest == SocialDestination.YOUTUBE)
-                                "Testar YouTube com autorização" else "Teste depende de OAuth")
+                            Spacer(Modifier.width(6.dp)); Text(when (dest) {
+                                SocialDestination.YOUTUBE -> "Testar YouTube com autorização"
+                                SocialDestination.FACEBOOK_PAGE, SocialDestination.TIKTOK ->
+                                    "Testar token OAuth temporário"
+                                else -> "Teste depende de OAuth"
+                            })
                         }
-                        Text(if (dest == SocialDestination.YOUTUBE)
-                            "Para publicar, vincule o canal ao cadastro na aba Redes." else
-                            "Sem OAuth, nenhum teste fictício é realizado.",
+                        Text(when (dest) {
+                            SocialDestination.YOUTUBE -> "Para publicar, vincule o canal na aba Redes."
+                            SocialDestination.FACEBOOK_PAGE -> "Para publicar, vincule uma Página e autorize cada envio."
+                            SocialDestination.TIKTOK -> "A autorização e privacidade serão verificadas antes de cada envio."
+                            else -> "Sem OAuth, nenhum teste fictício é realizado."
+                        },
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -787,5 +882,8 @@ internal fun SocialApiCenterScreen(back: () -> Unit, openGemini: () -> Unit) {
             if (feedback.isNotBlank()) Text(feedback, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary)
         }
+    }
+    externalTest?.let { dest ->
+        SocialExternalApiTestDialog(dest, onDismiss = { externalTest = null })
     }
 }
