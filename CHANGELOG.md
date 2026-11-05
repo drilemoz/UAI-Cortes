@@ -1,3 +1,10 @@
+# Histórico de alterações — Uai Cortes 0.1.170
+
+- **Correção CI143:** `StaticImageClip.kt` declara `@androidx.annotation.OptIn(UnstableApi::class)` na função `ClipMediaItems.playback`, que chama `MediaItem.Builder.setImageDurationMs`. Corrige especificamente `UnsafeOptInUsageError` encontrado em `:app:lintDebug` do workflow **Gerar APK 143** (0.1.169).
+- **Sem mascarar diagnósticos:** lint permanece ativo, sem baseline, supressões globais ou `abortOnError=false`.
+- **Compatibilidade:** a função Imagem/Capa 0.1.169, editor, projeto JSON schemaVersion 4, Estúdio, Gemini, Redes Sociais e cinco APKs Release são preservados. Versão 0.1.170, versionCode 171.
+- **Validação:** execução local do contrato para opt-in, testes estruturais e sincronização; compilação Gradle/Lint e teste do MP4 no aparelho ainda precisam ser executados na nova versão.
+
 # Histórico de alterações — Uai Cortes 0.1.169
 
 - **Fotos como clipes principais:** no editor, a opção **Imagem** abre o seletor do Android (SAF), valida JPG/PNG/WebP/HEIC/HEIF/BMP, limita arquivo a 24 MiB e imagem a 24 megapixels, permite definir de 1 a 30 segundos e inserir como capa no início, antes/depois do trecho selecionado ou no fim, sem alterar arquivo original.

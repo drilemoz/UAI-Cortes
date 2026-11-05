@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.169"
-    const val VERSION_CODE = 170
+    const val VERSION_NAME = "0.1.170"
+    const val VERSION_CODE = 171
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.170", listOf(
+            ReleaseFeature("photo-media3-lint-170", "Correção de compilação da capa", 
+                "Declaração de opt-in Media3 na montagem de clipes de imagem para corrigir a falha do Android Lint do workflow 143.", "check"),
+            ReleaseFeature("photo-editor-preserved-170", "Fotos e capas preservadas",
+                "Mantida a inclusão e duração de imagens na timeline sem desativar o Lint ou mudar projetos existentes.", "check")
+        )),
         ReleaseSummary("0.1.169", listOf(
             ReleaseFeature("timeline-photo-cover-169", "Capa e fotos na faixa principal",
                 "Insira imagens JPG, PNG, WebP ou HEIC da galeria antes do vídeo, entre clipes ou no final; escolha a duração sem produzir MP4 intermediário.", "check"),

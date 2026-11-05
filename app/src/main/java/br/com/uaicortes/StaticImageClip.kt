@@ -5,7 +5,9 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.provider.OpenableColumns
+import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
+import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -138,6 +140,7 @@ internal object ImageClipImport {
 
 /** Uma única configuração de mídia para todas as prévias; exibição da foto via PlayerView. */
 internal object ClipMediaItems {
+    @OptIn(UnstableApi::class)
     fun playback(clip: Clip): MediaItem {
         val item = MediaItem.Builder().setUri(clip.uri)
         return if (clip.isImage) item
