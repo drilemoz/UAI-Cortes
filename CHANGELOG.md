@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.162 (05/11/2026)
+- **Estúdio de Cenas mais simples:** apenas a ideia na entrada, com opções de duração/estilo/gênero recolhidas, resumo legível de título/sinopse/roteiro e campos detalhados sob demanda. "Surpreenda-me" fornece sugestão local imediata e explica que não usa Gemini.
+- **Cenas inteligentes:** Gemini solicita falas por personagem e duração estimada por cena; cartões mostram cena, personagens, falas, câmera, sons e ações sem longos formulários. Edição estruturada de falas, menu de ferramentas e um botão principal por vez.
+- **Progresso visível:** operação ativa aparece junto a indicador indeterminado e controle de cancelamento Gemini, com aviso sobre eventual consumo incerto. Exportação/importação mostram tarefa em curso.
+- **Compatibilidade:** preserva rascunhos anteriores, formatos de vídeo `schemaVersion=4`, editor manual, controle de Gemini, credenciais e SAF. Testes de compilação Android e chamadas reais com chave ainda necessários. Consulte `docs/VALIDATION_0.1.162.md`.
+
 # Uai Cortes · versão 0.1.161 (05/11/2026)
 - **Estúdio de Cenas:** etapas História → Cenas → Exportar para Flow, com geração de roteiros/cenas por Gemini somente após consentimento e revisão antes de aplicar. Duração, estilo, gênero, roteiro existente e rascunhos recuperáveis.
 - **Cenas e continuidade:** fichas persistentes de personagens e cenários, estado inicial/final, reordenação/duplicação/exclusão, edição por seção, geração de roteiro individual, importação de quadro final, visualização de imagens e associação manual de vídeos.

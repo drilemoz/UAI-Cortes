@@ -61,4 +61,38 @@ class FlowStudioModelTest {
         assertFalse(prompt.contains("9:16"))
         assertTrue(prompt.contains("Brazilian Portuguese"))
     }
+    @Test fun sceneDurationAndSpeakerLinesRoundTripWithoutBreakingOldDrafts() {
+        val scene = StudioScene(title = "Festa", durationSeconds = 9,
+            dialogue = "Ana: Uai!", dialogueLines = listOf(StudioDialogueLine("Ana", "Uai!"),
+                StudioDialogueLine("João", "E agora?")))
+        val restored = FlowStudioDraft.read(FlowStudioDraft(scenes = listOf(scene)).json())
+        assertEquals(9, restored.scenes.first().durationSeconds)
+        assertEquals(2, restored.scenes.first().dialogueLines.size)
+        assertTrue(restored.scenes.first().effectiveDialogue().contains("João: E agora?"))
+        // Rascunhos da versão anterior não possuíam os novos campos.
+        val legacy = scene.json().apply { remove("durationSeconds"); remove("dialogueLines") }
+        assertEquals(8, StudioScene.read(legacy).durationSeconds)
+        assertEquals("Ana: Uai!", StudioScene.read(legacy).effectiveDialogue())
+    }
+
+    @Test fun legacyDialogueCanBeSeparatedWithoutDroppingSpeaker() {
+        val lines = StudioDialoguePolicy.fromLegacy("Ana: Uai!\nJoão: E agora?\nSem nome")
+        assertEquals(3, lines.size)
+        assertEquals("João", lines[1].speaker)
+        assertEquals("Sem nome", lines[2].speech)
+    }
+
+    @Test fun sceneTimeBudgetMatchesStoryWithoutPuttingDurationInPrompts() {
+        assertEquals(listOf(9, 9, 9, 8, 8, 8, 8, 8, 8), StudioSceneTiming.distribute(75, 9))
+        assertEquals(75, StudioSceneTiming.distribute(75, 9).sum())
+        val json = JSONObject().put("scenes", JSONArray().apply {
+            repeat(9) { put(JSONObject().put("title", "Cena $it")
+                .put("actions", "Movimento $it")
+                .put("dialogueLines", JSONArray().put(JSONObject().put("speaker", "Ana").put("speech", "Oi")))) }
+        })
+        val result = FlowStudioAi.parseScenes(json, 75)
+        assertEquals(75, StudioSceneTiming.total(result))
+        assertEquals("Ana", result.first().dialogueLines.first().speaker)
+        assertFalse(StudioPromptPolicy.compose(result.first(), FlowStudioDraft(), null).contains("9:16"))
+    }
 }

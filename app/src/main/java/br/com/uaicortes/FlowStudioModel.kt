@@ -58,19 +58,66 @@ internal data class StudioStory(
     }
 }
 
+/** Falas atribuídas a cada personagem; campo opcional compatível com rascunhos v1. */
+internal data class StudioDialogueLine(val speaker: String = "", val speech: String = "") {
+    fun json() = JSONObject().put("speaker", speaker).put("speech", speech)
+    companion object {
+        fun read(j: JSONObject) = StudioDialogueLine(
+            j.optString("speaker").take(120), j.optString("speech").take(800))
+    }
+}
+
+/** Conversão explícita de falas legadas; não trunca conteúdo silenciosamente. */
+internal object StudioDialoguePolicy {
+    fun canConvert(text: String): Boolean {
+        val lines = text.lines().filter { it.isNotBlank() }
+        return lines.size < 20 && lines.all { line ->
+            val separator = line.indexOf(':')
+            if (separator in 1..120) line.substring(separator + 1).trim().length <= 800
+            else line.trim().length <= 800
+        }
+    }
+    fun fromLegacy(text: String): List<StudioDialogueLine> {
+        require(canConvert(text)) { "Falas antigas muito longas. Edite em texto livre antes de separar." }
+        return text.lines().filter { it.isNotBlank() }.map { line ->
+            val separator = line.indexOf(':')
+            if (separator in 1..120) StudioDialogueLine(line.substring(0, separator).trim(),
+                line.substring(separator + 1).trim())
+            else StudioDialogueLine("Personagem", line.trim())
+        }
+    }
+}
+
+/** Planejamento para cartões/roteiro: não altera a duração configurada no Google Flow. */
+internal object StudioSceneTiming {
+    fun distribute(targetSeconds: Int, count: Int): List<Int> {
+        if (count <= 0) return emptyList()
+        val seconds = targetSeconds.coerceIn(count, count * 60)
+        val base = seconds / count
+        val extra = seconds % count
+        return List(count) { i -> base + if (i < extra) 1 else 0 }
+    }
+    fun total(scenes: List<StudioScene>): Int = scenes.sumOf { it.durationSeconds }
+}
+
 internal data class StudioScene(
     val id: String = UUID.randomUUID().toString(), val title: String = "Nova cena",
     val visual: String = "", val characters: String = "", val actions: String = "",
     val dialogue: String = "", val effects: String = "", val camera: String = "",
     val initialState: String = "", val finalState: String = "", val prompt: String = "",
-    val imageAsset: String = "", val videoUri: String = "", val videoName: String = ""
+    val imageAsset: String = "", val videoUri: String = "", val videoName: String = "",
+    val durationSeconds: Int = 8, val dialogueLines: List<StudioDialogueLine> = emptyList()
 ) {
     fun json(includeLocalUri: Boolean = true) = JSONObject().put("id", id).put("title", title)
         .put("visual", visual).put("characters", characters).put("actions", actions)
         .put("dialogue", dialogue).put("effects", effects).put("camera", camera)
         .put("initialState", initialState).put("finalState", finalState).put("prompt", prompt)
         .put("imageAsset", imageAsset).put("videoUri", if (includeLocalUri) videoUri else "")
-        .put("videoName", videoName)
+        .put("videoName", videoName).put("durationSeconds", durationSeconds)
+        .put("dialogueLines", JSONArray().also { a -> dialogueLines.take(20).forEach { a.put(it.json()) } })
+    fun effectiveDialogue() = if (dialogueLines.isNotEmpty())
+        dialogueLines.joinToString("\n") { "${it.speaker.ifBlank { "Personagem" }}: ${it.speech}" }
+        else dialogue
     fun ready() = title.isNotBlank() && prompt.isNotBlank() && imageAsset.isNotBlank()
     fun status() = when {
         videoUri.isNotBlank() -> "Vídeo importado"
@@ -86,7 +133,13 @@ internal data class StudioScene(
             j.optString("camera").take(3000), j.optString("initialState").take(4000),
             j.optString("finalState").take(4000), j.optString("prompt").take(10000),
             j.optString("imageAsset").takeIf { it.matches(Regex("[a-fA-F0-9-]{36}\\.(png|jpg|webp)")) }.orEmpty(),
-            j.optString("videoUri").take(2048), j.optString("videoName").take(200))
+            j.optString("videoUri").take(2048), j.optString("videoName").take(200),
+            j.optInt("durationSeconds", 8).coerceIn(1, 60),
+            (j.optJSONArray("dialogueLines") ?: JSONArray()).let { array ->
+                (0 until minOf(array.length(), 20)).mapNotNull { i ->
+                    array.optJSONObject(i)?.let { StudioDialogueLine.read(it) }
+                }
+            })
     }
 }
 
@@ -134,7 +187,7 @@ internal object StudioPromptPolicy {
         appendLine("Use the actual supplied reference image as the source of truth. Do not contradict its visible characters, clothing, props, setting or composition.")
         appendLine("Scene: ${scene.title}. Visual: ${scene.visual}")
         appendLine("Characters: ${scene.characters}. Actions in order: ${scene.actions}")
-        appendLine("Exact speech in Brazilian Portuguese: ${scene.dialogue}")
+        appendLine("Exact speech in Brazilian Portuguese: ${scene.effectiveDialogue()}")
         appendLine("Camera: ${scene.camera}. Synchronized sound effects: ${scene.effects}")
         appendLine("Opening state: ${scene.initialState}. Closing state: ${scene.finalState}")
         previous?.let { appendLine("Previous closing state: ${it.finalState}") }

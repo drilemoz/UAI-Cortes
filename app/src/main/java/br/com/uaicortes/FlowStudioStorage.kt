@@ -106,7 +106,7 @@ internal class FlowStudioStorage(private val context: Context, projectId: String
                     entry("${prefix}prompt.txt", scene.prompt)
                     entry("${prefix}roteiro.txt", listOf("Título: ${scene.title}", "Visual: ${scene.visual}",
                         "Personagens: ${scene.characters}", "Ações: ${scene.actions}",
-                        "Falas (pt-BR): ${scene.dialogue}", "Sons: ${scene.effects}",
+                        "Falas (pt-BR): ${scene.effectiveDialogue()}", "Duração estimada: ${scene.durationSeconds}s", "Sons: ${scene.effects}",
                         "Câmera: ${scene.camera}", "Estado inicial: ${scene.initialState}",
                         "Estado final: ${scene.finalState}", "Vídeo: ${scene.videoName}").joinToString("\n"))
                     if (scene.imageAsset.isNotBlank()) {

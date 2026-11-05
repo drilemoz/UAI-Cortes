@@ -22,9 +22,14 @@ ALVO APROXIMADO: ${s.durationSeconds} segundos. ESTILO: ${s.style}. GÊNERO: ${s
 """.trimIndent()
 
     fun scenes(d: FlowStudioDraft): String = """Retorne SOMENTE um objeto JSON: {"scenes":[ {"title":string,"visual":string,
-"characters":string,"actions":string,"dialogue":string,"effects":string,"camera":string,
-"initialState":string,"finalState":string,"prompt":string} ]}.
+"characters":string,"actions":string,"dialogue":string,
+"dialogueLines":[{"speaker":string,"speech":string}],"durationSeconds":number,
+"effects":string,"camera":string,"initialState":string,"finalState":string,"prompt":string} ]}.
 Divida a história aprovada em cerca de ${((d.story.durationSeconds + 7) / 8).coerceIn(2, 45)} cenas visuais curtas.
+Planeje aproximadamente ${d.story.durationSeconds} segundos no total. Divida o tempo entre as cenas,
+preenchendo durationSeconds em cada uma (estimativa de montagem; não é parâmetro do Flow).
+Liste falas por personagem em dialogueLines, mesmo quando houver apenas uma pessoa; use [] para cenas sem falas.
+Preencha dialogue também como texto simples para compatibilidade com projetos antigos.
 Cada cena é gerada individualmente depois no Google Flow. Inclua AÇÕES sequenciais, expressões,
 sons sincronizados, instruções de câmera, falas EXATAS em português brasileiro e estado de abertura/fechamento.
 O estado final de cada cena deve poder servir de estado inicial da próxima. Considere referências de
@@ -44,7 +49,8 @@ REFERÊNCIAS: ${StudioPromptPolicy.referenceText(d)}
         val previous = d.scenes.getOrNull(index - 1)
         val next = d.scenes.getOrNull(index + 1)
         return """Responda SOMENTE JSON com os campos title, visual, characters, actions,
-dialogue, effects, camera, initialState, finalState, prompt (todos strings).
+dialogue, effects, camera, initialState, finalState, prompt (strings),
+mais durationSeconds (número estimado) e dialogueLines (lista {speaker,speech}).
 Aprimore APENAS esta cena, mantendo a história e continuidade; não gere outras cenas.
 Visual, gestos, ordem das ações e transições coerentes. Falas exatas em português brasileiro,
 textos visíveis em português brasileiro, som e câmera sincronizados.
@@ -87,11 +93,23 @@ Any visible writing must be Brazilian Portuguese. No logos, watermarks or signat
             to (0 until places.length()).map { StudioPlace.read(places.getJSONObject(it)) })
     }
 
-    fun parseScenes(raw: JSONObject): List<StudioScene> {
+    fun parseScenes(raw: JSONObject, targetSeconds: Int? = null): List<StudioScene> {
         val rows = raw.optJSONArray("scenes") ?: throw IllegalArgumentException("O Gemini não forneceu uma lista de cenas.")
         require(rows.length() in 1..60) { "Quantidade de cenas inválida." }
-        return (0 until rows.length()).map { i ->
-            StudioScene.read(rows.getJSONObject(i)).copy(imageAsset = "", videoUri = "", videoName = "")
+        val generated = (0 until rows.length()).map { i -> StudioScene.read(rows.getJSONObject(i)) }
+        // Usa a duração proposta pelo Gemini quando coerente; para dados ausentes ou
+        // extremos, distribui o tempo solicitado. É uma estimativa, não um parâmetro do Flow.
+        val allHaveDuration = (0 until rows.length()).all { i ->
+            rows.getJSONObject(i).optInt("durationSeconds", 0) in 1..60
+        }
+        val target = targetSeconds ?: StudioSceneTiming.total(generated)
+        val closeEnough = kotlin.math.abs(StudioSceneTiming.total(generated) - target) <=
+            maxOf(3, target / 10)
+        val plan = if (allHaveDuration && closeEnough) null
+                   else StudioSceneTiming.distribute(target, rows.length())
+        return generated.mapIndexed { i, scene ->
+            scene.copy(imageAsset = "", videoUri = "", videoName = "",
+                durationSeconds = plan?.get(i) ?: scene.durationSeconds)
         }.also { list -> require(list.all { it.title.isNotBlank() && it.actions.isNotBlank() }) {
             "Cenas incompletas. Revise antes de solicitar novamente."
         } }
@@ -99,5 +117,6 @@ Any visible writing must be Brazilian Portuguese. No logos, watermarks or signat
 
     fun parseSingle(raw: JSONObject, original: StudioScene): StudioScene =
         StudioScene.read(raw.optJSONObject("scene") ?: raw).copy(id = original.id,
-            imageAsset = original.imageAsset, videoUri = original.videoUri, videoName = original.videoName)
+            imageAsset = original.imageAsset, videoUri = original.videoUri, videoName = original.videoName,
+            durationSeconds = original.durationSeconds)
 }

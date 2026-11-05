@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -69,6 +70,8 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
     var status by remember(project.id) { mutableStateOf("") }
     var saveError by remember(project.id) { mutableStateOf(false) }
     var busy by remember(project.id) { mutableStateOf(false) }
+    var operation by remember(project.id) { mutableStateOf("") }
+    var activeRequest by remember(project.id) { mutableStateOf<Job?>(null) }
     var pending by remember(project.id) { mutableStateOf<StudioJob?>(null) }
     var storySuggestion by remember(project.id) { mutableStateOf<Pair<StudioStory, Pair<List<StudioPerson>, List<StudioPlace>>>?>(null) }
     var sceneSuggestions by remember(project.id) { mutableStateOf<List<StudioScene>?>(null) }
@@ -121,13 +124,14 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
         targetImage = null
         if (uri != null && id != null) scope.launch {
             busy = true
+            operation = "Importando imagem da galeria"
             try {
                 val filename = withContext(Dispatchers.IO) { storage.importImage(id, uri) }
                 updateScene(id) { it.copy(imageAsset = filename) }
                 imageRev++
                 status = "Imagem importada. Referências visuais não garantem identidade perfeita."
             } catch (_: Exception) { status = "Falha ao importar. Escolha uma imagem PNG, JPEG ou WebP de até 12 MB." }
-            finally { busy = false }
+            finally { busy = false; operation = "" }
         }
     }
     val saveImage = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("image/*")) { uri ->
@@ -157,11 +161,12 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
             val snapshot = draft
             scope.launch {
                 busy = true
+                operation = "Exportando pacote ZIP"
                 try {
                     withContext(Dispatchers.IO) { storage.exportZip(uri, snapshot) }
                     status = "Pacote ZIP exportado pelo seletor de arquivos."
                 } catch (_: Exception) { status = "Falha no ZIP; confira espaço e acesso às imagens de todas as cenas." }
-                finally { busy = false }
+                finally { busy = false; operation = "" }
             }
         }
     }
@@ -183,8 +188,14 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
         val chosenModel = modelName
         pending = null
         busy = true
-        status = "Consultando Gemini. Progresso indeterminado; não feche a tela durante esta chamada."
-        scope.launch {
+        operation = when (job.type) {
+            "story" -> "Gemini: criando título, história e personagens"
+            "scenes" -> "Gemini: dividindo história e preparando as cenas"
+            "image" -> "Gemini: gerando imagem inicial da cena ${job.index + 1}"
+            else -> "Gemini: preparando roteiro da cena ${job.index + 1}"
+        }
+        status = "Solicitação iniciada. Aguarde a resposta ou cancele; o tempo depende do serviço."
+        activeRequest = scope.launch {
             try {
                 val key = GeminiCredentialStore(context).read()
                     ?: throw IOException("Cadastre uma chave Gemini nas Configurações.")
@@ -214,7 +225,7 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
                     })
                     when (job.type) {
                         "story" -> storySuggestion = FlowStudioAi.parseStory(result, snapshot.story)
-                        "scenes" -> sceneSuggestions = FlowStudioAi.parseScenes(result)
+                        "scenes" -> sceneSuggestions = FlowStudioAi.parseScenes(result, snapshot.story.durationSeconds)
                         else -> singleSuggestion = snapshot.scenes[job.index].id to
                             FlowStudioAi.parseSingle(result, snapshot.scenes[job.index])
                     }
@@ -227,7 +238,7 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
             catch (failure: Exception) {
                 status = (failure.message?.take(200) ?: "Requisição falhou.") +
                     " Em falha de rede, verifique o uso antes de repetir: o resultado pode ser incerto."
-            } finally { busy = false }
+            } finally { busy = false; operation = ""; activeRequest = null }
         }
     }
 
@@ -321,7 +332,7 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
             dismissButton = { TextButton(onClick = { deletingScene = null }) { Text("Cancelar") } })
     }
     editingScene?.let { scene ->
-        StudioSceneEditor(scene, onSave = { modified ->
+        StudioSceneEditor(scene, draft.people.map { it.name }, onSave = { modified ->
             updateScene(scene.id) { modified }
             editingScene = null
         }, onDismiss = { editingScene = null })
@@ -386,21 +397,52 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
                     label = { Text(label) })
             }
         }
-        if (busy) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        if (busy || modelBusy) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                Text(if (modelBusy) "Consultando modelos de imagem no Gemini" else operation,
+                    style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                if (activeRequest != null) TextButton(onClick = {
+                    activeRequest?.cancel()
+                    ai.cancel(); imageClient.cancel()
+                    activeRequest = null
+                    busy = false; operation = ""
+                    status = "Solicitação cancelada. Se o envio já começou, o consumo pode ser incerto. Verifique antes de repetir."
+                }) { Text("Cancelar") }
+            }
+        } else if (status.isNotBlank()) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Info, null, Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary)
+                Text(" $status", style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f))
+                IconButton(onClick = { status = "" }) {
+                    Icon(Icons.Default.Close, contentDescription = "Dispensar aviso")
+                }
+            }
+        }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             when (draft.step) {
                 0 -> {
                     StudioStoryStep(draft.story, onUpdate = { s -> draft = draft.copy(story = s) },
                         onGenerate = { pending = StudioJob("story") },
+                        onSuggested = { status = it },
                         onContinue = { draft = draft.copy(story = draft.story.copy(approved = true), step = 1) },
                         disabled = busy)
                     StudioReferenceEditor(draft, onUpdate = { draft = it })
                 }
                 1 -> {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("${draft.scenes.size} cena(s)", style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.weight(1f))
+                        Column(Modifier.weight(1f)) {
+                            Text("${draft.scenes.size} cena(s)", style = MaterialTheme.typography.titleMedium)
+                            Text("${StudioSceneTiming.total(draft.scenes)}s previstos de ${draft.story.durationSeconds}s · estimativa",
+                                style = MaterialTheme.typography.labelSmall)
+                        }
                         TextButton(onClick = { draft = draft.copy(step = 2) }) { Text("Exportar") }
                     }
                     Text("Continuidade é aproximada: revise o último quadro, personagens e figurinos. " +
@@ -474,7 +516,7 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
                         }
                     }
                     OutlinedButton(onClick = { copyText(draft.story.fullText() + "\n" +
-                        draft.scenes.mapIndexed { i, s -> "Cena ${i + 1}: ${s.title}\n${s.actions}\n${s.dialogue}" }.joinToString("\n\n"),
+                        draft.scenes.mapIndexed { i, s -> "Cena ${i + 1} (${s.durationSeconds}s estimados): ${s.title}\n${s.actions}\n${s.effectiveDialogue()}" }.joinToString("\n\n"),
                         "Roteiro completo") }, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Default.ContentCopy, null); Text(" Copiar roteiro inteiro")
                     }
@@ -497,8 +539,6 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
                     Icon(Icons.Default.Edit, null); Text(" Abrir editor manual de prompts")
                 }
             }
-            if (status.isNotBlank()) Text(status, style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (saveError) Text("Falha ao salvar rascunho; não saia antes de corrigir o armazenamento.",
                 color = MaterialTheme.colorScheme.error)
             Spacer(Modifier.height(8.dp))
@@ -521,82 +561,130 @@ private fun StudioField(label: String, value: String, limit: Int = 5000,
 
 @Composable
 private fun StudioStoryStep(story: StudioStory, onUpdate: (StudioStory) -> Unit,
-    onGenerate: () -> Unit, onContinue: () -> Unit, disabled: Boolean) {
-    var scriptOpen by remember { mutableStateOf(story.originalScript.isNotBlank()) }
+    onGenerate: () -> Unit, onSuggested: (String) -> Unit, onContinue: () -> Unit, disabled: Boolean) {
+    var scriptOpen by remember { mutableStateOf(false) }
+    var preferencesOpen by remember { mutableStateOf(false) }
+    var detailsOpen by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf(false) }
     fun change(next: StudioStory) { onUpdate(next.copy(approved = false)) }
-    Text("História", style = MaterialTheme.typography.titleMedium)
-    Text("Descreva uma ideia em poucas palavras ou cole um roteiro. " +
-        "A geração só começa após confirmar o uso do Gemini.",
+    Text("1 · História", style = MaterialTheme.typography.titleMedium)
+    Text("Escreva só a ideia. O Gemini prepara título, personagens e história; você revisa antes de dividir em cenas.",
         style = MaterialTheme.typography.bodySmall)
     StudioField("Qual é a ideia do vídeo?", story.idea, 5000, 2) { change(story.copy(idea = it)) }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(onClick = onGenerate, enabled = !disabled && (story.idea.isNotBlank() || story.originalScript.isNotBlank()),
-            modifier = Modifier.weight(1f)) {
-            Icon(Icons.Default.AutoAwesome, null); Text(" Gerar história com IA")
-        }
-        OutlinedButton(onClick = {
-            val ideas = listOf(
-                "Um entregador robô encontra uma porteira que reconhece somente galinhas.",
-                "Um peixe tenta ensinar um pescador a pescar, mas ambos se confundem.",
-                "O elevador de um prédio começa a atender andares de outros planetas.",
-                "Uma avó vence um campeonato de corrida usando um carrinho de supermercado.",
-                "Um astronauta descobre que a Lua tem um cachorro como zelador.",
-                "Um espantalho decide pedir férias e as aves organizam uma festa.",
-                "Uma bicicleta inteligente começa a dar conselhos muito ruins ao ciclista.",
-                "Uma tempestade faz os guarda-chuvas fugirem das pessoas na rua."
-            )
-            change(story.copy(idea = ideas.random()))
-        }) { Icon(Icons.Default.Casino, null); Text(" Surpreenda-me") }
+    Button(onClick = onGenerate, enabled = !disabled && (story.idea.isNotBlank() || story.originalScript.isNotBlank()),
+        modifier = Modifier.fillMaxWidth()) {
+        Icon(Icons.Default.AutoAwesome, null)
+        Text(if (story.ready()) " Regenerar história com Gemini" else " Gerar história com Gemini")
+    }
+    OutlinedButton(onClick = {
+        val ideas = listOf(
+            "Um entregador robô encontra uma porteira que reconhece somente galinhas.",
+            "Um peixe tenta ensinar um pescador a pescar, mas ambos se confundem.",
+            "O elevador de um prédio começa a atender andares de outros planetas.",
+            "Uma avó vence um campeonato de corrida usando um carrinho de supermercado.",
+            "Um astronauta descobre que a Lua tem um cachorro como zelador.",
+            "Um espantalho decide pedir férias e as aves organizam uma festa.",
+            "Uma bicicleta inteligente começa a dar conselhos muito ruins ao ciclista.",
+            "Uma tempestade faz os guarda-chuvas fugirem das pessoas na rua."
+        )
+        val idea = ideas.filterNot { it == story.idea }.randomOrNull() ?: ideas.first()
+        change(story.copy(idea = idea))
+        onSuggested("Ideia sugerida localmente, sem Gemini e sem consumo de API. Toque em Gerar história com Gemini para desenvolver.")
+    }, modifier = Modifier.fillMaxWidth(), enabled = !disabled) {
+        Icon(Icons.Default.Casino, null); Text(" Surpreenda-me · sugestão grátis")
     }
     OutlinedButton(onClick = { scriptOpen = !scriptOpen }, modifier = Modifier.fillMaxWidth()) {
         Icon(Icons.Default.Description, null); Text(" Colar roteiro existente", Modifier.weight(1f))
         Icon(if (scriptOpen) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
     }
-    if (scriptOpen) StudioField("Roteiro original (sem enviar automaticamente)", story.originalScript, 25000, 4) {
+    if (scriptOpen) StudioField("Roteiro existente (não enviado automaticamente)", story.originalScript, 25000, 4) {
         change(story.copy(originalScript = it))
     }
-    Text("Duração desejada", style = MaterialTheme.typography.titleSmall)
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf(15 to "15s", 30 to "30s", 60 to "1min", 75 to "1min15s", 120 to "2min", 180 to "3min")
-            .forEach { (time, label) -> FilterChip(selected = story.durationSeconds == time,
-                onClick = { change(story.copy(durationSeconds = time)) }, label = { Text(label) }) }
+    OutlinedButton(onClick = { preferencesOpen = !preferencesOpen }, modifier = Modifier.fillMaxWidth()) {
+        Icon(Icons.Default.Tune, null)
+        Text(" ${story.durationSeconds}s · ${story.style} · ${story.genre}", Modifier.weight(1f),
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Icon(if (preferencesOpen) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
     }
-    var customDuration by remember(story.durationSeconds) { mutableStateOf(story.durationSeconds.toString()) }
-    OutlinedTextField(value = customDuration, onValueChange = { raw ->
-        customDuration = raw.filter(Char::isDigit).take(3)
-        customDuration.toIntOrNull()?.takeIf { it in 5..900 }?.let { change(story.copy(durationSeconds = it)) }
-    }, label = { Text("Personalizada (segundos, 5–900)") }, singleLine = true,
-        modifier = Modifier.fillMaxWidth())
-    Text("Estilo", style = MaterialTheme.typography.titleSmall)
-    val styles = listOf("Realista", "Animação 3D", "Animação 2D")
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        styles.forEach { item -> FilterChip(selected = story.style == item,
-            onClick = { change(story.copy(style = item)) }, label = { Text(item) }) }
-        FilterChip(selected = story.style !in styles, onClick = { change(story.copy(style = "Personalizado")) },
-            label = { Text("Personalizado") })
+    if (preferencesOpen) {
+        Text("Duração desejada", style = MaterialTheme.typography.titleSmall)
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(15 to "15s", 30 to "30s", 60 to "1min", 75 to "1min15s", 120 to "2min", 180 to "3min")
+                .forEach { (time, label) -> FilterChip(selected = story.durationSeconds == time,
+                    onClick = { change(story.copy(durationSeconds = time)) }, label = { Text(label) }) }
+            FilterChip(selected = story.durationSeconds !in listOf(15, 30, 60, 75, 120, 180),
+                onClick = { change(story.copy(durationSeconds = 90)) }, label = { Text("Outra") })
+        }
+        if (story.durationSeconds !in listOf(15, 30, 60, 75, 120, 180)) {
+            var customDuration by remember(story.durationSeconds) { mutableStateOf(story.durationSeconds.toString()) }
+            OutlinedTextField(value = customDuration, onValueChange = { raw ->
+                customDuration = raw.filter(Char::isDigit).take(3)
+                customDuration.toIntOrNull()?.takeIf { it in 5..900 }?.let { change(story.copy(durationSeconds = it)) }
+            }, label = { Text("Duração personalizada (5–900 s)") }, singleLine = true,
+                modifier = Modifier.fillMaxWidth())
+        }
+        Text("Estilo visual", style = MaterialTheme.typography.titleSmall)
+        val styles = listOf("Realista", "Animação 3D", "Animação 2D")
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            styles.forEach { item -> FilterChip(selected = story.style == item,
+                onClick = { change(story.copy(style = item)) }, label = { Text(item) }) }
+            FilterChip(selected = story.style !in styles, onClick = { change(story.copy(style = "Personalizado")) },
+                label = { Text("Outro") })
+        }
+        if (story.style !in styles) StudioField("Estilo personalizado", story.style, 120) {
+            change(story.copy(style = it))
+        }
+        Text("Gênero", style = MaterialTheme.typography.titleSmall)
+        val genres = listOf("Humor", "Comédia absurda", "Terror cômico", "Aventura")
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            genres.forEach { item -> FilterChip(selected = story.genre == item,
+                onClick = { change(story.copy(genre = item)) }, label = { Text(item) }) }
+            FilterChip(selected = story.genre !in genres, onClick = { change(story.copy(genre = "Personalizado")) },
+                label = { Text("Outro") })
+        }
+        if (story.genre !in genres) StudioField("Gênero personalizado", story.genre, 120) {
+            change(story.copy(genre = it))
+        }
     }
-    if (story.style !in styles) StudioField("Descreva o estilo personalizado", story.style, 120) {
-        change(story.copy(style = it))
+    if (story.ready()) {
+        OutlinedCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("História preparada", style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary)
+                Text(story.title, style = MaterialTheme.typography.titleMedium)
+                Text(story.synopsis, style = MaterialTheme.typography.bodyMedium)
+                TextButton(onClick = { detailsOpen = !detailsOpen }) {
+                    Icon(if (detailsOpen) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
+                    Text(if (detailsOpen) " Recolher roteiro" else " Ler roteiro completo")
+                }
+                if (detailsOpen) {
+                    listOf("Começo" to story.beginning, "Desenvolvimento" to story.development,
+                        "Reviravolta" to story.twist, "Final" to story.ending).forEach { (label, value) ->
+                        if (value.isNotBlank()) {
+                            Text(label, style = MaterialTheme.typography.labelLarge)
+                            Text(value, style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        Text("A história completa e os personagens aparecerão aqui após a geração. Você não precisa preencher os campos manualmente.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    Text("Gênero", style = MaterialTheme.typography.titleSmall)
-    val genres = listOf("Humor", "Comédia absurda", "Terror cômico", "Aventura")
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        genres.forEach { item -> FilterChip(selected = story.genre == item,
-            onClick = { change(story.copy(genre = item)) }, label = { Text(item) }) }
-        FilterChip(selected = story.genre !in genres, onClick = { change(story.copy(genre = "Personalizado")) },
-            label = { Text("Personalizado") })
+    OutlinedButton(onClick = { editing = !editing }, modifier = Modifier.fillMaxWidth()) {
+        Icon(Icons.Default.Edit, null)
+        Text(if (editing) " Ocultar edição detalhada" else " Editar título e detalhes manualmente", Modifier.weight(1f))
+        Icon(if (editing) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
     }
-    if (story.genre !in genres) StudioField("Descreva o gênero personalizado", story.genre, 120) {
-        change(story.copy(genre = it))
+    if (editing) {
+        StudioField("Título da história", story.title, 250) { change(story.copy(title = it)) }
+        StudioField("Sinopse", story.synopsis, 6000, 2) { change(story.copy(synopsis = it)) }
+        StudioField("Começo", story.beginning, 6000, 2) { change(story.copy(beginning = it)) }
+        StudioField("Desenvolvimento", story.development, 10000, 2) { change(story.copy(development = it)) }
+        StudioField("Reviravolta", story.twist, 6000, 2) { change(story.copy(twist = it)) }
+        StudioField("Final", story.ending, 6000, 2) { change(story.copy(ending = it)) }
     }
-    HorizontalDivider()
-    Text("Revisar a história", style = MaterialTheme.typography.titleMedium)
-    StudioField("Título", story.title, 250) { change(story.copy(title = it)) }
-    StudioField("Sinopse", story.synopsis, 6000, 2) { change(story.copy(synopsis = it)) }
-    StudioField("Começo", story.beginning, 6000, 2) { change(story.copy(beginning = it)) }
-    StudioField("Desenvolvimento", story.development, 10000, 2) { change(story.copy(development = it)) }
-    StudioField("Reviravolta", story.twist, 6000, 2) { change(story.copy(twist = it)) }
-    StudioField("Final", story.ending, 6000, 2) { change(story.copy(ending = it)) }
     Button(onClick = onContinue, enabled = !disabled && story.ready(), modifier = Modifier.fillMaxWidth()) {
         Icon(Icons.Default.Check, null)
         Text(if (story.approved) " Continuar para cenas" else " Aprovar história e continuar")
@@ -628,11 +716,21 @@ private fun StudioSceneCard(scene: StudioScene, index: Int, count: Int, storage:
     onUp: () -> Unit, onDown: () -> Unit, onRegenerate: () -> Unit,
     onImageGenerate: () -> Unit, onImageImport: () -> Unit, onImageExport: () -> Unit,
     onShare: () -> Unit, onCopy: () -> Unit) {
+    var menuOpen by remember(scene.id) { mutableStateOf(false) }
+    var details by remember(scene.id) { mutableStateOf(false) }
+    val mainAction = when {
+        scene.prompt.isBlank() -> "Gerar roteiro com Gemini"
+        scene.imageAsset.isBlank() -> "Gerar imagem com IA"
+        else -> "Copiar prompt"
+    }
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("${index + 1}. ${scene.title}", modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleSmall)
+                Column(Modifier.weight(1f)) {
+                    Text("Cena ${index + 1} · ${scene.durationSeconds}s estimados", style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary)
+                    Text(scene.title, style = MaterialTheme.typography.titleMedium)
+                }
                 IconButton(onClick = onUp, enabled = index > 0 && !busy) {
                     Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Subir cena")
                 }
@@ -642,74 +740,181 @@ private fun StudioSceneCard(scene: StudioScene, index: Int, count: Int, storage:
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
                 StudioSceneThumbnail(scene, storage, revision)
-                Column(Modifier.weight(1f)) {
-                    Text(scene.visual.ifBlank { scene.actions.ifBlank { "Cena não descrita." } },
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(scene.status(), style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(scene.actions.ifBlank { scene.visual.ifBlank { "Roteiro ainda não gerado." } },
                         maxLines = 3, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
-                    Text(scene.status(), style = MaterialTheme.typography.labelSmall)
-                    Text("Abertura: ${scene.initialState.ifBlank { "Pendente" }}",
-                        maxLines = 2, style = MaterialTheme.typography.labelSmall)
-                    Text("Fechamento: ${scene.finalState.ifBlank { "Pendente" }}",
-                        maxLines = 2, style = MaterialTheme.typography.labelSmall)
+                    if (scene.characters.isNotBlank()) {
+                        Text("Personagens · ${scene.characters}", maxLines = 2,
+                            overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             }
-            Row(Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                TextButton(onClick = onEdit, enabled = !busy) { Icon(Icons.Default.Edit, null); Text(" Editar") }
-                TextButton(onClick = onRegenerate, enabled = !busy) { Icon(Icons.Default.AutoAwesome, null); Text(" Roteiro com IA") }
-                TextButton(onClick = onDuplicate, enabled = !busy && count < 60) { Icon(Icons.Default.ContentCopy, null); Text(" Duplicar") }
-                TextButton(onClick = onDelete, enabled = !busy) { Icon(Icons.Default.DeleteOutline, null); Text(" Excluir") }
+            val lines = scene.dialogueLines
+            if (lines.isNotEmpty()) {
+                Text("Falas", style = MaterialTheme.typography.labelLarge)
+                lines.take(if (details) 20 else 2).forEach { line ->
+                    Text("${line.speaker.ifBlank { "Personagem" }}: ${line.speech}",
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = if (details) 4 else 2, overflow = TextOverflow.Ellipsis)
+                }
+                if (!details && lines.size > 2) Text("+ ${lines.size - 2} fala(s) · ver detalhes",
+                    style = MaterialTheme.typography.labelSmall)
+            } else if (scene.dialogue.isNotBlank()) {
+                Text("Falas · ${scene.dialogue}", maxLines = if (details) 8 else 2,
+                    style = MaterialTheme.typography.bodySmall, overflow = TextOverflow.Ellipsis)
             }
-            Row(Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                TextButton(onClick = onImageGenerate, enabled = !busy) { Icon(Icons.Default.Image, null)
-                    Text(if (scene.imageAsset.isBlank()) " Gerar imagem com IA" else " Regenerar imagem") }
-                TextButton(onClick = onImageImport, enabled = !busy) { Icon(Icons.Default.AddPhotoAlternate, null); Text(" Importar quadro") }
-                TextButton(onClick = onImageExport, enabled = scene.imageAsset.isNotBlank()) { Text("Salvar imagem") }
-                TextButton(onClick = onShare, enabled = scene.imageAsset.isNotBlank()) { Text("Compartilhar") }
+            if (scene.camera.isNotBlank()) Text("Câmera · ${scene.camera}", maxLines = if (details) 8 else 2,
+                style = MaterialTheme.typography.bodySmall, overflow = TextOverflow.Ellipsis)
+            if (scene.effects.isNotBlank()) Text("Sons · ${scene.effects}", maxLines = if (details) 8 else 2,
+                style = MaterialTheme.typography.bodySmall, overflow = TextOverflow.Ellipsis)
+            TextButton(onClick = { details = !details }) {
+                Icon(if (details) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
+                Text(if (details) " Ocultar detalhes" else " Ver ações e continuidade")
             }
-            OutlinedButton(onClick = onCopy, enabled = scene.prompt.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.ContentCopy, null); Text(" Copiar prompt")
+            if (details) {
+                if (scene.visual.isNotBlank()) Text("Visual · ${scene.visual}", style = MaterialTheme.typography.bodySmall)
+                Text("Início · ${scene.initialState.ifBlank { "Não definido" }}", style = MaterialTheme.typography.bodySmall)
+                Text("Final · ${scene.finalState.ifBlank { "Não definido" }}", style = MaterialTheme.typography.bodySmall)
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Button(onClick = {
+                    when {
+                        scene.prompt.isBlank() -> onRegenerate()
+                        scene.imageAsset.isBlank() -> onImageGenerate()
+                        else -> onCopy()
+                    }
+                }, enabled = !busy, modifier = Modifier.weight(1f)) {
+                    Icon(when {
+                        scene.prompt.isBlank() -> Icons.Default.AutoAwesome
+                        scene.imageAsset.isBlank() -> Icons.Default.Image
+                        else -> Icons.Default.ContentCopy
+                    }, null)
+                    Text(" $mainAction", maxLines = 2)
+                }
+                TextButton(onClick = onEdit, enabled = !busy) { Text("Editar") }
+                Box {
+                    IconButton(onClick = { menuOpen = true }, enabled = !busy) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "Outras ações da cena")
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(text = { Text("Regenerar roteiro com Gemini") }, onClick = {
+                            menuOpen = false; onRegenerate()
+                        })
+                        DropdownMenuItem(text = { Text("Gerar ou regenerar imagem") }, onClick = {
+                            menuOpen = false; onImageGenerate()
+                        })
+                        DropdownMenuItem(text = { Text("Copiar prompt") }, enabled = scene.prompt.isNotBlank(),
+                            onClick = { menuOpen = false; onCopy() })
+                        DropdownMenuItem(text = { Text("Importar imagem / último quadro") },
+                            onClick = { menuOpen = false; onImageImport() })
+                        DropdownMenuItem(text = { Text("Salvar imagem") }, enabled = scene.imageAsset.isNotBlank(),
+                            onClick = { menuOpen = false; onImageExport() })
+                        DropdownMenuItem(text = { Text("Compartilhar imagem") }, enabled = scene.imageAsset.isNotBlank(),
+                            onClick = { menuOpen = false; onShare() })
+                        DropdownMenuItem(text = { Text("Duplicar cena") }, enabled = count < 60,
+                            onClick = { menuOpen = false; onDuplicate() })
+                        DropdownMenuItem(text = { Text("Excluir cena") }, onClick = { menuOpen = false; onDelete() })
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun StudioSceneEditor(original: StudioScene, onSave: (StudioScene) -> Unit, onDismiss: () -> Unit) {
+private fun StudioSceneEditor(original: StudioScene, people: List<String>,
+    onSave: (StudioScene) -> Unit, onDismiss: () -> Unit) {
     var value by remember(original.id) { mutableStateOf(original) }
-    var tab by remember(original.id) { mutableIntStateOf(0) }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("Editar ${original.title}") },
-        text = { Column(Modifier.heightIn(max = 480.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf("Visual", "Som e câmera", "Continuidade", "Prompt").forEachIndexed { i, label ->
-                    FilterChip(selected = tab == i, onClick = { tab = i }, label = { Text(label) })
+    var advancedOpen by remember(original.id) { mutableStateOf(false) }
+    var dialogueOpen by remember(original.id) { mutableStateOf(false) }
+    var rawDialogueOpen by remember(original.id) { mutableStateOf(false) }
+    fun setLines(lines: List<StudioDialogueLine>) {
+        value = value.copy(dialogueLines = lines,
+            dialogue = lines.joinToString("\n") { "${it.speaker}: ${it.speech}" })
+    }
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Editar cena · ${original.title}") },
+        text = { Column(Modifier.heightIn(max = 490.dp).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            StudioField("Título da cena", value.title, 200) { value = value.copy(title = it) }
+            var durationText by remember(original.id) { mutableStateOf(value.durationSeconds.toString()) }
+            OutlinedTextField(value = durationText, onValueChange = { raw ->
+                durationText = raw.filter(Char::isDigit).take(2)
+                durationText.toIntOrNull()?.takeIf { it in 1..60 }?.let {
+                    value = value.copy(durationSeconds = it)
                 }
+            }, label = { Text("Duração estimada da cena (1–60 s)") }, singleLine = true,
+                modifier = Modifier.fillMaxWidth())
+            StudioField("Personagens da cena", value.characters, 2000) { value = value.copy(characters = it) }
+            if (people.isNotEmpty()) Text("Referências: ${people.joinToString(", ")}",
+                style = MaterialTheme.typography.labelSmall)
+            StudioField("O que acontece nesta cena?", value.actions, 6000, 2) { value = value.copy(actions = it) }
+            val currentLines = value.dialogueLines
+            OutlinedButton(onClick = { dialogueOpen = !dialogueOpen }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.RecordVoiceOver, null)
+                Text(" Falas por personagem (${currentLines.size})", Modifier.weight(1f))
+                Icon(if (dialogueOpen) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
             }
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                when (tab) {
-                    0 -> {
-                        StudioField("Título", value.title, 200) { value = value.copy(title = it) }
-                        StudioField("Descrição visual", value.visual, 4000, 2) { value = value.copy(visual = it) }
-                        StudioField("Personagens participantes", value.characters, 2000) { value = value.copy(characters = it) }
-                        StudioField("Ações e movimentos na ordem", value.actions, 6000, 2) { value = value.copy(actions = it) }
-                    }
-                    1 -> {
-                        StudioField("Falas exatas (pt-BR)", value.dialogue, 4000, 2) { value = value.copy(dialogue = it) }
-                        StudioField("Efeitos sonoros", value.effects, 3000, 2) { value = value.copy(effects = it) }
-                        StudioField("Movimentos de câmera", value.camera, 3000, 2) { value = value.copy(camera = it) }
-                    }
-                    2 -> {
-                        StudioField("Estado inicial", value.initialState, 4000, 2) { value = value.copy(initialState = it) }
-                        StudioField("Estado final", value.finalState, 4000, 2) { value = value.copy(finalState = it) }
-                        Text("Verifique a ligação entre os estados de cenas adjacentes antes de gerar no Flow.",
-                            style = MaterialTheme.typography.bodySmall)
-                    }
-                    3 -> {
-                        StudioField("Prompt individual em inglês", value.prompt, 10000, 4) { value = value.copy(prompt = it) }
-                        Text("Falas e texto na cena devem permanecer em pt-BR. Não inclua duração nem proporção no prompt.",
-                            style = MaterialTheme.typography.labelSmall)
+            if (dialogueOpen) {
+                if (currentLines.isEmpty() && value.dialogue.isNotBlank()) {
+                    Text("Falas antigas em texto livre. Edite em Modo texto ou adicione falas separadas.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+                currentLines.forEachIndexed { i, line ->
+                    OutlinedCard(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Fala ${i + 1}", modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.labelLarge)
+                                IconButton(onClick = { setLines(currentLines.filterIndexed { index, _ -> index != i }) }) {
+                                    Icon(Icons.Default.DeleteOutline, contentDescription = "Remover fala ${i + 1}")
+                                }
+                            }
+                            StudioField("Quem fala?", line.speaker, 120) { new ->
+                                setLines(currentLines.mapIndexed { index, old -> if (i == index) old.copy(speaker = new) else old })
+                            }
+                            StudioField("Texto exato em português", line.speech, 800, 2) { new ->
+                                setLines(currentLines.mapIndexed { index, old -> if (i == index) old.copy(speech = new) else old })
+                            }
+                        }
                     }
                 }
+                TextButton(onClick = {
+                    val existing = if (currentLines.isEmpty() && value.dialogue.isNotBlank())
+                        StudioDialoguePolicy.fromLegacy(value.dialogue) else currentLines
+                    if (existing.size < 20) setLines(existing + StudioDialogueLine(people.firstOrNull().orEmpty(), ""))
+                }, enabled = currentLines.size < 20 && (currentLines.isNotEmpty() ||
+                    StudioDialoguePolicy.canConvert(value.dialogue))) {
+                    Icon(Icons.Default.Add, null); Text(" Adicionar fala")
+                }
+                TextButton(onClick = { rawDialogueOpen = !rawDialogueOpen }) {
+                    Text(if (rawDialogueOpen) "Ocultar falas em texto livre" else "Editar falas antigas em texto livre")
+                }
+                if (rawDialogueOpen) StudioField("Falas (texto livre)", value.dialogue, 4000, 2) {
+                    value = value.copy(dialogue = it, dialogueLines = emptyList())
+                }
+            } else if (currentLines.isNotEmpty() || value.dialogue.isNotBlank()) {
+                Text(value.effectiveDialogue(), maxLines = 3, overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall)
+            }
+            OutlinedButton(onClick = { advancedOpen = !advancedOpen }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Tune, null)
+                Text(" Câmera, sons, visual e continuidade", Modifier.weight(1f))
+                Icon(if (advancedOpen) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
+            }
+            if (advancedOpen) {
+                StudioField("Câmera (movimento e enquadramento)", value.camera, 3000, 2) {
+                    value = value.copy(camera = it)
+                }
+                StudioField("Sons e efeitos", value.effects, 3000, 2) { value = value.copy(effects = it) }
+                StudioField("Descrição visual", value.visual, 4000, 2) { value = value.copy(visual = it) }
+                StudioField("Estado inicial", value.initialState, 4000, 2) { value = value.copy(initialState = it) }
+                StudioField("Estado final", value.finalState, 4000, 2) { value = value.copy(finalState = it) }
+                StudioField("Prompt individual em inglês", value.prompt, 10000, 4) { value = value.copy(prompt = it) }
+                Text("Ao editar o roteiro, revise também o prompt. Para sincronizá-lo com IA, use Regenerar roteiro; isso exige confirmação.",
+                    style = MaterialTheme.typography.bodySmall)
             }
         } },
         confirmButton = { TextButton(onClick = { onSave(value) }) { Text("Salvar cena") } },

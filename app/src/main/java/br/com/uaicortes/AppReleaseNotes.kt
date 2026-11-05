@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.161"
-    const val VERSION_CODE = 162
+    const val VERSION_NAME = "0.1.162"
+    const val VERSION_CODE = 163
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.162", listOf(
+            ReleaseFeature("flow-guided-162", "História revisável sem formulários longos",
+                "Ideia única, ajustes recolhidos e roteiro do Gemini em leitura direta com edição opcional.", "check"),
+            ReleaseFeature("flow-scene-dialogues-162", "Cenas por personagem, fala e tempo",
+                "Cartões mostram personagens, falas, câmera e sons; edição estruturada e duração estimada por cena.", "captions"),
+            ReleaseFeature("flow-task-feedback-162", "Progresso e cancelamento identificados",
+                "Surpreenda-me avisa que é local; Gemini mostra a operação e permite cancelar chamada incerta.", "check")
+        )),
         ReleaseSummary("0.1.161", listOf(
             ReleaseFeature("flow-studio-161", "Estúdio de Cenas em três etapas",
                 "Histórias, cenas e exportação ZIP com rascunhos locais, referências e modo manual preservado.", "check"),
