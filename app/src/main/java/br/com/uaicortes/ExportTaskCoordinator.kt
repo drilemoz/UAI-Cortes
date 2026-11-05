@@ -25,7 +25,7 @@ internal class ExportTaskCoordinator {
     fun start(fileName: String, quality: Int, nowMs: Long): Long? {
         if (snapshot.working) return null
         require(fileName.isNotBlank()) { "Informe um nome para o vídeo." }
-        require(quality == 720 || quality == 1080) { "Resolução inválida." }
+        require(quality in listOf(360, 480, 720, 1080)) { "Resolução inválida." }
         lastId += 1
         snapshot = ExportTaskSnapshot(id = lastId, working = true,
             startedAtMs = nowMs.coerceAtLeast(0L), fileName = fileName, quality = quality)

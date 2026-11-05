@@ -16,11 +16,25 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.145"
-    const val VERSION_CODE = 146
+    const val VERSION_NAME = "0.1.147"
+    const val VERSION_CODE = 148
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.147", listOf(
+            ReleaseFeature("export-low-res-147", "Exportação em 360p e 480p",
+                "Opções econômicas com perfis de bitrate próprios, cartões maiores e dimensões verticais H.264 pares.", "check"),
+            ReleaseFeature("export-progress-147", "Progresso de exportação mais claro",
+                "Percentual informado pelo Media3 com aviso de velocidade variável, sem inventar tempo restante ou avanço.", "captions"),
+            ReleaseFeature("saved-video-caption-popup-147", "Descrição após exportar em janela própria",
+                "Tela do vídeo salvo com três ações; editor manual e geração Gemini de descrição e hashtags ficam no pop-up com confirmação de cota.", "check")
+        )),
+        ReleaseSummary("0.1.146", listOf(
+            ReleaseFeature("gemini-key-tools-compact-146", "Gerenciador Gemini mais compacto",
+                "Seis ações de chave em uma barra de toque acessível, campo protegido e botões de teste/salvar com cantos discretos.", "check"),
+            ReleaseFeature("gemini-key-usage-panel-146", "Histórico Gemini mais organizado",
+                "Chaves e privacidade em painéis expansíveis; consumo de IA com métricas de respostas, tokens e 429 e detalhes locais sob demanda.", "captions")
+        )),
         ReleaseSummary("0.1.145", listOf(
             ReleaseFeature("voice-picker-wide-145", "Seletor Gemini mais amplo e compacto",
                 "Diálogo próximo à largura do celular, busca fixa, filtros sem cortes laterais e lista aproveitando a altura disponível.", "check"),

@@ -53,19 +53,19 @@ private fun CompactExportOption(label: String,icon: ImageVector?,selected: Boole
                 verticalAlignment=Alignment.CenterVertically,
                 horizontalArrangement=Arrangement.Center) {
                 if(icon!=null) {
-                    Icon(icon,contentDescription=null,modifier=Modifier.size(16.dp),
+                    Icon(icon,contentDescription=null,modifier=Modifier.size(20.dp),
                         tint=if(selected)Blue else MaterialTheme.colorScheme.onSurface)
                     Spacer(Modifier.width(4.dp))
                 }
-                Text(label,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis,
+                Text(label,fontSize=13.sp,maxLines=1,overflow=TextOverflow.Ellipsis,
                     fontWeight=if(selected)FontWeight.SemiBold else FontWeight.Normal)
             }
         } else {
             Column(Modifier.fillMaxSize(),horizontalAlignment=Alignment.CenterHorizontally,
                 verticalArrangement=Arrangement.Center) {
-                if(icon!=null) Icon(icon,contentDescription=null,modifier=Modifier.size(20.dp),
+                if(icon!=null) Icon(icon,contentDescription=null,modifier=Modifier.size(25.dp),
                     tint=if(selected)Blue else MaterialTheme.colorScheme.onSurface)
-                Text(label,fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis,
+                Text(label,fontSize=12.sp,maxLines=1,overflow=TextOverflow.Ellipsis,
                     fontWeight=if(selected)FontWeight.SemiBold else FontWeight.Normal)
             }
         }
@@ -139,7 +139,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
         previewPlayer.prepare()
     }
     var name by rememberSaveable(p.id) { mutableStateOf(ProjectNaming.exportName(p.title)) }
-    var quality by rememberSaveable(p.id) {mutableIntStateOf(defaultQuality.takeIf { it == 720 || it == 1080 } ?: 1080)}
+    var quality by rememberSaveable(p.id) {mutableIntStateOf(defaultQuality.takeIf { it in listOf(360, 480, 720, 1080) } ?: 1080)}
     var bitratePresetName by rememberSaveable(p.id) { mutableStateOf(ExportBitratePreset.HIGH.name) }
     var qualityHelpExpanded by rememberSaveable(p.id) { mutableStateOf(false) }
     var framingHelpExpanded by rememberSaveable(p.id) { mutableStateOf(false) }
@@ -204,7 +204,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                     Triple(ExportDestination.TIKTOK,Icons.Default.MusicNote,"TikTok")
                 ).forEach { (item, icon, label) ->
                     CompactExportOption(label,icon,destination==item,!working,
-                        Modifier.weight(1f).height(50.dp)) {
+                        Modifier.weight(1f).height(62.dp)) {
                         destinationId=item.name
                         bitratePresetName=SocialExportPolicy.recommendedBitrate(item).name
                     }
@@ -227,7 +227,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                     }
                     CompactExportOption("Preencher",Icons.Default.CenterFocusStrong,
                         frameMode==VerticalFrameMode.CENTER_CROP,!working,
-                        Modifier.weight(1f).height(42.dp),horizontal=true) {
+                        Modifier.weight(1f).height(50.dp),horizontal=true) {
                         frameModeId=VerticalFrameMode.CENTER_CROP.name
                     }
                 }
@@ -356,15 +356,22 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                     CompactExportLabel("Resolução",Icons.Default.AspectRatio)
                     Spacer(Modifier.height(5.dp))
                     Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                        listOf(720,1080).forEach { q ->
+                        listOf(360,480,720,1080).forEach { q ->
                             CompactExportOption("${q}p",Icons.Default.Movie,
-                                q==quality,!working,Modifier.weight(1f).height(44.dp),horizontal=true) {
+                                q==quality,!working,Modifier.weight(1f).height(58.dp)) {
                                 quality=q
                             }
                         }
                     }
                 }
             }
+            Text(when(quality) {
+                    360 -> "360p · arquivo menor e processamento mais leve"
+                    480 -> "480p · econômico para prévias e envio rápido"
+                    720 -> "720p · equilíbrio entre nitidez e tamanho"
+                    else -> "1080p · melhor definição, com maior consumo de espaço"
+                },fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier=Modifier.padding(top=5.dp))
             Spacer(Modifier.height(11.dp))
             CompactExportLabel("Compressão",Icons.Default.Tune)
             Spacer(Modifier.height(5.dp))
@@ -372,7 +379,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                 ExportBitratePreset.values().forEach { preset ->
                     val mbps=VideoExportQuality.videoBitrateBps(quality,preset)/1_000_000
                     CompactExportOption("${preset.label} · ${mbps}M",null,
-                        bitratePreset==preset,!working,Modifier.weight(1f).height(42.dp),horizontal=true) {
+                        bitratePreset==preset,!working,Modifier.weight(1f).height(50.dp),horizontal=true) {
                         bitratePresetName=preset.name
                     }
                 }
@@ -508,6 +515,11 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                         Spacer(Modifier.height(12.dp))
                         Text("Tempo decorrido: ${ExportProgressUi.elapsedLabel(elapsedSeconds)}",
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(5.dp))
+                Text(ExportProgressUi.progressExplanation(exportPhase),
+                    style=MaterialTheme.typography.labelSmall,
+                    textAlign=TextAlign.Center,
+                    color=MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.height(10.dp))
                         Text("${SocialExportPolicy.requestedLabel(destination,exportState.quality)} · " +
                             "${bitratePreset.label} · MP4",style=MaterialTheme.typography.bodySmall,

@@ -7,6 +7,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ExportTaskCoordinatorTest {
+    @Test fun lowResolutionsAreAcceptedForDirectExport() {
+        val small = ExportTaskCoordinator()
+        val a = small.start("economico.mp4", 360, 10L)!!
+        assertTrue(small.failure(a, "encerrado"))
+        val b = small.start("medio.mp4", 480, 20L)!!
+        assertEquals(480, small.snapshot.quality)
+        assertTrue(small.cancel(b))
+    }
+
     @Test fun lifecycleUsesRealProgressOnlyDuringRendering() {
         val tasks = ExportTaskCoordinator()
         val id = tasks.start("saida.mp4", 1080, 1000L)!!

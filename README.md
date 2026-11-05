@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.147 (04/11/2026)
+**Exportação v0.1.147:** novas resoluções econômicas 360p e 480p além de 720p e 1080p, opções maiores; progresso do Media3 explicado sem prometer velocidade linear. Tela final de vídeo salvo compacta, com ações Gerar descrição, Gerar com IA e Compartilhar; descrição, hashtags, consulta de modelos e consentimento Gemini somente em janela própria, sem envio do MP4 à IA. Build Android pendente.
+
+# Uai Cortes · versão 0.1.146 (04/11/2026)
+**Google Gemini v0.1.146:** página de API compacta, seis ações numa barra, botões de 8–9 dp de raio, chave com status protegido, cartões expansíveis para segurança e múltiplas chaves e indicadores locais de uso. Sem alterar segurança, tráfego TTS ou projetos.
+
 # Uai Cortes · versão 0.1.145 (04/11/2026)
 **Vozes IA v0.1.145:** seletor de voz Gemini com janela ampla e responsiva, filtros de gênero/timbre sem corte lateral, pesquisa sempre visível e lista mais densa com destaque da seleção atual.
 

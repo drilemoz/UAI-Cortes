@@ -5,13 +5,15 @@ import org.junit.Test
 
 class VideoExportQualityTest {
     @Test fun bitratesAreExplicitAndValid() {
+        assertEquals(2_000_000, VideoExportQuality.videoBitrateBps(360))
+        assertEquals(3_500_000, VideoExportQuality.videoBitrateBps(480))
         assertEquals(8_000_000, VideoExportQuality.videoBitrateBps(720))
         assertEquals(18_000_000, VideoExportQuality.videoBitrateBps(1080))
         assertEquals(192_000, VideoExportQuality.AUDIO_BITRATE_BPS)
     }
 
     @Test fun explicitPresetsAreOrderedAndLegacyQualityIsDefault() {
-        for (side in listOf(720, 1080)) {
+        for (side in listOf(360, 480, 720, 1080)) {
             val compact = VideoExportQuality.videoBitrateBps(side, ExportBitratePreset.COMPACT)
             val high = VideoExportQuality.videoBitrateBps(side, ExportBitratePreset.HIGH)
             val maximum = VideoExportQuality.videoBitrateBps(side, ExportBitratePreset.MAXIMUM)
@@ -89,7 +91,7 @@ class VideoExportQualityTest {
 
     @Test fun rejectsUnsupportedResolutions() {
         assertThrows(IllegalArgumentException::class.java) {
-            VideoExportQuality.videoBitrateBps(480)
+            VideoExportQuality.videoBitrateBps(240)
         }
     }
 

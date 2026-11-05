@@ -1,3 +1,18 @@
+# Uai Cortes · versão 0.1.147 (04/11/2026)
+
+## 0.1.147 — Exportar e compartilhar
+- 360p, 480p, 720p ou 1080p com controles maiores e estimativas de tamanho ajustadas à qualidade.
+- Exportação apresenta apenas o progresso informado pelo Media3, explicando que a velocidade de renderização pode variar.
+- Após salvar: três botões (Gerar descrição, Gerar com IA, Compartilhar). Editor de texto/hashtags e configurações Gemini abrem em pop-up com confirmação de API.
+- Uso real no aparelho, duração da renderização e saída MP4 ainda precisam de validação Android.
+
+# Uai Cortes · versão 0.1.146 (04/11/2026)
+
+## 0.1.146 — Visual da tela Google Gemini
+- Comandos da chave numa barra única, com menos rolagem e caixas compactas.
+- Privacidade, várias chaves e consumo IA em painéis expansíveis; três indicadores e detalhes sob demanda.
+- Segurança e confirmações das chaves mantidas. Validar em aparelho, TalkBack e com fonte ampliada; build Android ainda pendente.
+
 # Uai Cortes · versão 0.1.145 (04/11/2026)
 
 ## 0.1.145 — Janela de vozes aprimorada

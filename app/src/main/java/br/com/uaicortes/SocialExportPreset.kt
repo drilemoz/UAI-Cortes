@@ -25,8 +25,10 @@ internal enum class VerticalFrameMode(val label: String) {
 /** Regras puras de resolução, compartilhadas por interface, exportador e testes. */
 internal object SocialExportPolicy {
     fun dimensions(destination: ExportDestination, shortSide: Int): Pair<Int, Int>? {
-        require(shortSide == 720 || shortSide == 1080) { "Resolução não suportada: $shortSide" }
-        return if (destination.isVertical) shortSide to shortSide * 16 / 9 else null
+        require(shortSide in listOf(360, 480, 720, 1080)) { "Resolução não suportada: $shortSide" }
+        // A dimensão vertical solicitada deve ser par para codificação H.264.
+        val vertical = ((shortSide * 16.0 / 9.0 + 1.0) / 2.0).toInt() * 2
+        return if (destination.isVertical) shortSide to vertical else null
     }
 
     fun requestedLabel(destination: ExportDestination, shortSide: Int): String =

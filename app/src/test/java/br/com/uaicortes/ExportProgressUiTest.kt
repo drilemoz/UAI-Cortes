@@ -22,6 +22,11 @@ class ExportProgressUiTest {
         assertFalse(ExportProgressUi.canCancel(ExportPhase.SAVING))
     }
 
+    @Test fun explanationDoesNotPresentElapsedTimeAsCompletionEstimate() {
+        assertTrue(ExportProgressUi.progressExplanation(ExportPhase.RENDERING).contains("podem desacelerar"))
+        assertTrue(ExportProgressUi.progressExplanation(ExportPhase.PREPARING).contains("sem percentual"))
+    }
+
     @Test fun elapsedAndStageLabels() {
         assertEquals("00:00",ExportProgressUi.elapsedLabel(-30))
         assertEquals("01:05",ExportProgressUi.elapsedLabel(65))

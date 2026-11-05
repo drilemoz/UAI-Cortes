@@ -23,6 +23,16 @@ internal object VideoExportQuality {
 
     fun videoBitrateBps(outputShortSide: Int,
                         preset: ExportBitratePreset = ExportBitratePreset.HIGH): Int = when (outputShortSide) {
+        360 -> when (preset) {
+            ExportBitratePreset.COMPACT -> 1_200_000
+            ExportBitratePreset.HIGH -> 2_000_000
+            ExportBitratePreset.MAXIMUM -> 3_000_000
+        }
+        480 -> when (preset) {
+            ExportBitratePreset.COMPACT -> 2_000_000
+            ExportBitratePreset.HIGH -> 3_500_000
+            ExportBitratePreset.MAXIMUM -> 5_000_000
+        }
         720 -> when (preset) {
             ExportBitratePreset.COMPACT -> 5_000_000
             ExportBitratePreset.HIGH -> 8_000_000

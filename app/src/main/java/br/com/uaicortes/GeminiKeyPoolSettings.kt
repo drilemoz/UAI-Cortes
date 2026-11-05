@@ -4,6 +4,9 @@ import android.content.ClipDescription
 import android.content.Context
 import android.os.Build
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -45,17 +48,25 @@ internal fun GeminiKeyPoolSettings(store: GeminiCredentialStore, onChanged: () -
         auto = store.autoFallbackEnabled()
         onChanged()
     }
-    HorizontalDivider(Modifier.padding(vertical = 6.dp))
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Icon(Icons.Default.VpnKey, null, tint = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.width(8.dp))
-        Text("Várias chaves Gemini", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-        IconButton(onClick = { expanded = !expanded; refresh() }) {
-            Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, "Gerenciar chaves")
+    Surface(shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+        Row(Modifier.fillMaxWidth().clickable { expanded = !expanded; refresh() }
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.VpnKey, null, modifier = Modifier.size(19.dp),
+                tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(9.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("Chaves Gemini", style = MaterialTheme.typography.titleSmall)
+                Text("${entries.size}/8 protegidas · Limites por projeto Google Cloud",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                if (expanded) "Recolher chaves" else "Gerenciar chaves", Modifier.size(20.dp))
         }
     }
-    Text("${entries.size}/8 chaves protegidas. As cotas pertencem ao projeto Google Cloud, não à chave.",
-        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     if (!expanded) return
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         store.lastAutomaticSwitch()?.let { name ->

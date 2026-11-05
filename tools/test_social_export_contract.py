@@ -9,7 +9,8 @@ vm = (s/'ExportTaskViewModel.kt').read_text()
 ui = (s/'ExportScreen.kt').read_text()
 report = (s/'ExportQualityReport.kt').read_text()
 assert all(k in policy for k in ('ORIGINAL', 'SHORTS', 'REELS', 'TIKTOK'))
-assert 'shortSide to shortSide * 16 / 9' in policy
+assert 'shortSide to vertical' in policy and 'val vertical =' in policy
+assert 'shortSide in listOf(360, 480, 720, 1080)' in policy
 assert 'ExportBitratePreset.COMPACT' in policy
 assert 'FIT("Mostrar tudo")' in policy and 'CENTER_CROP("Preencher tela")' in policy
 assert 'Presentation.createForWidthAndHeight(' in engine

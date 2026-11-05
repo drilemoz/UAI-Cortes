@@ -16,6 +16,13 @@ internal object ExportProgressUi {
         ExportPhase.SAVING -> "Finalizando e salvando na galeria…"
     }
 
+    /** A porcentagem é real do Media3, porém não equivale ao tempo restante. */
+    fun progressExplanation(phase: ExportPhase): String = when (phase) {
+        ExportPhase.PREPARING -> "Preparação sem percentual disponível."
+        ExportPhase.RENDERING -> "Progresso real do vídeo; efeitos e trechos complexos podem desacelerar o processamento."
+        ExportPhase.SAVING -> "A gravação na galeria pode levar mais alguns instantes."
+    }
+
     fun elapsedLabel(elapsedSeconds: Long): String {
         val safe = elapsedSeconds.coerceAtLeast(0L)
         return "%02d:%02d".format(safe / 60L, safe % 60L)

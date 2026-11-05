@@ -112,13 +112,17 @@ internal fun VideoSavedDialog(
             .filter { it.isNotBlank() }.joinToString("\n")
     }
 
+    var showCaptionDialog by remember(uri) { mutableStateOf(false) }
+    var showAiOptions by remember(uri) { mutableStateOf(false) }
+    // O vídeo já foi salvo: a tela principal só mostra ações. A edição de
+    // descrição/hashtags e seleção de modelos passa a ficar num diálogo independente.
     Dialog(onDismissRequest = { if (persistDraft()) onClose() },
         properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 18.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                .padding(horizontal = 18.dp, vertical = 14.dp)) {
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(Icons.Default.CheckCircle, null, Modifier.size(46.dp),
@@ -172,10 +176,128 @@ internal fun VideoSavedDialog(
                     }
                 }
 
-                HorizontalDivider()
+
+                Spacer(Modifier.height(4.dp))
+                Text("Pronto para publicar", style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold)
+                Text("Escolha uma ação. Descrição e hashtags ficam em uma janela própria.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (exportDetails.isNotEmpty()) {
+                    OutlinedCard(Modifier.fillMaxWidth()) {
+                        TextButton(onClick = { showDetails = !showDetails },
+                            modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Default.Tune, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Detalhes técnicos", modifier = Modifier.weight(1f))
+                            Icon(if (showDetails) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                contentDescription = if (showDetails) "Recolher" else "Expandir")
+                        }
+                        if (showDetails) Column(Modifier.padding(start = 14.dp, end = 14.dp, bottom = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            exportDetails.forEach { line -> Text(line,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        }
+                    }
+                }
+
+                if (usageInfo.isNotBlank()) Text(usageInfo,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                failure?.let { Text(it, color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall) }
+                }
+                Spacer(Modifier.height(10.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    OutlinedCard(onClick = {
+                        showAiOptions = false
+                        showCaptionDialog = true
+                    }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(10.dp)) {
+                        Column(Modifier.fillMaxWidth().height(78.dp),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.Description, null, Modifier.size(25.dp),
+                                tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.height(4.dp))
+                            Text("Gerar descrição", style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                    OutlinedCard(onClick = {
+                        showAiOptions = true
+                        showCaptionDialog = true
+                    }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(10.dp)) {
+                        Column(Modifier.fillMaxWidth().height(78.dp),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.AutoAwesome, null, Modifier.size(25.dp),
+                                tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.height(4.dp))
+                            Text("Gerar com IA", style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                    Card(onClick = {
+                    runCatching {
+                        context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                            type = "video/mp4"
+                            putExtra(Intent.EXTRA_STREAM, uri)
+                            if (captionValid) putExtra(Intent.EXTRA_TEXT,
+                                VideoCaption(description.trim(), hashtags.trim()).combined)
+                            clipData = ClipData.newUri(context.contentResolver, "Vídeo", uri)
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }, "Compartilhar vídeo"))
+                    }.onFailure { failure = "Não foi possível compartilhar este vídeo." }
+
+                    }, modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp)) {
+                        Column(Modifier.fillMaxWidth().height(78.dp),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.Share, null, Modifier.size(25.dp),
+                                tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.height(4.dp))
+                            Text("Compartilhar", style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = {
+                        runCatching {
+                            context.startActivity(Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(uri, "video/mp4")
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            })
+                        }.onFailure { failure = "Não há aplicativo disponível para abrir este vídeo." }
+                    }) { Text("Abrir vídeo") }
+                    TextButton(onClick = { if (persistDraft()) onEdit(currentDraft()) }) {
+                        Text(editLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    TextButton(onClick = { if (persistDraft()) onClose() }) { Text("Fechar") }
+                }
+            }
+        }
+    }
+    if (showCaptionDialog) {
+        Dialog(onDismissRequest = { if (persistDraft()) showCaptionDialog = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Surface(Modifier.fillMaxWidth(.95f).fillMaxHeight(.86f),
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface) {
+                Column(Modifier.fillMaxSize().navigationBarsPadding().padding(14.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Descrição para publicar", style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { if (persistDraft()) showCaptionDialog = false }) {
+                            Icon(Icons.Default.Close, "Fechar descrição")
+                        }
+                    }
+                    Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Descrição para publicar", style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold)
                     Text("Descrição na primeira linha e 5 hashtags na segunda. Tudo em até 100 caracteres, sem emojis.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -235,6 +357,7 @@ internal fun VideoSavedDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.labelSmall)
                     }
+                    if (showAiOptions) {
                     if (showTopic) {
                         OutlinedTextField(value = topic, onValueChange = { topic = it.take(280) },
                             label = { Text("Assunto do vídeo para a IA") },
@@ -337,67 +460,25 @@ internal fun VideoSavedDialog(
                     Text("Opcional: você também pode digitar a descrição e as hashtags manualmente. A geração pode consumir cota da API Gemini.",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-
-                if (exportDetails.isNotEmpty()) {
-                    OutlinedCard(Modifier.fillMaxWidth()) {
-                        TextButton(onClick = { showDetails = !showDetails },
-                            modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Default.Tune, null, Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Detalhes técnicos", modifier = Modifier.weight(1f))
-                            Icon(if (showDetails) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                contentDescription = if (showDetails) "Recolher" else "Expandir")
-                        }
-                        if (showDetails) Column(Modifier.padding(start = 14.dp, end = 14.dp, bottom = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            exportDetails.forEach { line -> Text(line,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    } else {
+                        TextButton(onClick = { showAiOptions = true }) {
+                            Icon(Icons.Default.AutoAwesome, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Gerar com IA")
                         }
                     }
                 }
-                if (usageInfo.isNotBlank()) Text(usageInfo,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                failure?.let { Text(it, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error) }
 
-                Button(onClick = {
-                    runCatching {
-                        context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-                            type = "video/mp4"
-                            putExtra(Intent.EXTRA_STREAM, uri)
-                            if (captionValid) putExtra(Intent.EXTRA_TEXT,
-                                VideoCaption(description.trim(), hashtags.trim()).combined)
-                            clipData = ClipData.newUri(context.contentResolver, "Vídeo", uri)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }, "Compartilhar vídeo"))
-                    }.onFailure { failure = "Não foi possível compartilhar este vídeo." }
-                }, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.Share, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Compartilhar vídeo")
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = {
-                        runCatching {
-                            context.startActivity(Intent(Intent.ACTION_VIEW).apply {
-                                setDataAndType(uri, "video/mp4")
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            })
-                        }.onFailure { failure = "Não há aplicativo disponível para abrir este vídeo." }
-                    }, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Default.PlayArrow, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Abrir vídeo", maxLines = 1)
+
+                        if (usageInfo.isNotBlank()) Text(usageInfo,
+                            style = MaterialTheme.typography.labelSmall)
+                        failure?.let { Text(it, color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.labelSmall) }
                     }
-                    OutlinedButton(onClick = { if (persistDraft()) onEdit(currentDraft()) }, modifier = Modifier.weight(1f)) {
-                        Text(editLabel, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    TextButton(onClick = { if (persistDraft()) showCaptionDialog = false },
+                        modifier = Modifier.align(Alignment.End)) {
+                        Text("Concluir")
                     }
-                }
-                TextButton(onClick = { if (persistDraft()) onClose() }, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                    Text("Fechar")
                 }
             }
         }

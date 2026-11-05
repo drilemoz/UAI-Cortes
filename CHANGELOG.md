@@ -1,3 +1,19 @@
+# Uai Cortes · versão 0.1.147 (04/11/2026)
+
+## 0.1.147 — Exportação de vídeo e publicação mais organizadas
+- Destino com ícones ampliados e resolução em quatro opções (360p, 480p, 720p, 1080p); perfis H.264 independentes e dimensões verticais pares para reduzir falhas de codificação. O encoder pode ajustar a saída real, que segue conferida no relatório de qualidade.
+- Indicador mantém percentual fornecido pelo Transformer/Media3, com aviso de progresso não linear. Fases de preparação e gravação na galeria permanecem indeterminadas, sem inventar porcentagens nem conclusão antecipada.
+- Tela final de vídeo salvo mostra capa, nome, dimensões e três ações: Gerar descrição, Gerar com IA e Compartilhar. Entradas manuais, 5 hashtags, copiar, modelo Gemini, aviso de dados enviados e confirmação de custo/cota migrados para popup contextual rolável.
+- Mantidos rascunhos, consentimento explícito, compartilhamento opcional de texto válido, abrir vídeo, voltar ao editor, detalhes técnicos e compatibilidade do MP4. Não há upload de áudio/vídeo à Gemini.
+
+# Uai Cortes · versão 0.1.146 (04/11/2026)
+
+## 0.1.146 — Configuração Gemini compacta
+- Atalhos Colar, Copiar, Importar, Exportar, Obter e Remover numa barra única de seis itens, com rótulos e ícones acessíveis. Para larguras muito pequenas, habilita rolagem lateral sem cortar botões.
+- Campo protegido permanece vazio após salvar; copiar/exportar/remover continuam protegidos por confirmação e mantêm a semântica anterior. Testar TTS e Salvar/Atualizar permanecem separados.
+- Privacidade, chaves extras e consumo organizados em cartões com cantos discretos; 24h/7d/30d e métricas reais com possibilidade de expandir modelos e últimas operações.
+- Consumo continua local, e 429 não significa automaticamente saldo esgotado. Sem mudanças no esquema dos projetos, nas APIs ou no processamento de áudio.
+
 # Uai Cortes · versão 0.1.145 (04/11/2026)
 
 ## 0.1.145 — Seletor de vozes Gemini redesenhado
