@@ -29,6 +29,7 @@ internal fun GeminiUsageHint(operation: String, inputChars: Int? = null,
     val context = LocalContext.current
     val ledger = remember(context) { GeminiUsageLedger(context) }
     val quota = remember(context) { GeminiQuotaStore(context) }
+    val prices = remember(context) { GeminiPriceStore(context) }
     val keys = remember(context) { GeminiCredentialStore(context) }
     val activeProject = runCatching { keys.profiles().firstOrNull { it.id == keys.activeId() }?.projectId.orEmpty() }
         .getOrDefault("")
@@ -47,6 +48,14 @@ internal fun GeminiUsageHint(operation: String, inputChars: Int? = null,
             "tokens de áudio e resposta não podem ser previstos com segurança.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (model.isNotBlank() && activeProject.isNotBlank()) {
+            val avgPrice = GeminiAnalyticsPolicy.estimatedBatchCost(ledger.events(), activeProject,
+                model, operation, requestedCount.coerceIn(1, 500), prices.get(activeProject, model))
+            if (avgPrice != null) Text("Lote semelhante: custo local estimado ~US$ " +
+                "%.5f".format(Locale.US, avgPrice) +
+                " (preços manuais e cinco medições completas).",
+                style = MaterialTheme.typography.bodySmall)
+        }
         if (forecast != null) {
             forecast.averageTotal?.let { average ->
                 val total = average * requestedCount.coerceIn(1, 100)
@@ -106,8 +115,11 @@ internal fun GeminiUsagePanel() {
     var confirmClear by remember { mutableStateOf(false) }
     val keys = remember(context) { GeminiCredentialStore(context) }
     val quotas = remember(context) { GeminiQuotaStore(context) }
+    val prices = remember(context) { GeminiPriceStore(context) }
     var editProject by remember { mutableStateOf<String?>(null) }
     var editModel by remember { mutableStateOf("") }
+    var priceProject by remember { mutableStateOf<String?>(null) }
+    var priceModel by remember { mutableStateOf("") }
     var revision by remember { mutableIntStateOf(0) }
     fun refresh() { entries = runCatching { ledger.events() }.getOrDefault(emptyList()) }
     Surface(shape = RoundedCornerShape(14.dp),
@@ -161,7 +173,8 @@ internal fun GeminiUsagePanel() {
                 if (unknown > 0) Text("$unknown resposta(s) sem contagem de tokens informada pela API.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Custos e créditos: consulte os dados oficiais no Google.",
+                key(revision) { GeminiAnalyticsSection(filtered, prices, period) }
+                Text("Cobrança e créditos reais: consulte o painel oficial da Google.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 HorizontalDivider()
@@ -217,11 +230,20 @@ internal fun GeminiUsagePanel() {
                                         if (!limits.configured()) Text("Limites desconhecidos: sem saldo estimado.",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        OutlinedButton(onClick = { editProject = project; editModel = model },
-                                            shape = RoundedCornerShape(8.dp),
-                                            contentPadding = PaddingValues(horizontal = 9.dp),
-                                            modifier = Modifier.heightIn(min = 38.dp)) {
-                                            Text("Definir limites de $model", fontSize = 12.sp)
+                                        Row(Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            OutlinedButton(onClick = { editProject = project; editModel = model },
+                                                shape = RoundedCornerShape(8.dp),
+                                                modifier = Modifier.weight(1f).heightIn(min = 40.dp),
+                                                contentPadding = PaddingValues(horizontal = 4.dp)) {
+                                                Text("Limites", fontSize = 12.sp)
+                                            }
+                                            OutlinedButton(onClick = { priceProject = project; priceModel = model },
+                                                shape = RoundedCornerShape(8.dp),
+                                                modifier = Modifier.weight(1f).heightIn(min = 40.dp),
+                                                contentPadding = PaddingValues(horizontal = 4.dp)) {
+                                                Text("Tarifas USD", fontSize = 12.sp)
+                                            }
                                         }
                                     }
                                 }
@@ -320,6 +342,11 @@ internal fun GeminiUsagePanel() {
         GeminiQuotaBudgetDialog(project, editModel, quotas,
             onDismiss = { editProject = null },
             onSaved = { editProject = null; revision++; refresh() })
+    }
+    priceProject?.let { project ->
+        GeminiPricingDialog(project, priceModel, prices,
+            onDismiss = { priceProject = null },
+            onSaved = { priceProject = null; revision++; refresh() })
     }
     if (confirmClear) AlertDialog(onDismissRequest = { confirmClear = false },
         title = { Text("Limpar histórico de consumo?") },

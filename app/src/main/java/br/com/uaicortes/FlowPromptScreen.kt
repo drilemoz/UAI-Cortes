@@ -204,6 +204,13 @@ internal fun FlowPromptScreen(project: VideoProject,
                 Icon(Icons.Default.AutoAwesome, null)
                 Text(if (busy) " Aguarde Gemini..." else " Aprimorar cena com Gemini")
             }
+            FlowBatchSection(project.id, draft, onBeforeSend = { persist() }, onApply = { index, result ->
+                if (index in draft.scenes.indices) {
+                    draft = draft.copy(scenes = draft.scenes.toMutableList().also { it[index] = result })
+                    selected = index
+                    message = "Sugestão do lote aplicada à cena ${index + 1}; revise e salve."
+                }
+            })
             Text("Prompt completo desta cena", style = MaterialTheme.typography.titleSmall)
             val composed = runCatching { FlowPromptPolicy.compose(style, draft, selected) }.getOrNull()
             Text(composed ?: "Descreva a cena para montar o prompt.",

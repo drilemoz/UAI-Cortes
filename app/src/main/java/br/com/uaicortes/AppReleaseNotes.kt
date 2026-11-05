@@ -16,11 +16,35 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.156"
-    const val VERSION_CODE = 157
+    const val VERSION_NAME = "0.1.159"
+    const val VERSION_CODE = 160
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.159", listOf(
+            ReleaseFeature("flow-batch-scene-159", "Batch de cenas no Flow",
+                "Seleciona de 2 a 8 cenas e envia texto para refinamento assíncrono após confirmação e aviso de custo.", "check"),
+            ReleaseFeature("flow-batch-safe-159", "Revisar resultados por cena",
+                "Consulta jobs manualmente e aplica sugestões somente após revisão, recusando cenas alteradas.", "captions"),
+            ReleaseFeature("flow-batch-rest-159", "Recuperação inline da API Batch",
+                "Corrige leitura das respostas REST e preserva vínculo dos jobs com projeto e cenas sem armazenar prompts.", "check")
+        )),
+        ReleaseSummary("0.1.158", listOf(
+            ReleaseFeature("gemini-batch-text-158", "Lotes Gemini de texto opcionais",
+                "Permite enviar, após confirmação, pequenos jobs de texto Batch com modelo compatível e plano pago.", "check"),
+            ReleaseFeature("gemini-batch-recovery-158", "Consultar e recuperar jobs",
+                "Grava somente identificadores, consulta estado manualmente e recupera resultados inline sem nova geração.", "captions"),
+            ReleaseFeature("gemini-batch-safety-158", "Proteção contra envio duplicado",
+                "Registra envio incerto antes da chamada, não repete automaticamente nem troca de projeto silenciosamente.", "check")
+        )),
+        ReleaseSummary("0.1.157", listOf(
+            ReleaseFeature("gemini-usage-latency-157", "Tempo real das operações Gemini",
+                "Narrações, legendas e descrições registram duração da requisição em ms para diagnóstico local.", "check"),
+            ReleaseFeature("gemini-usage-charts-157", "Gráficos de uso por função",
+                "Painel apresenta tentativas, sucessos, falhas e tendência diária a partir de eventos locais.", "captions"),
+            ReleaseFeature("gemini-pricing-estimates-157", "Custos opcionais configuráveis",
+                "Tarifas USD/1M informadas por projeto e modelo; estimativas parciais sem afirmar saldo ou cobrança oficial.", "check")
+        )),
         ReleaseSummary("0.1.156", listOf(
             ReleaseFeature("gemini-checkpoint-subtitles-156", "Legendas Gemini recuperáveis",
                 "Resultados concluídos ficam em cache local temporário, para revisar e restaurar sem nova chamada.", "captions"),

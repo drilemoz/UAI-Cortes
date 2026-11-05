@@ -121,6 +121,8 @@ internal class GeminiTtsClient(context: Context? = null) {
     private suspend fun requestOnce(path: String, key: String, body: JSONObject? = null, max: Int = 1024 * 1024): JSONObject =
         withContext(Dispatchers.IO) {
             coroutineContext.ensureActive()
+            val startedNs = System.nanoTime()
+            fun elapsedMs(): Long = ((System.nanoTime() - startedNs) / 1_000_000L).coerceAtLeast(0L)
             val conn = URL("https://generativelanguage.googleapis.com/v1beta/$path").openConnection() as HttpURLConnection
             active.set(conn)
             try {
@@ -150,14 +152,14 @@ internal class GeminiTtsClient(context: Context? = null) {
                         }
                     }.getOrNull().orEmpty()
                     if (path == "interactions") usage?.safeRecord(key, body?.optString("model").orEmpty(),
-                        "narracao", status = if (status == 429) "429" else "erro_$status")
+                        "narracao", status = if (status == 429) "429" else "erro_$status", latencyMs = elapsedMs())
                     throw GeminiApiError(status, safeCode)
                 }
                 val result = conn.inputStream.use { readLimit(it, max) }
                 coroutineContext.ensureActive()
                 JSONObject(result.toString(Charsets.UTF_8)).also { response ->
                     if (path == "interactions") usage?.safeRecord(key, body?.optString("model").orEmpty(),
-                        "narracao", response)
+                        "narracao", response, latencyMs = elapsedMs())
                 }
             } catch (e: UnknownHostException) { throw IOException("Sem conexão com a internet.") }
             catch (e: SocketTimeoutException) { throw IOException("A conexão com Gemini excedeu o tempo limite.") }

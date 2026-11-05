@@ -187,6 +187,10 @@ internal class GeminiSubtitleClient(context: Context? = null) {
         val valid=GeminiKeyParser.validate(key)
         val wav=SubtitleAudioCache.getOrPrepare(context,project,onProgress)
         var remote: String? = null
+        var interactionStartedNs: Long? = null
+        fun elapsedMs(): Long? = interactionStartedNs?.let {
+            ((System.nanoTime() - it) / 1_000_000L).coerceAtLeast(0L)
+        }
         try {
             onProgress(60,"Preparando envio do áudio ao Gemini…")
             val (uri,name,state)=upload(wav,valid,onProgress)
@@ -197,15 +201,17 @@ internal class GeminiSubtitleClient(context: Context? = null) {
             }
             currentCoroutineContext().ensureActive()
             onProgress(null,"Transcrevendo fala e identificando horários…")
+            interactionStartedNs = System.nanoTime()
             val response=interaction(uri,valid)
-            usage?.safeRecord(valid, "gemini-3.5-transcribe", "legendas", response)
+            usage?.safeRecord(valid, "gemini-3.5-transcribe", "legendas", response, latencyMs = elapsedMs())
             currentCoroutineContext().ensureActive()
             val cues=GeminiSubtitleParser.parse(response,project.durationMs)
             onProgress(100,"Transcrição concluída")
             cues
         } catch(e: GeminiHttpException) {
             usage?.safeRecord(valid, "gemini-3.5-transcribe", "legendas",
-                status = if (e.statusCode == 429) "429" else "erro_${e.statusCode}")
+                status = if (e.statusCode == 429) "429" else "erro_${e.statusCode}",
+                latencyMs = elapsedMs())
             throw e
         } catch(e: UnknownHostException) {throw IOException("Sem conexão com a internet.")}
         catch(e: SocketTimeoutException) {throw IOException("O Gemini demorou a responder.")}

@@ -311,6 +311,7 @@ internal fun GeminiSettingsScreen(back: () -> Unit) {
         Heading("Google Gemini", back)
         GeminiSettingsSection()
         GeminiUsagePanel()
+        GeminiBatchSection()
         Spacer(Modifier.height(12.dp))
     }
 }

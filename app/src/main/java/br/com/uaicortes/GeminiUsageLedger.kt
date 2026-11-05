@@ -46,7 +46,7 @@ internal object GeminiUsagePolicy {
 
 internal data class GeminiUsageEvent(
     val at: Long, val project: String, val model: String, val operation: String,
-    val status: String, val tokens: GeminiTokenUsage?
+    val status: String, val tokens: GeminiTokenUsage?, val latencyMs: Long? = null
 )
 
 /** Histórico exclusivamente local. Não armazena prompts, mídia, respostas ou chaves. */
@@ -62,13 +62,14 @@ internal class GeminiUsageLedger(context: Context) {
     }.getOrNull() ?: "Projeto não informado"
 
     fun record(key: String, model: String, operation: String,
-        response: JSONObject? = null, status: String = "ok") = synchronized(storageLock) {
+        response: JSONObject? = null, status: String = "ok", latencyMs: Long? = null) = synchronized(storageLock) {
         val now = System.currentTimeMillis()
         val event = JSONObject().put("at", now)
             .put("project", identifyProject(key).take(100))
             .put("model", model.take(90))
             .put("operation", operation.take(35))
             .put("status", status.take(24))
+        latencyMs?.takeIf { it in 0L..600_000L }?.let { event.put("latencyMs", it) }
         val usage = response?.let(GeminiUsagePolicy::parse)
         if (usage != null) {
             usage.input?.let { event.put("input", it) }
@@ -100,7 +101,8 @@ internal class GeminiUsageLedger(context: Context) {
             val metrics = if (listOf("total", "input", "output", "thoughts", "cached").any(obj::has))
                 GeminiTokenUsage(n("input"), n("output"), n("thoughts"), n("cached"), n("total")) else null
             out += GeminiUsageEvent(obj.optLong("at", 0L), obj.optString("project"),
-                obj.optString("model"), obj.optString("operation"), obj.optString("status"), metrics)
+                obj.optString("model"), obj.optString("operation"), obj.optString("status"), metrics,
+                n("latencyMs")?.takeIf { it <= 600_000L })
         }
         out
     }
@@ -119,6 +121,6 @@ internal class GeminiUsageLedger(context: Context) {
 
 /** Nunca interromper uma geração de IA por falha ao salvar estatísticas opcionais. */
 internal fun GeminiUsageLedger.safeRecord(key: String, model: String, operation: String,
-    response: JSONObject? = null, status: String = "ok") {
-    runCatching { record(key, model, operation, response, status) }
+    response: JSONObject? = null, status: String = "ok", latencyMs: Long? = null) {
+    runCatching { record(key, model, operation, response, status, latencyMs) }
 }

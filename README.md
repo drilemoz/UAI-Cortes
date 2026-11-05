@@ -1,3 +1,24 @@
+# Uai Cortes · versão 0.1.159 (05/11/2026)
+- **Prompts Flow + Gemini Batch:** integração opcional dentro da tela Flow (projetos de vídeo e conjuntos locais). Seleciona 2–8 cenas não vazias por envio, modelo de TEXTO compatível, chave/projeto existente, confirmação de possível cobrança e consentimento explícito por envio. Contexto e cena textual são enviados; estilo-base, vídeo, áudio, imagem e credenciais NÃO entram nos prompts.
+- **Acompanhamento e revisão:** job `batches/...` fica associado ao identificador local do Flow, números das cenas, modelo, projeto, perfil e SHA-256 do estado original; não persiste texto ou resultados do Gemini. Consulta estado manualmente e oferece revisão individual; só aplica se o resultado é válido e a cena/contexto não mudaram. Preserva original quando houve alteração.
+- **Evita duplicidade:** checkpoint REVIEW é salvo antes do POST; jamais reenvia automaticamente após erro ou desconexão. Permite listar jobs do perfil e vincular manualmente um identificador remoto a envio incerto com confirmação. Bloqueia o mesmo conjunto de cenas enquanto há job potencialmente ativo.
+- **Parsing REST Batch:** corrige leitura do envelope oficial `output.inlinedResponses.inlinedResponses` e reconhece falhas por item; mantém o uso anterior do Batch genérico. Sem geração TTS, upload de mídia, serviço em segundo plano, estimativa de saldo oficial ou aplicação automática.
+- **Validação:** ver `docs/VALIDATION_0.1.159.md`. Preservar schemaVersion=4, 5 APKs Release, histórico e dados anteriores.
+
+# Uai Cortes · versão 0.1.158 (05/11/2026)
+- **Gemini Batch TEXTO opcional:** ferramenta expansível na página de Google Gemini. Envia de 2 a 8 pedidos curtos independentes, com escolha explícita de modelo de texto e aceite de possível cobrança do plano pago; nenhum job é criado ao abrir a tela. Só usa uma chave/projeto selecionado, sem failover, retry ou processamento local em segundo plano.
+- **Gerenciamento seguro de jobs:** registra ANTES do POST um marcador de envio incerto para evitar duplicações em perda de conexão; após sucesso, guarda `batches/...`, projeto, perfil, modelo, estado e quantidade. Consultas são manuais; permite recuperar um job pelo identificador quando foi criado externamente, consultar estado e selecionar/copiar resultados inline. O registro local pode ser ocultado sem cancelar job remoto.
+- **Privacidade:** prompts e respostas não são persistidos, apenas metadados privados de jobs (`gemini_batch_local_v1` fora dos backups). Falta de ID remoto exige revisão; nunca reenvia automaticamente. Texto enviado ao Google somente após confirmação; não altera WAVs, timeline, legendas nem MP4.
+- **Limites reais:** API Batch tem cotas separadas, é assíncrona, pode levar até 24 h e a redução anunciada de preço depende do modelo/plano; o Uai Cortes não afirma saldo ou custo oficial. Não é Batch TTS e não sintetiza vozes desta tela.
+- **Validação:** ver `docs/VALIDATION_0.1.158.md` para testes executados e pendências. Manter schemaVersion 4, cinco APKs Release e ferramentas anteriores.
+
+# Uai Cortes · versão 0.1.157 (05/11/2026)
+- **Consumo Gemini:** painel com gráfico compacto por função e tendência diária (até sete dias visíveis), sucesso/erro e latência média REAL de chamadas registradas por TTS, legendas e descrição/Flow. Nenhum tempo é simulado para operações anteriores.
+- **Tarifas manuais opcionais:** campos separados de USD/1 milhão tokens de entrada e saída por projeto/modelo; só somar operações com ambos os valores de uso informados pela API. Não é saldo oficial, fatura nem cálculo garantido de custo para modalidade, cache ou nível diferente.
+- **Estimativa antes do lote:** após cinco gerações comparáveis com tokens completos e tarifa informada, exibe custo local aproximado e identifica amostras insuficientes. Nunca altera modelo, chave ou cota da API.
+- **Privacidade:** sem guardar prompts, WAVs ou chaves no histórico; preços ficam em preferências privadas, fora do backup do projeto; schemaVersion 4, fluxo de exportação e cinco APKs preservados.
+- **Validação:** testes Kotlin/JVM + contratos Python e análise sintática. Compilação Android, preços reais e aparência no dispositivo ainda precisam de CI/teste físico.
+
 # Uai Cortes · versão 0.1.156 (05/11/2026)
 **Gemini 0.1.156:** recuperação local e manual de legendas e descrição geradas, com checkpoint atômico temporário privado e validação por fingerprint; chamadas interrompidas não são repetidas automaticamente. Diagnóstico de erros categorizado e consumo agrupado por operação no painel Gemini. Sem alterar chaves, mídia de origem, projetos JSON (schema 4) ou exportação. Build Android e testes reais pendentes.
 
