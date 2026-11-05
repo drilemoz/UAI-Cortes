@@ -16,12 +16,20 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.153"
-    const val VERSION_CODE = 154
+    const val VERSION_NAME = "0.1.154"
+    const val VERSION_CODE = 155
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
-        ReleaseSummary("0.1.153", listOf(
+        ReleaseSummary("0.1.154", listOf(
+            ReleaseFeature("gemini-usage-windows-154", "Cotas por minuto e por dia",
+                "Separação entre capacidade imediata RPM/TPM e projeção diária RPD, usando somente limites locais conhecidos.", "check"),
+            ReleaseFeature("gemini-voice-lot-plan-154", "Planejamento de lotes de voz",
+                "Identifica WAVs reutilizáveis e gera apenas falas pendentes, sem reiniciar as já concluídas.", "captions"),
+            ReleaseFeature("gemini-rpm-pacing-154", "Ritmo local de geração Gemini",
+                "Quando configurado, o RPM limita chamadas sequenciais; a geração fica em espera somente com a tela ativa.", "check")
+        )),
+        ReleaseSummary("0.1.154", listOf(
             ReleaseFeature("gemini-voice-favorites-153", "Vozes Gemini favoritas",
                 "Marque vozes com estrela e filtre favoritas, mantendo preferências locais entre projetos e sessões.", "captions"),
             ReleaseFeature("gemini-voice-selected-153", "Nome da voz escolhida",

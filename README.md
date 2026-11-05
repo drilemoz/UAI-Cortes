@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.154 (05/11/2026)
+- **Consumo Gemini:** agora e hoje (horário do Pacífico) aparecem separadamente; RPM, TPM de entrada e RPD mantêm significados próprios. Mostrar tempo aproximado até abrir a próxima janela RPM, quando há dados locais suficientes.
+- **Vozes IA:** planeja quantas chamadas novas são necessárias, contando WAVs existentes e válidos apenas quando a configuração da fala coincide. Arquivos concluídos permanecem disponíveis para retomar após interrupções.
+- **Ritmo RPM interativo:** respeita o limite manual por projeto e modelo ao gerar lotes, aguardando a janela seguinte com opção de cancelar; limite diário local informado é verificado antes da chamada. Sem limites configurados, mantém operação anterior.
+- Não consulta saldo oficial; não soma chaves do mesmo projeto nem repete chamadas ambíguas; não altera exportação, credenciais, legendas, mídias ou schemaVersion 4.
+- Testes Kotlin/JVM e contratos locais incluídos; compilação Android/fluxo Gemini real dependem de CI e testes físicos.
+
 # Uai Cortes · versão 0.1.153 (05/11/2026)
 **Vozes IA:** agora permite favoritagem local das vozes Gemini, filtro de favoritas, nome amigável no seletor geral e porcentagem real por WAV finalizado em lote. Durante cada chamada individual, o progresso permanece indeterminado porque a API não fornece avanço parcial; nenhuma cota é estimada por quantidade de chaves. As chaves, legendas e a timeline não foram alteradas.
 **CI128 — Publicação corrigida:** o workflow 128 passou em build/testes/Lint e verificou cinco APKs, mas a publicação foi rejeitada pela API GitHub porque as notas completas excedem 125.000 caracteres. O workflow gera notas curtas da versão atual sem apagar CHANGELOG/RELEASE_NOTES, testa o limite e atualiza notas de Releases existentes. Não altera o funcionamento Gemini ou a exportação de vídeo. Publicação v0.1.152 em CI ainda pendente.

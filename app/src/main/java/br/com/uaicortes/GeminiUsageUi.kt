@@ -59,13 +59,28 @@ internal fun GeminiUsageHint(operation: String, inputChars: Int? = null,
             if (paused) Text("Projeto em pausa temporária após 429 para este modelo.",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.error)
-            if (!paused) forecast.remainingByLocalLimits?.let { remaining ->
-                Text("Capacidade local estimada: até $remaining geração(ões), sob limites manuais " +
-                    "e uso registrado neste aparelho.", style = MaterialTheme.typography.bodySmall)
-                if (requestedCount > remaining) Text(
-                    "Atenção: as $requestedCount solicitações ultrapassam a estimativa local atual.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.error)
+            if (!paused) {
+                forecast.remainingNow?.let { nowRemaining ->
+                    Text("Agora: até $nowRemaining solicitação(ões) na janela local atual.",
+                        style = MaterialTheme.typography.bodySmall)
+                    if (requestedCount > nowRemaining) Text(
+                        "O lote excede a capacidade imediata estimada; a fila aguarda o RPM " +
+                            "quando esse limite estiver configurado.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error)
+                }
+                forecast.remainingToday?.let { daily ->
+                    Text("Hoje (Pacífico): até $daily tentativa(s) restantes neste aparelho, " +
+                        "segundo RPD manual.", style = MaterialTheme.typography.bodySmall)
+                    if (requestedCount > daily) Text("O lote excede o restante diário local informado. " +
+                        "As falas concluídas podem ser retomadas depois.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error)
+                }
+                forecast.nextRpmWindowMs?.let { wait ->
+                    Text("Próxima liberação RPM local em ~${(wait + 999L) / 1000L} s.",
+                        style = MaterialTheme.typography.labelSmall)
+                }
             }
             Text(forecast.label, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -183,10 +198,21 @@ internal fun GeminiUsagePanel() {
                                             val avg = f.averageTotal?.let { "$it tokens/ação" }
                                                 ?: "média pendente (${f.samples}/5 amostras)"
                                             val paused = keys.temporarilyBlocked(project, model)
-                                            val remaining = if (paused) " · pausa 429" else
-                                                f.remainingByLocalLimits?.let { " · até $it locais" } ?: ""
-                                            Text("${op.replaceFirstChar { it.uppercase() }}: $avg$remaining",
+                                            Text("${op.replaceFirstChar { it.uppercase() }}: $avg" +
+                                                if (paused) " · pausa temporária 429" else "",
                                                 style = MaterialTheme.typography.bodySmall)
+                                            if (!paused) {
+                                                Text("Agora: ${f.remainingNow?.let { "até $it" } ?: "indisponível"}" +
+                                                    " · Hoje (Pacífico): ${f.remainingToday?.let { "até $it" } ?: "indisponível"}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                if (f.remainingByRpm != null || f.remainingByTpm != null) Text(
+                                                    "RPM: ${f.remainingByRpm?.toString() ?: "?"}" +
+                                                        " · TPM entrada: ${f.remainingByTpm?.toString() ?: "?"}" +
+                                                        f.nextRpmWindowMs?.let { " · próxima janela ~${(it + 999L) / 1000L} s" }.orEmpty(),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            }
                                         }
                                         if (!limits.configured()) Text("Limites desconhecidos: sem saldo estimado.",
                                             style = MaterialTheme.typography.labelSmall,
@@ -203,7 +229,8 @@ internal fun GeminiUsagePanel() {
                         }
                     }
                 }
-                Text("Previsões usam somente solicitações deste aparelho e limites informados manualmente. " +
+                Text("Agora = limite imediato RPM/TPM; Hoje = limite RPD no Pacífico. " +
+                    "Estimativas usam somente este aparelho e limites informados manualmente. " +
                     "O uso externo, erros 429 e cotas oficiais podem reduzir o disponível.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)

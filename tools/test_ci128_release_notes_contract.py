@@ -14,7 +14,8 @@ def test() -> None:
     notes = render(raw, version, 'drilemoz/UAI-Cortes')
     assert notes.startswith(f'# Uai Cortes · versão {version}')
     assert len(notes.encode('utf-8')) <= MAX_PUBLICATION_BYTES < 125000
-    assert 'CI128' in notes
+    # Histórico CI128 continua no arquivo integral; a publicação usa só a versão atual.
+    assert 'CI128' in raw
     assert 'blob/main/RELEASE_NOTES.md' in notes
     assert len(raw) > len(notes) and '0.1.151' in raw
     script = (ROOT/'tools/release_notes_for_github.py')

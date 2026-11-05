@@ -40,24 +40,44 @@ internal class GeminiQuotaStore(context: Context) {
     }
 }
 
+/** Cada janela tem significado distinto: nunca apresentar RPM como saldo diário. */
 internal data class GeminiForecast(
     val samples: Int,
     val averageTotal: Long?,
     val averageInput: Long?,
-    val remainingByLocalLimits: Int?,
+    val remainingByLocalLimits: Int?, // compatibilidade: capacidade imediata conservadora
     val usedToday: Int,
-    val label: String
+    val label: String,
+    val remainingNow: Int? = null,
+    val remainingToday: Int? = null,
+    val remainingByRpm: Int? = null,
+    val remainingByTpm: Int? = null,
+    val usedLastMinute: Int = 0,
+    val nextRpmWindowMs: Long? = null
 )
 
 /** Nunca atribui eventos legados sem ID a um projeto cadastrado posteriormente. */
 internal object GeminiQuotaPolicy {
     private val pacific: ZoneId = ZoneId.of("America/Los_Angeles")
+    private const val MINUTE = 60_000L
     fun operationName(value: String): String = when {
         value.contains("narra", ignoreCase = true) -> "narracao"
         value.contains("legenda", ignoreCase = true) -> "legendas"
         value.contains("descri", ignoreCase = true) -> "descricao"
         value.contains("flow", ignoreCase = true) -> "flow"
         else -> value
+    }
+
+    /** Espera de ritmo local baseada nas tentativas registradas, nunca em saldo oficial. */
+    fun rpmWaitMs(events: List<GeminiUsageEvent>, project: String, model: String,
+        limit: Int?, now: Long = System.currentTimeMillis()): Long? {
+        if (limit == null || limit <= 0 || project.isBlank() || model.isBlank()) return null
+        val recent = events.filter { it.project == project && it.model == model &&
+            it.at > now - MINUTE && it.at <= now }.sortedBy { it.at }
+        if (recent.size < limit) return null
+        // Se houver excesso de chamadas, esperar a (n - limite + 1)-ésima mais antiga expirar.
+        val oldestToExpire = recent[recent.size - limit].at
+        return (oldestToExpire + MINUTE + 500L - now).coerceIn(1L, MINUTE + 500L)
     }
 
     fun compute(events: List<GeminiUsageEvent>, project: String, model: String,
@@ -78,28 +98,30 @@ internal object GeminiQuotaPolicy {
         val localToday = modelEvents.count {
             Instant.ofEpochMilli(it.at).atZone(pacific).toLocalDate() == today
         }
+        val lastMinute = modelEvents.filter { it.at > now - MINUTE }
+        val availableDaily = limits.rpd?.let { (it - localToday).coerceAtLeast(0) }
+        val availableRpm = limits.rpm?.let { (it - lastMinute.size).coerceAtLeast(0) }
+        // TPM é de ENTRADA: nunca substituir tokens de entrada ausentes por total/output.
+        val availableTpm = limits.tpmInput?.let { limit ->
+            if (avgInput != null && lastMinute.all { it.tokens?.input != null }) {
+                val used = lastMinute.sumOf { it.tokens?.input ?: 0L }
+                ((limit - used).coerceAtLeast(0L) / avgInput)
+                    .coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+            } else null
+        }
+        val availableNow = listOfNotNull(availableDaily, availableRpm, availableTpm).minOrNull()
         if (!limits.configured()) return GeminiForecast(totals.size, avgTotal, avgInput, null,
-            localToday, "Sem limites configurados; não é possível estimar o restante.")
-        val available = mutableListOf<Long>()
-        limits.rpd?.let { available += (it.toLong() - localToday).coerceAtLeast(0) }
-        limits.rpm?.let { limit ->
-            val used = modelEvents.count { it.at > now - 60_000L }
-            available += (limit.toLong() - used).coerceAtLeast(0)
-        }
-        // TPM significa tokens de ENTRADA por minuto; nunca subtrair total/output como se fosse input.
-        limits.tpmInput?.let { limit ->
-            if (avgInput != null && modelEvents.filter { it.at > now - 60_000L }
-                .all { it.tokens?.input != null }) {
-                val used = modelEvents.filter { it.at > now - 60_000L }.sumOf { it.tokens?.input ?: 0L }
-                available += ((limit - used).coerceAtLeast(0L) / avgInput)
-            }
-        }
-        val remaining = available.minOrNull()?.coerceAtMost(Int.MAX_VALUE.toLong())?.toInt()
+            localToday, "Sem limites configurados; não é possível estimar o restante.",
+            usedLastMinute = lastMinute.size)
         val qualifier = when {
-            remaining == null -> "Limites ainda não disponíveis."
+            availableNow == null -> "Limites ainda não disponíveis."
             limits.tpmInput != null && avgInput == null -> "TPM sem média de entrada; projeção parcial."
             else -> "Projeção parcial dos limites manuais; limites não informados e uso externo podem reduzir o disponível."
         }
-        return GeminiForecast(totals.size, avgTotal, avgInput, remaining, localToday, qualifier)
+        return GeminiForecast(totals.size, avgTotal, avgInput, availableNow, localToday, qualifier,
+            remainingNow = availableNow, remainingToday = availableDaily,
+            remainingByRpm = availableRpm, remainingByTpm = availableTpm,
+            usedLastMinute = lastMinute.size,
+            nextRpmWindowMs = if (availableRpm == 0) rpmWaitMs(modelEvents, project, model, limits.rpm, now) else null)
     }
 }

@@ -49,6 +49,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
     val store = remember(project.id) { VoiceIaDraftStore(context, project.id) }
     val credentials = remember(context) { GeminiCredentialStore(context) }
     val api = remember(context) { GeminiTtsClient(context) }
+    val pacing = remember(context) { GeminiLocalPacing(context) }
     val favoritesStore = remember(context) { GeminiVoiceFavorites(context) }
     var favoriteVoiceIds by remember(context) { mutableStateOf(favoritesStore.load()) }
     var cachedVoiceNames by remember(context) { mutableStateOf(favoritesStore.names()) }
@@ -174,6 +175,15 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                             cue.id != regenerateId && VoiceIaPolicy.matches(it, cue, voiceId, model, direction)
                         }
                         if (existing == null) {
+                            withContext(Dispatchers.IO) {
+                                pacing.beforeRequest(model) { waitMs ->
+                                    withContext(Dispatchers.Main) {
+                                        status = "Aguardando ${((waitMs + 999L) / 1000L)} s: " +
+                                            "ritmo RPM configurado para o modelo. $completed/${chosen.size} concluídas."
+                                    }
+                                }
+                            }
+                            coroutineContext.ensureActive()
                             status = "Gerando ${completed + 1}/${chosen.size}: ${cue.text.take(50)}"
                             val nextStart = cues.firstOrNull { it.startMs > cue.startMs }?.startMs
                             val available = (minOf(cue.endMs, nextStart ?: Long.MAX_VALUE,
@@ -279,8 +289,11 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
         }
         // Uma única barra compacta: mantém as seis ações visíveis sem rolagem horizontal.
         // Surface evita as larguras mínimas dos botões Material3 em telas estreitas.
-        val pending = cues.count { readyFor(it) == null }
-        val preparedCount = cues.size - pending
+        val batchPlan = VoiceIaBatchPlanner.plan(cues.map { cue ->
+            VoiceIaBatchItem(cue.id, readyFor(cue)?.let { File(it.filePath).isFile } == true)
+        })
+        val pending = batchPlan.toGenerate
+        val preparedCount = batchPlan.reusable
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -343,7 +356,9 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                         voicePickerForAll = true
                     } else {
                         forceCueId = null
-                        promptGenerate = cues.filter { readyFor(it) == null }.map { it.id }
+                        promptGenerate = cues.filter { cue ->
+                            readyFor(cue)?.let { File(it.filePath).isFile } != true
+                        }.map { it.id }
                     }
                 })
             VoiceIaToolbarAction(label = "Inserir $preparedCount", accessibilityLabel =
@@ -783,6 +798,14 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                 Text("Cada fala exige uma solicitação à API Gemini, que pode consumir cota ou gerar cobrança. " +
                     "Os arquivos são salvos individualmente; falhas não geram novas tentativas automáticas. " +
                     "Nenhuma voz entra na timeline sem a sua confirmação.")
+                if (count > 1) {
+                    val reusable = cues.count { cue ->
+                        cue.id !in ids && readyFor(cue)?.let { File(it.filePath).isFile } == true
+                    }
+                    Text("Planejamento: $count chamada(s) pendente(s), $reusable WAV(s) já reutilizáveis " +
+                        "com as configurações atuais. Cada WAV concluído fica salvo para retomar depois.",
+                        style = MaterialTheme.typography.bodySmall)
+                }
                 Text("O pedido inclui a duração aproximada da legenda; o Gemini pode devolver um WAV mais longo. " +
                     "Nenhuma palavra será removida pelo aplicativo.", style = MaterialTheme.typography.labelSmall)
                 GeminiUsageHint("narração", inputChars = cues.filter { it.id in ids }.sumOf { it.text.length },
