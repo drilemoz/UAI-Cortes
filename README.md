@@ -1,3 +1,7 @@
+# Uai Cortes · versão 0.1.144 (04/11/2026)
+
+**Vozes IA v0.1.144:** sincronização assistida com análise de conflito, ajuste local moderado de WAV que preserva o original, regeneração por ritmo confirmada, catálogo filtrável por características reais e botões compactos.
+
 # Uai Cortes · versão 0.1.143 (04/11/2026)
 
 ## Vozes IA: barra única de seis ações e seletores organizados

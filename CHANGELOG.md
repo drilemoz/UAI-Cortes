@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.144 (04/11/2026)
+
+- **Vozes IA:** assistente verifica fim da legenda, próxima fala e fim do projeto; oferece derivação offline em WAV (até 1,25×, com pré-escuta recomendada), ou regeneração Gemini com orientação aproximada, sem cortes silenciosos nem edição automática das legendas.
+- **Catálogo e UI:** pesquisa e filtros combináveis por gênero e altura declarados, nomes amigáveis dos IDs conhecidos, ações compactas; dados originais e WAV anterior preservados.
+- **Compatibilidade:** rascunho antigo continua legível, sem mudança no JSON principal/schemaVersion 4; uso de API exige confirmação e a exportação só utiliza WAV ajustado após Inserir/Trocar.
+
 # Uai Cortes · versão 0.1.143 (04/11/2026)
 
 ## Vozes IA: barra única de seis ações e seletores organizados

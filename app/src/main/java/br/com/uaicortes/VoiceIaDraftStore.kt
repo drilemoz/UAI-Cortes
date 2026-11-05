@@ -11,18 +11,26 @@ import java.security.MessageDigest
 internal data class VoiceIaTake(
     val cueId: String, val cueFingerprint: String, val voiceId: String,
     val model: String, val style: String, val filePath: String,
-    val durationMs: Long, val sha256: String
+    val durationMs: Long, val sha256: String,
+    /** O WAV original permanece imutável após correção local. */
+    val sourceFilePath: String? = null, val sourceDurationMs: Long? = null,
+    val requestStyle: String? = null
 ) {
     fun json(): JSONObject = JSONObject().put("cueId", cueId)
         .put("cueFingerprint", cueFingerprint).put("voiceId", voiceId)
         .put("model", model).put("style", style).put("filePath", filePath)
         .put("durationMs", durationMs).put("sha256", sha256)
+        .put("sourceFilePath", sourceFilePath).put("sourceDurationMs", sourceDurationMs)
+        .put("requestStyle", requestStyle)
     companion object {
         fun read(value: JSONObject) = VoiceIaTake(value.getString("cueId"),
             value.getString("cueFingerprint"), value.getString("voiceId"),
             value.getString("model"), value.getString("style"),
             value.getString("filePath"), value.getLong("durationMs"),
-            value.getString("sha256"))
+            value.getString("sha256"),
+            value.optString("sourceFilePath").takeUnless { it.isBlank() || it == "null" },
+            value.optLong("sourceDurationMs", 0L).takeIf { it > 0L },
+            value.optString("requestStyle").takeUnless { it.isBlank() || it == "null" })
     }
 }
 
@@ -63,7 +71,9 @@ internal class VoiceIaDraftStore(context: Context, projectId: String) {
 
     fun valid(take: VoiceIaTake): Boolean = try {
         val audio = File(take.filePath).canonicalFile
+        val original = take.sourceFilePath?.let { File(it).canonicalFile }
         if (audio.parentFile != audioDir || !audio.isFile ||
+            (original != null && (original.parentFile != audioDir || !original.isFile)) ||
             take.durationMs < 250L || take.sha256.length != 64 || audio.length() > 32L * 1024 * 1024) false
         else {
             val digest = MessageDigest.getInstance("SHA-256")

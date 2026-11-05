@@ -17,11 +17,11 @@ assert 'semantics { contentDescription = accessibilityLabel }' in ui
 assert 'Collator.getInstance(Locale.forLanguageTag("pt-BR"))' in ui
 assert 'sortedVoices = catalog.sortedWith' in ui
 assert 'sortedStyles = GeminiNarrationStyling.presets.sortedWith' in ui
-assert 'heightIn(max = 310.dp)' in ui and 'heightIn(max = 320.dp)' in ui
+assert 'heightIn(max = 310.dp)' in ui and 'heightIn(max = 245.dp)' in ui
 assert 'currentStyle == preset.label' in ui
 assert 'VoiceIaShortLabels' in ui
 assert 'pendingVoiceForAll' in ui and 'pendingStyleForAll' in ui
-assert 'api.synthesize(key, model, voiceId, direction, cue.text)' in ui
+assert 'api.synthesize(key, model, voiceId, requestStyle, cue.text)' in ui
 assert 'Text("WAV' not in ui or 'VoiceIaDisplayPolicy.overrunMs' in ui
 assert 'SubtitleOverlayOnFrame(selected, editable = false' in ui
 print('OK: barra única, 6 ações, cantos 8dp, catálogos alfabéticos, listas menores e políticas preservadas')

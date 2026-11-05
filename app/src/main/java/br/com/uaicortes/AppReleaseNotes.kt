@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.143"
-    const val VERSION_CODE = 144
+    const val VERSION_NAME = "0.1.144"
+    const val VERSION_CODE = 145
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.144", listOf(
+            ReleaseFeature("voice-ia-sync-144", "Sincronização assistida de voz",
+                "Diferença real de duração, aviso de sobreposição e ajuste WAV offline limitado com original preservado; regeneração guiada exige confirmação.", "captions"),
+            ReleaseFeature("voice-ia-filters-144", "Vozes Gemini fáceis de encontrar",
+                "Pesquisa, filtros de gênero e altura informados pelo catálogo, nomes curtos e botões compactos por fala.", "check")
+        )),
         ReleaseSummary("0.1.143", listOf(
             ReleaseFeature("voice-ia-one-row-143", "Vozes IA em uma barra compacta",
                 "Buscar, Lite/Flash, Voz, Humor, Gerar e Inserir na mesma linha, com cantos discretos e contadores curtos.", "captions"),

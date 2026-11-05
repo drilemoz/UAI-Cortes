@@ -75,6 +75,8 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
     var pendingInsertId by remember { mutableStateOf<String?>(null) }
     var pendingBatchInsert by remember { mutableStateOf(false) }
     var pendingDeleteId by remember { mutableStateOf<String?>(null) }
+    var pendingSyncId by remember { mutableStateOf<String?>(null) }
+    var quickGenerateId by remember { mutableStateOf<String?>(null) }
     var defaultVoice by remember(project.id) { mutableStateOf<String?>(null) }
     val voiceOverrides = remember(project.id) { mutableStateMapOf<String, String>() }
     var model by remember(project.id) { mutableStateOf(GeminiModels.LITE) }
@@ -141,7 +143,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
         if (onSave(changed)) status = "Voz salva na linha Vozes. Toque na faixa no editor para ajustar ou substituir."
         else status = "Falha ao salvar o projeto. O WAV preparado continua disponível."
     }
-    fun generate(ids: List<String>, regenerateId: String? = null) {
+    fun generate(ids: List<String>, regenerateId: String? = null, quickId: String? = null) {
         if (busy || !loaded || catalogBusy) return
         val chosen = cues.filter { it.id in ids }
         if (chosen.isEmpty()) return
@@ -161,14 +163,18 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                         }
                         if (existing == null) {
                             status = "Gerando ${completed + 1}/${chosen.size}: ${cue.text.take(50)}"
-                            val response = api.synthesize(key, model, voiceId, direction, cue.text)
+                            val nextStart = cues.firstOrNull { it.startMs > cue.startMs }?.startMs
+                            val available = (minOf(cue.endMs, nextStart ?: Long.MAX_VALUE,
+                                project.durationMs) - cue.startMs).coerceAtLeast(250L)
+                            val requestStyle = VoiceIaSync.guidance(direction, available, quickId == cue.id)
+                            val response = api.synthesize(key, model, voiceId, requestStyle, cue.text)
                             val savedFile = withContext(Dispatchers.IO) {
                                 coroutineContext.ensureActive()
                                 GeminiAudioFiles.save(context, response)
                             }
                             val take = VoiceIaTake(cue.id, VoiceIaPolicy.fingerprint(cue), voiceId,
                                 model, direction, savedFile.absolutePath, response.durationMs,
-                                GeminiNarrationCheckpoint.hash(response.bytes))
+                                GeminiNarrationCheckpoint.hash(response.bytes), requestStyle = requestStyle)
                             val updated = takes.filterNot { it.cueId == cue.id } + take
                             withContext(Dispatchers.IO) { store.save(updated) }
                             takes = updated
@@ -184,6 +190,56 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
             } catch (e: Exception) {
                 status = "Interrompido em ${completed + 1}/${chosen.size}: ${e.message?.take(130) ?: "falha local"}. Não haverá repetição automática."
             } finally { busy = false; generationJob = null }
+        }
+    }
+    fun adjustWav(cue: SubtitleCue, take: VoiceIaTake, targetMs: Long) {
+        if (busy) return
+        scope.launch {
+            busy = true
+            try {
+                val updated = withContext(Dispatchers.IO) {
+                    val source = File(take.sourceFilePath ?: take.filePath)
+                    val wave = VoiceIaWavStretch.shorten(source.readBytes(), targetMs)
+                    val saved = GeminiAudioFiles.save(context, wave)
+                    take.copy(filePath = saved.absolutePath, durationMs = wave.durationMs,
+                        sha256 = GeminiNarrationCheckpoint.hash(wave.bytes),
+                        sourceFilePath = source.absolutePath,
+                        sourceDurationMs = take.sourceDurationMs ?: take.durationMs)
+                }
+                if (takes.firstOrNull { it.cueId == cue.id } != take) {
+                    status = "A fala mudou durante o ajuste. O WAV original continua preservado."
+                } else {
+                    val copy = takes.filterNot { it.cueId == cue.id } + updated
+                    withContext(Dispatchers.IO) { store.save(copy) }
+                    takes = copy
+                    status = "Ajuste salvo em novo WAV (${formatPipMs(updated.durationMs)}). " +
+                        "Ouça antes de inserir ou substituir a faixa existente."
+                }
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) { status = "Não foi possível ajustar localmente: ${e.message?.take(120)}" }
+            finally { busy = false }
+        }
+    }
+    fun restoreOriginal(cue: SubtitleCue, take: VoiceIaTake) {
+        if (busy || take.sourceFilePath == null) return
+        scope.launch {
+            busy = true
+            try {
+                val original = withContext(Dispatchers.IO) {
+                    val file = File(take.sourceFilePath)
+                    val bytes = file.readBytes()
+                    val duration = GeminiWaveParser.duration(bytes, "audio/wav")
+                    take.copy(filePath = file.absolutePath, durationMs = duration,
+                        sha256 = GeminiNarrationCheckpoint.hash(bytes),
+                        sourceFilePath = null, sourceDurationMs = null)
+                }
+                val updated = takes.filterNot { it.cueId == cue.id } + original
+                withContext(Dispatchers.IO) { store.save(updated) }
+                takes = updated
+                status = "WAV original recuperado. Ouça e toque em Trocar para atualizar a timeline."
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) { status = "Não foi possível restaurar o WAV: ${e.message?.take(120)}" }
+            finally { busy = false }
         }
     }
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
@@ -328,8 +384,8 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                                     OutlinedButton(onClick = { voicePickerCueId = cue.id },
                                         enabled = !busy, shape = RoundedCornerShape(8.dp), modifier = Modifier.weight(1.45f),
                                         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)) {
-                                        Text(catalog.firstOrNull { it.id == voiceFor(cue) }?.let(GeminiVoicePresentation::label)
-                                            ?: voiceFor(cue) ?: "Escolher voz", maxLines = 1,
+                                        Text(VoiceIaShortLabels.voice(catalog.firstOrNull { it.id == voiceFor(cue) },
+                                            voiceFor(cue)), maxLines = 1,
                                             overflow = TextOverflow.Ellipsis, fontSize = 12.sp)
                                     }
                                     OutlinedButton(onClick = { stylePickerCueId = cue.id }, enabled = !busy,
@@ -345,12 +401,30 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                                 if (take != null) {
                                     val overrunMs = VoiceIaDisplayPolicy.overrunMs(
                                         cue.startMs, cue.endMs, take.durationMs)
-                                    Text(if (overrunMs > 0L)
-                                        "WAV ${formatPipMs(take.durationMs)} · +${VoiceIaDisplayPolicy.seconds(overrunMs)} s além da legenda"
-                                    else "WAV ${formatPipMs(take.durationMs)} · dentro da legenda",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = if (overrunMs > 0L) MaterialTheme.colorScheme.error
-                                        else MaterialTheme.colorScheme.onSurfaceVariant)
+                                    val nextCue = cues.firstOrNull { it.startMs > cue.startMs }
+                                    val voiceStart = inserted?.startMs ?: cue.startMs
+                                    val review = VoiceIaSync.review(voiceStart, cue.endMs,
+                                        nextCue?.startMs, project.durationMs, take.durationMs)
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(if (review.excessMs > 0)
+                                            "WAV ${formatPipMs(take.durationMs)} · +${VoiceIaDisplayPolicy.seconds(review.excessMs)} s fora da janela"
+                                        else "WAV ${formatPipMs(take.durationMs)} · sincronizado",
+                                            modifier = Modifier.weight(1f),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = if (review.excessMs > 0L) MaterialTheme.colorScheme.error
+                                            else MaterialTheme.colorScheme.onSurfaceVariant)
+                                        if (take.sourceFilePath != null) TextButton(onClick = {
+                                            restoreOriginal(cue, take)
+                                        }, enabled = !busy, contentPadding = PaddingValues(horizontal = 4.dp)) {
+                                            Text("Original", fontSize = 11.sp)
+                                        }
+                                        if (review.excessMs > 0L) TextButton(onClick = {
+                                            pendingSyncId = cue.id
+                                        }, enabled = !busy, contentPadding = PaddingValues(horizontal = 5.dp)) {
+                                            Icon(Icons.Default.Tune, "Ajustar sincronização", Modifier.size(15.dp))
+                                            Text("Ajustar", fontSize = 11.sp)
+                                        }
+                                    }
                                 }
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Button(onClick = {
@@ -361,7 +435,10 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                                         }
                                     }, enabled = !busy && loaded, shape = RoundedCornerShape(8.dp),
                                         modifier = Modifier.weight(1f), contentPadding = PaddingValues(6.dp)) {
-                                        Text(if (take == null) "Gerar" else "Refazer", fontSize = 12.sp)
+                                        Icon(if (take == null) Icons.Default.AutoAwesome else Icons.Default.Refresh,
+                                            contentDescription = null, modifier = Modifier.size(15.dp))
+                                        Spacer(Modifier.width(2.dp))
+                                        Text(if (take == null) "Gerar" else "Refazer", fontSize = 11.sp)
                                     }
                                     OutlinedButton(onClick = {
                                         if (take == null) return@OutlinedButton
@@ -374,12 +451,14 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                                         }
                                     }, enabled = take != null && !busy, shape = RoundedCornerShape(8.dp),
                                         modifier = Modifier.weight(1f), contentPadding = PaddingValues(6.dp)) {
-                                        Text(if (playingFile == take?.filePath) "Pausar" else "Ouvir", fontSize = 12.sp)
+                                        Icon(if (playingFile == take?.filePath) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                            contentDescription = null, modifier = Modifier.size(15.dp))
+                                        Text(if (playingFile == take?.filePath) "Pausa" else "Ouvir", fontSize = 11.sp)
                                     }
                                     Button(onClick = { pendingInsertId = cue.id },
                                         enabled = take != null && !busy, shape = RoundedCornerShape(8.dp),
                                         modifier = Modifier.weight(1.3f), contentPadding = PaddingValues(6.dp)) {
-                                        Text(if (inserted == null) "Inserir" else "Substituir", fontSize = 12.sp)
+                                        Text(if (inserted == null) "Inserir" else "Trocar", fontSize = 11.sp)
                                     }
                                 }
                                 if (inserted != null) {
@@ -406,25 +485,56 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
         val sortedVoices = catalog.sortedWith { a, b ->
             comparator.compare(GeminiVoicePresentation.label(a), GeminiVoicePresentation.label(b))
         }
+        var voiceQuery by remember(targetId, forAll) { mutableStateOf("") }
+        var genderFilter by remember(targetId, forAll) { mutableStateOf("Todas") }
+        var pitchFilter by remember(targetId, forAll) { mutableStateOf("Todos") }
+        val filteredVoices = GeminiVoiceSearch.byPitch(
+            GeminiVoiceSearch.byGender(GeminiVoiceSearch.filter(sortedVoices, voiceQuery), genderFilter),
+            pitchFilter)
         AlertDialog(onDismissRequest = { voicePickerCueId = null; voicePickerForAll = false },
             modifier = Modifier.padding(horizontal = 10.dp), shape = RoundedCornerShape(14.dp),
             title = { Text(if (forAll) "Voz para todas" else "Escolher voz Gemini", fontSize = 18.sp) },
             text = {
-                if (sortedVoices.isEmpty()) Text("Busque o catálogo Gemini no ícone ✨ antes de selecionar.")
-                else LazyColumn(Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
-                    itemsIndexed(sortedVoices, key = { _, voice -> voice.id }) { _, voice ->
+                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    if (sortedVoices.isEmpty()) Text("Busque o catálogo Gemini no ícone ✨ antes de selecionar.")
+                    else {
+                        OutlinedTextField(value = voiceQuery, onValueChange = { voiceQuery = it },
+                            label = { Text("Buscar nome ou característica") },
+                            singleLine = true, modifier = Modifier.fillMaxWidth(),
+                            textStyle = MaterialTheme.typography.bodySmall)
+                        Row(Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            listOf("Todas", "Femininas", "Masculinas").forEach { filter ->
+                                FilterChip(selected = genderFilter == filter, onClick = { genderFilter = filter },
+                                    label = { Text(filter, fontSize = 11.sp) })
+                            }
+                        }
+                        Row(Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            listOf("Todos", "Graves", "Médias", "Agudas", "Não informado").forEach { filter ->
+                                FilterChip(selected = pitchFilter == filter, onClick = { pitchFilter = filter },
+                                    label = { Text(filter, fontSize = 11.sp) })
+                            }
+                        }
+                        Text("${filteredVoices.size} de ${sortedVoices.size} vozes · filtros por dados da API",
+                            style = MaterialTheme.typography.labelSmall)
+                        if (filteredVoices.isEmpty()) Text("Nenhuma voz corresponde aos filtros selecionados.")
+                        LazyColumn(Modifier.fillMaxWidth().heightIn(max = 245.dp)) {
+                            itemsIndexed(filteredVoices, key = { _, voice -> voice.id }) { _, voice ->
                         Column(Modifier.fillMaxWidth().clickable {
                             if (forAll) pendingVoiceForAll = voice.id
                             else if (targetId != null) voiceOverrides[targetId] = voice.id
                             voicePickerCueId = null
                             voicePickerForAll = false
                         }.padding(horizontal = 5.dp, vertical = 7.dp)) {
-                            Text(GeminiVoicePresentation.label(voice), fontSize = 14.sp,
+                            Text(VoiceIaShortLabels.voice(voice, voice.id), fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium)
                             Text(GeminiVoicePresentation.shortDetails(voice),
                                 style = MaterialTheme.typography.labelSmall)
                         }
                         HorizontalDivider()
+                            }
+                        }
                     }
                 }
             }, confirmButton = { TextButton(onClick = {
@@ -503,6 +613,8 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                 Text("Cada fala exige uma solicitação à API Gemini, que pode consumir cota ou gerar cobrança. " +
                     "Os arquivos são salvos individualmente; falhas não geram novas tentativas automáticas. " +
                     "Nenhuma voz entra na timeline sem a sua confirmação.")
+                Text("O pedido inclui a duração aproximada da legenda; o Gemini pode devolver um WAV mais longo. " +
+                    "Nenhuma palavra será removida pelo aplicativo.", style = MaterialTheme.typography.labelSmall)
                 GeminiUsageHint("narração", inputChars = cues.filter { it.id in ids }.sumOf { it.text.length },
                     model = model)
             } },
@@ -510,9 +622,11 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                 promptGenerate = null
                 val regenerate = forceCueId
                 forceCueId = null
-                generate(ids, regenerate)
+                val quick = quickGenerateId
+                quickGenerateId = null
+                generate(ids, regenerate, quick)
             }) { Text("Gerar") } },
-            dismissButton = { TextButton(onClick = { promptGenerate = null }) { Text("Cancelar") } })
+            dismissButton = { TextButton(onClick = { promptGenerate = null; quickGenerateId = null }) { Text("Cancelar") } })
     }
     if (pendingBatchInsert) {
         val validCues = cues.mapNotNull { cue ->
@@ -571,6 +685,51 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                 else "Falha ao salvar: os WAVs preparados continuam disponíveis."
             }, enabled = validCues.isNotEmpty() && !busy) { Text("Inserir faixas") } },
             dismissButton = { TextButton(onClick = { pendingBatchInsert = false }) { Text("Cancelar") } })
+    }
+    pendingSyncId?.let { id ->
+        val cue = cues.firstOrNull { it.id == id }
+        val take = cue?.let(::readyFor)
+        if (cue == null || take == null) LaunchedEffect(id) { pendingSyncId = null }
+        else {
+            val installed = project.audioTracks.firstOrNull { it.kind == VoiceIaPolicy.KIND && it.subtitleId == cue.id }
+            val startMs = installed?.startMs ?: cue.startMs
+            val nextStart = cues.firstOrNull { it.startMs > cue.startMs }?.startMs
+            val review = VoiceIaSync.review(startMs, cue.endMs, nextStart,
+                project.durationMs, take.durationMs)
+            AlertDialog(onDismissRequest = { pendingSyncId = null },
+                title = { Text("Sincronizar fala") },
+                text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Legenda: ${formatPipMs(review.availableMs)} · WAV: ${formatPipMs(take.durationMs)}")
+                    if (review.nextOverlapMs > 0) Text(
+                        "A voz invade a próxima legenda em ${formatPipMs(review.nextOverlapMs)}.",
+                        color = MaterialTheme.colorScheme.error)
+                    if (review.canStretch) Text(
+                        "Ajuste offline ${String.format(Locale.ROOT, "%.2f", review.requiredSpeed)}×: " +
+                        "preserva a altura aproximada da voz, mas pode criar artefatos. " +
+                        "O WAV original fica guardado; ouça antes de inserir.")
+                    else Text("Aceleração excessiva prejudicaria a naturalidade. " +
+                        "Prefira regenerar com ritmo mais rápido ou editar os horários na tela Legendas.")
+                    Text("Os horários e o texto das legendas não serão alterados.",
+                        style = MaterialTheme.typography.labelSmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (review.canStretch) Button(onClick = {
+                            pendingSyncId = null
+                            adjustWav(cue, take, review.availableMs)
+                        }, modifier = Modifier.weight(1f), enabled = !busy) {
+                            Text("Ajustar WAV", fontSize = 12.sp)
+                        }
+                        OutlinedButton(onClick = {
+                            pendingSyncId = null
+                            quickGenerateId = cue.id
+                            forceCueId = cue.id
+                            promptGenerate = listOf(cue.id)
+                        }, modifier = Modifier.weight(1f), enabled = !busy) {
+                            Text("Regenerar breve", fontSize = 12.sp)
+                        }
+                    }
+                } },
+                confirmButton = { TextButton(onClick = { pendingSyncId = null }) { Text("Fechar") } })
+        }
     }
     pendingInsertId?.let { id ->
         val cue = cues.firstOrNull { it.id == id }
@@ -747,8 +906,19 @@ private fun VoiceIaToolbarAction(label: String, accessibilityLabel: String,
 
 /** Rótulos curtos somente na barra; nunca modificam estilo salvo nem prompt Gemini. */
 internal object VoiceIaShortLabels {
+    fun voice(voice: GeminiVoice?, voiceId: String?): String {
+        if (voice == null && voiceId.isNullOrBlank()) return "Escolher voz"
+        val raw = voice?.name?.ifBlank { voice.id } ?: voiceId.orEmpty()
+        val call = Regex("(?i)^(?:pt[-_]br[-_])?(?:csagent|call[ -]?center[ -]?agent)[ -]?(\\d+)$")
+            .matchEntire(raw)
+        if (call != null) return "Atendente ${call.groupValues[1]}"
+        val podcast = Regex("(?i)^(?:pt[-_]br[-_])?(?:podcaster|podcast[ -]?host)[ -]?(\\d+)$")
+            .matchEntire(raw)
+        if (podcast != null) return "Podcast ${podcast.groupValues[1]}"
+        return voice?.let(GeminiVoicePresentation::label) ?: raw
+    }
     fun style(name: String): String = when (name) {
-        "Neutra", "Humorística" -> "Humor"
+        "Humorística" -> "Humor"
         "Narrador profissional" -> "Narrador"
         "Contadora de histórias" -> "Histórias"
         "Jornalística" -> "Jornal"

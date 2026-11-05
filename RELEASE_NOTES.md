@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.144 (04/11/2026)
+
+- Novo ajuste assistido: detectar sobreposição, gerar WAV local derivado para pequenos desvios, preservar o original e exigir escuta antes de inserir. Para grandes diferenças, regenerar com ritmo orientado após confirmação de consumo Gemini.
+- Busca e filtros de vozes (feminina/masculina; grave/média/aguda) usando dados reais, botões curtos e nomes amigáveis para padrões reconhecidos.
+- Testar voz/tempo no aparelho e exportação MP4 antes de declarar fidelidade audiovisual.
+
 # Uai Cortes · versão 0.1.143 (04/11/2026)
 
 ## Vozes IA: barra única de seis ações e seletores organizados

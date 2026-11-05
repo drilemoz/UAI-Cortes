@@ -11,7 +11,7 @@ nav=(src/'EditorNavigation.kt').read_text()
 assert '"voices"' in nav and '"gemini_settings" -> if (previous == "audio" || previous == "voices")' in nav
 screen=(src/'VoiceIaScreen.kt').read_text()
 assert 'project.subtitles.filter' in screen and 'editable = false' in screen
-assert 'api.voicesWithDiagnosis(key)' in screen and 'api.synthesize(key, model, voiceId, direction, cue.text)' in screen
+assert 'api.voicesWithDiagnosis(key)' in screen and 'api.synthesize(key, model, voiceId, requestStyle, cue.text)' in screen
 assert 'promptGenerate' in screen and 'GeminiUsageHint' in screen
 assert 'chunked(SubtitleNarrationTimeline.MAX_SEGMENTS)' in screen
 assert 'VoiceIaPolicy.merge(current, cue, take)' in screen

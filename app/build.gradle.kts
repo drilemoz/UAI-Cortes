@@ -11,8 +11,8 @@ android {
         applicationId = "br.com.uaicortes"
         minSdk = 26
         targetSdk = 36
-        versionCode = 144
-        versionName = "0.1.143"
+        versionCode = 145
+        versionName = "0.1.144"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Definido pelo runner do GitHub Actions, sem inventar nome de repositório.
         val ciRepository = System.getenv("GITHUB_REPOSITORY").orEmpty()

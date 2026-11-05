@@ -9,6 +9,15 @@ internal object GeminiVoiceSearch {
         else -> voices
     }
 
+    /** Nunca inferir a altura a partir do nome: só filtrar quando a API fornece pitch. */
+    fun byPitch(voices: List<GeminiVoice>, filter: String): List<GeminiVoice> = when (filter) {
+        "Graves" -> voices.filter { it.pitch.equals("low", true) }
+        "Médias" -> voices.filter { it.pitch.equals("medium", true) }
+        "Agudas" -> voices.filter { it.pitch.equals("high", true) }
+        "Não informado" -> voices.filter { it.pitch.isBlank() }
+        else -> voices
+    }
+
     fun filter(voices: List<GeminiVoice>, query: String): List<GeminiVoice> {
         val target = GeminiVoicePresentation.fold(query.trim())
         if (target.isEmpty()) return voices
