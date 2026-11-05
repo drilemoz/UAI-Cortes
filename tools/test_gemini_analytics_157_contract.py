@@ -13,10 +13,10 @@ assert 'if (event.status != "ok"' in analytics
 assert 'it.status == "ok"' in analytics and 'sample.size >= 5' in analytics
 assert 'if (measured.isNotEmpty())' in analytics
 assert 'GeminiAnalyticsSection(filtered, prices, period)' in ui
-assert 'GeminiPricingDialog(project, priceModel, prices' in ui
-assert '"Tarifas USD"' in ui and '"Limites"' in ui
+assert 'GeminiModelSettingsDialog(project, configuringModel, quotas, prices' in ui
+assert '"Configurar"' in ui and 'GeminiUsageHelpButton' in ui
 assert 'Linha' not in prices
-assert 'Tarifas podem variar' in prices and 'não fatura' in prices.lower()
+assert 'Tarifas podem variar' in prices and 'não representam fatura' in (P/'GeminiModelSettingsUi.kt').read_text().lower()
 assert 'latencyMs' in ledger and 'GeminiUsageEvent(' in ledger
 for name in ('GeminiTtsCore.kt', 'GeminiVideoCaptionClient.kt', 'GeminiSubtitleClient.kt'):
     code = (P/name).read_text()

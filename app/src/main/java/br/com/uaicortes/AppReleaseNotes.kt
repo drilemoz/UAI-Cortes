@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.159"
-    const val VERSION_CODE = 160
+    const val VERSION_NAME = "0.1.160"
+    const val VERSION_CODE = 161
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.160", listOf(
+            ReleaseFeature("gemini-ui-compact-160", "Painel Gemini mais compacto",
+                "Resumo de consumo simplificado; ajuda técnica sob demanda e métricas detalhadas recolhidas.", "check"),
+            ReleaseFeature("gemini-price-catalog-160", "Preços públicos como referência",
+                "Sugere tarifas Standard de modelos conhecidos com datas e conferência; nunca lê cobrança oficial.", "captions"),
+            ReleaseFeature("gemini-model-config-160", "Configuração unificada de modelos",
+                "Cotas e preços numa só janela; plano gratuito depende de confirmação explícita.", "check")
+        )),
         ReleaseSummary("0.1.159", listOf(
             ReleaseFeature("flow-batch-scene-159", "Batch de cenas no Flow",
                 "Seleciona de 2 a 8 cenas e envia texto para refinamento assíncrono após confirmação e aviso de custo.", "check"),

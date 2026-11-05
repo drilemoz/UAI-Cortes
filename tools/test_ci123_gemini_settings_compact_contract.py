@@ -43,11 +43,11 @@ for item in ('"Aceitas"', '"Tokens"', '"Avisos 429"'):
 assert 'entries.filter { it.at >= cutoff }' in usage
 assert 'filtered.count { it.status == "429" }' in usage
 assert 'filtered.mapNotNull { it.tokens?.total }' in usage
-assert 'filtered.count { it.status == "ok" && it.tokens?.total == null }' in usage
+assert 'Tokens' in usage and 'Tokens e durações só aparecem quando medidos pela API.' in usage
 assert 'detailsExpanded' in usage and 'filtered.groupBy { it.project }' in usage
 assert 'filtered.takeLast(5).asReversed()' in usage
 assert 'ledger.clear()' in usage and 'confirmClear' in usage
 assert 'Ver limites e créditos no Google' in usage
-assert 'Não informa saldo de créditos da conta Google' in usage
-assert 'Round' in usage and 'heightIn(min = 42.dp)' in usage
+assert 'não representam saldo nem fatura oficial do Google' in usage
+assert 'RoundedCornerShape' in usage and 'heightIn(min = 40.dp)' in usage
 print('OK: barra Gemini compacta, segurança preservada e consumo local fiel')

@@ -28,7 +28,7 @@ assert 'Conferir tokens de entrada' in (s/'VideoSavedDialog.kt').read_text()
 assert 'Conferir tokens de entrada' in (s/'FlowPromptScreen.kt').read_text()
 for file in ('VideoSavedDialog.kt','FlowPromptScreen.kt','AutoSubtitleScreen.kt','GeminiNarrationUi.kt'):
     assert 'GeminiUsageHint(' in (s/file).read_text(),file
-assert 'Não informa saldo de créditos' in ui
+assert 'não representam saldo nem fatura oficial do Google' in ui
 for name in ('gemini_backup_rules.xml','gemini_data_extraction_rules.xml'):
     assert 'gemini_usage_local_v1.xml' in (p/'app/src/main/res/xml'/name).read_text()
 assert 'GeminiUsageLedgerAndroidTest' in (p/'app/src/androidTest/java/br/com/uaicortes/GeminiUsageLedgerAndroidTest.kt').read_text()

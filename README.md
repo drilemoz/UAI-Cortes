@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.160 (05/11/2026)
+- **Consumo mais compacto:** resumo de chamadas/tokens/429, custos e resultados por função; gráficos e detalhes técnicos recolhidos. Ajuda contextual `?` e uma linha por modelo utilizado, sem mostrar por padrão três modelos inativos.
+- **Configuração unificada:** limites RPM/TPM/RPD e preços USD/1M numa janela por projeto/modelo. Estado do plano pago/gratuito escolhido pelo usuário; `0 USD` exige confirmação explícita de gratuidade daquela operação.
+- **Referências oficiais datadas:** botão de preencher sugestão para Gemini 3.8 TTS, 3.5 Transcribe e TTS 2.5 compatíveis; dados consultados em 05/11/2026 na documentação de preços, com vigência e controle de frescor; nunca atualizar valores ou assumir plano via API. Modelos não cadastrados exigem valores manuais.
+- **Gráficos corrigidos:** a barra de sucesso representa sucessos/tentativas, não volume relativo. Não altera históricos, chaves AES-GCM, cotas, recuperação, lotes, vídeo nem schemaVersion=4. Validação: `docs/VALIDATION_0.1.160.md`.
+
 # Uai Cortes · versão 0.1.159 (05/11/2026)
 - **Prompts Flow + Gemini Batch:** integração opcional dentro da tela Flow (projetos de vídeo e conjuntos locais). Seleciona 2–8 cenas não vazias por envio, modelo de TEXTO compatível, chave/projeto existente, confirmação de possível cobrança e consentimento explícito por envio. Contexto e cena textual são enviados; estilo-base, vídeo, áudio, imagem e credenciais NÃO entram nos prompts.
 - **Acompanhamento e revisão:** job `batches/...` fica associado ao identificador local do Flow, números das cenas, modelo, projeto, perfil e SHA-256 do estado original; não persiste texto ou resultados do Gemini. Consulta estado manualmente e oferece revisão individual; só aplica se o resultado é válido e a cena/contexto não mudaram. Preserva original quando houve alteração.

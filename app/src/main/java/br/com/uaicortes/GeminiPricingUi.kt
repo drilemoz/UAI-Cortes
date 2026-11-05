@@ -3,6 +3,7 @@ package br.com.uaicortes
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -67,7 +68,7 @@ internal fun GeminiPricingDialog(project: String, model: String, store: GeminiPr
     }
 }
 
-/** Gráficos simples alimentados EXCLUSIVAMENTE pelos eventos armazenados neste aparelho. */
+/** Resumo enxuto; números avançados ficam ocultos até o usuário abrir os detalhes. */
 @Composable
 internal fun GeminiAnalyticsSection(events: List<GeminiUsageEvent>, priceStore: GeminiPriceStore,
     periodDays: Int) {
@@ -75,55 +76,71 @@ internal fun GeminiAnalyticsSection(events: List<GeminiUsageEvent>, priceStore: 
         GeminiAnalyticsPolicy.aggregate(events) { project, model -> priceStore.get(project, model) }
     }
     val estimated = stats.sumOf { it.knownCostUsd }
-    val withPrices = stats.sumOf { it.priced }
-    val missing = stats.sumOf { it.unpriced }
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+    val priced = stats.sumOf { it.priced }
+    val incomplete = stats.sumOf { it.unpriced }
+    var advanced by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         HorizontalDivider()
-        Text("Eficiência e custo estimado", style = MaterialTheme.typography.titleSmall)
-        Text("Tentativas: ${events.size} · com preço e tokens completos: $withPrices" +
-            " · sem estimativa: $missing", style = MaterialTheme.typography.bodySmall)
-        Text(if (withPrices == 0) "Custo: indisponível (preencha tarifas e aguarde medições)." else
-            "Subtotal estimado: US$ ${"%.5f".format(Locale.US, estimated)} em $withPrices geração(ões) medidas.",
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Custo e eficiência", style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f))
+            GeminiUsageHelpButton("Estimativa de custo",
+                "Valores de tarifas são fornecidos por você, inclusive quando copiados de referências públicas. " +
+                "O subtotal só cobre respostas com tokens de entrada e saída medidos; não é a fatura. " +
+                "Não inclui operações sem medição, cache, outras modalidades/tier, " +
+                "uso externo ou ajustes de faturamento. Latência é a duração medida da chamada.")
+        }
+        Text(if (priced == 0) "Custo: não configurado ou sem medições suficientes" else
+            "Subtotal parcial: US$ ${"%.5f".format(Locale.US, estimated)} · $priced medida(s)",
             style = MaterialTheme.typography.bodyMedium)
-        if (missing > 0 || withPrices > 0) Text("Subtotal parcial, não fatura: não inclui operações sem tokens/tarifas, " +
-            "cache, modalidades/tier especiais, ajustes de faturamento ou uso fora do app.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-        val maxAttempts = (stats.maxOfOrNull { it.attempts } ?: 0).coerceAtLeast(1)
-        stats.forEach { stat ->
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        if (stats.isNotEmpty()) {
+            Text("Atividade por função", style = MaterialTheme.typography.labelMedium)
+            stats.forEach { stat ->
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(stat.operation.replaceFirstChar { it.uppercase() },
-                        style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                        style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
                     Text("${stat.success}/${stat.attempts} concluídas",
                         style = MaterialTheme.typography.labelSmall)
                 }
-                LinearProgressIndicator(progress = { stat.attempts.toFloat() / maxAttempts },
-                    modifier = Modifier.fillMaxWidth().height(6.dp))
+            }
+        }
+        Row(Modifier.fillMaxWidth().clickable { advanced = !advanced }.padding(vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Text("Gráficos e métricas", style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.weight(1f))
+            Text(if (advanced) "Ocultar" else "Exibir", style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary)
+        }
+        if (advanced) {
+            Text("Tentativas: ${events.size} · preços e tokens completos: $priced · " +
+                "sem estimativa: $incomplete", style = MaterialTheme.typography.bodySmall)
+            stats.forEach { stat ->
+                val successRatio = if (stat.attempts > 0) stat.success.toFloat() / stat.attempts else 0f
+                Text("${stat.operation}: ${stat.success}/${stat.attempts} sucesso(s)",
+                    style = MaterialTheme.typography.labelSmall)
+                // Esta barra representa sucesso, não volume relativo de tentativas.
+                LinearProgressIndicator(progress = { successRatio },
+                    modifier = Modifier.fillMaxWidth().height(5.dp))
                 Text("Erros: ${stat.errors} · resposta média: " +
-                    (stat.averageLatencyMs?.let { "${"%.1f".format(Locale.US, it / 1000.0)} s (${stat.measuredDuration} medidas)" }
-                        ?: "sem tempo medido") +
-                    " · custo parcial: " + (if (stat.priced > 0) "US$ ${"%.5f".format(Locale.US, stat.knownCostUsd)}" else "indisponível"),
+                    (stat.averageLatencyMs?.let { "${"%.1f".format(Locale.US, it / 1000.0)} s" }
+                        ?: "não medida") + " · custo parcial: " +
+                    (if (stat.priced > 0) "US$ ${"%.5f".format(Locale.US, stat.knownCostUsd)}" else "não disponível"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-        }
-        val days = minOf(periodDays, 7)
-        val counts = GeminiAnalyticsPolicy.dailyCounts(events, days, System.currentTimeMillis())
-        val maxDaily = (counts.maxOfOrNull { it.second } ?: 0).coerceAtLeast(1)
-        Text("Atividade diária · últimos $days dia(s)", style = MaterialTheme.typography.labelMedium)
-        counts.forEach { (day, n) ->
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(day, style = MaterialTheme.typography.labelSmall)
-                LinearProgressIndicator(progress = { n.toFloat() / maxDaily },
-                    modifier = Modifier.weight(1f).height(5.dp))
-                Text(n.toString(), style = MaterialTheme.typography.labelSmall)
+            val days = minOf(periodDays, 7)
+            val counts = GeminiAnalyticsPolicy.dailyCounts(events, days, System.currentTimeMillis())
+            val maxDaily = (counts.maxOfOrNull { it.second } ?: 0).coerceAtLeast(1)
+            Text("Atividade diária · últimos $days dia(s)", style = MaterialTheme.typography.labelMedium)
+            counts.forEach { (day, n) ->
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(day, style = MaterialTheme.typography.labelSmall)
+                    LinearProgressIndicator(progress = { n.toFloat() / maxDaily },
+                        modifier = Modifier.weight(1f).height(5.dp))
+                    Text(n.toString(), style = MaterialTheme.typography.labelSmall)
+                }
             }
         }
-        Text("Gráficos usam apenas os últimos eventos locais, sujeitos à retenção de 500 registros/90 dias. " +
-            "Latência é tempo de chamada; não inclui preparação offline nem garante tempo futuro.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

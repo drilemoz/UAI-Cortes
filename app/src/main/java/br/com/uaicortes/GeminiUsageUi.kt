@@ -103,48 +103,55 @@ internal fun GeminiUsageHint(operation: String, inputChars: Int? = null,
     }
 }
 
-/** Painel local com métricas verificáveis; não calcula saldo ou custo fictício. */
+/** Resumo limpo por padrão; dados técnicos permanecem acessíveis por expansão/ajuda. */
 @Composable
 internal fun GeminiUsagePanel() {
     val context = LocalContext.current
     val ledger = remember(context) { GeminiUsageLedger(context) }
+    val keys = remember(context) { GeminiCredentialStore(context) }
+    val quotas = remember(context) { GeminiQuotaStore(context) }
+    val prices = remember(context) { GeminiPriceStore(context) }
     var expanded by remember { mutableStateOf(false) }
     var detailsExpanded by remember { mutableStateOf(false) }
     var period by remember { mutableIntStateOf(1) }
     var entries by remember { mutableStateOf(emptyList<GeminiUsageEvent>()) }
     var confirmClear by remember { mutableStateOf(false) }
-    val keys = remember(context) { GeminiCredentialStore(context) }
-    val quotas = remember(context) { GeminiQuotaStore(context) }
-    val prices = remember(context) { GeminiPriceStore(context) }
-    var editProject by remember { mutableStateOf<String?>(null) }
-    var editModel by remember { mutableStateOf("") }
-    var priceProject by remember { mutableStateOf<String?>(null) }
-    var priceModel by remember { mutableStateOf("") }
+    var configuringProject by remember { mutableStateOf<String?>(null) }
+    var configuringModel by remember { mutableStateOf("") }
     var revision by remember { mutableIntStateOf(0) }
     fun refresh() { entries = runCatching { ledger.events() }.getOrDefault(emptyList()) }
-    Surface(shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface,
+
+    Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
         Column(Modifier.fillMaxWidth().padding(11.dp),
             verticalArrangement = Arrangement.spacedBy(9.dp)) {
-            Row(Modifier.fillMaxWidth().clickable {
-                expanded = !expanded
-                if (expanded) refresh()
-            }, verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Surface(shape = RoundedCornerShape(10.dp),
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Surface(shape = RoundedCornerShape(9.dp),
                     color = MaterialTheme.colorScheme.primaryContainer) {
-                    Icon(Icons.Default.BarChart, null, Modifier.padding(9.dp).size(20.dp),
+                    Icon(Icons.Default.BarChart, null, Modifier.padding(9.dp).size(19.dp),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Column(Modifier.weight(1f).clickable {
+                    expanded = !expanded
+                    if (expanded) refresh()
+                }, verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text("Consumo da IA", style = MaterialTheme.typography.titleSmall)
-                    Text("Histórico local · Não informa saldo de créditos da conta Google.",
-                        style = MaterialTheme.typography.bodySmall,
+                    Text("Histórico local · Resumo", style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    if (expanded) "Recolher consumo" else "Ver consumo", Modifier.size(21.dp))
+                GeminiUsageHelpButton("Consumo e cotas",
+                    "O histórico é local e registra até 500 tentativas de 90 dias. " +
+                    "Tokens e durações só aparecem quando medidos pela API. " +
+                    "Erros 429 podem indicar limite por minuto, tokens ou dia. " +
+                    "As estimativas não representam saldo nem fatura oficial do Google.")
+                IconButton(onClick = {
+                    expanded = !expanded
+                    if (expanded) refresh()
+                }, modifier = Modifier.size(38.dp)) {
+                    Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        if (expanded) "Recolher consumo" else "Ver consumo")
+                }
             }
             if (expanded) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -158,9 +165,7 @@ internal fun GeminiUsagePanel() {
                 val cutoff = System.currentTimeMillis() - period * 24L * 60L * 60L * 1000L
                 val filtered = entries.filter { it.at >= cutoff }
                 val generated = filtered.count { it.status == "ok" }
-                val known = filtered.mapNotNull { it.tokens?.total }
-                val unknown = filtered.count { it.status == "ok" && it.tokens?.total == null }
-                val total = known.sum()
+                val total = filtered.mapNotNull { it.tokens?.total }.sum()
                 val limits = filtered.count { it.status == "429" }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     GeminiUsageMetric("Aceitas", generated.toString(), Modifier.weight(1f))
@@ -170,162 +175,123 @@ internal fun GeminiUsagePanel() {
                 }
                 if (filtered.isEmpty()) Text("Sem operações neste período.",
                     style = MaterialTheme.typography.bodySmall)
-                if (unknown > 0) Text("$unknown resposta(s) sem contagem de tokens informada pela API.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                 key(revision) { GeminiAnalyticsSection(filtered, prices, period) }
-                Text("Cobrança e créditos reais: consulte o painel oficial da Google.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                 HorizontalDivider()
-                Text("Previsões por projeto e modelo", style = MaterialTheme.typography.titleSmall)
-                val profiles = runCatching { keys.profiles() }.getOrDefault(emptyList())
-                if (profiles.none { it.projectId.isNotBlank() }) {
-                    Text("Informe o ID Google Cloud em Minhas chaves. Sem ID não há estimativa por projeto.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                } else {
-                    // Não somar duas chaves do mesmo projeto como se fossem cotas separadas.
-                    profiles.map { it.projectId }.filter { it.isNotBlank() }.distinct().forEach { project ->
-                        Surface(shape = RoundedCornerShape(10.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.33f)) {
-                            Column(Modifier.fillMaxWidth().padding(10.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text("Projeto: $project", style = MaterialTheme.typography.labelLarge)
-                                val models = (filtered.filter { it.project == project }
-                                    .map { it.model }.filter { it.isNotBlank() } +
-                                    listOf(GeminiModels.LITE, GeminiModels.FLASH, "gemini-3.5-transcribe"))
-                                    .distinct().take(12)
-                                models.forEach { model ->
-                                    key(model, revision) {
-                                        Text(model, style = MaterialTheme.typography.labelMedium)
-                                        val groups = listOf("narracao", "legendas", "descricao", "flow")
-                                        val enabled = groups.filter { op ->
-                                            filtered.any { it.project == project && it.model == model &&
-                                                GeminiQuotaPolicy.operationName(it.operation) == op }
-                                        }
-                                        val limits = quotas.get(project, model)
-                                        val opList = if (enabled.isEmpty()) listOf("narracao") else enabled
-                                        opList.forEach { op ->
-                                            val f = GeminiQuotaPolicy.compute(entries, project, model, op, limits)
-                                            val avg = f.averageTotal?.let { "$it tokens/ação" }
-                                                ?: "média pendente (${f.samples}/5 amostras)"
-                                            val paused = keys.temporarilyBlocked(project, model)
-                                            Text("${op.replaceFirstChar { it.uppercase() }}: $avg" +
-                                                if (paused) " · pausa temporária 429" else "",
-                                                style = MaterialTheme.typography.bodySmall)
-                                            if (!paused) {
-                                                Text("Agora: ${f.remainingNow?.let { "até $it" } ?: "indisponível"}" +
-                                                    " · Hoje (Pacífico): ${f.remainingToday?.let { "até $it" } ?: "indisponível"}",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                if (f.remainingByRpm != null || f.remainingByTpm != null) Text(
-                                                    "RPM: ${f.remainingByRpm?.toString() ?: "?"}" +
-                                                        " · TPM entrada: ${f.remainingByTpm?.toString() ?: "?"}" +
-                                                        f.nextRpmWindowMs?.let { " · próxima janela ~${(it + 999L) / 1000L} s" }.orEmpty(),
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            }
-                                        }
-                                        if (!limits.configured()) Text("Limites desconhecidos: sem saldo estimado.",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        Row(Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                            OutlinedButton(onClick = { editProject = project; editModel = model },
-                                                shape = RoundedCornerShape(8.dp),
-                                                modifier = Modifier.weight(1f).heightIn(min = 40.dp),
-                                                contentPadding = PaddingValues(horizontal = 4.dp)) {
-                                                Text("Limites", fontSize = 12.sp)
-                                            }
-                                            OutlinedButton(onClick = { priceProject = project; priceModel = model },
-                                                shape = RoundedCornerShape(8.dp),
-                                                modifier = Modifier.weight(1f).heightIn(min = 40.dp),
-                                                contentPadding = PaddingValues(horizontal = 4.dp)) {
-                                                Text("Tarifas USD", fontSize = 12.sp)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()) {
+                    Text("Modelos e limites", style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.weight(1f))
+                    GeminiUsageHelpButton("Estimativas por modelo",
+                        "O mesmo projeto compartilha limites entre as chaves. " +
+                        "Agora indica a janela RPM/TPM; Hoje considera RPD no horário do Pacífico. " +
+                        "Apenas operações deste aparelho entram nas estimativas. " +
+                        "Informe cotas específicas no Google AI Studio; não são obtidas pela chave da API.")
                 }
-                Text("Agora = limite imediato RPM/TPM; Hoje = limite RPD no Pacífico. " +
-                    "Estimativas usam somente este aparelho e limites informados manualmente. " +
-                    "O uso externo, erros 429 e cotas oficiais podem reduzir o disponível.",
+                val profiles = runCatching { keys.profiles() }.getOrDefault(emptyList())
+                val projects = profiles.map { it.projectId }.filter { it.isNotBlank() }.distinct()
+                if (projects.isEmpty()) Text("Adicione o ID do projeto em Minhas chaves.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (filtered.isNotEmpty()) {
-                    HorizontalDivider()
-                    Row(Modifier.fillMaxWidth().clickable { detailsExpanded = !detailsExpanded }
-                            .padding(vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Text("Modelos e últimas operações", Modifier.weight(1f),
-                            style = MaterialTheme.typography.titleSmall)
-                        Icon(if (detailsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            if (detailsExpanded) "Recolher operações" else "Exibir operações",
-                            Modifier.size(19.dp))
-                    }
-                    if (detailsExpanded) {
-                        for ((project, events) in filtered.groupBy { it.project }) {
-                            val sum = events.mapNotNull { it.tokens?.total }.sum()
-                            Text("Projeto: ${project.ifBlank { "Não informado" }} · $sum tokens informados",
-                                style = MaterialTheme.typography.titleSmall)
-                            for ((model, byModel) in events.groupBy { it.model }) {
-                                Text("${model.ifBlank { "Modelo não identificado" }} · ${byModel.size} tentativa(s)",
-                                    style = MaterialTheme.typography.bodySmall)
-                            }
-                        }
-                        Text("Consumo por função e classificação de falhas", style = MaterialTheme.typography.titleSmall)
-                        for ((operation, events) in filtered.groupBy { it.operation }.toSortedMap()) {
-                            val successes = events.count { it.status == "ok" }
-                            val failures = events.size - successes
-                            val tokens = events.mapNotNull { it.tokens?.total }.sum()
-                            Text("$operation: $successes concluída(s), $failures falha(s), " +
-                                "$tokens tokens informados", style = MaterialTheme.typography.bodySmall)
-                        }
-                        Text("Últimas operações", style = MaterialTheme.typography.titleSmall)
-                        val time = remember { SimpleDateFormat("dd/MM HH:mm", Locale("pt", "BR")) }
-                        for (event in filtered.takeLast(5).asReversed()) {
-                            val amount = event.tokens?.total?.let { "$it tokens" }
-                                ?: if (event.status == "ok") "consumo não informado" else "sem medição"
-                            Surface(shape = RoundedCornerShape(8.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)) {
-                                Row(Modifier.fillMaxWidth().padding(9.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Icon(if (event.status == "ok") Icons.Default.CheckCircle
-                                        else Icons.Default.Info,
-                                        null, Modifier.size(17.dp),
-                                        tint = if (event.status == "ok") MaterialTheme.colorScheme.primary
-                                            else MaterialTheme.colorScheme.error)
-                                    Column(Modifier.weight(1f)) {
-                                        Text("${event.operation} · ${time.format(Date(event.at))}",
-                                            style = MaterialTheme.typography.labelMedium)
-                                        Text("${if (event.status == "ok") "gerado" else GeminiOperationFailure.label(
-                                            GeminiOperationFailure.fromHttp(
-                                                event.status.removePrefix("erro_").toIntOrNull() ?: -1))} · $amount",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                projects.forEach { project ->
+                    Surface(shape = RoundedCornerShape(9.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.33f)) {
+                        Column(Modifier.fillMaxWidth().padding(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Projeto: $project", style = MaterialTheme.typography.labelMedium,
+                                maxLines = 1)
+                            // Apenas modelos realmente usados por este projeto, não três defaults inativos.
+                            val models = entries.asSequence().filter { it.project == project }
+                                .map { it.model }.filter { it.isNotBlank() }.distinct().take(12).toList()
+                            if (models.isEmpty()) Text("Sem modelos usados neste aparelho.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            models.forEach { model ->
+                                key(model, revision) {
+                                    val local = entries.filter { it.project == project && it.model == model }
+                                    val operation = local.lastOrNull()?.operation ?: "narracao"
+                                    val limit = quotas.get(project, model)
+                                    val estimate = GeminiQuotaPolicy.compute(entries, project, model,
+                                        operation, limit)
+                                    val paused = keys.temporarilyBlocked(project, model)
+                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Column(Modifier.weight(1f),
+                                            verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                            Text(GeminiPublicPriceCatalog.displayName(model),
+                                                style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                                            val state = when {
+                                                paused -> "Aguardando após erro 429"
+                                                !limit.configured() -> "Limites não informados"
+                                                else -> "Agora: ${estimate.remainingNow?.toString() ?: "?"}" +
+                                                    " · Hoje: ${estimate.remainingToday?.toString() ?: "?"}"
+                                            }
+                                            Text(state, style = MaterialTheme.typography.bodySmall,
+                                                color = if (paused) MaterialTheme.colorScheme.error
+                                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 2)
+                                        }
+                                        OutlinedButton(onClick = {
+                                            configuringProject = project; configuringModel = model
+                                        }, shape = RoundedCornerShape(8.dp),
+                                            contentPadding = PaddingValues(horizontal = 9.dp),
+                                            modifier = Modifier.heightIn(min = 40.dp)) {
+                                            Text("Configurar", fontSize = 12.sp)
+                                        }
                                     }
                                 }
+                            }
+                            TextButton(onClick = {
+                                configuringProject = project; configuringModel = ""
+                            }, modifier = Modifier.align(Alignment.End)) {
+                                Text("Adicionar modelo", fontSize = 12.sp)
                             }
                         }
                     }
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    OutlinedButton(onClick = { refresh() }, modifier = Modifier.weight(1f).heightIn(min = 42.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 6.dp)) {
-                        Icon(Icons.Default.Refresh, null, Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp)); Text("Atualizar", fontSize = 12.sp)
+                Row(Modifier.fillMaxWidth().clickable { detailsExpanded = !detailsExpanded }
+                        .padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Detalhes avançados", Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleSmall)
+                    Icon(if (detailsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        if (detailsExpanded) "Recolher detalhes" else "Mostrar detalhes", Modifier.size(20.dp))
+                }
+                if (detailsExpanded) {
+                    Text("Modelos e últimas operações", style = MaterialTheme.typography.labelMedium)
+                    for ((project, events) in filtered.groupBy { it.project }) {
+                        Text("${project.ifBlank { "Projeto não informado" }}: " +
+                            "${events.size} tentativas · " +
+                            "${events.mapNotNull { it.tokens?.total }.sum()} tokens registrados",
+                            style = MaterialTheme.typography.bodySmall)
+                        for ((model, group) in events.groupBy { it.model }) {
+                            Text("${model.ifBlank { "Modelo desconhecido" }} · ${group.size} tentativa(s)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
-                    OutlinedButton(onClick = { confirmClear = true }, modifier = Modifier.weight(1f).heightIn(min = 42.dp),
-                        enabled = entries.isNotEmpty(), shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 6.dp)) {
-                        Icon(Icons.Default.DeleteOutline, null, Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp)); Text("Limpar", fontSize = 12.sp)
+                    Text("Consumo por função e classificação de falhas", style = MaterialTheme.typography.labelMedium)
+                    for ((operation, events) in filtered.groupBy { it.operation }.toSortedMap()) {
+                        Text("$operation: ${events.count { it.status == "ok" }} concluídas · " +
+                            "${events.count { it.status != "ok" }} erros",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    Text("Últimas operações", style = MaterialTheme.typography.labelMedium)
+                    val time = remember { SimpleDateFormat("dd/MM HH:mm", Locale("pt", "BR")) }
+                    filtered.takeLast(5).asReversed().forEach { event ->
+                        val statusLabel = if (event.status == "ok") "OK" else GeminiOperationFailure.label(
+                            GeminiOperationFailure.fromHttp(
+                                event.status.removePrefix("erro_").toIntOrNull() ?: -1))
+                        Text("${time.format(Date(event.at))} · ${event.model} · " +
+                            "$statusLabel · " +
+                            "${event.tokens?.total?.toString() ?: "tokens não informados"}",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedButton(onClick = { refresh() },
+                            modifier = Modifier.weight(1f).heightIn(min = 40.dp),
+                            shape = RoundedCornerShape(8.dp)) { Text("Atualizar") }
+                        OutlinedButton(onClick = { confirmClear = true }, enabled = entries.isNotEmpty(),
+                            modifier = Modifier.weight(1f).heightIn(min = 40.dp),
+                            shape = RoundedCornerShape(8.dp)) { Text("Limpar") }
                     }
                 }
                 TextButton(onClick = {
@@ -333,30 +299,36 @@ internal fun GeminiUsagePanel() {
                         Uri.parse("https://aistudio.google.com/usage")))
                 }, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Default.OpenInNew, null, Modifier.size(16.dp))
-                    Spacer(Modifier.width(5.dp)); Text("Ver limites e créditos no Google", fontSize = 12.sp)
+                    Spacer(Modifier.width(5.dp))
+                    Text("Ver limites e créditos no Google", fontSize = 12.sp)
                 }
             }
         }
     }
-    editProject?.let { project ->
-        GeminiQuotaBudgetDialog(project, editModel, quotas,
-            onDismiss = { editProject = null },
-            onSaved = { editProject = null; revision++; refresh() })
-    }
-    priceProject?.let { project ->
-        GeminiPricingDialog(project, priceModel, prices,
-            onDismiss = { priceProject = null },
-            onSaved = { priceProject = null; revision++; refresh() })
+    configuringProject?.let { project ->
+        GeminiModelSettingsDialog(project, configuringModel, quotas, prices,
+            onDismiss = { configuringProject = null },
+            onSaved = { configuringProject = null; revision++; refresh() })
     }
     if (confirmClear) AlertDialog(onDismissRequest = { confirmClear = false },
         title = { Text("Limpar histórico de consumo?") },
-        text = { Text("Apaga apenas contagens locais deste aplicativo. " +
-            "Não apaga chaves, projetos ou áudios e não altera o consumo registrado pelo Google.") },
+        text = { Text("Apaga apenas as contagens locais. Não apaga chaves, projetos, áudios nem o consumo no Google.") },
         confirmButton = { TextButton(onClick = {
             runCatching { ledger.clear() }.onSuccess { refresh() }
             confirmClear = false
         }) { Text("Limpar histórico") } },
         dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Cancelar") } })
+}
+
+@Composable
+internal fun GeminiUsageHelpButton(title: String, explanation: String) {
+    var open by remember { mutableStateOf(false) }
+    IconButton(onClick = { open = true }, modifier = Modifier.size(36.dp)) {
+        Icon(Icons.Default.HelpOutline, "Ajuda: $title", modifier = Modifier.size(20.dp))
+    }
+    if (open) AlertDialog(onDismissRequest = { open = false },
+        title = { Text(title) }, text = { Text(explanation) },
+        confirmButton = { TextButton(onClick = { open = false }) { Text("Entendi") } })
 }
 
 @Composable

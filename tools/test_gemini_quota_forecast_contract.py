@@ -16,7 +16,7 @@ assert 'GeminiManualLimits' in forecast and 'remainingByLocalLimits' in forecast
 assert 'limits.tpmInput' in forecast and 'it.tokens?.input' in forecast
 assert 'getSharedPreferences("gemini_limits_local_v1"' in forecast
 assert 'SHA-256' in forecast and 'project + "\\n" + model' in forecast
-assert 'GeminiQuotaBudgetDialog' in usage and 'GeminiQuotaBudgetDialog' in quota_ui
+assert 'GeminiModelSettingsDialog' in usage and 'GeminiQuotaBudgetDialog' in quota_ui
 assert 'GeminiUsageHint(' in usage and 'requestedCount' in usage
 assert 'GeminiQuotaPolicy.compute' in usage
 assert 'GeminiUsageHint("narração"' in (s/'VoiceIaScreen.kt').read_text()
