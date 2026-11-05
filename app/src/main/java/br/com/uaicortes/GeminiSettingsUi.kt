@@ -91,33 +91,70 @@ internal fun GeminiSettingsSection() {
     }
     DisposableEffect(api) { onDispose { api.cancel() } }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(Icons.Default.AutoAwesome, null, tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp))
-            Text("Google Gemini · API de IA", style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f))
-            if (hasKey) Surface(shape = RoundedCornerShape(7.dp),
-                color = MaterialTheme.colorScheme.primaryContainer) {
-                Text("Protegida", modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
-                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+        // Cabeçalho de status, separado do campo e das operações sensíveis.
+        Surface(shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f)) {
+            Row(Modifier.fillMaxWidth().padding(14.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primary) {
+                    Icon(Icons.Default.AutoAwesome, null,
+                        modifier = Modifier.padding(11.dp).size(23.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary)
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("Gemini · Conexão de IA", style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text(if (hasKey) "Chave armazenada com proteção local"
+                         else "Configure uma chave para usar os recursos de IA",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
+                Surface(shape = RoundedCornerShape(7.dp),
+                    color = if (hasKey) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface) {
+                    Text(if (hasKey) "ATIVA" else "PENDENTE",
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                        color = if (hasKey) MaterialTheme.colorScheme.onPrimary
+                            else MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.labelSmall)
+                }
             }
         }
-        Text(if (hasKey) "Chave salva protegida. Para substituir, digite ou importe outra."
-             else "Configure sua chave pessoal para gerar narrações.",
-             style = MaterialTheme.typography.bodySmall,
-             color = MaterialTheme.colorScheme.onSurfaceVariant)
-        OutlinedTextField(value = key, onValueChange = { key = it.take(512) },
-            modifier = Modifier.fillMaxWidth(), label = { Text("Chave da API") }, singleLine = true,
-            placeholder = { if (hasKey) Text("Chave salva não é exibida") },
-            shape = RoundedCornerShape(9.dp),
-            visualTransformation = if (show) VisualTransformation.None else PasswordVisualTransformation(),
-            trailingIcon = {
-                IconButton(onClick = { show = !show }, enabled = !busy) {
-                    Icon(if (show) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        if (show) "Ocultar chave digitada" else "Mostrar chave digitada")
+        Surface(shape = RoundedCornerShape(14.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            color = MaterialTheme.colorScheme.surface) {
+            Column(Modifier.fillMaxWidth().padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.LockOutline, null, Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(7.dp))
+                    Text("Credencial ativa", style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.weight(1f))
+                    Text(if (hasKey) "Protegida" else "Não configurada",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-            })
+                OutlinedTextField(value = key, onValueChange = { key = it.take(512) },
+                    modifier = Modifier.fillMaxWidth(), label = { Text("Nova chave da API") },
+                    singleLine = true,
+                    placeholder = { if (hasKey) Text("A chave salva não é exibida") },
+                    shape = RoundedCornerShape(9.dp),
+                    visualTransformation = if (show) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { show = !show }, enabled = !busy) {
+                            Icon(if (show) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                if (show) "Ocultar chave digitada" else "Mostrar chave digitada")
+                        }
+                    })
+                Text("Digite outra chave apenas para substituir a atual.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelSmall)
+            }
+        }
+        Text("Ações da chave", style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
         // Uma única barra. Se a fonte/tela não comportar 6 áreas de toque de 48 dp,
         // habilitar rolagem horizontal em vez de cortar ou comprimir os comandos.
         BoxWithConstraints(Modifier.fillMaxWidth()) {
@@ -292,13 +329,15 @@ private fun GeminiKeyAction(label: String, icon: ImageVector,
     Surface(onClick = onClick, enabled = enabled,
         modifier = modifier.height(56.dp).semantics { contentDescription = label },
         shape = RoundedCornerShape(8.dp),
-        color = scheme.surfaceVariant.copy(alpha = 0.35f),
-        border = BorderStroke(1.dp, scheme.outlineVariant)) {
+        color = if (dangerous) scheme.errorContainer.copy(alpha = 0.50f)
+            else scheme.primaryContainer.copy(alpha = 0.46f),
+        border = BorderStroke(1.dp, if (dangerous) scheme.error.copy(alpha = 0.35f)
+            else scheme.primary.copy(alpha = 0.22f))) {
         Column(Modifier.fillMaxSize().padding(horizontal = 1.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center) {
-            Icon(icon, null, Modifier.size(18.dp), tint = foreground)
-            Spacer(Modifier.height(3.dp))
+            Icon(icon, null, Modifier.size(21.dp), tint = foreground)
+            Spacer(Modifier.height(4.dp))
             Text(label, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 color = foreground)
         }

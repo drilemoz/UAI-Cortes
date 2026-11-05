@@ -51,26 +51,30 @@ internal fun GeminiUsagePanel() {
     var entries by remember { mutableStateOf(emptyList<GeminiUsageEvent>()) }
     var confirmClear by remember { mutableStateOf(false) }
     fun refresh() { entries = runCatching { ledger.events() }.getOrDefault(emptyList()) }
-    Surface(shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f),
+    Surface(shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
-        Column(Modifier.fillMaxWidth().padding(12.dp),
+        Column(Modifier.fillMaxWidth().padding(11.dp),
             verticalArrangement = Arrangement.spacedBy(9.dp)) {
             Row(Modifier.fillMaxWidth().clickable {
                 expanded = !expanded
                 if (expanded) refresh()
-            }, verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.BarChart, null, Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(8.dp))
-                Text("Consumo da IA", Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleSmall)
+            }, verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Surface(shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer) {
+                    Icon(Icons.Default.BarChart, null, Modifier.padding(9.dp).size(20.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("Consumo da IA", style = MaterialTheme.typography.titleSmall)
+                    Text("Histórico local · Não informa saldo de créditos da conta Google.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    if (expanded) "Recolher consumo" else "Ver consumo", Modifier.size(20.dp))
+                    if (expanded) "Recolher consumo" else "Ver consumo", Modifier.size(21.dp))
             }
-            Text("Histórico deste aparelho · Não informa saldo de créditos da conta Google.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (expanded) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     for ((days, label) in listOf(1 to "24 h", 7 to "7 dias", 30 to "30 dias")) {
@@ -127,9 +131,25 @@ internal fun GeminiUsagePanel() {
                         for (event in filtered.takeLast(5).asReversed()) {
                             val amount = event.tokens?.total?.let { "$it tokens" }
                                 ?: if (event.status == "ok") "consumo não informado" else "sem medição"
-                            Text("${time.format(Date(event.at))} · ${event.operation} · " +
-                                "${if (event.status == "429") "limite 429" else if (event.status == "ok") "gerado" else "falha"} · $amount",
-                                style = MaterialTheme.typography.bodySmall)
+                            Surface(shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)) {
+                                Row(Modifier.fillMaxWidth().padding(9.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Icon(if (event.status == "ok") Icons.Default.CheckCircle
+                                        else Icons.Default.Info,
+                                        null, Modifier.size(17.dp),
+                                        tint = if (event.status == "ok") MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.error)
+                                    Column(Modifier.weight(1f)) {
+                                        Text("${event.operation} · ${time.format(Date(event.at))}",
+                                            style = MaterialTheme.typography.labelMedium)
+                                        Text("${if (event.status == "429") "limite 429" else if (event.status == "ok") "gerado" else "falha"} · $amount",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -172,12 +192,12 @@ internal fun GeminiUsagePanel() {
 private fun GeminiUsageMetric(label: String, number: String, modifier: Modifier,
     warning: Boolean = false) {
     val scheme = MaterialTheme.colorScheme
-    Surface(modifier = modifier, shape = RoundedCornerShape(8.dp),
-        color = scheme.surface,
-        border = BorderStroke(1.dp, scheme.outlineVariant)) {
-        Column(Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(number, style = MaterialTheme.typography.titleMedium,
+    Surface(modifier = modifier, shape = RoundedCornerShape(10.dp),
+        color = if (warning) scheme.errorContainer.copy(alpha = 0.54f)
+            else scheme.primaryContainer.copy(alpha = 0.43f)) {
+        Column(Modifier.padding(horizontal = 9.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(number, style = MaterialTheme.typography.titleLarge,
                 maxLines = 1, color = if (warning) scheme.error else scheme.onSurface)
             Text(label, style = MaterialTheme.typography.labelSmall,
                 maxLines = 1, color = scheme.onSurfaceVariant)

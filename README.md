@@ -1,3 +1,6 @@
+# Uai Cortes · versão 0.1.148 (05/11/2026)
+**Gemini v0.1.148:** redesenho real da configuração de API: cabeçalho com status e campo protegido, atalhos de seis ações na barra compacta, cartões de chaves com selo de ativa, cadastro/edição em janela personalizada em vez de formulário comprido, alternância 429 com ajuda expansível e indicadores de consumo local com histórico estruturado. A troca de chave, a confirmação de cópia/exportação, os limites e a geração Gemini continuam inalterados. Validar composição/rolagem no APK Android.
+
 # Uai Cortes · versão 0.1.147 (04/11/2026)
 **Exportação v0.1.147:** novas resoluções econômicas 360p e 480p além de 720p e 1080p, opções maiores; progresso do Media3 explicado sem prometer velocidade linear. Tela final de vídeo salvo compacta, com ações Gerar descrição, Gerar com IA e Compartilhar; descrição, hashtags, consulta de modelos e consentimento Gemini somente em janela própria, sem envio do MP4 à IA. Build Android pendente.
 

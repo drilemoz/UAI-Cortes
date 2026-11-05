@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.148 (05/11/2026)
+
+## 0.1.148 — Novo visual de Gemini e gerenciamento de credenciais
+- Configuração Gemini separa status de conexão, campo da chave e ferramentas em superfícies compactas com ícones. Preserva a barra única de 6 ações com área de toque 56dp e rolagem em largura insuficiente; confirmar ao copiar, exportar, remover e testar TTS.
+- Gerenciador de chaves usa cartões menores com selo ATIVA, máscara e ID de projeto, ações Usar/Editar/Excluir e cadastro/edição em Dialog próprio com rolagem, sem exibir chave persistida. Mantém máximo de 8, exigência de projetos distintos na alternância 429, confirmação e teste sem geração.
+- Histórico de Consumo da IA com cabeçalho destacado, cartões de métricas e últimas operações com estados visuais. Contagens continuam limitadas a dados locais da API; valores sem medição não viram zero, custos/créditos permanecem indisponíveis.
+- Nenhuma modificação em GeminiCredentialStore, consumo da API, modelos, engine, exportação Media3 ou schemaVersion do projeto. Necessário build e teste visual Android para confirmar ergonomia.
+
 # Uai Cortes · versão 0.1.147 (04/11/2026)
 
 ## 0.1.147 — Exportação de vídeo e publicação mais organizadas

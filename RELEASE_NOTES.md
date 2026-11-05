@@ -1,3 +1,12 @@
+# Uai Cortes · versão 0.1.148 (05/11/2026)
+
+## 0.1.148 — Gerenciamento Gemini renovado
+- Status visual da credencial e botões menores para Colar, Copiar, Importar, Exportar, Obter e Remover.
+- Múltiplas chaves exibidas em cartões; adicionar ou editar agora abre uma janela em vez de ocupar a tela inteira.
+- Painel de uso com métricas, histórico e aviso de limites em seções claras.
+- As operações sensíveis continuam protegidas por confirmação, e o histórico não presume saldo de créditos.
+- A experiência em aparelho ainda precisa ser testada após build GitHub Actions.
+
 # Uai Cortes · versão 0.1.147 (04/11/2026)
 
 ## 0.1.147 — Exportar e compartilhar
