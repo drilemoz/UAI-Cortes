@@ -41,9 +41,9 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
     var playing by remember(p.id) { mutableStateOf(false) }
     var previewTime by remember(p.id) { mutableLongStateOf(pip?.startAtMs ?: 0L) }
     val canvasIndex=AdaptiveVideoLayout.activeClipIndex(p.clips.map { it.durationMs },previewTime)
-    val canvasUri=p.clips.getOrNull(canvasIndex)?.uri
-    val canvasAspect=remember(canvasUri) {
-        canvasUri?.let { mediaAspect(context,it,false) } ?: 16f/9f
+    val canvasClip=p.clips.getOrNull(canvasIndex)
+    val canvasAspect=remember(canvasClip?.uri,canvasClip?.isImage) {
+        canvasClip?.let { mediaAspect(context,it.uri,it.isImage) } ?: 16f/9f
     }
     var expanded by remember(p.id) { mutableStateOf<String?>(null) }
     var showTimePresets by remember { mutableStateOf(false) }
@@ -76,10 +76,7 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
     LaunchedEffect(p.clips) {
         if (p.clips.isNotEmpty()) {
             player.setMediaItems(p.clips.map { clip ->
-                MediaItem.Builder().setUri(clip.uri).setClippingConfiguration(
-                    MediaItem.ClippingConfiguration.Builder()
-                        .setStartPositionMs(clip.startMs).setEndPositionMs(clip.endMs).build()
-                ).build()
+                ClipMediaItems.playback(clip)
             })
             player.prepare()
             seekProjectPosition(player, p.clips, previewTime)

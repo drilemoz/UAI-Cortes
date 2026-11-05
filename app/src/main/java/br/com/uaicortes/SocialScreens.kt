@@ -3,6 +3,7 @@ package br.com.uaicortes
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.activity.ComponentActivity
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -63,7 +64,33 @@ internal fun SocialDashboardScreen(
     var youtubeBusy by remember { mutableStateOf(false) }
     var channelToBind by remember { mutableStateOf<Pair<SocialAccount, YouTubeSocialApi.Channel>?>(null) }
     var pageToBind by remember { mutableStateOf<SocialAccount?>(null) }
+    var metaBusy by remember { mutableStateOf(false) }
+    var metaPages by remember { mutableStateOf<List<SocialExternalApis.FacebookPage>>(emptyList()) }
+    val activity = context as? ComponentActivity
+    fun connectMeta(publish: Boolean) {
+        if (activity == null) { failure = "Esta tela requer uma Activity Android."; return }
+        metaBusy = true
+        metaPages = emptyList()
+        SocialMetaAuth.start(activity, publish) { success, message ->
+            failure = message
+            if (success) {
+                scope.launch {
+                    runCatching {
+                        val userToken = SocialMetaAuth.currentUserToken()
+                            ?: error("A sessão Meta não retornou autorização válida.")
+                        val pages = SocialExternalApis.facebookPages(userToken)
+                        SocialMetaAuth.putPageTokens(pages)
+                        // Não guardar tokens em estado de UI ou no catálogo.
+                        metaPages = pages.map { it.copy(accessToken = "") }
+                    }.onFailure { failure = "Não foi possível consultar suas Páginas autorizadas." }
+                    metaBusy = false
+                }
+            } else metaBusy = false
+        }
+    }
+
     var confirmedPage by remember { mutableStateOf<Pair<SocialAccount, SocialExternalApis.FacebookPage>?>(null) }
+    var pageFromMeta by remember { mutableStateOf<SocialAccount?>(null) }
     val authorizeYouTube = rememberYouTubeAuthorization { error ->
         youtubeBusy = false
         failure = error
@@ -130,6 +157,41 @@ internal fun SocialDashboardScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
+                OutlinedCard {
+                    Column(Modifier.fillMaxWidth().padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        Text("Conexão Facebook Página", style = MaterialTheme.typography.titleMedium)
+                        Text(if (!SocialMetaAuth.isConfigured)
+                            "O login oficial precisa de META_APP_ID, META_CLIENT_TOKEN, hash de assinatura e permissões aprovadas. O compartilhamento manual segue disponível."
+                        else "Autorização pelo Facebook. O app guarda apenas IDs públicos de Páginas; tokens permanecem em sessão.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = { connectMeta(false) },
+                                enabled = !metaBusy && SocialMetaAuth.isConfigured) {
+                                Text("Conectar Meta")
+                            }
+                            TextButton(onClick = { connectMeta(true) },
+                                enabled = !metaBusy && SocialMetaAuth.isConfigured &&
+                                    SocialMetaAuth.currentUserToken() != null) {
+                                Text("Autorizar postagem")
+                            }
+                        }
+                        if (metaBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                        if (metaPages.isNotEmpty()) {
+                            Text("Páginas autorizadas (selecione um cadastro abaixo para vincular):",
+                                style = MaterialTheme.typography.labelSmall)
+                            metaPages.forEach { page ->
+                                Text("• ${page.name} (ID ${page.id})",
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
+                            TextButton(onClick = {
+                                SocialMetaAuth.disconnect(); metaPages = emptyList()
+                                failure = "Sessão Meta desconectada. IDs públicos já cadastrados foram preservados."
+                            }) { Text("Desconectar Meta") }
+                        }
+                    }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Meus destinos (${state.accounts.size})", modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.titleMedium)
@@ -150,7 +212,10 @@ internal fun SocialDashboardScreen(
                             Spacer(Modifier.width(10.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(account.label, fontWeight = FontWeight.Medium)
-                                Text("${account.destination.label} · Cadastro local",
+                                Text("${account.destination.label} · " + if (account.destination ==
+                                    SocialDestination.FACEBOOK_PAGE &&
+                                    SocialMetaAuth.pageToken(account.remotePageId) != null)
+                                    "Meta autorizada nesta sessão" else "Cadastro local",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
@@ -177,7 +242,12 @@ internal fun SocialDashboardScreen(
                                     Text(if (account.remotePageId.isBlank()) "Página não vinculada" else "Página vinculada",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    TextButton(onClick = { pageToBind = account }) { Text("Vincular") }
+                                    TextButton(onClick = {
+                                        if (metaPages.isNotEmpty()) {
+                                            // A seleção será feita em diálogo, com verificação do destino.
+                                            pageFromMeta = account
+                                        } else pageToBind = account
+                                    }) { Text("Vincular") }
                                 }
                             }
                             IconButton(onClick = { deletingAccount = account }) {
@@ -318,6 +388,17 @@ internal fun SocialDashboardScreen(
                 channelToBind = null
             }) { Text("Vincular") } },
             dismissButton = { TextButton(onClick = { channelToBind = null }) { Text("Cancelar") } })
+    }
+    pageFromMeta?.let { account ->
+        AlertDialog(onDismissRequest = { pageFromMeta = null },
+            title = { Text("Escolha a Página Meta") },
+            text = { Column(Modifier.heightIn(max = 350.dp).verticalScroll(rememberScrollState())) {
+                metaPages.forEach { page ->
+                    TextButton(onClick = { confirmedPage = account to page; pageFromMeta = null },
+                        modifier = Modifier.fillMaxWidth()) { Text("${page.name} · ${page.id}") }
+                }
+            } },
+            confirmButton = { TextButton(onClick = { pageFromMeta = null }) { Text("Cancelar") } })
     }
     pageToBind?.let { account ->
         SocialFacebookPageBindDialog(onDismiss = { pageToBind = null },
@@ -808,12 +889,30 @@ internal fun SocialApiCenterScreen(back: () -> Unit, openGemini: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Conexões de serviços", style = MaterialTheme.typography.titleMedium)
             Text("Chaves de desenvolvedor não equivalem a autorização para publicar na conta. " +
-                "YouTube usa autorização Google no Android. Meta Página/TikTok têm " +
-                    "modo avançado com token OAuth temporário e exigem permissões aprovadas. " +
-                    "Não existe login automático nessas duas redes nem envio sem confirmação.",
+                "YouTube usa autorização Google no Android. Meta Página agora pode iniciar " +
+                    "login oficial quando a integração estiver configurada; TikTok requer backend OAuth. " +
+                    "O modo avançado por token temporário continua opcional.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             ItemCard(Icons.Default.AutoAwesome, "Google Gemini", "Chaves e testes já existentes") { openGemini() }
+            OutlinedCard {
+                Column(Modifier.fillMaxWidth().padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Autorização Meta — Facebook Página", fontWeight = FontWeight.SemiBold)
+                    Text(if (SocialMetaAuth.isConfigured)
+                        "App ID e Client Token públicos configurados no build. Conecte a conta pela aba Redes Sociais."
+                    else "Aguardando configuração de META_APP_ID e META_CLIENT_TOKEN no CI e registro do hash da assinatura na Meta. Nenhum App Secret deve ir para o APK.",
+                        style = MaterialTheme.typography.bodySmall)
+                    Text("TikTok: Login Kit requer domínio HTTPS registrado, certificado do app e um backend seu para trocar o código OAuth por tokens. Sem esses requisitos, o modo avançado por token continua disponível.",
+                        style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = {
+                        SocialMetaAuth.disconnect()
+                        feedback = "Sessão Meta desconectada. Cadastros locais mantidos."
+                    }, enabled = SocialMetaAuth.isConfigured &&
+                        SocialMetaAuth.currentUserToken() != null) { Text("Desconectar sessão Meta") }
+                }
+            }
+
             SocialDestination.entries.forEach { dest ->
                 OutlinedCard {
                     Column(Modifier.fillMaxWidth().padding(14.dp),

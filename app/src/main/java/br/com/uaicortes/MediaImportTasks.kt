@@ -6,7 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /** Tipo da tarefa em curso. Uma importação não deve sobrescrever o resultado de outra. */
-internal enum class MediaTaskKind { VIDEO, AUDIO, OVERLAY }
+internal enum class MediaTaskKind { VIDEO, AUDIO, OVERLAY, IMAGE }
 
 /**
  * Exclusão mútua sem estado Android. A UI observa o estado Compose separadamente.

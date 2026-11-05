@@ -35,15 +35,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-internal val Blue = Color(0xFF0866FF)
-internal val Purple = Color(0xFF6954B5)
+internal val Blue = Color(0xFF0866FF); internal val Purple = Color(0xFF6954B5)
 internal val Green = Color(0xFF16866E)
-internal val Ink = Color(0xFF151515)
-internal val LightBg = Color(0xFFF7F8FA)
-internal data class OverlapConfirmation(
-    val project: VideoProject, val requested: List<Overlay>,
-    val preferredId: String, val conflicts: Set<Pair<String, String>>
-)
+internal val Ink = Color(0xFF151515); internal val LightBg = Color(0xFFF7F8FA)
+internal data class OverlapConfirmation(val project: VideoProject, val requested: List<Overlay>,
+    val preferredId: String, val conflicts: Set<Pair<String, String>>)
 internal data class SequentialConfirmation(val uri: Uri, val isImage: Boolean, val mediaMs: Long)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,6 +47,10 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         DiagnosticRecorder.initialize(applicationContext)
         setContent { UaiApp() }
+    }
+    @Deprecated("Callback do SDK Meta")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        super.onActivityResult(requestCode, resultCode, data); SocialMetaAuth.onActivityResult(requestCode, resultCode, data)
     }
 }
 /** Observa falhas de reprodução em todos os players sem capturar caminhos de mídia. */
@@ -110,7 +110,6 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     val activeProjectId = projectSession.activeProjectId
     val projects = projectSession.projects
     val project = projectSession.project
-    // Narração acompanha o projeto sem reter credenciais.
     val narrationDraft = remember(project?.id) { GeminiNarrationDraft() }
     var resumeVideoPreview by remember { mutableStateOf(false) }
     ProjectBackupLifecycle(backupStore, activeProjectId, screen)
@@ -186,7 +185,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     }
     fun saveOverlays(current: VideoProject, requested: List<Overlay>, preferredId: String?,
                      decision: String = "ask"): Boolean {
-        val canvasAspect = current.clips.firstOrNull()?.let { mediaAspect(context, it.uri, false) } ?: 16f / 9f
+        val canvasAspect = current.clips.firstOrNull()?.let { mediaAspect(context, it.uri, it.isImage) } ?: 16f / 9f
         return when (val result = OverlayOperations.apply(current, requested, preferredId,
                 canvasAspect, { mediaAspect(context, it.uri, it.isImage) }, decision)) {
             is OverlayUpdate.Confirm -> {
@@ -222,7 +221,6 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
         screen = "pip"
     }
     var selectedBoundary by workspace::selectedBoundary
-    /** Importações são canceláveis e vinculadas ao contexto que iniciou a leitura. */
     fun startMediaTask(kind: MediaTaskKind, origin: MediaTaskOrigin, operation: suspend () -> Unit) {
         if (!mediaTaskCoordinator.start(kind, origin, operation)) {
             android.widget.Toast.makeText(context, "Aguarde a importação atual terminar",
@@ -337,6 +335,8 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     BackHandler(screen != "home") { back() }
     LaunchedEffect(screen, diagnosticsEnabled) { DiagnosticRecorder.screen(screen) }
     MaterialTheme(colorScheme = palette) {
+    val mainImagePick = MainImageInsertionUi(project, screen, mediaAction, selectedClip, mediaTaskCoordinator) { changed, clip, index ->
+        write(changed).also { saved -> if (saved) { positionMs = changed.clips.take(index).sumOf { it.durationMs }; selectedClip = clip.id } } }
         val tapMonitor = if (diagnosticsEnabled) Modifier.pointerInput(screen) {
             val touches = mutableMapOf<PointerId, androidx.compose.ui.geometry.Offset>()
             val tolerance = viewConfiguration.touchSlop * 1.5f
@@ -433,7 +433,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                             navTo(it)
                         }
                     }, onUpdate = { write(it) },
-                    onAddVideo = { pendingPicker = "append"; openGallery("editor", "append") },
+                    onAddVideo = { pendingPicker = "append"; openGallery("editor", "append") }, onAddImage = mainImagePick,
                     onPiP = {
                         selectedOverlayId = project?.overlays?.firstOrNull()?.id.orEmpty()
                         screen = "pip"

@@ -66,6 +66,18 @@ internal fun TransitionFramePreview(a: Clip, b: Clip, kind: String, durationMs: 
     val frames by produceState<Pair<ImageBitmap?, ImageBitmap?>>(null to null, a.uri, b.uri, a.endMs, b.startMs) {
         value = withContext(Dispatchers.IO) {
             fun frame(clip: Clip, atMs: Long): ImageBitmap? = runCatching {
+                if (clip.isImage) {
+                    val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    context.contentResolver.openInputStream(Uri.parse(clip.uri))?.use {
+                        android.graphics.BitmapFactory.decodeStream(it, null, bounds)
+                    }
+                    var sample = 1
+                    while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 512) sample *= 2
+                    context.contentResolver.openInputStream(Uri.parse(clip.uri))?.use {
+                        android.graphics.BitmapFactory.decodeStream(it, null,
+                            android.graphics.BitmapFactory.Options().apply { inSampleSize = sample })
+                    }?.asImageBitmap()
+                } else {
                 val retriever = MediaMetadataRetriever()
                 try {
                     retriever.setDataSource(context, Uri.parse(clip.uri))
@@ -78,6 +90,7 @@ internal fun TransitionFramePreview(a: Clip, b: Clip, kind: String, durationMs: 
                     }
                     bitmap?.asImageBitmap()
                 } finally { retriever.release() }
+                }
             }.getOrNull()
             frame(a, (a.endMs - 100L).coerceAtLeast(a.startMs)) to frame(b, b.startMs)
         }

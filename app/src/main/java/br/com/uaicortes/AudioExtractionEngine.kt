@@ -23,15 +23,16 @@ class AudioExtractionEngine(private val context: Context) {
     fun cancel() { transformer?.cancel(); transformer = null; temporary?.delete() }
     fun start(clips: List<Clip>, destination: Uri,
               onSuccess: () -> Unit, onError: (String) -> Unit) {
-        require(clips.isNotEmpty()) { "Escolha um clipe com áudio" }
+        require(clips.any { !it.isImage }) { "Nenhum clipe de vídeo com áudio foi selecionado." }
         cancel()
-        val items = clips.map { clip ->
-            EditedMediaItem.Builder(MediaItem.Builder().setUri(clip.uri)
-                .setClippingConfiguration(MediaItem.ClippingConfiguration.Builder()
-                    .setStartPositionMs(clip.startMs).setEndPositionMs(clip.endMs).build())
-                .build()).setDurationUs(clip.durationMs * 1000L).setRemoveVideo(true).build()
+        // Fotos da linha do tempo não possuem áudio: o espaço temporal vira silêncio.
+        val sequence = EditedMediaItemSequence.Builder(setOf(androidx.media3.common.C.TRACK_TYPE_AUDIO))
+        clips.forEach { clip ->
+            if (clip.isImage) sequence.addGap(clip.durationMs * 1000L)
+            else sequence.addItem(EditedMediaItem.Builder(ClipMediaItems.playback(clip))
+                .setDurationUs(clip.durationMs * 1000L).setRemoveVideo(true).build())
         }
-        val composition = Composition.Builder(EditedMediaItemSequence.withAudioFrom(items)).build()
+        val composition = Composition.Builder(sequence.build()).build()
         val output = File(context.cacheDir, "uai-audio-${System.nanoTime()}.mp4")
         temporary = output
         transformer = Transformer.Builder(context).setAudioMimeType(MimeTypes.AUDIO_AAC)

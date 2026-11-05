@@ -122,7 +122,7 @@ class ExportEngine(private val context: Context) {
             require(ExportTimingPolicy.validClip(clip.startMs, clip.endMs, clip.sourceDurationMs)) {
                 "Trecho ${index + 1} possui início/fim inválidos; revise o corte antes de exportar."
             }
-            checkReadable(clip.uri, "Vídeo ${index + 1}")
+            checkReadable(clip.uri, if (clip.isImage) "Imagem ${index + 1}" else "Vídeo ${index + 1}")
         }
         project.overlays.forEachIndexed { index, overlay ->
             checkReadable(overlay.uri, "PiP ${index + 1}")
@@ -196,9 +196,7 @@ class ExportEngine(private val context: Context) {
         val postCompositionText = pipsTopFirst.isNotEmpty()
         var globalStartMs = 0L
         val mainItems = project.clips.mapIndexed { index, clip ->
-            val item = MediaItem.Builder().setUri(clip.uri).setClippingConfiguration(
-                MediaItem.ClippingConfiguration.Builder().setStartPositionMs(clip.startMs)
-                    .setEndPositionMs(clip.endMs).build()).build()
+            val item = ClipMediaItems.playback(clip)
             val previous = EditFeatures.boundary(project, index - 1)
             val next = EditFeatures.boundary(project, index)
             val fadeIn = EditFeatures.transitionMs(previous,
@@ -249,8 +247,9 @@ class ExportEngine(private val context: Context) {
             // Para vídeo com duração intrínseca, Transformer a descobre; omitir evita
             // informar incorretamente clip.durationMs como duração da fonte.
             EditedMediaItem.Builder(item)
-                .setEffects(Effects(if (clip.volume == 1f) emptyList() else listOf(GainProcessor(clip.volume)),
-                    videoEffects)).build()
+                .apply { if (clip.isImage) setFrameRate(30) }
+                .setEffects(Effects(if (clip.isImage || clip.volume == 1f) emptyList()
+                    else listOf(GainProcessor(clip.volume)), videoEffects)).build()
         }
         val mainSequence = EditedMediaItemSequence.withAudioAndVideoFrom(mainItems)
         val sequences = mutableListOf<EditedMediaItemSequence>()

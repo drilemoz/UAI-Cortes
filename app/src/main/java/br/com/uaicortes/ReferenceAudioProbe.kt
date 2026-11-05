@@ -32,7 +32,7 @@ internal object ReferenceAudioProbe {
             val duration = (clip.endMs - clip.startMs).coerceAtLeast(0L)
             val overlapStart = maxOf(window.fromMs, projectStart)
             val overlapEnd = minOf(window.untilMs, projectStart + duration)
-            if (overlapStart < overlapEnd) list += Slice(
+            if (!clip.isImage && overlapStart < overlapEnd) list += Slice(
                 Uri.parse(clip.uri), clip.startMs + overlapStart - projectStart,
                 clip.startMs + overlapEnd - projectStart, projectStart - clip.startMs
             )

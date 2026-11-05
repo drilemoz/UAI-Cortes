@@ -15,8 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      VERSION: '0.1.167'
-      VERSION_CODE: '168'
+      VERSION: '0.1.169'
+      VERSION_CODE: '170'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -71,6 +71,9 @@ jobs:
           python3 tools/ci72_media3_optin_test.py
       - name: Testes, Lint e compilar Release
         env:
+          META_APP_ID: ${{ secrets.META_APP_ID }}
+          META_CLIENT_TOKEN: ${{ secrets.META_CLIENT_TOKEN }}
+          TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}

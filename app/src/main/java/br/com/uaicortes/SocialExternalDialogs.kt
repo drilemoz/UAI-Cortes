@@ -108,7 +108,9 @@ internal fun SocialExternalPublishDialog(
     account: SocialAccount, post: SocialPublication, store: SocialStore,
     onChanged: (SocialData) -> Unit, onDismiss: () -> Unit
 ) {
-    var token by remember(post.id) { mutableStateOf("") }
+    // Uma sessão Meta aprovada dispensa colar token manualmente; nada é salvo em disco.
+    var token by remember(post.id) { mutableStateOf(if (account.destination ==
+        SocialDestination.FACEBOOK_PAGE) SocialMetaAuth.pageToken(account.remotePageId).orEmpty() else "") }
     var busy by remember { mutableStateOf(false) }
     var confirmedIdentity by remember { mutableStateOf(false) }
     var verifiedPage by remember { mutableStateOf<SocialExternalApis.FacebookPage?>(null) }
@@ -124,6 +126,9 @@ internal fun SocialExternalPublishDialog(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val isPage = account.destination == SocialDestination.FACEBOOK_PAGE
+    val metaSessionToken = remember(post.id) {
+        if (isPage) SocialMetaAuth.pageToken(account.remotePageId) else null
+    }
     val captionLength = listOf(post.description, post.hashtags)
         .filter(String::isNotBlank).joinToString("\n\n").length
     val verified = if (isPage) verifiedPage != null else creator != null
@@ -134,9 +139,12 @@ internal fun SocialExternalPublishDialog(
         text = { Column(Modifier.heightIn(max = 500.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Destino local: ${account.label}", fontWeight = FontWeight.SemiBold)
-            Text("Somente com token OAuth válido obtido após autorização da plataforma. " +
-                "Este modo avançado não realiza login OAuth: você fornece um token temporário " +
-                "a cada sessão. Nenhum segredo é armazenado, exportado ou registrado em logs.",
+            Text(if (isPage && SocialMetaAuth.pageToken(account.remotePageId) != null)
+                "Sessão Meta autorizada para esta Página. Confirme o destino antes do envio. " +
+                    "Os tokens não entram no catálogo ou no backup."
+                else "É necessário token OAuth autorizado. Para Meta Página, use Conectar Meta " +
+                    "no painel, se estiver configurado. TikTok ainda usa token temporário do " +
+                    "modo avançado. Nunca informe um App Secret.",
                 style = MaterialTheme.typography.bodySmall)
             Text("Vídeo: ${post.videoName}", style = MaterialTheme.typography.bodySmall)
             if (isPage) Text("Reels da Meta devem atender às regras atuais de formato, " +
@@ -147,7 +155,8 @@ internal fun SocialExternalPublishDialog(
             Text("Legenda: $captionLength/2200 caracteres", style = MaterialTheme.typography.labelSmall,
                 color = if (captionLength > 2200) MaterialTheme.colorScheme.error
                     else MaterialTheme.colorScheme.onSurfaceVariant)
-            if (!verified && !completed) {
+            if (!verified && !completed && !(isPage &&
+                    SocialMetaAuth.pageToken(account.remotePageId) != null)) {
                 OutlinedTextField(value = token,
                     onValueChange = { token = it.trim().take(4096); confirmedIdentity = false },
                     modifier = Modifier.fillMaxWidth(), singleLine = true,
@@ -240,6 +249,9 @@ internal fun SocialExternalPublishDialog(
                         val acct = latest.accounts.singleOrNull { it.id == account.id }
                             ?: error("Conta não encontrada.")
                         require(acct.destination == account.destination) { "Tipo de conta alterado." }
+                        if (metaSessionToken != null) require(
+                            SocialMetaAuth.pageToken(acct.remotePageId) == currentToken
+                        ) { "Sessão Meta encerrada ou alterada. Reconecte a Página antes de publicar." }
                         if (isPage) require(acct.remotePageId == verifiedPage?.id) {
                             "A Página foi alterada. Revalide a autorização." }
                         val marked = SocialPublicationPolicy.markUploadReview(source)

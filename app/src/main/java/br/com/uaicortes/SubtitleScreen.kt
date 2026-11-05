@@ -216,9 +216,7 @@ internal fun SubtitlePositionPreview(p:VideoProject,cue:SubtitleCue,
         playing=false
         player.pause()
         player.setMediaItems(p.clips.map { clip ->
-            MediaItem.Builder().setUri(clip.uri).setClippingConfiguration(
-                MediaItem.ClippingConfiguration.Builder().setStartPositionMs(clip.startMs)
-                    .setEndPositionMs(clip.endMs).build()).build()
+            ClipMediaItems.playback(clip)
         })
         player.prepare()
     }

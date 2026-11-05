@@ -338,9 +338,11 @@ object AutoSubtitleEngine {
                 currentCoroutineContext().ensureActive()
                 onProgress(TranscriptionStageProgress.decoding(index,project.clips.size,0f),
                     "Preparando áudio do clipe ${index+1} de ${project.clips.size}…")
-                all += readClip(context, clip, timeline, model) { fraction ->
-                    onProgress(TranscriptionStageProgress.decoding(index,project.clips.size,fraction),
-                        "Reconhecendo fala do clipe ${index+1} de ${project.clips.size}…")
+                if (!clip.isImage) {
+                    all += readClip(context, clip, timeline, model) { fraction ->
+                        onProgress(TranscriptionStageProgress.decoding(index,project.clips.size,fraction),
+                            "Reconhecendo fala do clipe ${index+1} de ${project.clips.size}…")
+                    }
                 }
                 timeline += clip.durationMs
                 onProgress(TranscriptionStageProgress.decoding(index,project.clips.size,1f),

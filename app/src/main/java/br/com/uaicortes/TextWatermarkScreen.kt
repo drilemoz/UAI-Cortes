@@ -31,9 +31,7 @@ internal fun TextWatermarkScreen(p: VideoProject, back: () -> Unit,
     DisposableEffect(player) { onDispose { player.release() } }
     LaunchedEffect(p.clips.firstOrNull()?.uri, p.clips.firstOrNull()?.startMs) {
         p.clips.firstOrNull()?.let { clip ->
-            player.setMediaItem(MediaItem.Builder().setUri(clip.uri)
-                .setClippingConfiguration(MediaItem.ClippingConfiguration.Builder()
-                    .setStartPositionMs(clip.startMs).setEndPositionMs(clip.endMs).build()).build())
+            player.setMediaItem(ClipMediaItems.playback(clip))
             player.prepare()
         }
     }
@@ -50,7 +48,7 @@ internal fun TextWatermarkScreen(p: VideoProject, back: () -> Unit,
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             val first = p.clips.firstOrNull()
             val aspect = remember(first?.uri) {
-                first?.uri?.let { mediaAspect(context, it, false) } ?: 16f / 9f
+                first?.let { mediaAspect(context, it.uri, it.isImage) } ?: 16f / 9f
             }
             InlineVideoPreview(aspect) {
                 AndroidView(factory = { ctx -> previewPlayer(ctx).apply {

@@ -11,8 +11,8 @@ android {
         applicationId = "br.com.uaicortes"
         minSdk = 26
         targetSdk = 36
-        versionCode = 168
-        versionName = "0.1.167"
+        versionCode = 170
+        versionName = "0.1.169"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Definido pelo runner do GitHub Actions, sem inventar nome de repositório.
         val ciRepository = System.getenv("GITHUB_REPOSITORY").orEmpty()
@@ -20,6 +20,22 @@ android {
             Regex("[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}").matches(it)
         }.orEmpty()
         buildConfigField("String", "GITHUB_RELEASE_REPOSITORY", "\"$safeRepository\"")
+        // IDs públicos, fornecidos no CI. Nunca colocar App Secret no APK.
+        val metaAppId = System.getenv("META_APP_ID").orEmpty()
+            .takeIf { it.matches(Regex("[0-9]{5,30}")) }.orEmpty()
+        val metaClientToken = System.getenv("META_CLIENT_TOKEN").orEmpty()
+            .takeIf { it.matches(Regex("[A-Za-z0-9_-]{1,150}")) }.orEmpty()
+        buildConfigField("String", "META_APP_ID", "\"$metaAppId\"")
+        buildConfigField("String", "META_CLIENT_TOKEN", "\"$metaClientToken\"")
+        resValue("string", "facebook_app_id", if (metaAppId.isBlank()) "0" else metaAppId)
+        resValue("string", "fb_login_protocol_scheme", "fb${if (metaAppId.isBlank()) "0" else metaAppId}")
+        resValue("string", "facebook_client_token", metaClientToken)
+        // Preparação TikTok: o SDK exige redirect HTTPS e troca de token num backend.
+        // Não ativar login sem domínio verificado e backend seguro.
+        val tikTokKey = System.getenv("TIKTOK_CLIENT_KEY").orEmpty()
+            .takeIf { it.matches(Regex("[A-Za-z0-9_-]{8,100}")) }.orEmpty()
+        buildConfigField("String", "TIKTOK_CLIENT_KEY", "\"$tikTokKey\"")
+
     }
     signingConfigs {
         create("ciRelease") {
@@ -75,6 +91,7 @@ dependencies {
     implementation("androidx.media3:media3-common:1.11.1")
     implementation("androidx.documentfile:documentfile:1.1.0")
     implementation("com.google.android.gms:play-services-auth:22.0.0")
+    implementation("com.facebook.android:facebook-login:19.0.0")
     implementation("com.alphacephei:vosk-android:0.3.75")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")

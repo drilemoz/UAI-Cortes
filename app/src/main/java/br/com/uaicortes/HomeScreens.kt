@@ -190,6 +190,18 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
         val thumbnail by produceState<ImageBitmap?>(null, first?.uri, first?.startMs, p.id) {
             value = withContext(Dispatchers.IO) {
                 first?.let { clip -> runCatching {
+                    if (clip.isImage) {
+                        val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                        context.contentResolver.openInputStream(Uri.parse(clip.uri))?.use {
+                            android.graphics.BitmapFactory.decodeStream(it, null, bounds)
+                        }
+                        var sample = 1
+                        while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 384) sample *= 2
+                        context.contentResolver.openInputStream(Uri.parse(clip.uri))?.use {
+                            android.graphics.BitmapFactory.decodeStream(it, null,
+                                android.graphics.BitmapFactory.Options().apply { inSampleSize = sample })
+                        }?.asImageBitmap()
+                    } else {
                     val retriever = MediaMetadataRetriever()
                     try {
                         retriever.setDataSource(context, Uri.parse(clip.uri))
@@ -205,6 +217,7 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
                             }
                         frame?.asImageBitmap()
                     } finally { retriever.release() }
+                    }
                 }.getOrNull() }
             }
         }

@@ -120,10 +120,7 @@ internal fun AudioReferenceAlignmentDialog(
             "project" -> {
                 val clips = project.clips.filter { it.endMs > it.startMs }
                 referencePlayer.setMediaItems(clips.map { clip ->
-                    MediaItem.Builder().setUri(Uri.parse(clip.uri))
-                        .setClippingConfiguration(MediaItem.ClippingConfiguration.Builder()
-                            .setStartPositionMs(clip.startMs).setEndPositionMs(clip.endMs).build())
-                        .build()
+                    ClipMediaItems.playback(clip)
                 })
             }
             "track" -> chosenTrack?.let { referencePlayer.setMediaItem(MediaItem.fromUri(Uri.parse(it.uri))) }

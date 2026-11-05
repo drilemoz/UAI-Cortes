@@ -19,7 +19,7 @@ import java.net.URLEncoder
  * Não substitui um fluxo OAuth verificado da Meta ou do TikTok.
  */
 internal object SocialExternalApis {
-    data class FacebookPage(val id: String, val name: String)
+    data class FacebookPage(val id: String, val name: String, val accessToken: String = "")
     data class TikTokCreator(
         val name: String, val username: String, val privacyOptions: List<String>,
         val commentsDisabled: Boolean, val duetDisabled: Boolean,
@@ -137,6 +137,23 @@ internal object SocialExternalApis {
             val id = obj.optString("id")
             require(SocialPublicationPolicy.validPageId(id)) { "O token não identificou uma Página válida." }
             FacebookPage(id, obj.optString("name").take(100))
+        } finally { conn.disconnect() }
+    }
+
+    /** GET /me/accounts a partir do token de usuário Meta. Tokens retornados não são persistidos. */
+    suspend fun facebookPages(userToken: String): List<FacebookPage> = withContext(Dispatchers.IO) {
+        val conn = connection("$META/me/accounts?fields=id%2Cname%2Caccess_token&limit=50",
+            userToken, "GET", "graph.facebook.com")
+        try {
+            val root = json(conn, "Consultar Páginas autorizadas")
+            val records = root.optJSONArray("data") ?: error("Meta não retornou Páginas autorizadas.")
+            (0 until records.length()).mapNotNull { index ->
+                val item = records.optJSONObject(index) ?: return@mapNotNull null
+                val id = item.optString("id")
+                if (!SocialPublicationPolicy.validPageId(id)) null
+                else FacebookPage(id, item.optString("name").take(100),
+                    item.optString("access_token").take(4096))
+            }
         } finally { conn.disconnect() }
     }
 

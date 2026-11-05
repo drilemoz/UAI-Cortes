@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.viewinterop.AndroidView
@@ -33,6 +34,45 @@ internal fun TrimScreen(p: VideoProject, selectedId: String, globalMs: Long, bac
         Heading("Cortar e unir", back)
         if (clip == null) {
             Text("Adicione um vídeo para editar.", modifier = Modifier.padding(16.dp))
+            return@Column
+        }
+        if (clip.isImage) {
+            var seconds by remember(clip.id) { mutableIntStateOf((clip.durationMs / 1000L).toInt()) }
+            val image by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, clip.uri) {
+                value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    runCatching {
+                        val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                        context.contentResolver.openInputStream(android.net.Uri.parse(clip.uri))?.use {
+                            android.graphics.BitmapFactory.decodeStream(it, null, bounds)
+                        }
+                        val largest = maxOf(bounds.outWidth, bounds.outHeight)
+                        var sample = 1
+                        while (largest / sample > 1000) sample *= 2
+                        val options = android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }
+                        context.contentResolver.openInputStream(android.net.Uri.parse(clip.uri))?.use {
+                            android.graphics.BitmapFactory.decodeStream(it, null, options)
+                        }?.asImageBitmap()
+                    }.getOrNull()
+                }
+            }
+            Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())
+                .padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text("Duração da imagem", style = MaterialTheme.typography.titleLarge)
+                if (image != null) Image(image!!, "Imagem selecionada",
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit)
+                Text(clip.title, style = MaterialTheme.typography.bodyMedium)
+                Text("Mostrar por ${seconds}s", fontWeight = FontWeight.SemiBold)
+                Slider(value = seconds.toFloat().coerceIn(1f,30f), valueRange = 1f..30f,
+                    steps = 28, onValueChange = { seconds = it.toInt().coerceIn(1,30) })
+                Text("A foto permanece estática. Alterar a duração também desloca as cenas " +
+                    "posteriores na linha do tempo, sem modificar o arquivo original.",
+                    style = MaterialTheme.typography.bodySmall)
+                Button(onClick = {
+                    update(ImageClipPolicy.resizeInProject(p, clip.id, seconds))
+                    back()
+                }, modifier = Modifier.fillMaxWidth()) { Text("Salvar duração") }
+            }
             return@Column
         }
         val total = clip.sourceDurationMs.coerceAtLeast(1L)

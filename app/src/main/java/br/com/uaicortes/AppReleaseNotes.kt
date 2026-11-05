@@ -16,11 +16,27 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.167"
-    const val VERSION_CODE = 168
+    const val VERSION_NAME = "0.1.169"
+    const val VERSION_CODE = 170
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.169", listOf(
+            ReleaseFeature("timeline-photo-cover-169", "Capa e fotos na faixa principal",
+                "Insira imagens JPG, PNG, WebP ou HEIC da galeria antes do vídeo, entre clipes ou no final; escolha a duração sem produzir MP4 intermediário.", "check"),
+            ReleaseFeature("photo-timing-169", "Duração e sincronismo da foto",
+                "Edite o tempo de 1 a 30 segundos; legendas, PiPs e trilhas extras posteriores acompanham a inserção da capa.", "captions"),
+            ReleaseFeature("photo-media3-169", "Prévia e exportação com fotos",
+                "Fotos aparecem como clipes na timeline e usam Media3 para compor o vídeo final, com imagem silenciosa e projeto legado preservado.", "check")
+        )),
+        ReleaseSummary("0.1.168", listOf(
+            ReleaseFeature("meta-sdk-login-168", "Login oficial Meta para Páginas",
+                "Autorize a conta pelo SDK Meta, escolha uma Página retornada pela API e vincule seu ID público sem salvar token no catálogo.", "check"),
+            ReleaseFeature("meta-session-168", "Sessão Meta para publicar",
+                "Após conceder pages_manage_posts, o Reel pode usar o token da Página na sessão atual, ainda com confirmação individual e revisão se houver falha incerta.", "captions"),
+            ReleaseFeature("tiktok-oauth-readiness-168", "Configuração OAuth e diagnóstico",
+                "Central mostra os requisitos Meta/TikTok; TikTok continua exigindo backend HTTPS próprio e aprovação antes de login integrado.", "check")
+        )),
         ReleaseSummary("0.1.167", listOf(
             ReleaseFeature("meta-pages-167", "Reels no Facebook Página — modo avançado",
                 "Vinculação de Página por token temporário, verificação de identidade e envio confirmado antes de iniciar; perfil pessoal continua assistido.", "check"),

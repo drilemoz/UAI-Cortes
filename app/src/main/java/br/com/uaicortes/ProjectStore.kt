@@ -13,16 +13,20 @@ data class Clip(
     val sourceDurationMs: Long,
     val startMs: Long = 0,
     val endMs: Long = sourceDurationMs,
-    val volume: Float = 1f
+    val volume: Float = 1f,
+    val isImage: Boolean = false,
+    val imageMimeType: String? = null
 ) {
     val durationMs: Long get() = (endMs - startMs).coerceAtLeast(1L)
     fun json() = JSONObject().put("id", id).put("uri", uri).put("title", title)
         .put("sourceDurationMs", sourceDurationMs).put("startMs", startMs)
         .put("endMs", endMs).put("volume", volume.toDouble())
+        .put("isImage", isImage).put("imageMimeType", imageMimeType)
     companion object {
         fun read(j: JSONObject) = Clip(j.optString("id", UUID.randomUUID().toString()),
             j.getString("uri"), j.optString("title", "Vídeo"), j.optLong("sourceDurationMs", 1000L),
-            j.optLong("startMs"), j.optLong("endMs", 1000L), j.optDouble("volume", 1.0).toFloat())
+            j.optLong("startMs"), j.optLong("endMs", 1000L), j.optDouble("volume", 1.0).toFloat(),
+            j.optBoolean("isImage", false), j.optString("imageMimeType").takeIf { it.isNotBlank() && it != "null" })
     }
 }
 

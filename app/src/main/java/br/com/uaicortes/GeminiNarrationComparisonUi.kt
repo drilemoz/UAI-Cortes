@@ -68,10 +68,7 @@ internal fun GeminiNarrationComparisonDialog(
                         feedback = "O vídeo não possui um intervalo original disponível."
                     } else {
                         val items = project.clips.filter { it.durationMs > 0L }.map { clip ->
-                            MediaItem.Builder().setUri(Uri.parse(clip.uri))
-                                .setClippingConfiguration(MediaItem.ClippingConfiguration.Builder()
-                                    .setStartPositionMs(clip.startMs).setEndPositionMs(clip.endMs).build())
-                                .build()
+                            ClipMediaItems.playback(clip)
                         }
                         player.setMediaItems(items)
                         player.prepare()

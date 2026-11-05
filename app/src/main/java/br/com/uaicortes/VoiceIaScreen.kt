@@ -1177,9 +1177,7 @@ private fun VoiceIaVideoPreview(p: VideoProject, cue: SubtitleCue,
     DisposableEffect(player) { onDispose { player.release() } }
     LaunchedEffect(player, p.clips.map { Triple(it.uri, it.startMs, it.endMs) }) {
         player.setMediaItems(p.clips.map { clip ->
-            MediaItem.Builder().setUri(clip.uri).setClippingConfiguration(
-                MediaItem.ClippingConfiguration.Builder().setStartPositionMs(clip.startMs)
-                    .setEndPositionMs(clip.endMs).build()).build()
+            ClipMediaItems.playback(clip)
         })
         player.prepare()
     }

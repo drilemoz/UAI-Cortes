@@ -43,9 +43,7 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
     LaunchedEffect(mixPlayer, p.clips.map { Triple(it.uri, it.startMs, it.endMs) }) {
         mixPlaying = false
         mixPlayer.setMediaItems(p.clips.map { clip ->
-            MediaItem.Builder().setUri(clip.uri).setClippingConfiguration(
-                MediaItem.ClippingConfiguration.Builder().setStartPositionMs(clip.startMs)
-                    .setEndPositionMs(clip.endMs).build()).build()
+            ClipMediaItems.playback(clip)
         })
         if (p.clips.isNotEmpty()) {
             mixPlayer.prepare()

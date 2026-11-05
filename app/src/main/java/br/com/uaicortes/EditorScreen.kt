@@ -41,7 +41,8 @@ import java.util.UUID
 @Composable
 internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     onSelected:(String)->Unit,onPosition:(Long)->Unit,onBack:()->Unit,onEdit:(String)->Unit,
-    onUpdate:(VideoProject)->Unit,onAddVideo:()->Unit,onPiP:()->Unit,onAudio:()->Unit,
+    onUpdate:(VideoProject)->Unit,onAddVideo:()->Unit,onAddImage:()->Unit,
+    onPiP:()->Unit,onAudio:()->Unit,
     onSelectOverlay:(String)->Unit,onTransition:(Int)->Unit,onSaveHome:()->Unit,
     onSelectAudio:(String)->Unit,onSelectSubtitle:(String)->Unit,
     onClipAudio:(String)->Unit,
@@ -58,7 +59,8 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     var previewVolume by remember(p.id) { mutableFloatStateOf(1f) }
     var previewVolumeMenu by remember { mutableStateOf(false) }
     val activeFrameIndex = AdaptiveVideoLayout.activeClipIndex(p.clips.map { it.durationMs }, currentMs)
-    val activeFrameUri = p.clips.getOrNull(activeFrameIndex)?.uri
+    val activeFrame = p.clips.getOrNull(activeFrameIndex)
+    val activeFrameUri = activeFrame?.takeUnless { it.isImage }?.uri
     // Um clipe novo pode ter FPS diferente. A leitura não bloqueia a interface.
     val frameFps by produceState<Float?>(initialValue = null, activeFrameUri) {
         value = activeFrameUri?.let { uri ->
@@ -90,11 +92,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     }
     LaunchedEffect(player, p.clips.map { Triple(it.uri, it.startMs, it.endMs) }) {
         restoringMedia = true
-        player.setMediaItems(p.clips.map { clip ->
-            MediaItem.Builder().setUri(clip.uri).setClippingConfiguration(
-                MediaItem.ClippingConfiguration.Builder().setStartPositionMs(clip.startMs)
-                    .setEndPositionMs(clip.endMs).build()).build()
-        })
+        player.setMediaItems(p.clips.map(ClipMediaItems::playback))
         player.prepare()
         // Restaura o playhead após reconfiguração/retorno à tela; não sobrescrever
         // o tempo salvo com o zero inicial do player durante o prepare().
@@ -146,9 +144,9 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)
             .background(Color(0xFF101014)).padding(10.dp), contentAlignment = Alignment.Center) {
             val activeIndex=AdaptiveVideoLayout.activeClipIndex(p.clips.map { it.durationMs },currentMs)
-            val previewUri=p.clips.getOrNull(activeIndex)?.uri
-            val actualAspect=remember(previewUri) {
-                previewUri?.let { mediaAspect(context,it,false) } ?: 16f/9f
+            val previewClip = p.clips.getOrNull(activeIndex)
+            val actualAspect=remember(previewClip?.uri, previewClip?.isImage) {
+                previewClip?.let { mediaAspect(context,it.uri,it.isImage) } ?: 16f/9f
             }
             val fit=AdaptiveVideoLayout.fit(maxWidth.value,maxHeight.value,actualAspect)
             val videoW=fit.width.dp
@@ -272,7 +270,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                         }
                     }
                 }
-            }, enabled = p.clips.isNotEmpty() && !savingFrame,
+            }, enabled = p.clips.getOrNull(activeFrameIndex)?.isImage == false && !savingFrame,
                 modifier = Modifier.size(42.dp)) {
                 if (savingFrame) CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
                 else Icon(Icons.Default.PhotoCamera, "Capturar quadro e salvar na galeria")
@@ -297,7 +295,8 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             },
             onValueChangeFinished = { scrubbing = false },
             valueRange=0f..p.durationMs.toFloat(),modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp))
-        TimelineRow("Vídeo",Blue,p.clips.mapIndexed{ index, clip -> "Clipe ${index+1}" to clip.durationMs },p.durationMs,currentMs,selectedId,
+        TimelineRow("Vídeo",Blue,p.clips.mapIndexed{ index, clip ->
+            (if (clip.isImage) "Foto ${index+1}" else "Clipe ${index+1}") to clip.durationMs },p.durationMs,currentMs,selectedId,
             onClip={ id -> onSelected(p.clips[id].id); clipMenuId = p.clips[id].id },
             onBoundary=onTransition)
         OverlayTimeline(p.overlays, p.durationMs, onClick = { id -> onSelectOverlay(id); onEdit("pip") })
@@ -324,6 +323,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             Triple("Salvar", Icons.Default.Save, "save"),
             Triple("Cortar", Icons.Default.ContentCut, "trim"),
             Triple("Unir", Icons.Default.Add, "add"),
+            Triple("Imagem", Icons.Default.AddPhotoAlternate, "image"),
             Triple("PiP", Icons.Default.Layers, "pip"),
             Triple("Áudio", Icons.Default.MusicNote, "audio"),
             Triple("Vozes IA", Icons.Default.RecordVoiceOver, "voices"),
@@ -345,6 +345,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                     when (key) {
                         "save" -> onSaveHome()
                         "add" -> onAddVideo()
+                        "image" -> onAddImage()
                         "pip" -> onPiP()
                         "audio" -> onEdit("audio")
                         else -> onEdit(key)
@@ -370,7 +371,8 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 verticalArrangement=Arrangement.spacedBy(9.dp)) {
                 Row(verticalAlignment=Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Editar clipe",fontWeight=FontWeight.Bold,fontSize=19.sp)
+                        Text(if (active.isImage) "Editar imagem" else "Editar clipe",
+                            fontWeight=FontWeight.Bold,fontSize=19.sp)
                         Text(active.title, maxLines=1,overflow=TextOverflow.Ellipsis,
                             style=MaterialTheme.typography.bodySmall)
                     }
@@ -383,7 +385,10 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                     clipMenuId=null
                 }
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                    ClipSheetAction("Cortar",Icons.Default.ContentCut) {clipMenuId=null;onEdit("trim")}
+                    ClipSheetAction(if (active.isImage) "Duração" else "Cortar",
+                        if (active.isImage) Icons.Default.Timer else Icons.Default.ContentCut) {
+                        clipMenuId=null;onEdit("trim")
+                    }
                     ClipSheetAction("Duplicar",Icons.Default.ContentCopy) {
                         val newId = UUID.randomUUID().toString()
                         val list=p.clips.toMutableList();list.add(idx+1,active.copy(id=newId))
@@ -411,10 +416,16 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                     Text(if (p.audioTracks.any { it.clipId == active.id })
                         "Editar áudio deste clipe" else "Adicionar áudio somente a este clipe")
                 }
-                Text("Volume apenas deste clipe: ${(active.volume*100).toInt()}%")
-                Slider(value=active.volume.coerceIn(0f,1f), onValueChange={ v ->
-                    onUpdate(p.copy(clips=p.clips.map { if(it.id==active.id) it.copy(volume=v) else it }))
-                })
+                if (!active.isImage) {
+                    Text("Volume apenas deste clipe: ${(active.volume*100).toInt()}%")
+                    Slider(value=active.volume.coerceIn(0f,1f), onValueChange={ v ->
+                        onUpdate(p.copy(clips=p.clips.map { if(it.id==active.id) it.copy(volume=v) else it }))
+                    })
+                } else {
+                    Text("Imagem estática · ${active.durationMs/1000L}s · sem som original. " +
+                        "Use Duração para ajustar o tempo exibido.",
+                        style=MaterialTheme.typography.bodySmall)
+                }
                 Text("Excluir ou duplicar não altera o arquivo original.",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)

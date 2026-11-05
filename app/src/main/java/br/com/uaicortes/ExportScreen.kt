@@ -120,9 +120,9 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
             delay(100)
         }
     }
-    val exportPreviewUri=p.clips.getOrNull(exportClipIndex)?.uri
-    val exportPreviewAspect=remember(exportPreviewUri) {
-        exportPreviewUri?.let { mediaAspect(context,it,false) } ?: 16f/9f
+    val exportPreviewClip = p.clips.getOrNull(exportClipIndex)
+    val exportPreviewAspect=remember(exportPreviewClip?.uri, exportPreviewClip?.isImage) {
+        exportPreviewClip?.let { mediaAspect(context,it.uri,it.isImage) } ?: 16f/9f
     }
     var destinationId by rememberSaveable(p.id) { mutableStateOf(ExportDestination.ORIGINAL.name) }
     var frameModeId by rememberSaveable(p.id) { mutableStateOf(VerticalFrameMode.FIT.name) }
@@ -133,9 +133,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
     DisposableEffect(previewPlayer) { onDispose {previewPlayer.release()} }
     LaunchedEffect(p.clips) {
         previewPlayer.setMediaItems(p.clips.map { clip ->
-            MediaItem.Builder().setUri(clip.uri).setClippingConfiguration(
-                MediaItem.ClippingConfiguration.Builder().setStartPositionMs(clip.startMs)
-                    .setEndPositionMs(clip.endMs).build()).build()
+            ClipMediaItems.playback(clip)
         })
         previewPlayer.prepare()
     }
@@ -157,7 +155,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
     // Só consulta metadados locais em IO: não bloqueia a tela e não faz upload da mídia.
     LaunchedEffect(p.id, p.clips) {
         sourceShortSide = withContext(Dispatchers.IO) {
-            p.clips.mapNotNull { clip ->
+            p.clips.filterNot { it.isImage }.mapNotNull { clip ->
                 runCatching {
                     val retriever = MediaMetadataRetriever()
                     try {
