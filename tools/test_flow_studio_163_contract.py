@@ -18,7 +18,7 @@ assert 'FlowStudioClipPolicy.canDivide(draft.story)' in ui
 assert 'onPrepare = {' in ui and 'Preparar prompt sem IA' in ui
 assert 'Câmera: quem aparece e como se move?' in ui
 assert 'O que esse personagem diz?' in ui
-assert 'Cada cena representa UM vídeo' in ui
+assert 'Uma cena = um vídeo do Flow' in ui
 assert 'CADA CENA é UM CLIPE INDEPENDENTE' in script
 assert 'durationSeconds' in model and 'dialogueLines' in model
 assert 'StudioPromptPolicy.compose(' in clip and 'fun canDivide' in clip

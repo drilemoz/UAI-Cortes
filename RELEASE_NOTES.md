@@ -1,3 +1,12 @@
+# Uai Cortes · versão 0.1.164 — Wizard visual de criação
+
+- **Wizard em cinco etapas:** novo projeto abre primeiro o estilo visual; depois personagens, cenários, montagem dos clipes e exportação para Flow. Cada tela foca uma tarefa, com navegação e autosave.
+- **Sugestões imediatas sem API:** alienígena, pessoa, animal, fruta, robô, objeto animado e cenários. Fichas com nome e aparência em destaque; roupa, voz e objetos opcionais.
+- **Biblioteca entre histórias:** personagens, cenários e estilos podem ser salvos e reutilizados; imagem opcional da galeria com cópia privada. Exportação ZIP inclui referências importadas.
+- **Gemini opcional:** enriquecer individualmente personagem ou cenário após confirmação, com revisão antes de aplicar; sem chamadas pagas automáticas.
+- **Cena = clipe:** editor oferece personagens cadastrados e seleção de quem fala; imagem inicial opcional, prompt preparável sem IA. Compatibilidade dos rascunhos v1 e projetos de vídeo schemaVersion=4.
+- **Validação:** testes locais estáticos e de integridade não substituem build Android/uso real das APIs; ver `docs/VALIDATION_0.1.164.md`.
+
 # Uai Cortes · versão 0.1.163 — Estúdio em clipes e Gemini global
 
 - **Cada cena é um clipe:** o fluxo agora permite criar Cena 1, Cena 2 etc. manualmente, sem história obrigatória; cada uma tem ação, fala, câmera, sons, imagem inicial e prompt próprios.

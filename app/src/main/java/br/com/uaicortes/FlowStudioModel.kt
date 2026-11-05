@@ -7,22 +7,30 @@ import java.util.UUID
 /** Modelo independente do ProjectStore/schemaVersion=4 e do FlowPromptDraft legado. */
 internal data class StudioPerson(
     val name: String = "", val appearance: String = "", val clothes: String = "",
-    val voice: String = "", val personality: String = "", val objects: String = ""
+    val voice: String = "", val personality: String = "", val objects: String = "",
+    val id: String = UUID.randomUUID().toString(), val imageAsset: String = ""
 ) {
     fun json() = JSONObject().put("name", name).put("appearance", appearance)
         .put("clothes", clothes).put("voice", voice).put("personality", personality).put("objects", objects)
+        .put("id", id).put("imageAsset", imageAsset)
     companion object {
         fun read(j: JSONObject) = StudioPerson(j.optString("name").take(120), j.optString("appearance").take(1500),
             j.optString("clothes").take(1000), j.optString("voice").take(500),
-            j.optString("personality").take(800), j.optString("objects").take(800))
+            j.optString("personality").take(800), j.optString("objects").take(800),
+            j.optString("id").takeIf { it.matches(Regex("[a-fA-F0-9-]{36}")) } ?: UUID.randomUUID().toString(),
+            j.optString("imageAsset").takeIf { it.matches(Regex("[a-fA-F0-9-]{36}\\.(png|jpg|webp)")) }.orEmpty())
     }
 }
 
-internal data class StudioPlace(val name: String = "", val details: String = "", val objects: String = "") {
+internal data class StudioPlace(val name: String = "", val details: String = "", val objects: String = "",
+    val id: String = UUID.randomUUID().toString(), val imageAsset: String = "") {
     fun json() = JSONObject().put("name", name).put("details", details).put("objects", objects)
+        .put("id", id).put("imageAsset", imageAsset)
     companion object {
         fun read(j: JSONObject) = StudioPlace(j.optString("name").take(120),
-            j.optString("details").take(1800), j.optString("objects").take(900))
+            j.optString("details").take(1800), j.optString("objects").take(900),
+            j.optString("id").takeIf { it.matches(Regex("[a-fA-F0-9-]{36}")) } ?: UUID.randomUUID().toString(),
+            j.optString("imageAsset").takeIf { it.matches(Regex("[a-fA-F0-9-]{36}\\.(png|jpg|webp)")) }.orEmpty())
     }
 }
 
@@ -119,9 +127,10 @@ internal data class StudioScene(
         dialogueLines.filter { it.speech.isNotBlank() }.joinToString("\n") {
             "${it.speaker.ifBlank { "Personagem" }}: ${it.speech}"
         } else dialogue
-    fun ready() = title.isNotBlank() && prompt.isNotBlank() && imageAsset.isNotBlank()
+    fun ready() = title.isNotBlank() && prompt.isNotBlank()
     fun status() = when {
         videoUri.isNotBlank() -> "Vídeo importado"
+        ready() && imageAsset.isBlank() -> "Prompt pronto · imagem opcional"
         ready() -> "Pronta"
         else -> "Não preparada"
     }
@@ -154,7 +163,7 @@ internal data class FlowStudioDraft(
         .put("people", JSONArray().also { a -> people.forEach { a.put(it.json()) } })
         .put("places", JSONArray().also { a -> places.forEach { a.put(it.json()) } })
         .put("scenes", JSONArray().also { a -> scenes.forEach { a.put(it.json(includeLocalUri)) } })
-        .put("step", step.coerceIn(0, 2))
+        .put("wizardVersion", 2).put("step", step.coerceIn(0, 4))
     companion object {
         fun read(j: JSONObject): FlowStudioDraft {
             require(j.optInt("schema") == 1) { "Formato do Estúdio não reconhecido." }
@@ -169,7 +178,12 @@ internal data class FlowStudioDraft(
                 (0 until persons.length()).map { StudioPerson.read(persons.getJSONObject(it)) },
                 (0 until locations.length()).map { StudioPlace.read(locations.getJSONObject(it)) },
                 (0 until scenes.length()).map { StudioScene.read(scenes.getJSONObject(it)) },
-                j.optInt("step").coerceIn(0, 2))
+                if (j.optInt("wizardVersion") >= 2) j.optInt("step").coerceIn(0, 4)
+                else when (j.optInt("step").coerceIn(0, 2)) {
+                    0 -> 0 // antiga Ideia -> novo Estilo
+                    1 -> 3 // antigas Cenas -> novas Cenas
+                    else -> 4 // antiga Exportação -> nova Exportação
+                })
             require(result.scenes.map { it.id }.distinct().size == result.scenes.size) { "Cenas com identificadores duplicados." }
             return result
         }

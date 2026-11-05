@@ -101,6 +101,34 @@ internal class FlowStudioStorage(private val context: Context, projectId: String
                 entry("personagens.json", org.json.JSONArray().also { arr -> draft.people.forEach { arr.put(it.json()) } }.toString(2))
                 entry("cenarios.json", org.json.JSONArray().also { arr -> draft.places.forEach { arr.put(it.json()) } }.toString(2))
                 entry("ordem-e-continuidade.json", draft.json(includeLocalUri = false).toString(2))
+                // Incluir referências da galeria: os arquivos ficam no catálogo global, fora da pasta do projeto.
+                // Nunca incluir URIs content://, chaves ou imagens não cadastradas na história.
+                val library = StudioReferenceLibrary(context)
+                val includedReferences = mutableSetOf<String>()
+                draft.people.forEachIndexed { index, person ->
+                    if (person.imageAsset.isNotBlank()) {
+                        val file = library.asset(person.imageAsset)
+                            ?: throw IOException("Imagem do personagem ${index + 1} indisponível para o ZIP.")
+                        val entryName = "referencias/personagens/${person.imageAsset}"
+                        if (includedReferences.add(entryName)) {
+                            zip.putNextEntry(ZipEntry(entryName))
+                            file.inputStream().use { it.copyTo(zip) }
+                            zip.closeEntry()
+                        }
+                    }
+                }
+                draft.places.forEachIndexed { index, place ->
+                    if (place.imageAsset.isNotBlank()) {
+                        val file = library.asset(place.imageAsset)
+                            ?: throw IOException("Imagem do cenário ${index + 1} indisponível para o ZIP.")
+                        val entryName = "referencias/cenarios/${place.imageAsset}"
+                        if (includedReferences.add(entryName)) {
+                            zip.putNextEntry(ZipEntry(entryName))
+                            file.inputStream().use { it.copyTo(zip) }
+                            zip.closeEntry()
+                        }
+                    }
+                }
                 draft.scenes.forEachIndexed { index, scene ->
                     val prefix = "cenas/cena-${(index + 1).toString().padStart(2, '0')}/"
                     entry("${prefix}prompt.txt", scene.prompt)

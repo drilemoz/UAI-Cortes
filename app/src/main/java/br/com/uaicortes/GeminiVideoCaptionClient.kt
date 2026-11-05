@@ -152,7 +152,7 @@ CONTEXTO:\n${contextText.take(1200)}"""
     suspend fun generateStudioJson(key: String, instruction: String, model: String,
         operation: String): JSONObject = withContext(Dispatchers.IO) {
         require(GeminiCaptionModelPolicy.validId(model)) { "Selecione um modelo de texto válido." }
-        require(operation in setOf("studio_story", "studio_scenes", "studio_scene"))
+        require(operation in setOf("studio_story", "studio_scenes", "studio_scene", "studio_person", "studio_place"))
         require(instruction.length in 10..45000) { "O roteiro excede o limite desta operação." }
         val payload = JSONObject().put("contents", JSONArray().put(JSONObject()
             .put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", instruction)))))

@@ -49,6 +49,10 @@ private data class StudioJob(val type: String, val index: Int = -1)
 private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: () -> Unit) {
     val context = LocalContext.current
     val storage = remember(project.id) { FlowStudioStorage(context, project.id) }
+    val referenceLibrary = remember(context) { StudioReferenceLibrary(context) }
+    var libraryData by remember(context) { mutableStateOf(runCatching { referenceLibrary.read() }.getOrNull()) }
+    var referenceImageRev by remember { mutableIntStateOf(0) }
+    var galleryReference by remember { mutableStateOf<Pair<String, String>?>(null) }
     val load = remember(project.id) { runCatching { storage.read() } }
     if (load.isFailure) {
         Column(Modifier.fillMaxSize().statusBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -77,6 +81,8 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
     var storySuggestion by remember(project.id) { mutableStateOf<Pair<StudioStory, Pair<List<StudioPerson>, List<StudioPlace>>>?>(null) }
     var sceneSuggestions by remember(project.id) { mutableStateOf<List<StudioScene>?>(null) }
     var singleSuggestion by remember(project.id) { mutableStateOf<Pair<String, StudioScene>?>(null) }
+    var personSuggestion by remember(project.id) { mutableStateOf<Pair<String, StudioPerson>?>(null) }
+    var placeSuggestion by remember(project.id) { mutableStateOf<Pair<String, StudioPlace>?>(null) }
     var deletingScene by remember(project.id) { mutableStateOf<String?>(null) }
     var editingScene by remember(project.id) { mutableStateOf<StudioScene?>(null) }
     var imageDialog by remember(project.id) { mutableIntStateOf(-1) }
@@ -98,6 +104,10 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
         if (saved == draft) return true
         return try { storage.save(draft); saved = draft; saveError = false; true }
         catch (_: Exception) { saveError = true; false }
+    }
+    fun saveLibrary(next: StudioLibraryData) {
+        try { referenceLibrary.save(next); libraryData = next; status = "Referência salva na biblioteca para outras histórias." }
+        catch (_: Exception) { status = "Não foi possível salvar na biblioteca. Referências existentes preservadas." }
     }
     fun exit() { if (saveNow()) back() }
     BackHandler { exit() }
@@ -132,6 +142,25 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
                 imageRev++
                 status = "Imagem importada. Referências visuais não garantem identidade perfeita."
             } catch (_: Exception) { status = "Falha ao importar. Escolha uma imagem PNG, JPEG ou WebP de até 12 MB." }
+            finally { busy = false; operation = "" }
+        }
+    }
+    val importReference = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val target = galleryReference
+        galleryReference = null
+        if (uri != null && target != null) scope.launch {
+            busy = true; operation = "Importando imagem de referência"
+            try {
+                val filename = withContext(Dispatchers.IO) { referenceLibrary.importImage(target.second, uri) }
+                if (target.first == "person") draft = draft.copy(people = draft.people.map { person ->
+                    if (person.id == target.second) person.copy(imageAsset = filename) else person
+                })
+                else draft = draft.copy(places = draft.places.map { place ->
+                    if (place.id == target.second) place.copy(imageAsset = filename) else place
+                })
+                referenceImageRev++
+                status = "Imagem da galeria salva. Ela não será enviada à API sem confirmação."
+            } catch (_: Exception) { status = "Falha ao importar referência. Use JPEG, PNG ou WebP até 12 MB." }
             finally { busy = false; operation = "" }
         }
     }
@@ -193,6 +222,8 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
             "story" -> "Gemini: criando título, história e personagens"
             "scenes" -> "Gemini: dividindo história e preparando as cenas"
             "image" -> "Gemini: gerando imagem inicial da cena ${job.index + 1}"
+            "person" -> "Gemini: enriquecendo personagem ${job.index + 1}"
+            "place" -> "Gemini: enriquecendo cenário ${job.index + 1}"
             else -> "Gemini: preparando roteiro da cena ${job.index + 1}"
         }
         status = "Solicitação iniciada. Aguarde a resposta ou cancele; o tempo depende do serviço."
@@ -205,8 +236,11 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
                 if (job.type == "image") {
                     if (models.none { it.id == chosenModel }) throw IOException("Consulte e selecione um modelo disponível para a chave.")
                     val scene = snapshot.scenes[job.index]
-                    val refs = listOfNotNull(storage.asset(scene.imageAsset),
-                        storage.asset(snapshot.scenes.getOrNull(job.index - 1)?.imageAsset.orEmpty()))
+                    val refNames = scene.characters.split(',', ';').map { it.trim() }
+                    val refs = (listOfNotNull(storage.asset(scene.imageAsset),
+                        storage.asset(snapshot.scenes.getOrNull(job.index - 1)?.imageAsset.orEmpty())) +
+                        snapshot.people.filter { it.name in refNames }.mapNotNull { referenceLibrary.asset(it.imageAsset) } +
+                        snapshot.places.mapNotNull { referenceLibrary.asset(it.imageAsset) })
                         .distinctBy { it.path }.take(2)
                     val bytes = withContext(Dispatchers.IO) {
                         imageClient.createImage(key, chosenModel, FlowStudioAi.image(snapshot, job.index), refs.map { it.readBytes() })
@@ -221,21 +255,30 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
                     val instruction = when (job.type) {
                         "story" -> FlowStudioAi.story(snapshot.story)
                         "scenes" -> FlowStudioAi.scenes(snapshot)
+                        "person" -> FlowStudioAi.enrichPerson(snapshot.people[job.index], snapshot.story.style)
+                        "place" -> FlowStudioAi.enrichPlace(snapshot.places[job.index], snapshot.story.style)
                         else -> FlowStudioAi.oneScene(snapshot, job.index)
                     }
-                    val result = ai.generateStudioJson(key, instruction, textModel, when (job.type) {
-                        "story" -> "studio_story"; "scenes" -> "studio_scenes"; else -> "studio_scene"
-                    })
+                    val operationId = when (job.type) {
+                        "story" -> "studio_story"
+                        "scenes" -> "studio_scenes"
+                        "person" -> "studio_person"
+                        "place" -> "studio_place"
+                        else -> "studio_scene"
+                    }
+                    val result = ai.generateStudioJson(key, instruction, textModel, operationId)
                     when (job.type) {
                         "story" -> storySuggestion = FlowStudioAi.parseStory(result, snapshot.story)
                         "scenes" -> sceneSuggestions = FlowStudioAi.parseScenes(result, snapshot.story.durationSeconds)
+                        "person" -> personSuggestion = snapshot.people[job.index].id to
+                            FlowStudioAi.parsePerson(result, snapshot.people[job.index])
+                        "place" -> placeSuggestion = snapshot.places[job.index].id to
+                            FlowStudioAi.parsePlace(result, snapshot.places[job.index])
                         else -> singleSuggestion = snapshot.scenes[job.index].id to
                             FlowStudioAi.parseSingle(result, snapshot.scenes[job.index])
                     }
                     status = "Resposta recebida. Revise antes de aplicar. " +
-                        GeminiUsageLedger(context).lastMessage(when (job.type) {
-                            "story" -> "studio_story"; "scenes" -> "studio_scenes"; else -> "studio_scene"
-                        })
+                        GeminiUsageLedger(context).lastMessage(operationId)
                 }
                 if (beforeKeyId != keys.activeId()) {
                     val newName = keys.profiles().firstOrNull { it.id == keys.activeId() }?.label
@@ -270,6 +313,8 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
             title = { Text(if (job.type == "image") "Confirmar geração de imagem" else "Enviar texto ao Gemini?") },
             text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(if (job.type == "image") "Será enviada a descrição desta cena e até duas imagens de referência. Nenhuma geração começa sem esta confirmação."
+                     else if (job.type == "person" || job.type == "place")
+                         "O Gemini receberá somente a ficha textual escolhida e o estilo. A resposta aparecerá para revisão antes de salvar; nenhuma imagem será enviada."
                      else "Serão enviados texto do roteiro, referências e contexto necessários. Nenhuma imagem ou vídeo é enviado nesta operação.")
                 Text("Modelo: ${if (job.type == "image") modelName else textModel}")
                 Text(if (job.type == "image") StudioImagePricing.note(modelName) else
@@ -300,8 +345,10 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
                 Text("${proposed.second.first.size} personagem(ns) e ${proposed.second.second.size} cenário(s).")
             } },
             confirmButton = { TextButton(onClick = {
-                draft = draft.copy(story = proposed.first, people = proposed.second.first,
-                    places = proposed.second.second, step = 0)
+                val newPeople = proposed.second.first.filterNot { generated -> draft.people.any { it.name == generated.name } }
+                val newPlaces = proposed.second.second.filterNot { generated -> draft.places.any { it.name == generated.name } }
+                draft = draft.copy(story = proposed.first,
+                    people = (draft.people + newPeople).take(30), places = (draft.places + newPlaces).take(30))
                 storySuggestion = null
                 status = "Proposta aplicada. Edite e aprove antes de dividir em cenas."
             }) { Text("Usar proposta") } },
@@ -318,7 +365,7 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
                 Text("A aplicação substituirá a lista atual, sem apagar arquivos de imagens no aparelho.")
             } },
             confirmButton = { TextButton(onClick = {
-                draft = draft.copy(scenes = proposed, step = 1)
+                draft = draft.copy(scenes = proposed, step = 3)
                 sceneSuggestions = null
             }) { Text("Aplicar cenas") } },
             dismissButton = { TextButton(onClick = { sceneSuggestions = null }) { Text("Manter atuais") } })
@@ -335,6 +382,31 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
                 singleSuggestion = null
             }) { Text("Aplicar roteiro") } },
             dismissButton = { TextButton(onClick = { singleSuggestion = null }) { Text("Descartar") } })
+    }
+    personSuggestion?.let { (id, proposal) ->
+        AlertDialog(onDismissRequest = { personSuggestion = null },
+            title = { Text("Sugestão para ${proposal.name}") },
+            text = { Column(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())) {
+                Text("Aparência: ${proposal.appearance}\nRoupas: ${proposal.clothes}\nVoz: ${proposal.voice}\nPersonalidade: ${proposal.personality}\nObjetos: ${proposal.objects}")
+            } }, confirmButton = { TextButton(onClick = {
+                if (draft.people.any { it.id == id }) {
+                    draft = draft.copy(people = draft.people.map { if (it.id == id) proposal else it })
+                } else status = "Personagem mudou durante a solicitação; sugestão não aplicada."
+                personSuggestion = null
+            }) { Text("Aplicar à ficha") } },
+            dismissButton = { TextButton(onClick = { personSuggestion = null }) { Text("Descartar") } })
+    }
+    placeSuggestion?.let { (id, proposal) ->
+        AlertDialog(onDismissRequest = { placeSuggestion = null },
+            title = { Text("Sugestão para ${proposal.name}") },
+            text = { Text("Ambiente: ${proposal.details}\nObjetos: ${proposal.objects}") },
+            confirmButton = { TextButton(onClick = {
+                if (draft.places.any { it.id == id }) {
+                    draft = draft.copy(places = draft.places.map { if (it.id == id) proposal else it })
+                } else status = "Cenário mudou durante a solicitação; sugestão não aplicada."
+                placeSuggestion = null
+            }) { Text("Aplicar à ficha") } },
+            dismissButton = { TextButton(onClick = { placeSuggestion = null }) { Text("Descartar") } })
     }
     deletingScene?.let { id ->
         AlertDialog(onDismissRequest = { deletingScene = null }, title = { Text("Excluir cena?") },
@@ -404,22 +476,6 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
                 Icon(Icons.Default.Save, contentDescription = "Salvar rascunho")
             }
         }
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("1 · Ideia", "2 · Cenas (clipes)", "3 · Exportar para Flow").forEachIndexed { index, label ->
-                FilterChip(selected = draft.step == index, onClick = { draft = draft.copy(step = index) },
-                    label = { Text(label) })
-            }
-        }
-        if (!busy && !modelBusy) {
-            val keys = GeminiCredentialStore(context)
-            val active = keys.profiles().firstOrNull { it.id == keys.activeId() }
-            Text("Gemini: ${active?.label ?: "sem chave"} · Troca automática por 429: " +
-                (if (keys.autoFallbackEnabled()) "ativada" else "desativada"),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 4.dp))
-        }
         if (busy || modelBusy) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
@@ -450,35 +506,73 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            StudioWizardStepHeader(draft.step, onNavigate = { if (!busy) draft = draft.copy(step = it) })
             when (draft.step) {
-                0 -> {
-                    StudioStoryStep(draft.story, onUpdate = { s -> draft = draft.copy(story = s) },
-                        onGenerate = { pending = StudioJob("story") },
-                        onSuggested = { status = it },
-                        onContinue = { draft = draft.copy(story = draft.story.copy(approved = true), step = 1) },
-                        onStartScenes = { draft = draft.copy(step = 1) },
-                        disabled = busy)
-                    StudioReferenceEditor(draft, onUpdate = { draft = it })
-                }
-                1 -> {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text("${draft.scenes.size} cena(s)", style = MaterialTheme.typography.titleMedium)
-                            Text("${StudioSceneTiming.total(draft.scenes)}s previstos de ${draft.story.durationSeconds}s · estimativa",
-                                style = MaterialTheme.typography.labelSmall)
+                0 -> StudioWizardStyle(draft.story, libraryData?.styles.orEmpty(),
+                    onChange = { draft = draft.copy(story = it) },
+                    onSaveStyle = { style ->
+                        libraryData?.let { data -> saveLibrary(data.copy(styles = (data.styles + style).distinct().take(30))) }
+                    })
+                1 -> StudioWizardPeople(draft.people, libraryData, referenceLibrary, referenceImageRev,
+                    onUpsert = { person ->
+                        val people = if (draft.people.any { it.id == person.id })
+                            draft.people.map { if (it.id == person.id) person else it }
+                        else (draft.people + person).take(30)
+                        draft = draft.copy(people = people)
+                    }, onDelete = { id -> draft = draft.copy(people = draft.people.filterNot { it.id == id }) },
+                    onImport = { id -> galleryReference = "person" to id; importReference.launch(arrayOf("image/*")) },
+                    onSaveLibrary = { person ->
+                        libraryData?.let { data ->
+                            val savedPerson = person.copy(id = java.util.UUID.randomUUID().toString())
+                            saveLibrary(data.copy(people = (data.people + savedPerson).take(100)))
                         }
-                        TextButton(onClick = { draft = draft.copy(step = 2) }) { Text("Exportar") }
+                    }, onEnrich = { id ->
+                        draft.people.indexOfFirst { it.id == id }.takeIf { it >= 0 }?.let { pending = StudioJob("person", it) }
+                    }, busy = busy)
+                2 -> StudioWizardPlaces(draft.places, libraryData, referenceLibrary, referenceImageRev,
+                    onUpsert = { place ->
+                        val places = if (draft.places.any { it.id == place.id })
+                            draft.places.map { if (it.id == place.id) place else it }
+                        else (draft.places + place).take(30)
+                        draft = draft.copy(places = places)
+                    }, onDelete = { id -> draft = draft.copy(places = draft.places.filterNot { it.id == id }) },
+                    onImport = { id -> galleryReference = "place" to id; importReference.launch(arrayOf("image/*")) },
+                    onSaveLibrary = { place ->
+                        libraryData?.let { data ->
+                            val savedPlace = place.copy(id = java.util.UUID.randomUUID().toString())
+                            saveLibrary(data.copy(places = (data.places + savedPlace).take(100)))
+                        }
+                    }, onEnrich = { id ->
+                        draft.places.indexOfFirst { it.id == id }.takeIf { it >= 0 }?.let { pending = StudioJob("place", it) }
+                    }, busy = busy)
+                3 -> {
+                    Text("Monte os clipes", style = MaterialTheme.typography.headlineSmall)
+                    Text("Uma cena = um vídeo do Flow. Selecione os personagens e descreva o que acontece.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("${draft.scenes.size} clipe(s) · ${StudioSceneTiming.total(draft.scenes)}s estimados",
+                        style = MaterialTheme.typography.labelMedium)
+                    var planningOpen by remember { mutableStateOf(false) }
+                    TextButton(onClick = { planningOpen = !planningOpen }) {
+                        Icon(Icons.Default.AutoAwesome, null)
+                        Text(" Pedir sugestões ao Gemini (opcional)")
                     }
-                    Text("Cada cena representa UM vídeo a gerar separadamente no Google Flow. " +
-                        "Exemplo: cena 1 mostra os dois se olhando; cena 2 só o abacate fala; " +
-                        "cena 3 só a banana responde. Importe o último quadro para ajudar na continuidade.",
-                        style = MaterialTheme.typography.bodySmall)
-                    OutlinedButton(onClick = { pending = StudioJob("scenes") },
-                        enabled = !busy && FlowStudioClipPolicy.canDivide(draft.story),
-                        modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.AutoAwesome, null); Text(" Sugerir clipes com Gemini (opcional)")
+                    if (planningOpen) {
+                        StudioField("Ideia curta da história", draft.story.idea, 5000, 2) { idea ->
+                            draft = draft.copy(story = draft.story.copy(idea = idea))
+                        }
+                        OutlinedButton(onClick = { pending = StudioJob("story") },
+                            enabled = !busy && draft.story.idea.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
+                            Text("Sugerir história e personagens")
+                        }
                     }
-                    StudioReferenceEditor(draft, onUpdate = { draft = it })
+                    if (planningOpen) {
+                        OutlinedButton(onClick = { pending = StudioJob("scenes") },
+                            enabled = !busy && FlowStudioClipPolicy.canDivide(draft.story),
+                            modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Default.AutoAwesome, null); Text(" Sugerir clipes com Gemini (opcional)")
+                        }
+                    }
                     draft.scenes.forEachIndexed { i, scene ->
                         StudioSceneCard(scene, i, draft.scenes.size, storage, imageRev,
                             busy = busy, onEdit = { editingScene = scene },
@@ -524,7 +618,7 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
                         Icon(Icons.Default.Add, null); Text(" Nova cena (um clipe no Flow)")
                     }
                 }
-                else -> {
+                4 -> {
                     Text("Preparar para o Google Flow", style = MaterialTheme.typography.titleMedium)
                     Text("Configure 9:16 e a duração no Flow, separadamente. Os prompts não contêm esses parâmetros. " +
                         "O envio de imagens e prompts é manual; não existe integração de projeto editável com o Flow neste aplicativo.",
@@ -570,6 +664,12 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
                 Icon(if (advanced) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
             }
             if (advanced) {
+                val keys = GeminiCredentialStore(context)
+                val active = keys.profiles().firstOrNull { it.id == keys.activeId() }
+                Text("Gemini: ${active?.label ?: "sem chave"} · Troca após 429: " +
+                    (if (keys.autoFallbackEnabled()) "ativada" else "desativada"),
+                    style = MaterialTheme.typography.bodySmall)
+                StudioReferenceEditor(draft, onUpdate = { draft = it })
                 Text("O modo manual mantém Texto → vídeo, Vídeo de referência, estilo-base, " +
                     "constantes, edição de cenas, aprimoramento e refinamento em lote Gemini.",
                     style = MaterialTheme.typography.bodySmall)
@@ -580,6 +680,18 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
             if (saveError) Text("Falha ao salvar rascunho; não saia antes de corrigir o armazenamento.",
                 color = MaterialTheme.colorScheme.error)
             Spacer(Modifier.height(8.dp))
+        }
+        HorizontalDivider()
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedButton(onClick = { draft = draft.copy(step = (draft.step - 1).coerceAtLeast(0)) },
+                enabled = draft.step > 0 && !busy) { Icon(Icons.Default.ArrowBack, null); Text(" Voltar") }
+            Button(onClick = { if (draft.step < 4) draft = draft.copy(step = draft.step + 1) },
+                enabled = draft.step < 4 && !busy, modifier = Modifier.weight(1f)) {
+                Text(if (draft.step == 3) "Preparar para Flow" else "Continuar")
+                Icon(Icons.Default.ArrowForward, null)
+            }
+            if (draft.step == 4) Text("Projeto salvo", style = MaterialTheme.typography.labelSmall)
         }
     }
 }
@@ -765,7 +877,6 @@ private fun StudioSceneCard(scene: StudioScene, index: Int, count: Int, storage:
     val mainAction = when {
         !FlowStudioClipPolicy.canPrepare(scene) -> "Descrever cena"
         scene.prompt.isBlank() -> "Preparar prompt sem IA"
-        scene.imageAsset.isBlank() -> "Gerar imagem inicial"
         else -> "Copiar prompt"
     }
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
@@ -823,13 +934,9 @@ private fun StudioSceneCard(scene: StudioScene, index: Int, count: Int, storage:
                 Text("Início · ${scene.initialState.ifBlank { "Não definido" }}", style = MaterialTheme.typography.bodySmall)
                 Text("Final · ${scene.finalState.ifBlank { "Não definido" }}", style = MaterialTheme.typography.bodySmall)
             }
-            if (scene.imageAsset.isBlank()) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                OutlinedButton(onClick = onImageImport, modifier = Modifier.weight(1f), enabled = !busy) {
-                    Icon(Icons.Default.Upload, null); Text(" Importar imagem")
-                }
-                OutlinedButton(onClick = onImageGenerate, modifier = Modifier.weight(1f), enabled = !busy) {
-                    Icon(Icons.Default.AutoAwesome, null); Text(" Gerar imagem")
-                }
+            OutlinedButton(onClick = onImageImport, modifier = Modifier.fillMaxWidth(), enabled = !busy) {
+                Icon(Icons.Default.PhotoLibrary, null)
+                Text(if (scene.imageAsset.isBlank()) " Usar imagem da galeria (opcional)" else " Trocar imagem da galeria")
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -837,14 +944,12 @@ private fun StudioSceneCard(scene: StudioScene, index: Int, count: Int, storage:
                     when {
                         !FlowStudioClipPolicy.canPrepare(scene) -> onEdit()
                         scene.prompt.isBlank() -> onPrepare()
-                        scene.imageAsset.isBlank() -> onImageGenerate()
                         else -> onCopy()
                     }
                 }, enabled = !busy, modifier = Modifier.weight(1f)) {
                     Icon(when {
                         !FlowStudioClipPolicy.canPrepare(scene) -> Icons.Default.Edit
                         scene.prompt.isBlank() -> Icons.Default.Description
-                        scene.imageAsset.isBlank() -> Icons.Default.Image
                         else -> Icons.Default.ContentCopy
                     }, null)
                     Text(" $mainAction", maxLines = 2)
@@ -904,6 +1009,19 @@ private fun StudioSceneEditor(original: StudioScene, people: List<String>,
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("Um cartão = um vídeo do Flow. Descreva a ação ou reação; o resto é opcional.",
                 style = MaterialTheme.typography.bodySmall)
+            if (people.isNotEmpty()) {
+                Text("Quem aparece?", style = MaterialTheme.typography.labelMedium)
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    people.filter { it.isNotBlank() }.forEach { name ->
+                        val selectedNames = value.characters.split(',').map { it.trim() }.filter { it.isNotBlank() }
+                        FilterChip(selected = name in selectedNames, onClick = {
+                            val next = if (name in selectedNames) selectedNames - name else selectedNames + name
+                            value = value.copy(characters = next.joinToString(", "))
+                        }, label = { Text(name) })
+                    }
+                }
+            }
             StudioField("O que acontece nesta cena?", value.actions, 6000, 3) {
                 value = value.copy(actions = it)
             }
@@ -920,6 +1038,18 @@ private fun StudioSceneEditor(original: StudioScene, people: List<String>,
             if (dialogueOpen) {
                 val currentLines = value.dialogueLines
                 val firstLine = currentLines.firstOrNull() ?: StudioDialogueLine()
+                if (people.isNotEmpty()) {
+                    Text("Quem fala agora?", style = MaterialTheme.typography.labelSmall)
+                    Row(Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        people.filter { it.isNotBlank() }.forEach { name ->
+                            FilterChip(selected = firstLine.speaker == name, onClick = {
+                                setLines(if (currentLines.isEmpty()) listOf(firstLine.copy(speaker = name))
+                                    else currentLines.toMutableList().also { it[0] = firstLine.copy(speaker = name) })
+                            }, label = { Text(name) })
+                        }
+                    }
+                }
                 StudioField("Quem fala?", firstLine.speaker, 120) { speaker ->
                     setLines(if (currentLines.isEmpty()) listOf(firstLine.copy(speaker = speaker))
                         else currentLines.toMutableList().also { it[0] = firstLine.copy(speaker = speaker) })

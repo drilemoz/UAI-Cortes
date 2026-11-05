@@ -82,6 +82,44 @@ class FlowStudioModelTest {
         assertEquals("Sem nome", lines[2].speech)
     }
 
+    @Test fun wizardMigrationPreservesOldProjectsAndStep() {
+        val legacy = FlowStudioDraft(story = StudioStory(style = "Realista"),
+            people = listOf(StudioPerson("Alien", "verde")), scenes = listOf(StudioScene(actions = "Olha")))
+            .json().apply { remove("wizardVersion"); put("step", 1) }
+        val restored = FlowStudioDraft.read(legacy)
+        assertEquals(3, restored.step) // Cenas antigas -> Cenas do Wizard
+        assertEquals("Realista", restored.story.style)
+        assertEquals("Alien", restored.people.first().name)
+        assertEquals("Olha", restored.scenes.first().actions)
+        assertEquals(4, FlowStudioDraft.read(legacy.put("step", 2)).step)
+        assertEquals(0, FlowStudioDraft.read(legacy.put("step", 0)).step)
+    }
+
+    @Test fun wizardImagesAndReusableDetailsRoundTrip() {
+        val picture = "550e8400-e29b-41d4-a716-446655440000.png"
+        val person = StudioPerson(name = "Abacate", appearance = "olhos grandes", imageAsset = picture)
+        val place = StudioPlace(name = "Cozinha", imageAsset = picture)
+        val draft = FlowStudioDraft(people = listOf(person), places = listOf(place), step = 4,
+            scenes = listOf(StudioScene(prompt = "Camera focuses on the avocado", imageAsset = "")))
+        val restored = FlowStudioDraft.read(draft.json())
+        assertEquals(draft, restored)
+        assertEquals(picture, restored.people.first().imageAsset)
+        assertEquals(picture, restored.places.first().imageAsset)
+        assertEquals("Prompt pronto · imagem opcional", restored.scenes.first().status())
+    }
+
+    @Test fun localSuggestionsAndEnrichmentNeverDiscardReferenceIdentity() {
+        val alien = StudioReferenceSuggestions.person("👽 Alienígena")
+        assertTrue(alien.appearance.isNotBlank())
+        assertTrue(StudioReferenceSuggestions.place("🍳 Cozinha").details.isNotBlank())
+        val enhanced = FlowStudioAi.parsePerson(JSONObject().put("name", "Nome errado")
+            .put("appearance", "Ser de quatro olhos").put("clothes", "Macacão verde"), alien)
+        assertEquals(alien.id, enhanced.id)
+        assertEquals(alien.name, enhanced.name)
+        assertEquals("Ser de quatro olhos", enhanced.appearance)
+        assertFalse(FlowStudioAi.enrichPerson(alien, "Animação 3D").contains("9:16"))
+    }
+
     @Test fun manualClipDoesNotRequireStoryApprovalOrGemini() {
         val idea = StudioStory(idea = "Abacate e banana brigando", approved = false)
         val scene1 = StudioScene(title = "Encontro", actions = "Os dois se olham em silêncio", finalState = "Os dois se olham")

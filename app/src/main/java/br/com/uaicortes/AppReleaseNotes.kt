@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.163"
-    const val VERSION_CODE = 164
+    const val VERSION_NAME = "0.1.164"
+    const val VERSION_CODE = 165
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.164", listOf(
+            ReleaseFeature("studio-wizard-164", "Estúdio de Cenas com Wizard visual",
+                "Cinco etapas: estilo, personagens, cenários, cenas e exportação, com detalhes opcionais e navegação simples.", "check"),
+            ReleaseFeature("studio-library-164", "Personagens e cenários reutilizáveis",
+                "Sugestões locais prontas, biblioteca compartilhada e referências da galeria sem geração obrigatória de imagem.", "captions"),
+            ReleaseFeature("studio-enrich-164", "Gemini ajuda a criar referências",
+                "Enriquecimento individual de personagem/cenário com confirmação, revisão, consumo rastreado e opção offline.", "check")
+        )),
         ReleaseSummary("0.1.163", listOf(
             ReleaseFeature("flow-one-clip-163", "Cada cena é um vídeo do Flow",
                 "Criação direta de clipes sem roteiro completo; imagem, fala, ação, câmera e sons por cena.", "check"),
