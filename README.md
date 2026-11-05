@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.173 — Correção da importação de fotos
+
+- Corrigido o fluxo do botão Imagem: o leitor de dimensões BitmapFactory em modo `inJustDecodeBounds` não rejeita mais `null` de `decodeStream` para uma imagem válida.
+- Preservadas a galeria integrada, a cópia privada da imagem, as durações, o posicionamento e a linha do tempo.
+- Testes instrumentados adicionados para JPG/PNG válidos, persistência e JPEG inválido. Execução em dispositivo Android ainda pendente.
+
 # Uai Cortes · versão 0.1.172 — Editor sincronizado e mídia durável
 
 - **Editor:** linha do tempo sincronizada com faixas de vídeos, imagens, PiP, áudio, vozes e legendas; cursor único e rótulos em ícones, sem mudar JSON do projeto.

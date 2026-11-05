@@ -129,9 +129,13 @@ internal object ImageClipImport {
             "Imagem vazia ou acima de 24 MB. Escolha um arquivo menor."
         }
         val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        context.contentResolver.openInputStream(uri)?.use { stream ->
+        // Com inJustDecodeBounds=true, decodeStream() retorna null mesmo para imagem
+        // válida. A validação é feita pelas dimensões em options, NÃO pelo retorno.
+        val imageStream = context.contentResolver.openInputStream(uri)
+            ?: error("Não foi possível abrir a imagem escolhida.")
+        imageStream.use { stream ->
             BitmapFactory.decodeStream(stream, null, options)
-        } ?: error("Não foi possível ler a imagem escolhida.")
+        }
         require(options.outWidth > 0 && options.outHeight > 0 &&
             options.outWidth.toLong() * options.outHeight.toLong() <= MAX_PIXELS) {
             "Imagem inválida ou acima de 24 megapixels. Reduza a resolução."

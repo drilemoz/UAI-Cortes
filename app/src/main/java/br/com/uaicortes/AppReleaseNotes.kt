@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.172"
-    const val VERSION_CODE = 173
+    const val VERSION_NAME = "0.1.173"
+    const val VERSION_CODE = 174
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.173", listOf(
+            ReleaseFeature("image-bounds-fix-173", "Fotos novamente importáveis",
+                "Corrigida a leitura de dimensões que rejeitava imagens válidas na galeria integrada.", "check"),
+            ReleaseFeature("photo-regression-173", "Validação da foto ao inserir",
+                "JPG e PNG passam por validação de tamanho e cópia privada; arquivo inválido continua sendo rejeitado.", "captions")
+        )),
         ReleaseSummary("0.1.172", listOf(
             ReleaseFeature("unified-timeline-172", "Uma linha do tempo para tudo",
                 "Faixas com ícones e cursor único sincronizado para vídeos, imagens, PiP, áudio, vozes e legendas.", "check"),

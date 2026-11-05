@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.173 — Importação de imagens da galeria
+
+- Corrigida a exceção de `image_import` em `StaticImageClip.kt`, identificada no diagnóstico de 05/11/2026 e reproduzida por vídeo: `BitmapFactory.decodeStream` devolve `null` quando `inJustDecodeBounds=true`, sem indicar erro.
+- `openInputStream` é verificado separadamente e os limites de pixel/tamanho continuam validados pelas dimensões de `BitmapFactory.Options`.
+- Teste Android para JPG/PNG válidos e entrada JPEG corrompida; contrato Python para impedir regresso do operador Elvis sobre `decodeStream`.
+- Mantidos schemaVersion=4, 5 APKs, APIs, projetos e todas as mudanças da 0.1.172.
+
 # Uai Cortes · versão 0.1.172 — Linha do tempo unificada, importação e diagnóstico
 
 - Unificadas as pistas do editor com cursor de reprodução comum e faixa visual dedicada a fotos (fotos ainda são clipes principais no render, não overlays extras).

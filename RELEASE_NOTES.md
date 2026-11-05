@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.173 — Fotos importáveis novamente
+
+- Corrige o aviso indevido “Não foi possível ler a imagem escolhida” após selecionar uma foto na galeria integrada.
+- Mantém capa no início, duração de 1 a 30 segundos, galeria integrada de Vídeo/PiP e mídia original intacta.
+- Testes de regressão preparados. Build Android, teste físico de importação e exportação de MP4 continuam pendentes.
+
 # Uai Cortes · versão 0.1.172 — Timeline, mídia local e erros HTTP
 
 - **Editor:** escala temporal única, pistas com ícones para vídeo, imagem, PiP, áudio, vozes e legendas; cursor alinhado à reprodução e navegação ao tocar/arrastar na régua.
