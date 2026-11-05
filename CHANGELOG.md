@@ -1,3 +1,13 @@
+# Uai Cortes · versão 0.1.143 (04/11/2026)
+
+## Vozes IA: barra única de seis ações e seletores organizados
+
+- Ações **Buscar**, **Lite/Flash**, **Voz**, **Humor**, **Gerar N** e **Inserir N** reunidas em uma linha; botões retangulares compactos (40 dp, raio 8 dp), com descrição acessível completa e sem perder os contadores.
+- Modelo Lite/Flash agora usa o mesmo estilo de botão; controles dos cartões individuais também ganharam cantos discretos, preservando textos, informações técnicas, prévia e timeline.
+- Diálogos de vozes e estilos ordenados alfabeticamente em português; lista interna rolável limitada a 310/320 dp, seleção atual marcada e título compacto. Todas as opções originais permanecem disponíveis.
+- Rótulos curtos aparecem somente na interface. Nenhum texto, estilo Gemini, áudio, chave ou duração do projeto é alterado por essa revisão.
+- Testes locais e validação estrutural não substituem compilação Gradle nem teste no celular.
+
 # Uai Cortes · versão 0.1.142 (04/11/2026)
 
 ## Vozes IA: interface compacta e escolhas gerais

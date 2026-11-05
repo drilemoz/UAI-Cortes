@@ -12,14 +12,14 @@ assert 'height(264.dp)' not in preview
 assert 'SubtitleOverlayOnFrame(selected, editable = false' in preview
 assert 'formatPipMs(cue.startMs)' in ui and 'formatPipMs(cue.endMs)' in ui
 assert 'formatMs(cue.startMs)' not in ui
-assert ui.index('Text("Voz geral"') < ui.index('if (status.isNotBlank())')
-assert 'Text(if (defaultStyle == "Neutra") "Humor" else defaultStyle' in ui and 'Text("Gerar todas ($pending)"' in ui
+assert ui.index('VoiceIaToolbarAction(label = "Voz"') < ui.index('if (status.isNotBlank())')
+assert 'VoiceIaShortLabels.style(defaultStyle)' in ui and 'label = "Gerar $pending"' in ui
 assert 'Text("Voz para todas"' not in ui
 assert 'pendingVoiceForAll' in ui and 'pendingStyleForAll' in ui
 assert 'voiceOverrides.clear()' in ui and 'styleOverrides.clear()' in ui
 assert 'VoiceIaDisplayPolicy.overrunMs(' in ui
 assert 'maxLines = if (active) 3 else 1' in ui
-assert 'contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)' in ui
+assert 'shape = RoundedCornerShape(8.dp)' in ui
 assert 'api.synthesize(key, model, voiceId, direction, cue.text)' in ui
 assert 'editable = false' in ui
 policy = (root/'app/src/main/java/br/com/uaicortes/VoiceIaDisplayPolicy.kt').read_text()

@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.142"
-    const val VERSION_CODE = 143
+    const val VERSION_NAME = "0.1.143"
+    const val VERSION_CODE = 144
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.143", listOf(
+            ReleaseFeature("voice-ia-one-row-143", "Vozes IA em uma barra compacta",
+                "Buscar, Lite/Flash, Voz, Humor, Gerar e Inserir na mesma linha, com cantos discretos e contadores curtos.", "captions"),
+            ReleaseFeature("voice-ia-sorted-dialogs-143", "Listas de voz e estilo em ordem alfabética",
+                "Seletores Gemini com rolagem interna, seleção marcada e todas as opções anteriores preservadas.", "check")
+        )),
         ReleaseSummary("0.1.142", listOf(
             ReleaseFeature("voice-ia-general-settings-142", "Voz e humor para todas as falas",
                 "Buscar vozes, Lite e Voz geral ficam juntos; estilo Humor geral tem aplicação confirmada, sem substituir escolhas individuais silenciosamente.", "captions"),

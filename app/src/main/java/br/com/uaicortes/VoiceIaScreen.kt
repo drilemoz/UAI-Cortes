@@ -14,6 +14,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -31,6 +34,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.coroutineContext
 import java.io.File
+import java.text.Collator
+import java.util.Locale
 
 /** Vozes IA: as legendas são fonte somente leitura. Áudio tradicional continua separado. */
 @Composable
@@ -203,39 +208,36 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                     ?.let { selectedCueId = cues[it + 1].id } })
             VoiceIaCueTimeline(cues, project.durationMs, selectedCue.id) { selectedCueId = it }
         }
-        // Ferramentas gerais próximas: catálogo, modelo e voz comum.
-        // A escolha geral só altera o rascunho, sem enviar texto ao Gemini.
-        Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 3.dp),
+        // Uma única barra compacta: mantém as seis ações visíveis sem rolagem horizontal.
+        // Surface evita as larguras mínimas dos botões Material3 em telas estreitas.
+        val pending = cues.count { readyFor(it) == null }
+        val preparedCount = cues.size - pending
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = {
-                if (catalogBusy || busy) return@OutlinedButton
-                scope.launch {
-                    catalogBusy = true
-                    try {
-                        val key = withContext(Dispatchers.IO) { credentials.read() }
-                            ?: error("Configure uma chave Gemini primeiro.")
-                        val result = api.voicesWithDiagnosis(key)
-                        catalog = result.voices
-                        status = if (catalog.isEmpty()) "Catálogo sem vozes disponíveis." else
-                            "Catálogo Gemini: ${catalog.size} voz(es). Escolha uma para gerar."
-                    } catch (e: CancellationException) { throw e }
-                    catch (e: Exception) { status = "Consulta de vozes: ${GeminiVoiceCatalog.safeMessage(e)}" }
-                    finally { catalogBusy = false }
-                }
-            }, enabled = !busy && !catalogBusy, modifier = Modifier.weight(1.35f),
-                contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp)) {
-                Icon(Icons.Default.AutoAwesome, null, Modifier.size(15.dp))
-                Spacer(Modifier.width(3.dp))
-                Text(if (catalogBusy) "Buscando" else "Buscar vozes", fontSize = 11.sp,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            Box {
-                TextButton(onClick = { modelOpen = true }, enabled = !busy,
-                    contentPadding = PaddingValues(horizontal = 2.dp, vertical = 0.dp)) {
-                    Text(if (model == GeminiModels.LITE) "Lite" else "Flash", fontSize = 12.sp)
-                    Icon(Icons.Default.ArrowDropDown, null, Modifier.size(17.dp))
-                }
+            horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            VoiceIaToolbarAction(label = "", accessibilityLabel = if (catalogBusy)
+                    "Consultando catálogo Gemini" else "Buscar vozes Gemini",
+                icon = Icons.Default.AutoAwesome, modifier = Modifier.weight(.64f),
+                enabled = !busy && !catalogBusy, onClick = {
+                    scope.launch {
+                        catalogBusy = true
+                        try {
+                            val key = withContext(Dispatchers.IO) { credentials.read() }
+                                ?: error("Configure uma chave Gemini primeiro.")
+                            val result = api.voicesWithDiagnosis(key)
+                            catalog = result.voices
+                            status = if (catalog.isEmpty()) "Catálogo sem vozes disponíveis." else
+                                "Catálogo Gemini: ${catalog.size} voz(es). Escolha uma para gerar."
+                        } catch (e: CancellationException) { throw e }
+                        catch (e: Exception) { status = "Consulta de vozes: ${GeminiVoiceCatalog.safeMessage(e)}" }
+                        finally { catalogBusy = false }
+                    }
+                })
+            Box(Modifier.weight(.92f)) {
+                VoiceIaToolbarAction(label = if (model == GeminiModels.LITE) "Lite" else "Flash",
+                    accessibilityLabel = "Modelo de geração: ${if (model == GeminiModels.LITE) "Lite" else "Flash"}",
+                    arrow = true, modifier = Modifier.fillMaxWidth(), enabled = !busy,
+                    onClick = { modelOpen = true })
                 DropdownMenu(expanded = modelOpen, onDismissRequest = { modelOpen = false }) {
                     GeminiModels.supported.forEach { candidate ->
                         DropdownMenuItem(text = { Text(candidate) }, onClick = {
@@ -244,15 +246,34 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                     }
                 }
             }
-            OutlinedButton(onClick = { voicePickerForAll = true },
-                enabled = !busy && !catalogBusy, modifier = Modifier.weight(1.1f),
-                contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp)) {
-                Text("Voz geral", fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (defaultVoice != null && cues.isNotEmpty() && cues.all { voiceFor(it) == defaultVoice }) {
-                    Spacer(Modifier.width(2.dp))
-                    Icon(Icons.Default.Check, "Voz geral selecionada", Modifier.size(14.dp))
-                }
-            }
+            val allSameVoice = defaultVoice != null && cues.isNotEmpty() &&
+                cues.all { voiceFor(it) == defaultVoice }
+            VoiceIaToolbarAction(label = "Voz", accessibilityLabel =
+                    if (allSameVoice) "Voz geral selecionada. Alterar voz para todas as falas"
+                    else "Escolher voz geral para todas as falas",
+                selected = allSameVoice, modifier = Modifier.weight(.79f),
+                enabled = !busy && !catalogBusy, onClick = { voicePickerForAll = true })
+            VoiceIaToolbarAction(label = VoiceIaShortLabels.style(defaultStyle),
+                accessibilityLabel = "Interpretação geral: $defaultStyle",
+                arrow = true, modifier = Modifier.weight(1.13f), enabled = !busy,
+                onClick = { stylePickerForAll = true })
+            VoiceIaToolbarAction(label = "Gerar $pending", accessibilityLabel =
+                    "Gerar vozes pendentes: $pending",
+                accent = true, modifier = Modifier.weight(1.17f),
+                enabled = !busy && loaded && pending > 0, onClick = {
+                    val missingVoice = cues.firstOrNull { voiceFor(it).isNullOrBlank() }
+                    if (missingVoice != null) {
+                        status = "Escolha Voz geral ou selecione uma voz em cada fala antes de gerar."
+                        voicePickerForAll = true
+                    } else {
+                        forceCueId = null
+                        promptGenerate = cues.filter { readyFor(it) == null }.map { it.id }
+                    }
+                })
+            VoiceIaToolbarAction(label = "Inserir $preparedCount", accessibilityLabel =
+                    "Inserir todas as vozes prontas: $preparedCount",
+                modifier = Modifier.weight(1.19f), enabled = !busy && loaded && preparedCount > 0,
+                onClick = { pendingBatchInsert = true })
         }
         if (status.isNotBlank()) Text(status, Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
@@ -268,44 +289,6 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
             Text("Este projeto não possui legendas com texto. Importe ou crie legendas na ferramenta Legendas; " +
                 "elas aparecerão aqui automaticamente.", Modifier.padding(20.dp))
         } else {
-            val pending = cues.count { readyFor(it) == null }
-            val preparedCount = cues.size - pending
-            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                OutlinedButton(onClick = { stylePickerForAll = true }, enabled = !busy,
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)) {
-                    Icon(Icons.Default.TheaterComedy, null, Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(if (defaultStyle == "Neutra") "Humor" else defaultStyle, fontSize = 12.sp, maxLines = 1,
-                        overflow = TextOverflow.Ellipsis)
-                    Icon(Icons.Default.ArrowDropDown, null, Modifier.size(17.dp))
-                }
-                Button(onClick = {
-                    val missingVoice = cues.firstOrNull { voiceFor(it).isNullOrBlank() }
-                    if (missingVoice != null) {
-                        status = "Escolha Voz geral ou selecione uma voz em cada fala antes de gerar."
-                        voicePickerForAll = true
-                    } else {
-                        forceCueId = null
-                        promptGenerate = cues.filter { readyFor(it) == null }.map { it.id }
-                    }
-                }, enabled = !busy && loaded && pending > 0,
-                    modifier = Modifier.weight(1.55f),
-                    contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp)) {
-                    Text("Gerar todas ($pending)", maxLines = 1, fontSize = 12.sp)
-                }
-            }
-            if (preparedCount > 0) {
-                OutlinedButton(onClick = { pendingBatchInsert = true },
-                    enabled = !busy && loaded,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 3.dp)) {
-                    Icon(Icons.Default.LibraryAdd, null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(7.dp))
-                    Text("Inserir todas as vozes prontas ($preparedCount)")
-                }
-            }
             HorizontalDivider()
             LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
@@ -343,14 +326,14 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                                 Row(verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     OutlinedButton(onClick = { voicePickerCueId = cue.id },
-                                        enabled = !busy, modifier = Modifier.weight(1.45f),
+                                        enabled = !busy, shape = RoundedCornerShape(8.dp), modifier = Modifier.weight(1.45f),
                                         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)) {
                                         Text(catalog.firstOrNull { it.id == voiceFor(cue) }?.let(GeminiVoicePresentation::label)
                                             ?: voiceFor(cue) ?: "Escolher voz", maxLines = 1,
                                             overflow = TextOverflow.Ellipsis, fontSize = 12.sp)
                                     }
                                     OutlinedButton(onClick = { stylePickerCueId = cue.id }, enabled = !busy,
-                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(8.dp), modifier = Modifier.weight(1f),
                                         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)) {
                                         Text(styleFor(cue), fontSize = 11.sp, maxLines = 1,
                                             overflow = TextOverflow.Ellipsis)
@@ -376,7 +359,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                                             forceCueId = if (take != null) cue.id else null
                                             promptGenerate = listOf(cue.id)
                                         }
-                                    }, enabled = !busy && loaded,
+                                    }, enabled = !busy && loaded, shape = RoundedCornerShape(8.dp),
                                         modifier = Modifier.weight(1f), contentPadding = PaddingValues(6.dp)) {
                                         Text(if (take == null) "Gerar" else "Refazer", fontSize = 12.sp)
                                     }
@@ -389,13 +372,13 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                                             wavePlayer.prepare(); wavePlayer.play()
                                             playingFile = take.filePath
                                         }
-                                    }, enabled = take != null && !busy, modifier = Modifier.weight(1f),
-                                        contentPadding = PaddingValues(6.dp)) {
+                                    }, enabled = take != null && !busy, shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.weight(1f), contentPadding = PaddingValues(6.dp)) {
                                         Text(if (playingFile == take?.filePath) "Pausar" else "Ouvir", fontSize = 12.sp)
                                     }
                                     Button(onClick = { pendingInsertId = cue.id },
-                                        enabled = take != null && !busy, modifier = Modifier.weight(1.3f),
-                                        contentPadding = PaddingValues(6.dp)) {
+                                        enabled = take != null && !busy, shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.weight(1.3f), contentPadding = PaddingValues(6.dp)) {
                                         Text(if (inserted == null) "Inserir" else "Substituir", fontSize = 12.sp)
                                     }
                                 }
@@ -419,44 +402,69 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
     if (voicePickerCueId != null || voicePickerForAll) {
         val targetId = voicePickerCueId
         val forAll = voicePickerForAll
+        val comparator = Collator.getInstance(Locale.forLanguageTag("pt-BR"))
+        val sortedVoices = catalog.sortedWith { a, b ->
+            comparator.compare(GeminiVoicePresentation.label(a), GeminiVoicePresentation.label(b))
+        }
         AlertDialog(onDismissRequest = { voicePickerCueId = null; voicePickerForAll = false },
-            title = { Text(if (forAll) "Voz para todas as falas" else "Escolher voz Gemini") },
-            text = { Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
-                if (catalog.isEmpty()) Text("Consulte o catálogo em Buscar vozes antes de selecionar.")
-                catalog.forEach { voice ->
-                    Column(Modifier.fillMaxWidth().clickable {
-                        if (forAll) pendingVoiceForAll = voice.id
-                        else if (targetId != null) voiceOverrides[targetId] = voice.id
-                        voicePickerCueId = null
-                        voicePickerForAll = false
-                    }.padding(vertical = 9.dp)) {
-                        Text(GeminiVoicePresentation.label(voice), fontWeight = FontWeight.Medium)
-                        Text(GeminiVoicePresentation.shortDetails(voice),
-                            style = MaterialTheme.typography.labelSmall)
+            modifier = Modifier.padding(horizontal = 10.dp), shape = RoundedCornerShape(14.dp),
+            title = { Text(if (forAll) "Voz para todas" else "Escolher voz Gemini", fontSize = 18.sp) },
+            text = {
+                if (sortedVoices.isEmpty()) Text("Busque o catálogo Gemini no ícone ✨ antes de selecionar.")
+                else LazyColumn(Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
+                    itemsIndexed(sortedVoices, key = { _, voice -> voice.id }) { _, voice ->
+                        Column(Modifier.fillMaxWidth().clickable {
+                            if (forAll) pendingVoiceForAll = voice.id
+                            else if (targetId != null) voiceOverrides[targetId] = voice.id
+                            voicePickerCueId = null
+                            voicePickerForAll = false
+                        }.padding(horizontal = 5.dp, vertical = 7.dp)) {
+                            Text(GeminiVoicePresentation.label(voice), fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium)
+                            Text(GeminiVoicePresentation.shortDetails(voice),
+                                style = MaterialTheme.typography.labelSmall)
+                        }
+                        HorizontalDivider()
                     }
-                    HorizontalDivider()
                 }
-            } }, confirmButton = { TextButton(onClick = {
+            }, confirmButton = { TextButton(onClick = {
                 voicePickerCueId = null; voicePickerForAll = false
             }) { Text("Fechar") } })
     }
     if (stylePickerCueId != null || stylePickerForAll) {
         val targetId = stylePickerCueId
         val forAll = stylePickerForAll
+        val currentStyle = if (forAll) defaultStyle else
+            cues.firstOrNull { it.id == targetId }?.let { styleFor(it) } ?: defaultStyle
+        val comparator = Collator.getInstance(Locale.forLanguageTag("pt-BR"))
+        val sortedStyles = GeminiNarrationStyling.presets.sortedWith { a, b ->
+            comparator.compare(a.label, b.label)
+        }
         AlertDialog(onDismissRequest = { stylePickerCueId = null; stylePickerForAll = false },
-            title = { Text(if (forAll) "Estilo para todas as falas" else "Interpretação da fala") },
-            text = { Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
-                GeminiNarrationStyling.presets.forEach { preset ->
-                    Text(preset.label, Modifier.fillMaxWidth().clickable {
-                        if (forAll) pendingStyleForAll = preset.label
-                        else if (targetId != null) styleOverrides[targetId] = preset.label
-                        stylePickerCueId = null
-                        stylePickerForAll = false
-                    }.padding(12.dp))
+            modifier = Modifier.padding(horizontal = 10.dp), shape = RoundedCornerShape(14.dp),
+            title = { Text(if (forAll) "Estilo geral" else "Interpretação da fala", fontSize = 18.sp) },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Atual: $currentStyle", style = MaterialTheme.typography.labelSmall)
+                LazyColumn(Modifier.fillMaxWidth().heightIn(max = 310.dp)) {
+                    itemsIndexed(sortedStyles, key = { _, preset -> preset.label }) { _, preset ->
+                        Row(Modifier.fillMaxWidth().clickable {
+                            if (forAll) pendingStyleForAll = preset.label
+                            else if (targetId != null) styleOverrides[targetId] = preset.label
+                            stylePickerCueId = null
+                            stylePickerForAll = false
+                        }.heightIn(min = 42.dp).padding(horizontal = 6.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Text(preset.label, modifier = Modifier.weight(1f), fontSize = 14.sp)
+                            if (currentStyle == preset.label)
+                                Icon(Icons.Default.Check, "Selecionado", Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.primary)
+                        }
+                        HorizontalDivider()
+                    }
                 }
             } }, confirmButton = { TextButton(onClick = {
                 stylePickerCueId = null; stylePickerForAll = false
-            }) { Text("Cancelar") } })
+            }) { Text("Fechar") } })
     }
     pendingVoiceForAll?.let { selected ->
         AlertDialog(onDismissRequest = { pendingVoiceForAll = null },
@@ -704,5 +712,50 @@ private fun VoiceIaCueTimeline(cues: List<SubtitleCue>, durationMs: Long,
                 }
             }
         }
+    }
+}
+
+/** Controles compactos da barra de Vozes IA: mesma altura e raios discretos. */
+@Composable
+private fun VoiceIaToolbarAction(label: String, accessibilityLabel: String,
+    modifier: Modifier = Modifier, enabled: Boolean = true, accent: Boolean = false,
+    icon: ImageVector? = null, arrow: Boolean = false, selected: Boolean = false,
+    onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val foreground = when {
+        !enabled -> colors.onSurface.copy(alpha = .38f)
+        accent -> colors.onPrimary
+        else -> colors.primary
+    }
+    Surface(onClick = onClick, enabled = enabled,
+        modifier = modifier.height(40.dp).semantics { contentDescription = accessibilityLabel },
+        shape = RoundedCornerShape(8.dp), color = if (accent) colors.primary else colors.surface,
+        contentColor = foreground,
+        border = if (accent) null else BorderStroke(1.dp, colors.outlineVariant)) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 2.dp),
+            horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+            if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(17.dp))
+            if (label.isNotEmpty()) Text(label, fontSize = 11.sp,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
+            if (arrow) Icon(Icons.Default.ArrowDropDown, contentDescription = null,
+                modifier = Modifier.size(13.dp))
+            if (selected) Icon(Icons.Default.Check, contentDescription = null,
+                modifier = Modifier.size(12.dp))
+        }
+    }
+}
+
+/** Rótulos curtos somente na barra; nunca modificam estilo salvo nem prompt Gemini. */
+internal object VoiceIaShortLabels {
+    fun style(name: String): String = when (name) {
+        "Neutra", "Humorística" -> "Humor"
+        "Narrador profissional" -> "Narrador"
+        "Contadora de histórias" -> "Histórias"
+        "Jornalística" -> "Jornal"
+        "Conversacional" -> "Conversa"
+        "Sussurrada" -> "Sussurro"
+        "Publicitária" -> "Anúncio"
+        "Sarcástica" -> "Sarcasmo"
+        else -> name
     }
 }
