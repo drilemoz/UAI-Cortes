@@ -1,4 +1,10 @@
-# Uai Cortes · versão 0.1.152 (05/11/2026)
+# Uai Cortes · versão 0.1.153 (05/11/2026)
+## 0.1.153 — Favoritos e progresso em Vozes IA
+- Favoritas no catálogo Gemini com estrela e filtro, salvas localmente.
+- Nome da voz escolhida na barra, inclusive após reabrir o app quando já consultada.
+- Progresso percentual das falas concluídas e indicador indeterminado por chamada TTS.
+- Sem alterações nos limites Gemini, projetos, legendas, exportação ou assinatura.
+
 
 ## 0.1.152 — Correção de publicação CI128
 - Evita HTTP 422 por exceder o limite de tamanho das notas no GitHub Releases.

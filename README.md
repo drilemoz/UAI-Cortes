@@ -1,4 +1,5 @@
-# Uai Cortes · versão 0.1.152 (05/11/2026)
+# Uai Cortes · versão 0.1.153 (05/11/2026)
+**Vozes IA:** agora permite favoritagem local das vozes Gemini, filtro de favoritas, nome amigável no seletor geral e porcentagem real por WAV finalizado em lote. Durante cada chamada individual, o progresso permanece indeterminado porque a API não fornece avanço parcial; nenhuma cota é estimada por quantidade de chaves. As chaves, legendas e a timeline não foram alteradas.
 **CI128 — Publicação corrigida:** o workflow 128 passou em build/testes/Lint e verificou cinco APKs, mas a publicação foi rejeitada pela API GitHub porque as notas completas excedem 125.000 caracteres. O workflow gera notas curtas da versão atual sem apagar CHANGELOG/RELEASE_NOTES, testa o limite e atualiza notas de Releases existentes. Não altera o funcionamento Gemini ou a exportação de vídeo. Publicação v0.1.152 em CI ainda pendente.
 
 # Uai Cortes · versão 0.1.151 (05/11/2026)

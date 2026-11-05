@@ -1,4 +1,10 @@
-# Uai Cortes · versão 0.1.152 (05/11/2026)
+# Uai Cortes · versão 0.1.153 (05/11/2026)
+## v0.1.153 — Vozes Gemini favoritas e progresso real
+- Estrela para adicionar/remover vozes favoritas, com filtro e persistência local entre projetos, sem guardar chaves.
+- Nome público amigável da voz geral aparece na barra e fica em cache local para reabertura da tela.
+- Porcentagem por falas efetivamente concluídas, com spinner individual; nunca exibir progresso interno fictício da API TTS.
+- Mantidos legenda somente leitura, cópia de WAV, sem mudança em schemaVersion 4 ou uso de cota.
+
 
 ## CI128 — Notas de publicação corrigidas
 - O workflow 128 concluiu Gradle, testes unitários, Lint, assinatura e verificação de cinco APKs v0.1.151, mas o GitHub devolveu HTTP 422 porque RELEASE_NOTES.md tinha mais de 125.000 caracteres.

@@ -12,7 +12,7 @@ assert 'height(264.dp)' not in preview
 assert 'SubtitleOverlayOnFrame(selected, editable = false' in preview
 assert 'formatPipMs(cue.startMs)' in ui and 'formatPipMs(cue.endMs)' in ui
 assert 'formatMs(cue.startMs)' not in ui
-assert ui.index('VoiceIaToolbarAction(label = "Voz"') < ui.index('if (status.isNotBlank())')
+assert ui.index('VoiceIaToolbarAction(label = if (allSameVoice) globalVoiceLabel else "Voz"') < ui.index('if (status.isNotBlank())')
 assert 'VoiceIaShortLabels.style(defaultStyle)' in ui and 'label = "Gerar $pending"' in ui
 assert 'Text("Voz para todas"' not in ui
 assert 'pendingVoiceForAll' in ui and 'pendingStyleForAll' in ui

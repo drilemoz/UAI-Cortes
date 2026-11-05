@@ -5,11 +5,11 @@ root=Path(__file__).resolve().parents[1]
 ui=(root/'app/src/main/java/br/com/uaicortes/VoiceIaScreen.kt').read_text()
 bar=ui[ui.index('// Uma única barra compacta:'):ui.index('if (status.isNotBlank())')]
 assert bar.count('VoiceIaToolbarAction(')==6, 'Seis controles em uma única Row'
-for label in ['label = ""', 'label = "Voz"', 'VoiceIaShortLabels.style(defaultStyle)',
+for label in ['label = ""', 'label = if (allSameVoice) globalVoiceLabel else "Voz"', 'VoiceIaShortLabels.style(defaultStyle)',
               'label = "Gerar $pending"','label = "Inserir $preparedCount"',
               'model == GeminiModels.LITE']:
     assert label in bar, label
-assert 'Voz geral' not in bar.split('VoiceIaToolbarAction(label = "Voz"')[0]
+assert 'Voz geral' not in bar.split('VoiceIaToolbarAction(label = if (allSameVoice) globalVoiceLabel else "Voz"')[0]
 assert 'Button(' not in bar and 'OutlinedButton(' not in bar
 assert 'Surface(onClick = onClick, enabled = enabled' in ui
 assert 'shape = RoundedCornerShape(8.dp)' in ui
