@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
+import kotlinx.coroutines.launch
 
 private fun copyText(context: Context, text: String) {
     (context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)
@@ -58,6 +59,13 @@ internal fun SocialDashboardScreen(
     val store = remember(context) { SocialStore(context) }
     var data by remember { mutableStateOf<SocialData?>(null) }
     var failure by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+    var youtubeBusy by remember { mutableStateOf(false) }
+    var channelToBind by remember { mutableStateOf<Pair<SocialAccount, YouTubeSocialApi.Channel>?>(null) }
+    val authorizeYouTube = rememberYouTubeAuthorization { error ->
+        youtubeBusy = false
+        failure = error
+    }
     fun refresh() {
         runCatching { store.load() }.onSuccess { data = it; failure = "" }
             .onFailure { failure = "Não foi possível abrir o catálogo. Os dados anteriores foram preservados." }
@@ -142,6 +150,24 @@ internal fun SocialDashboardScreen(
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
+                            if (account.destination == SocialDestination.YOUTUBE) {
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(if (account.remoteChannelId.isBlank()) "Não vinculado" else "Canal vinculado",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    TextButton(onClick = {
+                                        youtubeBusy = true
+                                        authorizeYouTube { token ->
+                                            scope.launch {
+                                                runCatching { YouTubeSocialApi.channel(token) }
+                                                    .onSuccess { channel -> channelToBind = account to channel; failure = "" }
+                                                    .onFailure { failure = it.message ?: "Falha ao consultar canal." }
+                                                youtubeBusy = false
+                                            }
+                                        }
+                                    }, enabled = !youtubeBusy) { Text("Vincular") }
+                                }
+                            }
                             IconButton(onClick = { deletingAccount = account }) {
                                 Icon(Icons.Default.DeleteOutline, "Excluir destino")
                             }
@@ -167,12 +193,48 @@ internal fun SocialDashboardScreen(
                             Text("${account?.label ?: "Conta indisponível"} · ${publication.status.label}",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodySmall)
+                            if (publication.metrics.hasData) {
+                                Text("${publication.metrics.views ?: "—"} visualizações · " +
+                                    if (publication.metrics.source == "youtube_api") "YouTube API" else "Dados manuais",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            if (account?.destination == SocialDestination.YOUTUBE &&
+                                publication.status == SocialPublicationStatus.CONFIRMED_BY_API &&
+                                publication.remoteVideoId.isNotBlank()) {
+                                TextButton(onClick = {
+                                    youtubeBusy = true
+                                    authorizeYouTube { token ->
+                                        scope.launch {
+                                            runCatching {
+                                                val channel = YouTubeSocialApi.channel(token)
+                                                require(channel.id == account.remoteChannelId) {
+                                                    "A conta Google não corresponde ao canal vinculado." }
+                                                YouTubeSocialApi.metrics(token, publication.remoteVideoId)
+                                            }.onSuccess { latest ->
+                                                runCatching {
+                                                    val state = store.load()
+                                                    val next = state.copy(publications = state.publications.map {
+                                                        if (it.id == publication.id &&
+                                                            it.status == SocialPublicationStatus.CONFIRMED_BY_API)
+                                                            it.copy(metrics = latest, updatedAt = System.currentTimeMillis())
+                                                        else it
+                                                    })
+                                                    store.save(next); data = next; failure = ""
+                                                }.onFailure { failure = "Falha ao salvar métricas no aparelho." }
+                                            }.onFailure { failure = it.message ?: "Métricas indisponíveis." }
+                                            youtubeBusy = false
+                                        }
+                                    }
+                                }, enabled = !youtubeBusy) { Text("Atualizar métricas YouTube") }
+                            }
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 OutlinedButton(onClick = {
                                     val sent = tryShareVideo(context, publication)
                                     if (sent) persist(state.copy(publications = state.publications.map {
                                         if (it.id == publication.id &&
-                                            it.status != SocialPublicationStatus.CONFIRMED_MANUALLY)
+                                            it.status in setOf(SocialPublicationStatus.PREPARED,
+                                                SocialPublicationStatus.SHARED_UNCONFIRMED))
                                             it.copy(status = SocialPublicationStatus.SHARED_UNCONFIRMED,
                                                 updatedAt = System.currentTimeMillis()) else it
                                     })) else failure = "Vídeo indisponível. Selecione-o novamente na galeria."
@@ -218,6 +280,25 @@ internal fun SocialDashboardScreen(
                     Text("Remover")
                 }
             }, dismissButton = { TextButton(onClick = { deletingAccount = null }) { Text("Cancelar") } })
+    }
+    channelToBind?.let { (account, channel) ->
+        AlertDialog(onDismissRequest = { channelToBind = null },
+            title = { Text("Vincular canal YouTube?") },
+            text = { Text("Canal: ${channel.title}\nID: ${channel.id}\n\n" +
+                "Este ID público será salvo na conta local. O token OAuth não será armazenado.") },
+            confirmButton = { TextButton(onClick = {
+                data?.let { state ->
+                    val conflict = state.accounts.any {
+                        it.id != account.id && it.remoteChannelId == channel.id
+                    }
+                    if (conflict) failure = "Este canal já está vinculado a outra conta."
+                    else persist(state.copy(accounts = state.accounts.map {
+                        if (it.id == account.id) SocialPublicationPolicy.bindChannel(it, channel.id) else it
+                    }))
+                }
+                channelToBind = null
+            }) { Text("Vincular") } },
+            dismissButton = { TextButton(onClick = { channelToBind = null }) { Text("Cancelar") } })
     }
     selectedPost?.let { current ->
         SocialPublicationDetailDialog(current, onDismiss = { selectedPost = null },
@@ -293,7 +374,8 @@ private fun SocialPublicationDetailDialog(current: SocialPublication, onDismiss:
                 Text("O Android não confirma se o compartilhamento foi publicado. " +
                     "Marque apenas após conferir na rede.", style = MaterialTheme.typography.bodySmall)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = confirmed, onCheckedChange = { confirmed = it })
+                    Checkbox(checked = confirmed, enabled = current.status != SocialPublicationStatus.CONFIRMED_BY_API,
+                        onCheckedChange = { confirmed = it })
                     Text("Confirmo que publiquei")
                 }
                 OutlinedTextField(value = url, onValueChange = { url = it.take(300) },
@@ -321,10 +403,13 @@ private fun SocialPublicationDetailDialog(current: SocialPublication, onDismiss:
             val nextMetrics = SocialMetrics(parse(views), parse(likes), parse(comments), parse(shares),
                 if (listOf(views, likes, comments, shares).any { it.isNotBlank() }) now else 0L)
             onSave(current.copy(status = when {
+                current.status == SocialPublicationStatus.CONFIRMED_BY_API -> SocialPublicationStatus.CONFIRMED_BY_API
+                current.status == SocialPublicationStatus.UPLOAD_REVIEW -> SocialPublicationStatus.UPLOAD_REVIEW
                 confirmed -> SocialPublicationStatus.CONFIRMED_MANUALLY
                 current.status == SocialPublicationStatus.CONFIRMED_MANUALLY -> SocialPublicationStatus.SHARED_UNCONFIRMED
                 else -> current.status
-            }, postUrl = url.trim(), metrics = nextMetrics, updatedAt = now))
+            }, postUrl = if (current.status == SocialPublicationStatus.CONFIRMED_BY_API) current.postUrl else url.trim(),
+                metrics = nextMetrics, updatedAt = now))
         }, enabled = SocialPublicationPolicy.isSafeHttps(url) && metricsValid) { Text("Salvar") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } })
 }
@@ -347,6 +432,14 @@ internal fun SocialPublishScreen(initialUri: Uri?, initialName: String,
     var hashtags by rememberSaveable { mutableStateOf(initialDraft?.hashtags.orEmpty()) }
     var selectedAccounts by remember { mutableStateOf<Set<String>>(emptySet()) }
     var prepared by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    var youtubeBusy by remember { mutableStateOf(false) }
+    var youtubeProgress by remember { mutableStateOf("") }
+    var uploadToConfirm by remember { mutableStateOf<SocialPublication?>(null) }
+    var uploadPrivacy by remember { mutableStateOf("private") }
+    val authorizeYouTube = rememberYouTubeAuthorization { error ->
+        failure = error; youtubeBusy = false
+    }
     LaunchedEffect(Unit) {
         runCatching { store.load() }.onSuccess { data = it }
             .onFailure { failure = "Não foi possível ler as contas. Catálogo preservado." }
@@ -423,7 +516,12 @@ internal fun SocialPublishScreen(initialUri: Uri?, initialName: String,
                 Text("Preparar ${selectedAccounts.size} destino(s)")
             }
             if (prepared) {
-                Text("Pronto para compartilhar, um destino por vez", style = MaterialTheme.typography.titleMedium)
+                Text("Pronto para publicar por destino", style = MaterialTheme.typography.titleMedium)
+                if (youtubeBusy) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                    Text(youtubeProgress.ifBlank { "Aguardando autorização do YouTube..." },
+                        style = MaterialTheme.typography.bodySmall)
+                }
                 Text("Escolha o aplicativo correto no seletor Android. Abrir o seletor não confirma publicação. " +
                     "Algumas redes não recebem a descrição automaticamente: copie o texto quando necessário.",
                     style = MaterialTheme.typography.bodySmall,
@@ -431,13 +529,37 @@ internal fun SocialPublishScreen(initialUri: Uri?, initialName: String,
                 data?.publications?.filter { it.accountId in selectedAccounts && it.videoUri == videoUri }
                     ?.forEach { publication ->
                         val account = data?.accounts?.firstOrNull { it.id == publication.accountId }
+                        if (account?.destination == SocialDestination.YOUTUBE) {
+                            when (publication.status) {
+                                SocialPublicationStatus.PREPARED, SocialPublicationStatus.SHARED_UNCONFIRMED -> {
+                                    Button(onClick = { uploadToConfirm = publication },
+                                        enabled = !youtubeBusy && account.remoteChannelId.isNotBlank(),
+                                        modifier = Modifier.fillMaxWidth()) {
+                                        Icon(Icons.Default.CloudUpload, null)
+                                        Spacer(Modifier.width(6.dp)); Text("Enviar ao YouTube pela API")
+                                    }
+                                    if (account.remoteChannelId.isBlank()) Text(
+                                        "Vincule o canal na aba Redes Sociais antes do envio direto.",
+                                        style = MaterialTheme.typography.bodySmall)
+                                }
+                                SocialPublicationStatus.UPLOAD_REVIEW -> Text(
+                                    "Upload incerto: confira o YouTube Studio antes de criar outro envio. " +
+                                        "Não há repetição automática.",
+                                    style = MaterialTheme.typography.bodySmall)
+                                SocialPublicationStatus.CONFIRMED_BY_API -> Text(
+                                    "YouTube confirmou o vídeo: ${publication.remoteVideoId}",
+                                    style = MaterialTheme.typography.bodySmall)
+                                else -> Unit
+                            }
+                        }
                         OutlinedButton(onClick = {
                             if (tryShareVideo(context, publication)) {
                                 data?.let { state ->
                                     runCatching {
                                         val next = state.copy(publications = state.publications.map {
                                             if (it.id == publication.id &&
-                                                it.status != SocialPublicationStatus.CONFIRMED_MANUALLY)
+                                                it.status in setOf(SocialPublicationStatus.PREPARED,
+                                                SocialPublicationStatus.SHARED_UNCONFIRMED))
                                                 it.copy(status = SocialPublicationStatus.SHARED_UNCONFIRMED,
                                                     updatedAt = System.currentTimeMillis()) else it
                                         })
@@ -454,6 +576,79 @@ internal fun SocialPublishScreen(initialUri: Uri?, initialName: String,
             }
             Spacer(Modifier.height(24.dp))
         }
+    }
+    uploadToConfirm?.let { post ->
+        AlertDialog(onDismissRequest = { if (!youtubeBusy) uploadToConfirm = null },
+            title = { Text("Enviar vídeo ao YouTube?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Você autorizará a conta Google e enviará o vídeo para o canal vinculado. " +
+                        "Este envio consome sua internet e a cota de API, e não será repetido automaticamente.")
+                    Text(post.videoName, fontWeight = FontWeight.SemiBold)
+                    Text("Privacidade", style = MaterialTheme.typography.labelMedium)
+                    listOf("private" to "Privado", "unlisted" to "Não listado",
+                        "public" to "Público").forEach { (id, label) ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = uploadPrivacy == id,
+                                onClick = { uploadPrivacy = id })
+                            Text(label)
+                        }
+                    }
+                    Text("A confirmação da API significa upload recebido; o processamento e " +
+                        "a disponibilidade pública podem demorar.", style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = { TextButton(enabled = !youtubeBusy, onClick = {
+                val account = data?.accounts?.firstOrNull { it.id == post.accountId }
+                if (account == null || account.destination != SocialDestination.YOUTUBE ||
+                    account.remoteChannelId.isBlank()) {
+                    failure = "Vincule primeiro um canal YouTube válido."
+                    uploadToConfirm = null
+                } else {
+                    uploadToConfirm = null
+                    youtubeBusy = true
+                    youtubeProgress = "Autorizando canal..."
+                    val chosenPrivacy = uploadPrivacy
+                    authorizeYouTube { token ->
+                        scope.launch {
+                            runCatching {
+                                val channel = YouTubeSocialApi.channel(token)
+                                require(channel.id == account.remoteChannelId) {
+                                    "A conta Google atual não corresponde ao canal vinculado."
+                                }
+                                val snapshot = store.load()
+                                val source = snapshot.publications.firstOrNull { it.id == post.id }
+                                    ?: error("Publicação não encontrada no catálogo.")
+                                val marked = SocialPublicationPolicy.markUploadReview(source)
+                                val started = snapshot.copy(publications = snapshot.publications.map {
+                                    if (it.id == post.id) marked else it
+                                })
+                                store.save(started); data = started
+                                youtubeProgress = "Enviando vídeo..."
+                                val remoteId = YouTubeSocialApi.upload(context, token, marked,
+                                    chosenPrivacy) { sent, total ->
+                                    scope.launch { youtubeProgress =
+                                        "Upload: ${(sent * 100 / total).coerceIn(0L, 100L)}%" }
+                                }
+                                val latest = store.load()
+                                val confirmed = SocialPublicationPolicy.confirmApiUpload(
+                                    latest.publications.first { it.id == post.id }, remoteId)
+                                val next = latest.copy(publications = latest.publications.map {
+                                    if (it.id == post.id) confirmed else it
+                                })
+                                store.save(next); data = next
+                                youtubeProgress = "Upload confirmado pelo YouTube."
+                                failure = ""
+                            }.onFailure { error ->
+                                failure = error.message ?: "Envio não confirmado. Confira o YouTube Studio."
+                            }
+                            youtubeBusy = false
+                        }
+                    }
+                }
+            }) { Text("Autorizar e enviar") } },
+            dismissButton = { TextButton(enabled = !youtubeBusy,
+                onClick = { uploadToConfirm = null }) { Text("Cancelar") } })
     }
 }
 
@@ -492,6 +687,11 @@ internal fun SocialApiCenterScreen(back: () -> Unit, openGemini: () -> Unit) {
     val context = LocalContext.current
     val store = remember(context) { SocialStore(context) }
     var feedback by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+    var testBusy by remember { mutableStateOf(false) }
+    val authorizeYouTube = rememberYouTubeAuthorization { error ->
+        feedback = error; testBusy = false
+    }
     val exporter = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) runCatching {
@@ -524,7 +724,8 @@ internal fun SocialApiCenterScreen(back: () -> Unit, openGemini: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Conexões de serviços", style = MaterialTheme.typography.titleMedium)
             Text("Chaves de desenvolvedor não equivalem a autorização para publicar na conta. " +
-                "OAuth para redes sociais ainda não está implementado nesta versão.",
+                "YouTube usa autorização Google no Android; Meta/TikTok aguardam " +
+                    "permissões de desenvolvedor. Não há upload automático sem consentimento.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             ItemCard(Icons.Default.AutoAwesome, "Google Gemini", "Chaves e testes já existentes") { openGemini() }
@@ -533,7 +734,8 @@ internal fun SocialApiCenterScreen(back: () -> Unit, openGemini: () -> Unit) {
                     Column(Modifier.fillMaxWidth().padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(7.dp)) {
                         Text(dest.label, fontWeight = FontWeight.SemiBold)
-                        Text("Não conectado · ${dest.help}", style = MaterialTheme.typography.bodySmall,
+                        Text((if (dest == SocialDestination.YOUTUBE) "Autorização por ação · "
+                            else "Não conectado · ") + dest.help, style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(onClick = {
@@ -546,11 +748,26 @@ internal fun SocialApiCenterScreen(back: () -> Unit, openGemini: () -> Unit) {
                                 feedback = "Link oficial copiado."
                             }) { Icon(Icons.Default.ContentCopy, null, Modifier.size(16.dp)); Text("Copiar") }
                         }
-                        OutlinedButton(onClick = {}, enabled = false) {
+                        OutlinedButton(onClick = {
+                            if (dest == SocialDestination.YOUTUBE) {
+                                testBusy = true
+                                authorizeYouTube { token ->
+                                    scope.launch {
+                                        runCatching { YouTubeSocialApi.channel(token) }
+                                            .onSuccess { feedback = "YouTube autorizado: ${it.title} (${it.id})" }
+                                            .onFailure { feedback = it.message ?: "Erro ao consultar canal." }
+                                        testBusy = false
+                                    }
+                                }
+                            }
+                        }, enabled = dest == SocialDestination.YOUTUBE && !testBusy) {
                             Icon(Icons.Default.CheckCircleOutline, null, Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp)); Text("Testar conexão · OAuth pendente")
+                            Spacer(Modifier.width(6.dp)); Text(if (dest == SocialDestination.YOUTUBE)
+                                "Testar YouTube com autorização" else "Teste depende de OAuth")
                         }
-                        Text("Sem OAuth, nenhum teste fictício é realizado.",
+                        Text(if (dest == SocialDestination.YOUTUBE)
+                            "Para publicar, vincule o canal ao cadastro na aba Redes." else
+                            "Sem OAuth, nenhum teste fictício é realizado.",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

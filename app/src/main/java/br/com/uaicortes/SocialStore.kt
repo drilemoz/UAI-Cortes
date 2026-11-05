@@ -33,7 +33,9 @@ internal enum class SocialDestination(val label: String, val help: String, val d
 internal enum class SocialPublicationStatus(val label: String) {
     PREPARED("Preparada"),
     SHARED_UNCONFIRMED("Compartilhamento aberto · confirmar postagem"),
-    CONFIRMED_MANUALLY("Publicada · confirmada manualmente");
+    CONFIRMED_MANUALLY("Publicada · confirmada manualmente"),
+    UPLOAD_REVIEW("Envio iniciado · verificar no YouTube"),
+    CONFIRMED_BY_API("Enviada · confirmada pelo YouTube");
     companion object {
         fun parse(value: String): SocialPublicationStatus =
             entries.firstOrNull { it.name == value } ?: PREPARED
@@ -45,16 +47,18 @@ internal data class SocialAccount(
     val destination: SocialDestination,
     val label: String,
     val profileUrl: String = "",
+    val remoteChannelId: String = "",
     val createdAt: Long = System.currentTimeMillis()
 ) {
     fun toJson() = JSONObject().put("id", id).put("destination", destination.name)
-        .put("label", label).put("profileUrl", profileUrl).put("createdAt", createdAt)
+        .put("label", label).put("profileUrl", profileUrl)
+        .put("remoteChannelId", remoteChannelId).put("createdAt", createdAt)
     companion object {
         fun fromJson(json: JSONObject): SocialAccount = SocialAccount(
             id = json.getString("id"),
             destination = requireNotNull(SocialDestination.parse(json.getString("destination"))),
             label = json.getString("label"), profileUrl = json.optString("profileUrl"),
-            createdAt = json.optLong("createdAt", 0L)
+            remoteChannelId = json.optString("remoteChannelId"), createdAt = json.optLong("createdAt", 0L)
         )
     }
 }
@@ -62,17 +66,19 @@ internal data class SocialAccount(
 internal data class SocialMetrics(
     val views: Long? = null, val likes: Long? = null,
     val comments: Long? = null, val shares: Long? = null,
-    val measuredAt: Long = 0L
+    val measuredAt: Long = 0L, val source: String = "manual"
 ) {
     val hasData get() = listOf(views, likes, comments, shares).any { it != null }
     fun toJson() = JSONObject().put("views", views ?: JSONObject.NULL)
         .put("likes", likes ?: JSONObject.NULL).put("comments", comments ?: JSONObject.NULL)
         .put("shares", shares ?: JSONObject.NULL).put("measuredAt", measuredAt)
+        .put("source", source)
     companion object {
         fun fromJson(json: JSONObject?): SocialMetrics = if (json == null) SocialMetrics() else SocialMetrics(
             views = json.optLongOrNull("views"), likes = json.optLongOrNull("likes"),
             comments = json.optLongOrNull("comments"), shares = json.optLongOrNull("shares"),
-            measuredAt = json.optLong("measuredAt", 0L)
+            measuredAt = json.optLong("measuredAt", 0L),
+            source = json.optString("source", "manual")
         )
     }
 }
@@ -89,6 +95,7 @@ internal data class SocialPublication(
     val hashtags: String = "",
     val status: SocialPublicationStatus = SocialPublicationStatus.PREPARED,
     val postUrl: String = "",
+    val remoteVideoId: String = "",
     val metrics: SocialMetrics = SocialMetrics(),
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = createdAt
@@ -97,6 +104,7 @@ internal data class SocialPublication(
         .put("videoUri", videoUri).put("videoName", videoName)
         .put("description", description).put("hashtags", hashtags)
         .put("status", status.name).put("postUrl", postUrl)
+        .put("remoteVideoId", remoteVideoId)
         .put("metrics", metrics.toJson()).put("createdAt", createdAt).put("updatedAt", updatedAt)
     companion object {
         fun fromJson(json: JSONObject): SocialPublication = SocialPublication(
@@ -104,7 +112,8 @@ internal data class SocialPublication(
             videoUri = json.getString("videoUri"), videoName = json.getString("videoName"),
             description = json.optString("description"), hashtags = json.optString("hashtags"),
             status = SocialPublicationStatus.parse(json.optString("status")),
-            postUrl = json.optString("postUrl"), metrics = SocialMetrics.fromJson(json.optJSONObject("metrics")),
+            postUrl = json.optString("postUrl"), remoteVideoId = json.optString("remoteVideoId"),
+            metrics = SocialMetrics.fromJson(json.optJSONObject("metrics")),
             createdAt = json.optLong("createdAt", 0L), updatedAt = json.optLong("updatedAt", 0L)
         )
     }
@@ -117,6 +126,35 @@ internal data class SocialData(
 
 /** Política pura de publicação assistida: nunca equiparar Intent aberta à postagem confirmada. */
 internal object SocialPublicationPolicy {
+    fun validChannel(id: String): Boolean =
+        id.isBlank() || (id.startsWith("UC") && id.length in 20..64 &&
+            id.all { it.isLetterOrDigit() || it == '_' || it == '-' })
+
+    fun validVideoId(id: String): Boolean =
+        id.isBlank() || Regex("[A-Za-z0-9_-]{11}").matches(id)
+
+    /** Acesso autorizado é obtido a cada ação; só o ID público do canal fica em disco. */
+    fun bindChannel(account: SocialAccount, id: String): SocialAccount {
+        require(account.destination == SocialDestination.YOUTUBE && id.isNotBlank() && validChannel(id))
+        return account.copy(remoteChannelId = id)
+    }
+
+    /** Gravar antes do primeiro POST: sem repetição após resposta incerta. */
+    fun markUploadReview(post: SocialPublication): SocialPublication {
+        require(post.status == SocialPublicationStatus.PREPARED ||
+            post.status == SocialPublicationStatus.SHARED_UNCONFIRMED)
+        return post.copy(status = SocialPublicationStatus.UPLOAD_REVIEW,
+            updatedAt = System.currentTimeMillis())
+    }
+
+    fun confirmApiUpload(post: SocialPublication, videoId: String): SocialPublication {
+        require(post.status == SocialPublicationStatus.UPLOAD_REVIEW &&
+            videoId.isNotBlank() && validVideoId(videoId))
+        return post.copy(status = SocialPublicationStatus.CONFIRMED_BY_API,
+            remoteVideoId = videoId, postUrl = "https://www.youtube.com/watch?v=$videoId",
+            updatedAt = System.currentTimeMillis())
+    }
+
     fun isSafeHttps(url: String): Boolean {
         if (url.isBlank()) return true
         val uri = runCatching { Uri.parse(url.trim()) }.getOrNull() ?: return false
@@ -176,12 +214,17 @@ internal class SocialStore(context: Context) {
         require(data.accounts.map { it.id }.distinct().size == data.accounts.size)
         require(data.publications.map { it.id }.distinct().size == data.publications.size)
         require(data.accounts.all { it.id.isNotBlank() && it.label.length in 1..70 &&
-            SocialPublicationPolicy.isSafeHttps(it.profileUrl) })
+            SocialPublicationPolicy.isSafeHttps(it.profileUrl) &&
+            SocialPublicationPolicy.validChannel(it.remoteChannelId) &&
+            (it.remoteChannelId.isBlank() || it.destination == SocialDestination.YOUTUBE) })
         val ids = data.accounts.map { it.id }.toSet()
         require(data.publications.all { it.accountId in ids &&
             SocialPublicationPolicy.isShareableVideo(it.videoUri) &&
             it.videoName.length in 1..200 && it.description.length <= 3000 && it.hashtags.length <= 1500 &&
             SocialPublicationPolicy.isSafeHttps(it.postUrl) &&
+            SocialPublicationPolicy.validVideoId(it.remoteVideoId) &&
+            (it.remoteVideoId.isBlank() || it.status == SocialPublicationStatus.CONFIRMED_BY_API) &&
+            it.metrics.source in setOf("manual", "youtube_api") &&
             listOf(it.metrics.views,it.metrics.likes,it.metrics.comments,it.metrics.shares)
                 .all { value -> value == null || value >= 0 } })
     }

@@ -1,3 +1,12 @@
+# Uai Cortes · versão 0.1.166 — YouTube OAuth e publicação direta (fase 2)
+
+- **YouTube OAuth:** integração opcional com o AuthorizationClient do Google Play services (escopos `youtube.upload` e `youtube.readonly`). Vincular ID público do canal depois de consulta real e confirmação; nenhum token salvo/exportado.
+- **Enviar ao YouTube:** botão por publicação preparada, confirmação individual, privacidade Privado/Não listado/Público (privado por padrão), inicialização de sessão recuperável e envio em blocos de 1 MiB. Sem envio automático de múltiplos destinos nem repetição cega após falha.
+- **Status e métricas:** registrar `UPLOAD_REVIEW` antes do POST e `CONFIRMED_BY_API` somente quando API confirmar ID de vídeo. Atualizar métricas sob demanda com origem `youtube_api`, sem misturar valores manuais.
+- **Compatibilidade:** campos novos opcionais em contas/publicações/métricas; JSON social ainda schema 1, projetos de vídeo `schemaVersion=4` e biblioteca do Estúdio preservados. Meta, TikTok e Kwai mantêm compartilhamento assistido; sem prometer upload automático.
+- **Configuração externa necessária:** habilitar a YouTube Data API v3 e cadastrar OAuth Android com package `br.com.uaicortes` + SHA-1 da assinatura realmente usada; Google Play services no aparelho. Requer consentimento da conta e cotas do projeto Google Cloud.
+- **Limites:** uploads acontecem com a tela de publicação ativa. Após interromper a sessão ou erro inconclusivo, o app exige verificação manual no YouTube Studio; nesta versão não persiste URI sensível de retomada. Build Android, OAuth real, compatibilidade de API e upload com conta autorizada ainda não foram executados localmente.
+
 # Uai Cortes · versão 0.1.165 — Redes Sociais (fase 1)
 
 - **Redes Sociais:** nova aba no rodapé da Home, de Projetos e de Ajustes com cadastro local independente de TikTok, YouTube, Kwai, Facebook Página e Facebook Perfil. O cadastro não significa que a conta está autenticada.

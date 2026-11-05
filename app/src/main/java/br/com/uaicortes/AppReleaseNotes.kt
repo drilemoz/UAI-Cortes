@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.165"
-    const val VERSION_CODE = 166
+    const val VERSION_NAME = "0.1.166"
+    const val VERSION_CODE = 167
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.166", listOf(
+            ReleaseFeature("youtube-oauth-166", "Autorização YouTube pelo Android",
+                "Vincule o ID público do canal após permissão Google; credenciais não são exportadas nem salvas no catálogo.", "check"),
+            ReleaseFeature("youtube-upload-166", "Envio direto YouTube com confirmação",
+                "Upload de vídeo por API com escolha de privacidade, progresso e revisão obrigatória após falha incerta.", "captions"),
+            ReleaseFeature("youtube-metrics-166", "Métricas reais do YouTube",
+                "Consulta manual de visualizações e interações por vídeo confirmado, separada dos dados manuais.", "check")
+        )),
         ReleaseSummary("0.1.165", listOf(
             ReleaseFeature("social-dashboard-165", "Nova aba Redes Sociais",
                 "Destinos separados para Facebook Página/Perfil, YouTube, TikTok e Kwai, com histórico local e métricas inseridas manualmente.", "check"),

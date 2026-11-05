@@ -11,8 +11,8 @@ android {
         applicationId = "br.com.uaicortes"
         minSdk = 26
         targetSdk = 36
-        versionCode = 166
-        versionName = "0.1.165"
+        versionCode = 167
+        versionName = "0.1.166"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Definido pelo runner do GitHub Actions, sem inventar nome de repositório.
         val ciRepository = System.getenv("GITHUB_REPOSITORY").orEmpty()
@@ -74,6 +74,7 @@ dependencies {
     implementation("androidx.media3:media3-effect:1.11.1")
     implementation("androidx.media3:media3-common:1.11.1")
     implementation("androidx.documentfile:documentfile:1.1.0")
+    implementation("com.google.android.gms:play-services-auth:22.0.0")
     implementation("com.alphacephei:vosk-android:0.3.75")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
