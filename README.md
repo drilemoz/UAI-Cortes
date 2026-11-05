@@ -1,3 +1,17 @@
+# Uai Cortes · versão 0.1.172 — Editor sincronizado e mídia durável
+
+- **Editor:** linha do tempo sincronizada com faixas de vídeos, imagens, PiP, áudio, vozes e legendas; cursor único e rótulos em ícones, sem mudar JSON do projeto.
+- **Imagens:** usar a galeria integrada já existente para selecionar fotos; SAF alternativo e cópia privada por projeto para evitar a perda de acesso por URI temporária.
+- **Diagnóstico:** erros de Gemini/Meta/TikTok/YouTube com código HTTP categorizado; nenhuma chave, token ou prompt é registrado.
+- **Limites:** edição da mídia original continua não destrutiva. Reprodução/exportação precisam ser testadas no Android CI e físico.
+
+# Uai Cortes · versão 0.1.171 (05/11/2026)
+
+- **Editor de cortes simplificado:** prévia ocupando o espaço superior, uma régua visual com 12 miniaturas, cursor arrastável e ações grandes Dividir, Aparar, Remover. Ação Pronto retorna ao editor principal; ajuste preciso, mover, excluir clipe e refazer ficam no menu secundário.
+- **Recorte visual:** alças roxas escolhem o que manter; alças amarelas escolhem o que remover. A remoção do intervalo pede confirmação, divide a mídia sem regravar o original, remonta a sequência, mantém a transição na borda final e ajusta horários globais de legendas e PiP.
+- **Segurança e compatibilidade:** undo/redo de até 15 passos em memória, mínimo de 250 ms por trecho, proibição de apagar o único clipe inteiro e persistência em schemaVersion 4. Áudio vinculado a clipe mantém referências; MP4 final ainda depende de validação real.
+- **Regressão:** testes do núcleo e controle visual adicionados. Sintaxe e estrutura verificáveis localmente; CI Gradle e teste no Android são obrigatórios antes de declarar funcionamento aprovado.
+
 # Uai Cortes · versão 0.1.170 (05/11/2026)
 
 - **Correção CI143:** `StaticImageClip.kt` declara `@androidx.annotation.OptIn(UnstableApi::class)` na função `ClipMediaItems.playback`, que chama `MediaItem.Builder.setImageDurationMs`. Corrige especificamente `UnsafeOptInUsageError` encontrado em `:app:lintDebug` do workflow **Gerar APK 143** (0.1.169).

@@ -59,8 +59,9 @@ fun DiagnosticScreen(onBack: () -> Unit, onEnabledChanged: (Boolean) -> Unit) {
                     feedback = if (it) "Captura iniciada." else "Captura interrompida. O relatório foi mantido."
                 })
             }
-            Text("Quando ativo, registra data/hora, tela, toques aproximados, ações de navegação e erros. " +
-                "Não registra teclas digitadas, textos de legendas, nomes dos arquivos, caminhos, áudio, vídeos ou senhas. " +
+            Text("Quando ativo, registra data/hora, tela, ações, erros e falhas de API " +
+                "(serviço, operação, HTTP, modelo público, latência e tokens quando informados). " +
+                "Não registra chaves, tokens, prompts, mensagens HTTP, nomes dos arquivos, caminhos, áudio, vídeos ou senhas. " +
                 "O TXT inclui o modelo do aparelho e a versão do Android.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)

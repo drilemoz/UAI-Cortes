@@ -11,6 +11,8 @@ object DiagnosticPrivacy {
         raw.contains("width and height must be > 0", ignoreCase = true) -> "INVALID_FRAME_DIMENSIONS"
         raw.contains("asset loader", ignoreCase = true) -> "ASSET_LOADER"
         raw.contains("permission", ignoreCase = true) || raw.contains("securityexception", ignoreCase = true) -> "MEDIA_PERMISSION"
+        raw.contains("filenotfoundexception", ignoreCase = true) -> "MEDIA_MISSING"
+        raw.contains("ZIP", ignoreCase = true) || raw.contains("modelo Vosk", ignoreCase = true) -> "MODEL_ARCHIVE_INVALID"
         raw.contains("no space", ignoreCase = true) || raw.contains("enospc", ignoreCase = true) -> "NO_STORAGE"
         raw.contains("codec", ignoreCase = true) || raw.contains("decoder", ignoreCase = true) -> "CODEC"
         raw.contains("timeout", ignoreCase = true) -> "TIMEOUT"

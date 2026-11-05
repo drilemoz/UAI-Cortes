@@ -8,6 +8,7 @@ import java.time.Instant
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 
 /** Diagnóstico local opt-in. Nunca grava conteúdo de campos, mídia, URI, ID nem nome de projeto. */
 object DiagnosticRecorder {
@@ -20,6 +21,7 @@ object DiagnosticRecorder {
     }
     private val lock = Any()
     private val active = AtomicBoolean(false)
+    private val lastSaveLogMs = AtomicLong(0L)
     @Volatile private var app: Context? = null
     private var installedHandler = false
 
@@ -61,8 +63,25 @@ object DiagnosticRecorder {
     }
 
     fun screen(route: String) = log("SCREEN", DiagnosticPrivacy.safeIdentifier(route))
-    fun action(route: String, action: String) = log("ACTION",
-        "screen=${DiagnosticPrivacy.safeIdentifier(route)} action=${DiagnosticPrivacy.safeIdentifier(action)}")
+    fun action(route: String, action: String) {
+        // Deslizamentos de PiP/áudio podem salvar dezenas de vezes por segundo.
+        // Agregação apenas da telemetria: NÃO interfere no salvamento real do projeto.
+        if (action == "project_saved") {
+            val now = System.currentTimeMillis()
+            val previous = lastSaveLogMs.get()
+            if (now - previous < 1500L || !lastSaveLogMs.compareAndSet(previous, now)) return
+        }
+        log("ACTION", "screen=${DiagnosticPrivacy.safeIdentifier(route)} action=${DiagnosticPrivacy.safeIdentifier(action)}")
+    }
+
+    /** Somente códigos/taxonomia controlada; nunca token, URL, prompt ou corpo HTTP. */
+    fun api(service: String, operation: String, model: String?, status: Int?,
+        elapsedMs: Long?, tokens: Long? = null, outcome: String = "unknown") {
+        if (!active.get()) return
+        val event = ApiDiagnosticPolicy.sanitize(service, operation, model, status,
+            elapsedMs, tokens, outcome)
+        log("API", event)
+    }
     fun tap(route: String, x: Float, y: Float, width: Int, height: Int) = log("TAP",
         "screen=${DiagnosticPrivacy.safeIdentifier(route)} ${DiagnosticPrivacy.touchGrid(x,y,width,height)}")
     fun failure(stage: String, raw: String) = log("ERROR",
@@ -129,7 +148,7 @@ object DiagnosticRecorder {
             }.getOrDefault("desconhecida")
             appendLine("Uai Cortes $appVersion | diagnóstico local")
             appendLine("Android SDK: ${Build.VERSION.SDK_INT}; aparelho: ${Build.MANUFACTURER} ${Build.MODEL}")
-            appendLine("Dados: eventos, telas e toques aproximados, sem texto digitado ou caminhos de mídia")
+            appendLine("Dados: eventos, erros e códigos de API; sem segredos, prompts ou caminhos de mídia")
             appendLine("Ativado: ${active.get()}")
             appendLine("---")
             append(body.ifBlank { "Nenhum evento registrado.\n" })

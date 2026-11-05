@@ -1,8 +1,7 @@
 package br.com.uaicortes
 
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -22,45 +21,60 @@ import androidx.compose.ui.unit.dp
 internal fun MainImageInsertionUi(
     project: VideoProject?, screen: String, mediaAction: String,
     selectedClipId: String, coordinator: MediaTaskCoordinator,
+    incomingImage: Uri?, onImageConsumed: () -> Unit, openGallery: () -> Unit,
     onInserted: (VideoProject, Clip, Int) -> Boolean
 ): () -> Unit {
     val context = LocalContext.current
-    val mediaController = remember(context) { MediaImportController(context.applicationContext) }
     var pending by remember { mutableStateOf<ImageClipSource?>(null) }
     var requestedProjectId by remember { mutableStateOf("") }
     var pendingProjectId by remember { mutableStateOf("") }
     var seconds by remember { mutableIntStateOf(ImageClipPolicy.DEFAULT_SECONDS) }
     var placement by remember { mutableStateOf(ImageClipPolicy.Placement.START) }
-    LaunchedEffect(project?.id, screen) {
-        if (pendingProjectId != project?.id || screen != "editor") pending = null
+    fun cancelPending() {
+        ImageClipImport.discardUnused(context.applicationContext, pending)
+        pending = null
     }
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        val expectedId = requestedProjectId
-        if (uri != null && screen == "editor" && expectedId.isNotBlank() &&
-            project?.id == expectedId) {
-            coordinator.start(MediaTaskKind.IMAGE,
-                MediaTaskOrigin(expectedId, screen, mediaAction)) {
-                val result = runCatching { ImageClipImport.inspect(context.applicationContext, uri) }
-                result.onSuccess { source ->
-                    if (project?.id == expectedId && screen == "editor") {
-                        mediaController.persistReadAccess(uri)
-                        pendingProjectId = expectedId
-                        pending = source
-                        seconds = ImageClipPolicy.DEFAULT_SECONDS
-                        placement = ImageClipPolicy.Placement.START
-                    } else Toast.makeText(context, "O projeto mudou. Selecione a foto novamente.",
-                        Toast.LENGTH_LONG).show()
-                }.onFailure { error ->
-                    Toast.makeText(context, error.message ?: "Imagem não suportada.",
-                        Toast.LENGTH_LONG).show()
+    LaunchedEffect(project?.id, screen) {
+        if (pendingProjectId != project?.id || screen != "editor") cancelPending()
+    }
+    // A escolha é feita pela MESMA galeria integrada de Vídeo e PiP.
+    // OpenDocument permanece disponível pelo botão de arquivos desse navegador.
+    LaunchedEffect(incomingImage, project?.id, screen) {
+        val uri = incomingImage ?: return@LaunchedEffect
+        if (screen != "editor" || project == null) return@LaunchedEffect
+        val expectedId = project.id
+        onImageConsumed()
+        val accepted = coordinator.start(MediaTaskKind.IMAGE,
+            MediaTaskOrigin(expectedId, screen, mediaAction)) {
+            try {
+                val source = ImageClipImport.inspect(context.applicationContext, uri)
+                val durable = ImageClipImport.copyIntoProject(context.applicationContext, source)
+                if (project.id == expectedId && screen == "editor") {
+                    pendingProjectId = expectedId
+                    pending = durable
+                    seconds = ImageClipPolicy.DEFAULT_SECONDS
+                    placement = ImageClipPolicy.Placement.START
+                    DiagnosticRecorder.action("editor", "image_import_ready")
+                } else {
+                    ImageClipImport.discardUnused(context.applicationContext, durable)
+                    Toast.makeText(context, "O projeto mudou. Importe novamente.", Toast.LENGTH_LONG).show()
                 }
+            } catch (error: Exception) {
+                DiagnosticRecorder.exception("image_import", error)
+                Toast.makeText(context, error.message ?: "Não foi possível importar a foto.",
+                    Toast.LENGTH_LONG).show()
             }
+        }
+        if (!accepted) {
+            DiagnosticRecorder.failure("image_import", "import busy")
+            Toast.makeText(context, "Há outra importação em andamento. Tente novamente.",
+                Toast.LENGTH_LONG).show()
         }
     }
     val source = pending
     if (source != null && screen == "editor" && project?.id == pendingProjectId) {
         AlertDialog(
-            onDismissRequest = { pending = null },
+            onDismissRequest = { cancelPending() },
             icon = { Icon(Icons.Default.AddPhotoAlternate, null) },
             title = { Text("Adicionar imagem ao vídeo") },
             text = {
@@ -99,16 +113,16 @@ internal fun MainImageInsertionUi(
                             pending = null
                             Toast.makeText(context, "Imagem adicionada à timeline.", Toast.LENGTH_SHORT).show()
                         }
-                    } else pending = null
+                    } else cancelPending()
                 }) { Text("Adicionar imagem") }
             },
-            dismissButton = { TextButton(onClick = { pending = null }) { Text("Cancelar") } }
+            dismissButton = { TextButton(onClick = { cancelPending() }) { Text("Cancelar") } }
         )
     }
     return {
         if (project != null && screen == "editor") {
             requestedProjectId = project.id
-            picker.launch(arrayOf("image/*"))
+            openGallery()
         }
     }
 }

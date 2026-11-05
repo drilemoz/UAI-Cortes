@@ -40,8 +40,12 @@ internal fun ProjectMediaAlert(project: VideoProject?) {
         val missing = withContext(Dispatchers.IO) {
             ProjectMediaAvailability.inaccessibleCount(context.applicationContext, project)
         }
-        if (missing > 0) Toast.makeText(context,
-            "$missing mídia(s) não acessível(is). Confira arquivos e permissões de leitura.",
-            Toast.LENGTH_LONG).show()
+        if (missing > 0) {
+            DiagnosticRecorder.action("editor", "media_access_missing")
+            Toast.makeText(context,
+                "$missing mídia(s) não acessível(is). Reabra a galeria e verifique as permissões. " +
+                    "Os arquivos e o projeto não foram apagados.",
+                Toast.LENGTH_LONG).show()
+        }
     }
 }

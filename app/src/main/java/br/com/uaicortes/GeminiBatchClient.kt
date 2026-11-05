@@ -123,6 +123,8 @@ internal class GeminiBatchClient {
             coroutineContext.ensureActive()
             if (body != null) http.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
             val status = http.responseCode
+            DiagnosticRecorder.api("gemini", if (body == null) "batch_poll" else "batch_create",
+                null, status, null, outcome = if (status in 200..299) "ok" else "http_error")
             coroutineContext.ensureActive()
             if (status !in 200..299) throw IOException(when (status) {
                 400 -> "Lote ou modelo rejeitado pelo Gemini (400)."
@@ -148,6 +150,10 @@ internal class GeminiBatchClient {
             return JSONObject(text)
         } catch (cancel: CancellationException) {
             throw cancel
+        } catch (error: java.io.IOException) {
+            DiagnosticRecorder.api("gemini", if (body == null) "batch_poll" else "batch_create",
+                null, null, null, outcome = "network_uncertain")
+            throw error
         } finally {
             connection.compareAndSet(http, null)
             http.disconnect()

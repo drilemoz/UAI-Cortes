@@ -123,4 +123,10 @@ internal class GeminiUsageLedger(context: Context) {
 internal fun GeminiUsageLedger.safeRecord(key: String, model: String, operation: String,
     response: JSONObject? = null, status: String = "ok", latencyMs: Long? = null) {
     runCatching { record(key, model, operation, response, status, latencyMs) }
+    // O registro da API não depende de gravar o histórico. Em caso de erro, jamais
+    // incluir a chave, ID do projeto, corpo da resposta ou texto do usuário.
+    DiagnosticRecorder.api("gemini", operation, model, ApiDiagnosticPolicy.httpStatus(status),
+        latencyMs, response?.let { GeminiUsagePolicy.parse(it)?.total },
+        if (status == "ok") "ok" else if (ApiDiagnosticPolicy.httpStatus(status) != null)
+            "http_error" else "unknown")
 }

@@ -5,8 +5,8 @@ root=Path(__file__).resolve().parents[1]
 src=root/'app/src/main/java/br/com/uaicortes'
 editor=(src/'EditorScreen.kt').read_text()
 assert 'Triple("Vozes IA", Icons.Default.RecordVoiceOver, "voices")' in editor
-assert 'trackKind = VoiceIaPolicy.KIND' in editor
-assert 'InteractiveAudioTimeline(p, onSelectTrack = onSelectAudio' in editor
+assert 'val voice = resolved.filter { it.kind == VoiceIaPolicy.KIND }' in (src/'UnifiedEditorTimeline.kt').read_text()
+assert 'UnifiedEditorTimeline(p,currentMs' in editor and 'onOpenVoice={onEdit("voices")}' in editor
 nav=(src/'EditorNavigation.kt').read_text()
 assert '"voices"' in nav and '"gemini_settings" -> if (previous == "audio" || previous == "voices" || previous == "api_center")' in nav
 screen=(src/'VoiceIaScreen.kt').read_text()

@@ -286,36 +286,20 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 seekGlobal(ms)
             }, modifier = Modifier.weight(1f))
         }
-        // Os botões junto de play/pause substituem os quatro ajustes finos redundantes.
-        // O Slider continua disponível para deslocamentos longos e arrasto direto.
-        if(p.durationMs>0) Slider(value=currentMs.toFloat().coerceIn(0f,p.durationMs.toFloat()),
-            onValueChange={global ->
-                scrubbing = true
-                seekGlobal(global.toLong())
-            },
-            onValueChangeFinished = { scrubbing = false },
-            valueRange=0f..p.durationMs.toFloat(),modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp))
-        TimelineRow("Vídeo",Blue,p.clips.mapIndexed{ index, clip ->
-            (if (clip.isImage) "Foto ${index+1}" else "Clipe ${index+1}") to clip.durationMs },p.durationMs,currentMs,selectedId,
-            onClip={ id -> onSelected(p.clips[id].id); clipMenuId = p.clips[id].id },
-            onBoundary=onTransition)
-        OverlayTimeline(p.overlays, p.durationMs, onClick = { id -> onSelectOverlay(id); onEdit("pip") })
-        InteractiveAudioTimeline(p, onSelectTrack = onSelectAudio,
-            onMoveTrack = { trackId, start ->
-                onUpdate(p.copy(audioTracks = p.audioTracks.map { audio ->
-                    if (audio.id == trackId) audio.copy(startMs = start) else audio
+        // Faixas com origem temporal comum. A linha azul atravessa todas as pistas.
+        UnifiedEditorTimeline(p,currentMs, onSeek=::seekGlobal,
+            onClip={ id -> onSelected(id); clipMenuId=id },
+            onTransition=onTransition,
+            onOverlay={ id -> onSelectOverlay(id); onEdit("pip") },
+            onAudio=onSelectAudio, onAddVideo=onAddVideo, onAddImage=onAddImage,
+            onOpenPiP=onPiP, onOpenAudio={onEdit("audio")},
+            onOpenVoice={onEdit("voices")},
+            onSubtitle=onSelectSubtitle, onOpenSubtitle={onEdit("subtitles")},
+            onMoveAudio={ trackId, start ->
+                onUpdate(p.copy(audioTracks=p.audioTracks.map { track ->
+                    if (track.id==trackId) track.copy(startMs=start) else track
                 }))
-                feedback = "Posição da faixa atualizada."
-            }, onLegacyClick = { onEdit("audio") })
-        InteractiveAudioTimeline(p, onSelectTrack = onSelectAudio,
-            onMoveTrack = { trackId, start ->
-                onUpdate(p.copy(audioTracks = p.audioTracks.map { audio ->
-                    if (audio.id == trackId) audio.copy(startMs = start) else audio
-                }))
-                feedback = "Posição da voz atualizada."
-            }, onLegacyClick = { onEdit("voices") }, trackKind = VoiceIaPolicy.KIND)
-        SubtitleOverviewTimeline(p.subtitles,p.durationMs,onSelectSubtitle,
-            onOpen={onEdit("subtitles")})
+            })
         Spacer(Modifier.height(5.dp));HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
         // Ferramentas em carrossel circular: salvar é um cartão, não um botão solto.
         // Começamos no centro de Int.MAX_VALUE para permitir deslizar nas duas direções.

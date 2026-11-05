@@ -48,6 +48,8 @@ internal object YouTubeSocialApi {
     }
 
     private fun ensureOk(code: Int, operation: String) {
+        DiagnosticRecorder.api("youtube", operation.lowercase().replace(' ', '_'), null, code,
+            null, outcome=if (code in 200..299) "ok" else "http_error")
         if (code !in 200..299) throw IOException("$operation: HTTP $code. Confira autorização, cotas e API ativada.")
     }
 
@@ -150,6 +152,8 @@ internal object YouTubeSocialApi {
                     put.setFixedLengthStreamingMode(count)
                     put.outputStream.use { it.write(buffer, 0, count) }
                     val code = put.responseCode
+                    DiagnosticRecorder.api("youtube", "upload_chunk", null, code,
+                        null, outcome=if (code == 308 || code in 200..299) "ok" else "http_error")
                     if (code == 308) {
                         val reported = put.getHeaderField("Range")
                             ?.let { Regex("bytes=0-(\\d+)").matchEntire(it) }?.groupValues?.get(1)

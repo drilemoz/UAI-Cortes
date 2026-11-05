@@ -1,3 +1,18 @@
+# Uai Cortes · versão 0.1.172 — Timeline, mídia local e erros HTTP
+
+- **Editor:** escala temporal única, pistas com ícones para vídeo, imagem, PiP, áudio, vozes e legendas; cursor alinhado à reprodução e navegação ao tocar/arrastar na régua.
+- **Foto/capa:** escolha pela galeria integrada; botão de arquivos via SAF, confirmação da duração/posição e cópia local durável antes de inserir. Não remove nem modifica a foto original.
+- **Diagnóstico de APIs:** registra status HTTP, categoria e tempo de operação para Gemini e APIs de publicação, com tokens contabilizados apenas quando declarados oficialmente. Não grava chaves, tokens, prompts ou URLs.
+- **Estabilidade:** progresso protegido contra estados nulos durante geração e classificação mais específica de arquivos indisponíveis/ZIP de modelo.
+- **Validação pendente:** compilação Gradle Android, Lint, teste de imagens/Media3, navegação real e chamadas autorizadas.
+
+# Uai Cortes · versão 0.1.171 — Cortar e unir visual
+
+- **Editor de cortes simplificado:** prévia ocupando o espaço superior, uma régua visual com 12 miniaturas, cursor arrastável e ações grandes Dividir, Aparar, Remover. Ação Pronto retorna ao editor principal; ajuste preciso, mover, excluir clipe e refazer ficam no menu secundário.
+- **Recorte visual:** alças roxas escolhem o que manter; alças amarelas escolhem o que remover. A remoção do intervalo pede confirmação, divide a mídia sem regravar o original, remonta a sequência, mantém a transição na borda final e ajusta horários globais de legendas e PiP.
+- **Segurança e compatibilidade:** undo/redo de até 15 passos em memória, mínimo de 250 ms por trecho, proibição de apagar o único clipe inteiro e persistência em schemaVersion 4. Áudio vinculado a clipe mantém referências; MP4 final ainda depende de validação real.
+- **Regressão:** testes do núcleo e controle visual adicionados. Sintaxe e estrutura verificáveis localmente; CI Gradle e teste no Android são obrigatórios antes de declarar funcionamento aprovado.
+
 # Uai Cortes · versão 0.1.170 — CI143, opt-in Media3 de imagens
 
 - **Correção CI143:** `StaticImageClip.kt` declara `@androidx.annotation.OptIn(UnstableApi::class)` na função `ClipMediaItems.playback`, que chama `MediaItem.Builder.setImageDurationMs`. Corrige especificamente `UnsafeOptInUsageError` encontrado em `:app:lintDebug` do workflow **Gerar APK 143** (0.1.169).

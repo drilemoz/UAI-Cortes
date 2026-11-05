@@ -16,11 +16,27 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.170"
-    const val VERSION_CODE = 171
+    const val VERSION_NAME = "0.1.172"
+    const val VERSION_CODE = 173
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.172", listOf(
+            ReleaseFeature("unified-timeline-172", "Uma linha do tempo para tudo",
+                "Faixas com ícones e cursor único sincronizado para vídeos, imagens, PiP, áudio, vozes e legendas.", "check"),
+            ReleaseFeature("integrated-gallery-172", "Fotos na galeria integrada",
+                "Selecione a imagem no mesmo navegador de vídeo e PiP; uma cópia privada preserva a mídia no projeto.", "captions"),
+            ReleaseFeature("api-diagnostics-172", "Diagnóstico com erros de API",
+                "Registro local de códigos HTTP e categorias sem guardar credenciais ou conteúdo de solicitações.", "check")
+        )),
+        ReleaseSummary("0.1.171", listOf(
+            ReleaseFeature("trim-visual-171", "Cortar vídeo ficou visual",
+                "Tela de cortes com prévia ampla, faixa de quadros interativa e comandos Dividir, Aparar, Remover e Pronto.", "check"),
+            ReleaseFeature("trim-safe-remove-171", "Remover um pedaço e unir",
+                "Seleção com alças, confirmação, união dos trechos e preservação dos arquivos originais.", "captions"),
+            ReleaseFeature("trim-simplified-171", "Menos botões, mais controle",
+                "Ajuste preciso e reorganização no menu; desfazer/refazer e compatibilidade com projetos anteriores.", "check")
+        )),
         ReleaseSummary("0.1.170", listOf(
             ReleaseFeature("photo-media3-lint-170", "Correção de compilação da capa", 
                 "Declaração de opt-in Media3 na montagem de clipes de imagem para corrigir a falha do Android Lint do workflow 143.", "check"),

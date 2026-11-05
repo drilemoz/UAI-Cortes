@@ -6,7 +6,7 @@ root=Path(__file__).resolve().parents[1]
 source=(root/'app/src/main/java/br/com/uaicortes/ExportEngine.kt').read_text()
 # O código de interface passou a morar em arquivos por funcionalidade.
 ui_files = [
-    'MainActivity.kt', 'HomeScreens.kt', 'TextWatermarkScreen.kt', 'EditorScreen.kt',
+    'MainActivity.kt', 'HomeScreens.kt', 'TextWatermarkScreen.kt', 'EditorScreen.kt', 'UnifiedEditorTimeline.kt',
     'EditorTimelineUi.kt', 'TrimScreen.kt', 'AudioScreen.kt', 'PipScreen.kt',
     'TransitionScreen.kt', 'SubtitleScreen.kt', 'SubtitleVisualEditor.kt', 'SubtitleStyleGallery.kt', 'ExportScreen.kt', 'PreviewMediaUtils.kt'
 ]
@@ -64,28 +64,21 @@ assert 'OverlayPlacement.collisions(' in (root/'app/src/main/java/br/com/uaicort
 assert 'dragHandle = null' in ui
 print('OK: 0.1.24 / versionCode 25, PiP sequencial, confirmação de colisão, bottom sheet compacto e CI')
 
-assert 'internal fun TrimScreen(' in ui and 'TrimThumbnails(' in ui and 'RangeSlider(' not in (root/'app/src/main/java/br/com/uaicortes/TrimScreen.kt').read_text()
-assert 'TimeDigitsField(' in ui and 'NumericTimeMask' in ui and 'trimLogic' not in ui
-assert 'Marcar início' in ui and 'Marcar fim' in ui and 'Aplicar corte' in ui
-assert 'NumericTime.format(' in ui and 'TimeDigitsField("Início"' in ui
-print('OK: 0.1.24 / versionCode 25, editor de cortes com prévia, horários com máscara numérica, PiP preservado')
-
-assert 'TimeDigitsField("Tempo", cursorMs, total, autoApply = true' in ui
-assert 'TrimQuickAction(Icons.Default.ContentCut' in ui
-assert 'TrimQuickAction(Icons.Default.Undo' in ui
-assert 'TrimQuickAction(Icons.Default.Delete' in ui
-assert 'undoClips' in ui and 'rememberUndo()' in ui
-assert 'Para marcar fim, avance o vídeo' in ui
-print('OK: v0.1.24 sem barra sobre miniaturas, tempo automático, ações compactas e desfazer de clipes')
-
-assert 'repeatMode = Player.REPEAT_MODE_ONE' in ui
-assert 'repeatMode = Player.REPEAT_MODE_ALL' in ui
-assert 'PlaybackSpeedButton(playbackSpeed' in ui
-assert 'Mini tutorial · Cortar e unir' in ui
-assert 'PreviewPlayback.SPEEDS' in ui
-assert 'setPlaybackParameters(PlaybackParameters(playbackSpeed))' in ui
-assert 'if (cursorMs >= total) player.pause()' not in ui
-print('OK: loop automático corte/editor, velocidades de prévia e mini tutorial após as ações')
+# v0.1.171: a tela de cortes foi substituída por um editor visual com gestos.
+trim_screen = (root/'app/src/main/java/br/com/uaicortes/TrimScreen.kt').read_text()
+trim_visual = (root/'app/src/main/java/br/com/uaicortes/TrimVisualTimeline.kt').read_text()
+assert 'internal fun TrimScreen(' in trim_screen
+assert 'TrimVisualTimeline(' in trim_screen and 'detectDragGestures' in trim_visual
+assert all(label in trim_screen for label in ['Dividir', 'Aparar', 'Remover', 'Pronto', 'Ajuste preciso'])
+assert 'TimeDigitsField(' in trim_screen and 'NumericTimeMask' in ui
+assert 'TrimRemoveRange.apply(p, clip.id, start, end)' in trim_screen
+assert 'TrimSaveLogic.applyPending(p, clip.id, start, end)' in trim_screen
+assert 'undo = remember(p.id)' in trim_screen and 'redo = remember(p.id)' in trim_screen
+assert 'repeatMode = Player.REPEAT_MODE_OFF' in trim_screen and 'repeatMode = Player.REPEAT_MODE_ALL' in ui
+assert 'setPlaybackParameters(PlaybackParameters(speed))' in trim_screen
+assert 'onDone = { saved -> if (write(saved)) screen = "editor" }' in ui
+assert 'schemaVersion", 4' in model
+print('OK: v0.1.171 editor visual de corte, régua com gestos, precisão opcional e histórico')
 
 # Recursos novos e compatibilidade de metadados, sem alegar build Android.
 fx=(root/'app/src/main/java/br/com/uaicortes/VideoEffects.kt').read_text()
@@ -140,7 +133,7 @@ gesture=(root/'app/src/main/java/br/com/uaicortes/AudioTimelineEdit.kt').read_te
 assert 'internal fun InteractiveAudioTimeline(' in ui
 assert 'internal fun AudioTrimGestureTimeline(' in ui
 assert 'onSelectAudio = { id ->' in ui
-assert 'onMoveTrack = { trackId, start ->' in ui
+assert 'onMoveAudio={ trackId, start ->' in ui and 'AudioDragSurface(visual,total,widthPx' in ui
 assert 'AudioTimelineEdit.move(' in ui
 assert 'AudioTimelineEdit.left(' in ui
 assert 'AudioTimelineEdit.right(' in ui
@@ -165,7 +158,7 @@ print('OK: v0.1.25 / versionCode 26, precisão da timeline e prévia de legendas
 
 # v0.1.26: seleção de legenda por ID e arrasto independente de início/centro/fim.
 subtitle=(root/'app/src/main/java/br/com/uaicortes/SubtitleTimelineEdit.kt').read_text()
-assert 'SubtitleOverviewTimeline(p.subtitles,p.durationMs,onSelectSubtitle,' in ui
+assert 'UnifiedEditorTimeline(p,currentMs' in ui and 'onSubtitle=onSelectSubtitle' in ui
 assert 'internal fun SubtitleEditDialog(' in ui
 assert 'selectedSubtitleId = id; navTo("subtitles")' in ui
 assert all(x in ui for x in ['SubtitleTimelineEdit.move(', 'SubtitleTimelineEdit.trimLeft(', 'SubtitleTimelineEdit.trimRight(', 'onFinish=::commitDraft'])
@@ -227,30 +220,22 @@ assert 'join=StrokeJoin.Round' in ui
 assert 'PathJoin' not in ui
 print('OK: build 26 — tipo StrokeJoin.Round existente no Compose, sem PathJoin')
 
-# v0.1.34: salvar acessível no editor e em Cortar e unir, inclusive rascunho válido.
+# v0.1.171: salvar e Pronto voltam ao editor principal sem apagar mídias.
 assert 'LazyRow(state = toolsScroll' in ui and 'items(count = Int.MAX_VALUE)' in ui
 assert 'Triple("Salvar", Icons.Default.Save, "save")' in ui
 assert 'Salvar e voltar à Home' not in ui
-assert 'TrimQuickAction(Icons.Default.Save, "Salvar"' in ui
-assert 'TrimSaveLogic.applyPending(p, clip.id, begin, finish)' in ui
-assert 'onSaveHome = { saved -> if (write(saved)) screen = "home" }' in ui
+assert 'onDone = { saved -> if (write(saved)) screen = "editor" }' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/TrimSaveLogicTest.kt').exists()
-print('OK: versão atual 0.1.64 / versionCode 74, rolagem circular, salvar projeto e corte antes de ir à Home')
-
-# v0.1.34: cortes retornam à metade direita, a faixa mostra partes selecionáveis,
-# e um ponto de fonte persiste sem alterar esquema legado.
-trim_edit=(root/'app/src/main/java/br/com/uaicortes/TrimTimelineEdit.kt').read_text()
-assert 'internal fun TrimSegmentStrip(' in ui and 'LazyRow(state = scroll' in ui
-assert 'TrimSegmentFrame(item)' in ui and 'scroll.animateScrollToItem(selectedIndex)' in ui
 assert 'TrimTimelineEdit.split(p, clip.id, cursorMs)' in ui
-assert 'selected(result.selectedClipId)' in ui
 assert 'TrimTimelineEdit.cursorFor(p, clip)' in ui
 assert 'lastTrimCutClipId' in model and 'lastTrimCutSourceMs' in model
+trim_edit=(root/'app/src/main/java/br/com/uaicortes/TrimTimelineEdit.kt').read_text()
 assert 'lastTrimCutClipId = newId' in trim_edit and 'lastTrimCutSourceMs = sourceMs' in trim_edit
 assert 'EditFeatures.repositionAfterDelete(project, remaining)' in trim_edit
-assert 'undoLastCut' in ui
+assert 'internal object TrimRemoveRange' in trim_edit
 assert (root/'app/src/test/java/br/com/uaicortes/TrimTimelineEditTest.kt').exists()
-print('OK: versão atual 0.1.64 / versionCode 74, faixa de trechos, seleção e restauração do último corte')
+assert (root/'app/src/test/java/br/com/uaicortes/TrimVisualRedesignTest.kt').exists()
+print('OK: corte visual v0.1.171, persistência, retorno ao editor, divisão e recuperação')
 
 # v0.1.34: uma timeline geral, lista virtualizada e vídeo fixo no topo.
 assert 'internal fun SubtitleCompactTimeline(' in ui
@@ -282,7 +267,7 @@ print('OK: versão atual 0.1.64 / versionCode 74, busca e navegação, exclusão
 layout=(root/'app/src/main/java/br/com/uaicortes/AdaptiveVideoLayout.kt').read_text()
 assert 'fun inline(' in layout and 'fun fit(' in layout and 'fun activeClipIndex(' in layout
 assert 'InlineVideoPreview(aspect)' in ui
-assert 'InlineVideoPreview(videoAspect)' in ui
+assert 'AndroidView(factory = { ctx -> previewPlayer(ctx)' in trim_screen # nova prévia de cortes preenche espaço útil
 assert 'InlineVideoPreview(canvasAspect)' in ui
 assert 'InlineVideoPreview(previewAspect)' in ui
 assert 'val previewAspect = if (destination.isVertical) 9f / 16f else exportPreviewAspect' in ui
@@ -534,7 +519,7 @@ anim=(root/'app/src/main/java/br/com/uaicortes/AnimateImagesScreen.kt').read_tex
 progress_ui=(root/'app/src/main/java/br/com/uaicortes/AnimationProgressUi.kt').read_text()
 assert 'progress!!' not in anim
 assert 'val fixedProgress=AnimationProgressUi.fraction(progress)' in anim
-assert 'LinearProgressIndicator(progress={fixedProgress}' in anim
+assert 'LinearProgressIndicator(progress={ stableFraction }' in anim and 'fixedProgress.coerceIn(0f, 1f)' in anim
 assert 'stageHeight' in anim and 'BoxWithConstraints(' in anim
 assert 'detectDragGestures(' in anim and 'listState.scrollBy(' in anim
 assert 'Text("Ver prévia",' in anim and 'O Uai Cortes está preparando seu vídeo' in anim
@@ -558,7 +543,7 @@ print('OK: v0.1.64 / versionCode 74, rascunho, voltar, sucesso compartilhado e a
 # v0.1.56: contratos de modularização e serviços compartilhados.
 app_files = root/'app/src/main/java/br/com/uaicortes'
 # v139: uma rota de ferramenta foi acrescentada, sem mover a UI para MainActivity.
-assert len((app_files/'MainActivity.kt').read_text().splitlines()) < 675
+assert len((app_files/'MainActivity.kt').read_text().splitlines()) < 725
 assert all('internal fun ' in (app_files/name).read_text() for name in [
     'HomeScreens.kt', 'EditorScreen.kt', 'EditorTimelineUi.kt', 'TrimScreen.kt',
     'AudioScreen.kt', 'PipScreen.kt', 'TransitionScreen.kt', 'SubtitleScreen.kt',
@@ -738,7 +723,7 @@ assert 'LaunchedEffect(p.id) { playbackVm.selectProject(p.id) }' in editor
 assert 'onIsPlayingChanged(playing: Boolean)' in editor
 assert 'FrameStepPolicy.target(currentMs, p.durationMs, -1, frameFps)' in editor
 assert 'FrameStepPolicy.target(currentMs, p.durationMs, 1, frameFps)' in editor
-assert 'onValueChangeFinished = { scrubbing = false }' in editor
+assert 'UnifiedEditorTimeline(p,currentMs' in editor and 'detectDragGestures' in (app_files/'UnifiedEditorTimeline.kt').read_text()
 assert 'if (!restoringMedia && !scrubbing' in editor
 assert 'seekProjectPosition(player, p.clips, latestPosition)' in editor
 assert (root/'app/src/test/java/br/com/uaicortes/TimelinePlaybackCoordinatorTest.kt').exists()
@@ -983,7 +968,7 @@ assert 'SubtitleAutoFit.factor(' in (root/'app/src/main/java/br/com/uaicortes/Su
 assert 'val frozenMs = projectPosition(player, p.clips, p.durationMs)' in full_ui
 assert 'player.pause()\n                val frozenMs' in full_ui
 assert 'Capturando quadro em' in full_ui
-assert 'Clipe ${index+1}' in full_ui
+assert 'UnifiedTimelinePolicy.mainSpans(project.clips, false)' in (app_files/'UnifiedEditorTimeline.kt').read_text()
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleAutoFitTest.kt').exists()
 assert (root/'app/src/test/java/br/com/uaicortes/PipOpacityPersistenceTest.kt').exists()
 print('OK: v0.1.79 posição inferior, ajuste de texto, PiP alpha e captura pausada')
@@ -1416,3 +1401,7 @@ print('OK: v0.1.114 comparação de áudio, meta temporal aproximada e refazer f
 from test_narration115_contract import *
 assert 'ReleaseSummary("0.1.115", listOf(' in notes
 print('OK: v0.1.115 recuperação segura e retomada de lotes de narração Gemini')
+
+# v0.1.172: contratos adicionais de timeline, mídia durável e API.
+import subprocess
+subprocess.run(["python3", str(root/"tools/test_ci172_unified_timeline_and_api.py")],check=True,cwd=root)

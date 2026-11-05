@@ -1,3 +1,18 @@
+# Uai Cortes · versão 0.1.172 — Linha do tempo unificada, importação e diagnóstico
+
+- Unificadas as pistas do editor com cursor de reprodução comum e faixa visual dedicada a fotos (fotos ainda são clipes principais no render, não overlays extras).
+- Atalho Imagem usa DeviceMediaBrowser, o mesmo da seleção de Vídeo e PiP, com alternativa SAF; fotos selecionadas são copiadas para armazenamento privado e lidas via FileProvider.
+- Eventos API tipados (serviço/ação/modelo público/HTTP/categoria/latência/consumo informado), sem credenciais nem texto da solicitação; menos eventos de salvamento de projetos no relatório.
+- Protegido indicador de progresso de Animar Imagens e ampliada classificação de arquivo ausente/modelo inválido. Correções históricas de Vosk/Media3 permanecem pendentes de confirmação no aparelho.
+- Compatibilidade de VideoProject schemaVersion=4, Estúdio, Gemini, redes sociais, backups e cinco APKs mantida.
+
+# Histórico de alterações — Uai Cortes 0.1.171
+
+- **Editor de cortes simplificado:** prévia ocupando o espaço superior, uma régua visual com 12 miniaturas, cursor arrastável e ações grandes Dividir, Aparar, Remover. Ação Pronto retorna ao editor principal; ajuste preciso, mover, excluir clipe e refazer ficam no menu secundário.
+- **Recorte visual:** alças roxas escolhem o que manter; alças amarelas escolhem o que remover. A remoção do intervalo pede confirmação, divide a mídia sem regravar o original, remonta a sequência, mantém a transição na borda final e ajusta horários globais de legendas e PiP.
+- **Segurança e compatibilidade:** undo/redo de até 15 passos em memória, mínimo de 250 ms por trecho, proibição de apagar o único clipe inteiro e persistência em schemaVersion 4. Áudio vinculado a clipe mantém referências; MP4 final ainda depende de validação real.
+- **Regressão:** testes do núcleo e controle visual adicionados. Sintaxe e estrutura verificáveis localmente; CI Gradle e teste no Android são obrigatórios antes de declarar funcionamento aprovado.
+
 # Histórico de alterações — Uai Cortes 0.1.170
 
 - **Correção CI143:** `StaticImageClip.kt` declara `@androidx.annotation.OptIn(UnstableApi::class)` na função `ClipMediaItems.playback`, que chama `MediaItem.Builder.setImageDurationMs`. Corrige especificamente `UnsafeOptInUsageError` encontrado em `:app:lintDebug` do workflow **Gerar APK 143** (0.1.169).

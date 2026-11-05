@@ -56,3 +56,95 @@ object TrimTimelineEdit {
         return Result(updated, adjacent.id)
     }
 }
+
+/** Operações de corte visual que alteram somente os intervalos do projeto.
+ * O arquivo original nunca é regravado. */
+internal object TrimRemoveRange {
+    /** Converte um intervalo removido da fonte em dois trechos unidos na timeline.
+     * As partes remanescentes devem ter no mínimo 250 ms.
+     */
+    fun apply(project: VideoProject, clipId: String, fromMs: Long, toMs: Long,
+        firstNewId: String = UUID.randomUUID().toString(),
+        secondNewId: String = UUID.randomUUID().toString()): TrimTimelineEdit.Result? {
+        val index = project.clips.indexOfFirst { it.id == clipId }
+        if (index < 0) return null
+        val clip = project.clips[index]
+        if (clip.isImage || fromMs < clip.startMs || toMs > clip.endMs ||
+            toMs - fromMs < TrimLogic.MIN_SEGMENT_MS) return null
+        val leftMs = fromMs - clip.startMs
+        val rightMs = clip.endMs - toMs
+        if ((leftMs > 0L && leftMs < TrimLogic.MIN_SEGMENT_MS) ||
+            (rightMs > 0L && rightMs < TrimLogic.MIN_SEGMENT_MS)) return null
+        if (leftMs == 0L && rightMs == 0L && project.clips.size == 1) return null
+
+        val beforeDuration = project.clips.take(index).sumOf { it.durationMs }
+        val globalFrom = beforeDuration + leftMs
+        val globalTo = globalFrom + (toMs - fromMs)
+        val result: TrimTimelineEdit.Result = when {
+            leftMs == 0L && rightMs == 0L -> TrimTimelineEdit.remove(project, clipId) ?: return null
+            leftMs == 0L -> {
+                // Reaproveitar o ID mantém vínculos de áudio/seleção e transições posteriores.
+                val changed = project.copy(clips = project.clips.mapIndexed { i, c ->
+                    if (i == index) c.copy(startMs = toMs) else c
+                }, lastTrimCutClipId = null, lastTrimCutSourceMs = null)
+                TrimTimelineEdit.Result(changed, clipId)
+            }
+            rightMs == 0L -> {
+                val changed = project.copy(clips = project.clips.mapIndexed { i, c ->
+                    if (i == index) c.copy(endMs = fromMs) else c
+                }, lastTrimCutClipId = null, lastTrimCutSourceMs = null)
+                TrimTimelineEdit.Result(changed, clipId)
+            }
+            else -> {
+                if (firstNewId == clipId || firstNewId.isBlank() ||
+                    firstNewId == secondNewId || secondNewId.isBlank() ||
+                    project.clips.any { it.id == firstNewId || it.id == secondNewId }) return null
+                val left = clip.copy(endMs = fromMs)
+                val right = clip.copy(id = secondNewId, startMs = toMs)
+                val clips = project.clips.toMutableList().apply {
+                    set(index, left)
+                    add(index + 1, right)
+                }
+                val following = project.clips.getOrNull(index + 1)?.id
+                val transitions = project.transitions.map { t ->
+                    if (t.fromId == clipId && t.toId == following) t.copy(fromId = right.id) else t
+                }
+                val updated = ClipAudioBindings.cloneAttached(project.copy(clips = clips,
+                    transitions = transitions, lastTrimCutClipId = right.id,
+                    lastTrimCutSourceMs = toMs), clipId, right.id)
+                TrimTimelineEdit.Result(updated, right.id)
+            }
+        }
+        return result.copy(project = shiftGlobalItems(result.project, globalFrom, globalTo))
+    }
+
+    private fun shiftGlobalItems(project: VideoProject, from: Long, to: Long): VideoProject {
+        val removed = to - from
+        fun adjusted(time: Long): Long = when {
+            time <= from -> time
+            time >= to -> time - removed
+            else -> from
+        }
+        return project.copy(
+            subtitles = project.subtitles.mapNotNull { cue ->
+                val begin = adjusted(cue.startMs)
+                val end = adjusted(cue.endMs)
+                if (end <= begin) null else cue.copy(startMs = begin, endMs = end,
+                    wordTimings = cue.wordTimings.mapNotNull { word ->
+                        val wStart = adjusted(word.startMs)
+                        val wEnd = adjusted(word.endMs)
+                        if (wEnd <= wStart) null else word.copy(startMs = wStart, endMs = wEnd)
+                    })
+            },
+            overlays = project.overlays.mapNotNull { overlay ->
+                val begin = adjusted(overlay.startAtMs)
+                val end = adjusted(overlay.startAtMs + overlay.durationMs)
+                if (end <= begin) null else overlay.copy(startAtMs = begin,
+                    durationMs = end - begin)
+            },
+            audioTracks = project.audioTracks.map { audio ->
+                if (audio.clipId != null) audio else audio.copy(startMs = adjusted(audio.startMs))
+            }
+        )
+    }
+}

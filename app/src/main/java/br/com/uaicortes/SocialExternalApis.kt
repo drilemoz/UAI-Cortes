@@ -66,6 +66,9 @@ internal object SocialExternalApis {
 
     private fun json(conn: HttpURLConnection, operation: String): JSONObject {
         val status = conn.responseCode
+        DiagnosticRecorder.api(if (conn.url.host.contains("tiktok")) "tiktok" else "meta",
+            operation.lowercase().replace(Regex("[^a-z0-9_]"), "_").take(48), null,
+            status, null, outcome = if (status in 200..299) "ok" else "http_error")
         if (status !in 200..299) throw IOException("$operation: HTTP $status. Confira permissões, cota e autorização.")
         // Não incluir corpos de erro em logs ou mensagens: podem conter dados sensíveis.
         return JSONObject(readSmall(conn))
@@ -280,8 +283,11 @@ internal object SocialExternalApis {
                 }
                 try {
                     put.outputStream.use { it.write(buffer, 0, length) }
-                    if (put.responseCode !in 200..299)
-                        throw IOException("Transferência TikTok: HTTP ${put.responseCode}. Verifique a publicação antes de repetir.")
+                    val code = put.responseCode
+                    DiagnosticRecorder.api("tiktok", "upload_chunk", null, code, null,
+                        outcome=if (code in 200..299) "ok" else "http_error")
+                    if (code !in 200..299)
+                        throw IOException("Transferência TikTok: HTTP $code. Verifique a publicação antes de repetir.")
                 } finally { put.disconnect() }
                 offset += length
                 progress(offset, size)

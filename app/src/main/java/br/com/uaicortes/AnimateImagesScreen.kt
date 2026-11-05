@@ -225,11 +225,15 @@ internal fun AnimateImagesScreen(
                 Spacer(Modifier.height(16.dp))
                 Text(AnimationProgressUi.title(task.phase),style=MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(12.dp))
+                // Progresso opcional: passar SEMPRE um Float não nulo para a lambda
+                // usada pelo Material3. Evita NPE na árvore de semântica durante
+                // transições rápidas entre fases indeterminadas/determinadas.
                 val fixedProgress=AnimationProgressUi.fraction(progress)
-                if(fixedProgress==null) LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
+                if (fixedProgress == null) LinearProgressIndicator(modifier=Modifier.fillMaxWidth())
                 else {
-                    LinearProgressIndicator(progress={fixedProgress},modifier=Modifier.fillMaxWidth())
-                    Text("${(fixedProgress*100).toInt()}%")
+                    val stableFraction: Float = fixedProgress.coerceIn(0f, 1f)
+                    LinearProgressIndicator(progress={ stableFraction },modifier=Modifier.fillMaxWidth())
+                    Text("${(stableFraction*100).toInt()}%")
                 }
                 Text("O Uai Cortes está preparando seu vídeo. Progresso real quando disponível.",
                     style=MaterialTheme.typography.bodySmall)

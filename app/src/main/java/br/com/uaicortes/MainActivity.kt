@@ -120,6 +120,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     var selectedSubtitleId by workspace::selectedSubtitleId
     var positionMs by workspace::positionMs
     var pendingPicker by rememberSaveable { mutableStateOf("") }
+    var incomingMainImage by remember { mutableStateOf<Uri?>(null) }
     var importedAudioSourceVideo by rememberSaveable { mutableStateOf<Uri?>(null) }
     var mediaOrigin by rememberSaveable { mutableStateOf("editor") }
     var selectedOverlayId by workspace::selectedOverlayId
@@ -261,6 +262,13 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
         mediaAction = action
         screen = "media"
     }
+    val mainImageDocumentPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null && mediaAction == "image_insert") {
+            mediaController.persistReadAccess(uri)
+            incomingMainImage = uri
+            screen = "editor"
+        }
+    }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         uris.forEach(mediaController::persistReadAccess)
         val images = MediaImportRules.images(animationImages.map(Uri::toString), uris.map(Uri::toString))
@@ -335,7 +343,9 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     BackHandler(screen != "home") { back() }
     LaunchedEffect(screen, diagnosticsEnabled) { DiagnosticRecorder.screen(screen) }
     MaterialTheme(colorScheme = palette) {
-    val mainImagePick = MainImageInsertionUi(project, screen, mediaAction, selectedClip, mediaTaskCoordinator) { changed, clip, index ->
+    val mainImagePick = MainImageInsertionUi(project, screen, mediaAction, selectedClip,
+        mediaTaskCoordinator, incomingMainImage, { incomingMainImage = null },
+        { openGallery("editor", "image_insert") }) { changed, clip, index ->
         write(changed).also { saved -> if (saved) { positionMs = changed.clips.take(index).sumOf { it.durationMs }; selectedClip = clip.id } } }
         val tapMonitor = if (diagnosticsEnabled) Modifier.pointerInput(screen) {
             val touches = mutableMapOf<PointerId, androidx.compose.ui.geometry.Offset>()
@@ -459,7 +469,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     if (write(changed)) screen = "editor"
                 } }
                 "trim" -> project?.let { TrimScreen(it, selectedClip, positionMs, ::back, { write(it) },
-                    { selectedClip = it }, onSaveHome = { saved -> if (write(saved)) screen = "home" }) }
+                    { selectedClip = it }, onDone = { saved -> if (write(saved)) screen = "editor" }) }
                 "clip_audio" -> project?.let { current ->
                     ClipAudioScreen(current, selectedClip, ::back,
                         onApply = { track ->
@@ -523,6 +533,10 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                             screen="animate"
                         }
                         "new", "append" -> importVideoClips(chosen.map { it.uri }, persistDocumentAccess = false)
+                        "image_insert" -> {
+                            chosen.firstOrNull()?.let { incomingMainImage = it.uri }
+                            screen = "editor"
+                        }
                         "audio_extract" -> {
                             chosen.firstOrNull()?.let { importedAudioSourceVideo = it.uri }
                             screen = "audio"
@@ -536,12 +550,13 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 }, openDocuments = {
                     when (mediaAction) {
                         "animate_images" -> imagePicker.launch(arrayOf("image/*"))
+                        "image_insert" -> mainImageDocumentPicker.launch(arrayOf("image/*"))
                         "new", "append" -> videoPicker.launch(arrayOf("video/*"))
                         "audio_extract" -> externalVideoPicker.launch(arrayOf("video/*"))
                         else -> overlayPicker.launch(arrayOf("image/*", "video/*"))
                     }
                 }, scope = when (mediaAction) {
-                    "animate_images" -> GalleryScope.IMAGES_ONLY
+                    "animate_images", "image_insert" -> GalleryScope.IMAGES_ONLY
                     "new", "append", "audio_extract" -> GalleryScope.VIDEOS
                     else -> GalleryScope.IMAGES_AND_VIDEOS
                 }, allowMultiple = mediaAction == "new" || mediaAction == "append" || mediaAction == "animate_images")

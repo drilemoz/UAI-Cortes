@@ -5,6 +5,9 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.provider.OpenableColumns
+import androidx.core.content.FileProvider
+import java.io.File
+import java.util.UUID
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
@@ -135,6 +138,59 @@ internal object ImageClipImport {
         }
         val title = runCatching { mediaName(context, uri) }.getOrDefault("Imagem")
         ImageClipSource(uri.toString(), title, mime)
+    }
+
+    /** Cópia durável: galeria MediaStore não oferece grant persistível via SAF.
+     * O clipe aponta para conteúdo privado do Uai Cortes, não para uma URI temporária.
+     */
+    suspend fun copyIntoProject(context: Context, source: ImageClipSource): ImageClipSource =
+        withContext(Dispatchers.IO) {
+            val extension = when (source.mimeType) {
+                "image/jpeg" -> "jpg"; "image/png" -> "png"; "image/webp" -> "webp"
+                "image/heic" -> "heic"; "image/heif" -> "heif"; else -> "bmp"
+            }
+            val dir = File(context.filesDir, "project_images_v1")
+            require(dir.isDirectory || dir.mkdirs()) { "Não foi possível preparar o armazenamento." }
+            val output = File(dir, UUID.randomUUID().toString() + "." + extension)
+            val partial = File(dir, output.name + ".partial")
+            try {
+                val inputUri = Uri.parse(source.uri)
+                var written = 0L
+                context.contentResolver.openInputStream(inputUri)?.use { input ->
+                    partial.outputStream().use { target ->
+                        val buffer = ByteArray(32 * 1024)
+                        while (true) {
+                            val count = input.read(buffer)
+                            if (count < 0) break
+                            written += count
+                            require(written <= 24L * 1024L * 1024L) { "Imagem acima de 24 MB." }
+                            target.write(buffer, 0, count)
+                        }
+                        target.fdSyncIfAvailable()
+                    }
+                } ?: error("Não foi possível ler a imagem.")
+                require(written > 0L && partial.renameTo(output)) { "Falha ao salvar imagem no projeto." }
+                val stable = FileProvider.getUriForFile(context,
+                    context.packageName + ".diagnostics", output)
+                ImageClipSource(stable.toString(), source.title, source.mimeType)
+            } catch (failure: Exception) {
+                partial.delete(); output.delete(); throw failure
+            }
+        }
+
+    /** Exclui somente cópia PRIVADA ainda não inserida. Nunca remove a foto original. */
+    fun discardUnused(context: Context, source: ImageClipSource?) {
+        val uri = source?.uri?.let(Uri::parse) ?: return
+        if (uri.scheme != "content" || uri.authority != context.packageName + ".diagnostics") return
+        if (uri.pathSegments.firstOrNull() != "project_images") return
+        val fileName = uri.pathSegments.lastOrNull() ?: return
+        if (!fileName.matches(Regex("[0-9a-f-]{36}\\.(jpg|png|webp|heic|heif|bmp)"))) return
+        val output = File(File(context.filesDir, "project_images_v1"), fileName)
+        runCatching { output.delete() }
+    }
+
+    private fun java.io.OutputStream.fdSyncIfAvailable() {
+        if (this is java.io.FileOutputStream) fd.sync()
     }
 }
 
