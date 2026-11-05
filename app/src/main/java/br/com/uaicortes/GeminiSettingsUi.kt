@@ -127,7 +127,7 @@ internal fun GeminiSettingsSection() {
             Column(Modifier.fillMaxWidth().padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.LockOutline, null, Modifier.size(18.dp),
+                    Icon(Icons.Default.Lock, null, Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(7.dp))
                     Text("Credencial ativa", style = MaterialTheme.typography.titleSmall,

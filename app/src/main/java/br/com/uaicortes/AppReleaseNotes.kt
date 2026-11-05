@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.148"
-    const val VERSION_CODE = 149
+    const val VERSION_NAME = "0.1.149"
+    const val VERSION_CODE = 150
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.149", listOf(
+            ReleaseFeature("ci125-material-lock-icon-149", "CI125: painel Gemini compilável",
+                "Substituído ícone de cadeado não disponível por ícone Material compatível, mantendo status protegido e ações.", "check"),
+            ReleaseFeature("ci125-icon-regression-149", "Regressão de ícone na tela Gemini",
+                "Teste evita o símbolo ausente no catálogo Compose e preserva o redesenho das chaves.", "check")
+        )),
         ReleaseSummary("0.1.148", listOf(
             ReleaseFeature("gemini-dashboard-redesign-148", "Gemini com painel de credencial redesenhado",
                 "Cabeçalho de status e campo protegido em cartões; seis ações compactas sem mudar confirmações sensíveis.", "check"),

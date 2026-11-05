@@ -30,5 +30,5 @@ for term in ('"Aceitas"', '"Tokens"', '"Avisos 429"',
              'filtered.mapNotNull { it.tokens?.total }', 'ledger.clear()',
              'Ver limites e créditos no Google'):
     assert term in usage, term
-assert '0.1.148' in (root/'VERSION').read_text()
+assert tuple(map(int, (root/'VERSION').read_text().strip().split('.'))) >= (0, 1, 148)
 print('OK: tela Gemini, gerenciamento em modal, segurança e consumo preservados v0.1.148')

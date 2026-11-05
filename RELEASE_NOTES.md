@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.149 (05/11/2026)
+
+## 0.1.149 — Correção da compilação Gemini (CI125)
+- Corrige símbolo de ícone não reconhecido ao compilar a nova tela Gemini.
+- Preserva a interface compacta, as chaves protegidas, o gerenciamento de múltiplas chaves e as ações com confirmação.
+- Correção de código-fonte; execução completa dos testes Android e publicação de APKs ainda pendentes.
+
 # Uai Cortes · versão 0.1.148 (05/11/2026)
 
 ## 0.1.148 — Gerenciamento Gemini renovado

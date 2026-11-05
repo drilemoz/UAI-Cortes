@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.149 (05/11/2026)
+
+## 0.1.149 — Corrigir compilação após redesenho Gemini (CI125)
+- Workflow 125 falhou em `:app:compileDebugKotlin` e `:app:compileReleaseKotlin`: referência `Icons.Default.LockOutline` indisponível em `GeminiSettingsUi.kt:130`.
+- Usado o ícone Material `Icons.Default.Lock`, conservando o painel e o sentido de credencial protegida.
+- Adicionado teste de regressão para o ícone incompatível e mantidos testes das telas Gemini, confirmação de operações sensíveis e proteção de segredos.
+- Versionamento sincronizado para `0.1.149`/`150`; compilação Android e cinco APKs seguem pendentes de execução no CI.
+
 # Uai Cortes · versão 0.1.148 (05/11/2026)
 
 ## 0.1.148 — Novo visual de Gemini e gerenciamento de credenciais

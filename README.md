@@ -1,3 +1,6 @@
+# Uai Cortes · versão 0.1.149 (05/11/2026)
+**CI125:** correção de compilação Kotlin do painel Gemini: `Icons.Default.LockOutline` não é resolvido pela configuração atual de Material Icons; troca por `Icons.Default.Lock`. Nenhuma mudança no armazenamento de chaves, no layout funcional ou na geração de áudio. v0.1.149 / versionCode 150. APK depende do CI Android.
+
 # Uai Cortes · versão 0.1.148 (05/11/2026)
 **Gemini v0.1.148:** redesenho real da configuração de API: cabeçalho com status e campo protegido, atalhos de seis ações na barra compacta, cartões de chaves com selo de ativa, cadastro/edição em janela personalizada em vez de formulário comprido, alternância 429 com ajuda expansível e indicadores de consumo local com histórico estruturado. A troca de chave, a confirmação de cópia/exportação, os limites e a geração Gemini continuam inalterados. Validar composição/rolagem no APK Android.
 
