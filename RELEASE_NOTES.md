@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.152 (05/11/2026)
+
+## 0.1.152 — Correção de publicação CI128
+- Evita HTTP 422 por exceder o limite de tamanho das notas no GitHub Releases.
+- Publica um resumo da versão atual, mantendo o histórico completo no código-fonte.
+- Mantém a validação de assinatura, os cinco APKs por arquitetura e a revisão das notas em reexecuções do workflow.
+- O workflow 128 comprovou build Android completo, testes, Lint e cinco APKs da 0.1.151; a publicação da 0.1.152 ainda precisa ser testada no GitHub Actions.
+
 # Uai Cortes · versão 0.1.151 (05/11/2026)
 
 ## 0.1.151 — Estimativas de consumo Gemini

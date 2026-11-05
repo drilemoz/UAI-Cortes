@@ -1,3 +1,6 @@
+# Uai Cortes · versão 0.1.152 (05/11/2026)
+**CI128 — Publicação corrigida:** o workflow 128 passou em build/testes/Lint e verificou cinco APKs, mas a publicação foi rejeitada pela API GitHub porque as notas completas excedem 125.000 caracteres. O workflow gera notas curtas da versão atual sem apagar CHANGELOG/RELEASE_NOTES, testa o limite e atualiza notas de Releases existentes. Não altera o funcionamento Gemini ou a exportação de vídeo. Publicação v0.1.152 em CI ainda pendente.
+
 # Uai Cortes · versão 0.1.151 (05/11/2026)
 **Gemini 0.1.151:** novo painel de previsões locais por projeto/modelo/função, com médias de tokens de operações bem-sucedidas (mínimo 5 amostras) e limites RPM/TPM de entrada/RPD informados pelo usuário a partir do AI Studio. Não é uma consulta de saldo oficial; eventos antigos sem projeto não são atribuídos retroativamente. Dicas antes de gerar voz, legenda, descrição e Flow. Failover autorizado após HTTP 429 com pausa por projeto e modelo, sem mudar segurança das chaves. Compilação Android e testes de API reais pendentes.
 

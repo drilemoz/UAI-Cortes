@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.151"
-    const val VERSION_CODE = 152
+    const val VERSION_NAME = "0.1.152"
+    const val VERSION_CODE = 153
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.152", listOf(
+            ReleaseFeature("ci128-release-notes-limit-152", "CI128: publicação de APKs corrigida",
+                "Notas resumidas são geradas para o GitHub Releases; histórico completo permanece no repositório.", "check"),
+            ReleaseFeature("ci128-release-notes-guard-152", "Teste preventivo de limite do GitHub",
+                "Validação impede publicação com notas acima do limite da API e mantém cinco APKs por arquitetura.", "check")
+        )),
         ReleaseSummary("0.1.151", listOf(
             ReleaseFeature("gemini-forecast-151", "Previsões Gemini baseadas em medições",
                 "Médias por modelo e operação após cinco amostras e limites manuais por projeto; saldos nunca são inventados.", "captions"),

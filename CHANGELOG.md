@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.152 (05/11/2026)
+
+## CI128 — Notas de publicação corrigidas
+- O workflow 128 concluiu Gradle, testes unitários, Lint, assinatura e verificação de cinco APKs v0.1.151, mas o GitHub devolveu HTTP 422 porque RELEASE_NOTES.md tinha mais de 125.000 caracteres.
+- `tools/release_notes_for_github.py` publica somente o resumo da versão atual (máximo 80 KiB UTF-8), preservando as notas históricas em `RELEASE_NOTES.md` e `CHANGELOG.md`.
+- Release existente recebe atualização das notas além dos APKs, garantindo reexecução idempotente do workflow.
+- Não foram alterados geração Gemini, dados de projetos, quotas, editor, conteúdo da mídia nem assinatura.
+
 # Uai Cortes · versão 0.1.151 (05/11/2026)
 
 ## 0.1.151 — Central inteligente de consumo e fallback Gemini
