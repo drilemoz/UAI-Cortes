@@ -172,6 +172,7 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
     Row(Modifier.fillMaxWidth().navigationBarsPadding().height(72.dp)
         .background(MaterialTheme.colorScheme.surface), horizontalArrangement=Arrangement.SpaceEvenly) {
         listOf(Triple("home",Icons.Default.Home,"Início"),Triple("projects",Icons.Default.Folder,"Projetos"),
+            Triple("social",Icons.Default.Public,"Redes"),
             Triple("settings",Icons.Default.Settings,"Ajustes")).forEach { (page,icon,label) ->
             Column(Modifier.weight(1f).fillMaxHeight().clickable {onTab(page)},horizontalAlignment=Alignment.CenterHorizontally,
                 verticalArrangement=Arrangement.Center) {
@@ -226,17 +227,22 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
     HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant.copy(alpha=0.45f))
 }
 
-@Composable internal fun ProjectsScreen(projects: List<VideoProject>,back:()->Unit,open:(VideoProject)->Unit,delete:(VideoProject)->Unit) {
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal=18.dp)) {
-        Heading("Projetos",back)
-        if (projects.isEmpty()) Text("Nenhum projeto salvo.",modifier=Modifier.padding(24.dp))
-        LazyColumn { items(projects,key={it.id}) { ProjectItem(it,open,delete) } }
+@Composable internal fun ProjectsScreen(projects: List<VideoProject>,back:()->Unit,open:(VideoProject)->Unit,
+    delete:(VideoProject)->Unit, onTab:(String)->Unit) {
+    Column(Modifier.fillMaxSize().statusBarsPadding()) {
+        Column(Modifier.weight(1f).padding(horizontal=18.dp)) {
+            Heading("Projetos",back)
+            if (projects.isEmpty()) Text("Nenhum projeto salvo.",modifier=Modifier.padding(24.dp))
+            LazyColumn { items(projects,key={it.id}) { ProjectItem(it,open,delete) } }
+        }
+        MainNav("projects",onTab)
     }
 }
 
-@Composable internal fun SettingsScreen(back:()->Unit, onClick:(String)->Unit) {
-    Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
-        .padding(horizontal=18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+@Composable internal fun SettingsScreen(back:()->Unit, onClick:(String)->Unit, onTab:(String)->Unit) {
+    Column(Modifier.fillMaxSize().statusBarsPadding()) {
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
+            .padding(horizontal=18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Heading("Configurações",back)
         ItemCard(Icons.Default.Tune,"Geral","Qualidade e armazenamento") {onClick("general")}
         ItemCard(Icons.Default.Backup,"Salvamento e segurança",
@@ -244,6 +250,8 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
         ItemCard(Icons.Default.Palette,"Tela","Sistema, claro, escuro e AMOLED") {onClick("appearance")}
         ItemCard(Icons.Default.RecordVoiceOver,"Reconhecimento de voz",
             "Instalar modelo offline de legendas em português") { onClick("speech_model") }
+        ItemCard(Icons.Default.SettingsEthernet,"Central de APIs e Contas",
+            "Gemini, YouTube, Facebook, TikTok e Kwai") { onClick("api_center") }
         ItemCard(Icons.Default.AutoAwesome,"Google Gemini — API de IA",
             "Chave, vozes e narrações") { onClick("gemini_settings") }
         ItemCard(Icons.Default.BugReport,"Diagnóstico","Capturar erros e toques, exportar relatório") {onClick("diagnostics")}
@@ -251,6 +259,8 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
         ItemCard(Icons.Default.SystemUpdate,"Atualizações pelo GitHub",
             "Verificar versões, baixar e instalar com confirmação") { onClick("updates") }
         ItemCard(Icons.Default.Info,"Sobre","Versão e informações do aplicativo") {onClick("about")}
+        }
+        MainNav("settings",onTab)
     }
 }
 

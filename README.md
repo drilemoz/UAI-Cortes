@@ -1,3 +1,12 @@
+# Uai Cortes · versão 0.1.165 (05/11/2026)
+
+- **Redes Sociais:** nova aba no rodapé da Home, de Projetos e de Ajustes com cadastro local independente de TikTok, YouTube, Kwai, Facebook Página e Facebook Perfil. O cadastro não significa que a conta está autenticada.
+- **Após exportação:** opção Publicar nas redes para o exportador tradicional e Animar Imagens. Escolha do MP4 pelo SAF, múltiplos destinos, descrição/hashtags comuns, compartilhamento manual individual e histórico persistente. Abrir o seletor não confirma postagem.
+- **Histórico e métricas:** estados preparada/compartilhamento aberto/publicação confirmada manualmente; ligação por vídeo e destino; visualizações, curtidas, comentários e compartilhamentos apenas quando informados. Nunca confundir números manuais com dados oficiais.
+- **Central de APIs e Contas:** acesso às chaves Gemini existentes, links oficiais de desenvolvedor e exportação/importação SAF de cadastros sem credenciais, URLs ou tokens. Testes de API e uploads diretos dependem de OAuth/permissões oficiais, ainda não implementados.
+- **Segurança:** catálogo JSON privado com AtomicFile, preservação de arquivo corrompido, verificação de URLs HTTPS, sem tocar em VideoProject schemaVersion 4 e sem criar serviços/contas falsas. Nenhum envio de vídeo ou chamada de rede automática.
+- **Validação:** verificações estruturais/PSI e instrumentados incluídos. Build Android/execução de OAuth e publicação real permanecem pendentes de ambiente e credenciais autorizadas. Detalhes em `docs/VALIDATION_0.1.165.md`.
+
 # Uai Cortes · versão 0.1.164 (05/11/2026)
 
 - **Wizard em cinco etapas:** novo projeto abre primeiro o estilo visual; depois personagens, cenários, montagem dos clipes e exportação para Flow. Cada tela foca uma tarefa, com navegação e autosave.

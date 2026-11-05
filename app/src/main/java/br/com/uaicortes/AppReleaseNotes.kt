@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.164"
-    const val VERSION_CODE = 165
+    const val VERSION_NAME = "0.1.165"
+    const val VERSION_CODE = 166
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.165", listOf(
+            ReleaseFeature("social-dashboard-165", "Nova aba Redes Sociais",
+                "Destinos separados para Facebook Página/Perfil, YouTube, TikTok e Kwai, com histórico local e métricas inseridas manualmente.", "check"),
+            ReleaseFeature("social-publish-165", "Publicação assistida após exportação",
+                "Seleção de contas, descrição e hashtags comuns, compartilhamento individual via Android e confirmação manual sem duplicidade automática.", "captions"),
+            ReleaseFeature("social-api-center-165", "Central de APIs e Contas",
+                "Links oficiais, acesso ao Gemini e importação/exportação somente de configurações públicas. OAuth social permanece pendente.", "check")
+        )),
         ReleaseSummary("0.1.164", listOf(
             ReleaseFeature("studio-wizard-164", "Estúdio de Cenas com Wizard visual",
                 "Cinco etapas: estilo, personagens, cenários, cenas e exportação, com detalhes opcionais e navegação simples.", "check"),

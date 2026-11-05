@@ -44,6 +44,7 @@ internal fun VideoSavedDialog(
     videoContext: String = "",
     initialPublicationDraft: VideoPublicationDraft? = null,
     onPublicationDraftSave: ((VideoPublicationDraft) -> Boolean)? = null,
+    onSocialPublish: ((Uri, String, VideoPublicationDraft) -> Unit)? = null,
     onEdit: (VideoPublicationDraft) -> Unit, onClose: () -> Unit
 ) {
     val context = LocalContext.current
@@ -275,6 +276,18 @@ internal fun VideoSavedDialog(
                                 maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
+                }
+                if (onSocialPublish != null) {
+                    OutlinedButton(onClick = {
+                        if (persistDraft()) onSocialPublish(uri, displayedName, currentDraft())
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.Public, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Publicar nas redes sociais")
+                    }
+                    Text("Selecione destinos e compartilhe separadamente. A publicação é confirmada por você.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically) {

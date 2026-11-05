@@ -26,5 +26,5 @@ assert 'Imagem da galeria salva. Ela não será enviada à API sem confirmação
 assert 'referencias/personagens/' in s and 'referencias/cenarios/' in s
 assert 'ready() = title.isNotBlank() && prompt.isNotBlank()' in m
 assert 'FlowLegacyPromptScreen(project, onSave' in u
-assert 'versionCode = 165' in (r/'app/build.gradle.kts').read_text()
+assert 'versionCode = 166' in (r/'app/build.gradle.kts').read_text()
 print('OK: Wizard visual 5 etapas, sugestões locais, biblioteca, galeria, Gemini com consentimento, migração.')

@@ -91,7 +91,8 @@ private fun ExportFrameIllustration(crop: Boolean) {
 
 @Composable
 internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
-    onPublicationDraftSave: (VideoPublicationDraft) -> Boolean) {
+    onPublicationDraftSave: (VideoPublicationDraft) -> Boolean,
+    onSocialPublish: (Uri, String, VideoPublicationDraft) -> Unit) {
     val context=LocalContext.current
     val exportVm: ExportTaskViewModel = viewModel()
     val exportState = exportVm.task
@@ -567,6 +568,10 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
             },
             initialPublicationDraft=p.publicationDraft,
             onPublicationDraftSave=onPublicationDraftSave,
+            onSocialPublish = { uri, name, draft ->
+                exportVm.dismissSaved()
+                onSocialPublish(uri, name, draft)
+            },
             onEdit={ _ -> exportVm.dismissSaved();back()},onClose={exportVm.dismissSaved()})
     }
 

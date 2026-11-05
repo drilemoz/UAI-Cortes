@@ -937,7 +937,7 @@ home=(app_files/'HomeScreens.kt').read_text()
 assert 'GeminiSettingsSection()' not in home
 assert 'onClick("gemini_settings")' in home
 assert '"gemini_settings" -> GeminiSettingsScreen(::back)' in main
-assert '"gemini_settings" -> if (previous == "audio" || previous == "voices") previous else "settings"' in nav
+assert '"gemini_settings" -> if (previous == "audio" || previous == "voices" || previous == "api_center") previous else "settings"' in nav
 assert 'GeminiKeyAction(' in settings and settings.count('GeminiKeyAction(') >= 7
 assert 'Dialog(' in voice_ui and 'LazyColumn(' in voice_ui
 assert 'GeminiVoiceSearch.filter(voices, voiceSearch)' in voice_ui

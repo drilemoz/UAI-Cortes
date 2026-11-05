@@ -8,7 +8,7 @@ assert 'Triple("Vozes IA", Icons.Default.RecordVoiceOver, "voices")' in editor
 assert 'trackKind = VoiceIaPolicy.KIND' in editor
 assert 'InteractiveAudioTimeline(p, onSelectTrack = onSelectAudio' in editor
 nav=(src/'EditorNavigation.kt').read_text()
-assert '"voices"' in nav and '"gemini_settings" -> if (previous == "audio" || previous == "voices")' in nav
+assert '"voices"' in nav and '"gemini_settings" -> if (previous == "audio" || previous == "voices" || previous == "api_center")' in nav
 screen=(src/'VoiceIaScreen.kt').read_text()
 assert 'project.subtitles.filter' in screen and 'editable = false' in screen
 assert 'api.voicesWithDiagnosis(key)' in screen and 'api.synthesize(key, usedModel, voiceId, requestStyle, cue.text)' in screen

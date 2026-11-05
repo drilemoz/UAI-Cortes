@@ -3,7 +3,7 @@ package br.com.uaicortes
 /** Rotas e regras de recuperação em um único lugar para todas as ferramentas. */
 internal object EditorNavigation {
     private val routes = setOf(
-        "home", "projects", "settings", "gemini_settings", "general", "backup_settings", "appearance", "about", "whats_new", "diagnostics", "speech_model",
+        "home", "projects", "social", "social_publish", "api_center", "settings", "gemini_settings", "general", "backup_settings", "appearance", "about", "whats_new", "diagnostics", "speech_model",
         "editor", "media", "animate", "flow_workspace", "pip", "audio", "voices", "clip_audio", "trim", "transition", "subtitles",
         "watermark", "publication", "flow_prompt", "export", "autosubtitle"
     )
@@ -23,12 +23,14 @@ internal object EditorNavigation {
     }
 
     fun back(route: String, previous: String, mediaOrigin: String, animationDestination: String): String = when (route) {
-        "editor", "home", "projects" -> "home"
+        "editor", "home", "projects", "social" -> "home"
+        "social_publish" -> "social"
+        "api_center" -> if (previous == "social") "social" else "settings"
         "settings" -> if (previous == "audio" || previous == "voices") previous else "home"
         "media" -> knownRoute(mediaOrigin)
         "flow_workspace" -> "home"
         "animate" -> "home" // Voltar sempre leva à tela inicial; adicionar ao editor é outra ação.
-        "gemini_settings" -> if (previous == "audio" || previous == "voices") previous else "settings"
+        "gemini_settings" -> if (previous == "audio" || previous == "voices" || previous == "api_center") previous else "settings"
         "general", "backup_settings", "appearance", "about", "diagnostics" -> "settings"
         "whats_new" -> if (previous == "settings" || previous == "about") previous else "home"
         "speech_model" -> if (previous == "autosubtitle") "autosubtitle" else "settings"
