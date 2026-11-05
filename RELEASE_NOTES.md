@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.161 (05/11/2026)
+- **Estúdio de Cenas:** etapas História → Cenas → Exportar para Flow, com geração de roteiros/cenas por Gemini somente após consentimento e revisão antes de aplicar. Duração, estilo, gênero, roteiro existente e rascunhos recuperáveis.
+- **Cenas e continuidade:** fichas persistentes de personagens e cenários, estado inicial/final, reordenação/duplicação/exclusão, edição por seção, geração de roteiro individual, importação de quadro final, visualização de imagens e associação manual de vídeos.
+- **Imagem Gemini:** seleção após consulta `models.list` com a chave ativa, solicitação `generateContent` só para IMAGEM, proporção 9:16, confirmação explícita com custo verificável parcial ou aviso de custo desconhecido; importação, salvamento, regeneração e compartilhamento Android/Flow.
+- **Exportação e compatibilidade:** ZIP SAF com imagens por cena, prompts UTF-8, roteiro, fichas e ordem; editor manual de Flow e refinamento em lote existentes permanecem em Avançado. `schemaVersion=4` e projetos legados preservados. Chamadas pagas e integração com Flow não testadas sem chave/autorização. Consultar `docs/VALIDATION_0.1.161.md`.
+
 # Uai Cortes · versão 0.1.160 (05/11/2026)
 - **Consumo mais compacto:** resumo de chamadas/tokens/429, custos e resultados por função; gráficos e detalhes técnicos recolhidos. Ajuda contextual `?` e uma linha por modelo utilizado, sem mostrar por padrão três modelos inativos.
 - **Configuração unificada:** limites RPM/TPM/RPD e preços USD/1M numa janela por projeto/modelo. Estado do plano pago/gratuito escolhido pelo usuário; `0 USD` exige confirmação explícita de gratuidade daquela operação.

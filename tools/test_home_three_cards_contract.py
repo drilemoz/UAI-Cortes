@@ -13,7 +13,7 @@ assert 'Arrangement.spacedBy(8.dp)' in actions
 for label, icon, callback in [
     ('Novo projeto', 'Icons.Default.AddCircleOutline', 'onCreate'),
     ('Animar fotos', 'Icons.Default.AutoAwesomeMotion', 'onAnimate'),
-    ('Prompts Flow', 'Icons.Default.MovieFilter', 'onFlow'),
+    ('Estúdio de Cenas', 'Icons.Default.MovieFilter', 'onFlow'),
 ]:
     assert f'HomeActionTile("{label}", {icon}, {callback}' in actions
     assert f'onNodeWithText("{label}").performClick()' in test

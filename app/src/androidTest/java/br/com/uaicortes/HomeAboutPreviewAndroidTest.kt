@@ -38,13 +38,13 @@ class HomeAboutPreviewAndroidTest {
         rule.onNodeWithText(version).assertExists()
         rule.onNodeWithText("Novo projeto").assertExists()
         rule.onNodeWithText("Animar fotos").assertExists()
-        rule.onNodeWithText("Prompts Flow").assertExists()
+        rule.onNodeWithText("Estúdio de Cenas").assertExists()
         rule.onNodeWithContentDescription("Configurações").performClick()
         rule.onNodeWithText(version).assertExists()
         rule.onNodeWithText("Testar visual da Home").performClick()
         rule.onNodeWithText("Novo projeto").assertIsNotEnabled()
         rule.onNodeWithText("Animar fotos").assertIsNotEnabled()
-        rule.onNodeWithText("Prompts Flow").assertIsNotEnabled()
+        rule.onNodeWithText("Estúdio de Cenas").assertIsNotEnabled()
         rule.runOnIdle {
             org.junit.Assert.assertEquals(0, createCalls)
             org.junit.Assert.assertEquals(0, animateCalls)
@@ -64,7 +64,7 @@ class HomeAboutPreviewAndroidTest {
         }
         rule.onNodeWithText("Novo projeto").performClick()
         rule.onNodeWithText("Animar fotos").performClick()
-        rule.onNodeWithText("Prompts Flow").performClick()
+        rule.onNodeWithText("Estúdio de Cenas").performClick()
         rule.runOnIdle {
             org.junit.Assert.assertEquals(1, createCalls)
             org.junit.Assert.assertEquals(1, animateCalls)

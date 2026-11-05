@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 
 /** Estilo único por aparelho, contexto e até 12 cenas por projeto. */
 @Composable
-internal fun FlowPromptScreen(project: VideoProject,
+internal fun FlowLegacyPromptScreen(project: VideoProject,
     onSave: (FlowPromptDraft) -> Boolean, back: () -> Unit) {
     val context = LocalContext.current
     val styleStore = remember(context) { FlowPromptStyleStore(context) }
@@ -126,7 +126,7 @@ internal fun FlowPromptScreen(project: VideoProject,
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { exit() }) { Icon(Icons.Default.ArrowBack, "Voltar") }
             Column(Modifier.weight(1f)) {
-                Text("Prompts para o Flow", style = MaterialTheme.typography.titleLarge)
+                Text("Modo manual · Prompts Flow", style = MaterialTheme.typography.titleLarge)
                 Text(project.title, style = MaterialTheme.typography.bodySmall)
             }
         }

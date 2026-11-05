@@ -113,7 +113,7 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
             enabled = !preview, modifier = Modifier.weight(1f))
         HomeActionTile("Animar fotos", Icons.Default.AutoAwesomeMotion, onAnimate,
             enabled = !preview, modifier = Modifier.weight(1f))
-        HomeActionTile("Prompts Flow", Icons.Default.MovieFilter, onFlow,
+        HomeActionTile("Estúdio de Cenas", Icons.Default.MovieFilter, onFlow,
             enabled = !preview, modifier = Modifier.weight(1f))
     }
 }

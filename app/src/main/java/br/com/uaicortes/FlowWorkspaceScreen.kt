@@ -42,7 +42,7 @@ internal fun FlowWorkspaceScreen(back: () -> Unit) {
         return
     }
     if (creating) AlertDialog(onDismissRequest = { creating = false },
-        title = { Text("Novo conjunto de cenas") },
+        title = { Text("Novo projeto de cenas") },
         text = { OutlinedTextField(value = title, onValueChange = { title = it.take(80) },
             label = { Text("Nome do vídeo") }, singleLine = true) },
         confirmButton = { TextButton(onClick = {
@@ -57,12 +57,17 @@ internal fun FlowWorkspaceScreen(back: () -> Unit) {
         title = { Text("Excluir este conjunto de prompts?") },
         text = { Text("As cenas serão removidas deste aparelho. Não altera MP4s ou vídeos gerados.") },
         confirmButton = { TextButton(onClick = {
-            if (persist(entries.orEmpty().filterNot { it.id == id })) deleteId = null
+            if (persist(entries.orEmpty().filterNot { it.id == id })) {
+                if (!FlowStudioStorage(context, id).deleteAll()) {
+                    error = "Projeto removido do catálogo, mas alguns arquivos privados podem permanecer."
+                }
+                deleteId = null
+            }
         }) { Text("Excluir") } },
         dismissButton = { TextButton(onClick = { deleteId = null }) { Text("Cancelar") } })
     }
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
-        Heading("Projetos de prompts Flow", back)
+        Heading("Estúdio de Cenas", back)
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Prepare cenas sem importar vídeo. Cada conjunto possui suas cenas e compartilha o mesmo estilo-base 3D salvo no aparelho.",
@@ -82,7 +87,11 @@ internal fun FlowWorkspaceScreen(back: () -> Unit) {
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(entry.title, style = MaterialTheme.typography.titleSmall)
-                            Text("${entry.draft.scenes.size} cena(s)", style = MaterialTheme.typography.bodySmall)
+                            val studio = remember(entry.id, currentId) {
+                                runCatching { FlowStudioStorage(context, entry.id).read() }.getOrNull()
+                            }
+                            Text("${studio?.scenes?.size ?: entry.draft.scenes.size} cena(s) no Estúdio",
+                                style = MaterialTheme.typography.bodySmall)
                         }
                         IconButton(onClick = { deleteId = entry.id }) {
                             Icon(Icons.Default.DeleteOutline, "Excluir prompts")

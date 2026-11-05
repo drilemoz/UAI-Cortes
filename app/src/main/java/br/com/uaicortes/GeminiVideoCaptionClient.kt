@@ -148,6 +148,30 @@ CONTEXTO:\n${contextText.take(1200)}"""
         result
     }
 
+    /** Estúdio: somente JSON textual, reaproveitando credenciais, transporte e registro de uso. */
+    suspend fun generateStudioJson(key: String, instruction: String, model: String,
+        operation: String): JSONObject = withContext(Dispatchers.IO) {
+        require(GeminiCaptionModelPolicy.validId(model)) { "Selecione um modelo de texto válido." }
+        require(operation in setOf("studio_story", "studio_scenes", "studio_scene"))
+        require(instruction.length in 10..45000) { "O roteiro excede o limite desta operação." }
+        val payload = JSONObject().put("contents", JSONArray().put(JSONObject()
+            .put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", instruction)))))
+            .put("generationConfig", JSONObject().put("responseMimeType", "application/json")
+                .put("maxOutputTokens", if (operation == "studio_scenes") 14000 else 4500))
+        // Sem failover implícito em ações de geração: após interrupção o resultado pode ter sido cobrado.
+        val response = requestJsonOnce(URL(
+            "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent"),
+            GeminiKeyParser.validate(key), payload, operation, model)
+        val parts = response.optJSONArray("candidates")?.optJSONObject(0)?.optJSONObject("content")
+            ?.optJSONArray("parts") ?: throw IOException("Gemini não retornou dados estruturados.")
+        val answer = (0 until parts.length()).joinToString("\n") {
+            parts.optJSONObject(it)?.optString("text").orEmpty()
+        }.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
+        try { JSONObject(answer) } catch (_: Exception) {
+            throw IOException("A resposta não estava em JSON válido; revise antes de gerar novamente.")
+        }
+    }
+
     private suspend fun requestJson(url: URL, validKey: String, payload: JSONObject?,
         operation: String? = null, model: String = ""): JSONObject =
         if (failover == null) requestJsonOnce(url, validKey, payload, operation, model)
