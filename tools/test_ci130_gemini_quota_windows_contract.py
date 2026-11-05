@@ -14,7 +14,7 @@ assert 'lastMinute.all { it.tokens?.input != null }' in forecast
 assert 'remainingByLocalLimits' in forecast
 assert 'Hoje (Pacífico)' in usage and 'Agora:' in usage
 assert 'GeminiLocalPacing(context)' in voice
-assert 'pacing.beforeRequest(model)' in voice
+assert 'pacing.beforeRequest(usedModel)' in voice
 assert 'delay(waitMs)' in pacing and 'coroutineContext.ensureActive()' in pacing
 assert 'limits.rpd != null && forecast.remainingToday == 0' in pacing
 assert 'VoiceIaBatchPlanner.plan(' in voice and 'VoiceIaBatchItem' in planner

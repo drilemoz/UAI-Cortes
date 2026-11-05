@@ -30,6 +30,7 @@ import androidx.media3.common.Player
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
@@ -47,6 +48,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val store = remember(project.id) { VoiceIaDraftStore(context, project.id) }
+    val queueStore = remember(project.id) { VoiceIaQueueStore(context, project.id) }
     val credentials = remember(context) { GeminiCredentialStore(context) }
     val api = remember(context) { GeminiTtsClient(context) }
     val pacing = remember(context) { GeminiLocalPacing(context) }
@@ -65,6 +67,10 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
     val selectedCue = cues.firstOrNull { it.id == selectedCueId } ?: cues.firstOrNull()
     var takes by remember(project.id) { mutableStateOf<List<VoiceIaTake>>(emptyList()) }
     var loaded by remember(project.id) { mutableStateOf(false) }
+    var savedQueue by remember(project.id) { mutableStateOf<VoiceIaQueueSnapshot?>(null) }
+    var resumeQueueConfirmation by remember { mutableStateOf(false) }
+    var retryQueueConfirmation by remember { mutableStateOf(false) }
+    var discardQueueConfirmation by remember { mutableStateOf(false) }
     var status by remember(project.id) { mutableStateOf("") }
     var catalog by remember(project.id) { mutableStateOf<List<GeminiVoice>>(emptyList()) }
     var catalogBusy by remember { mutableStateOf(false) }
@@ -108,19 +114,48 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
             wavePlayer.release()
         }
     }
-    LaunchedEffect(store) {
+    LaunchedEffect(store, queueStore) {
         try {
-            takes = withContext(Dispatchers.IO) { store.load() }
+            val recovery = withContext(Dispatchers.IO) {
+                val recoveredTakes = store.load()
+                var queueWarning = ""
+                val restoredQueue = try {
+                    queueStore.load()?.let { old ->
+                        val repaired = VoiceIaQueuePolicy.recover(old,
+                            cues.associate { it.id to VoiceIaPolicy.fingerprint(it) }) { item ->
+                            val cue = cues.firstOrNull { it.id == item.cueId }
+                            cue != null && recoveredTakes.any { take ->
+                                VoiceIaPolicy.matches(take, cue, item.voiceId, item.model, item.style)
+                            }
+                        }
+                        if (repaired != old) queueStore.save(repaired)
+                        if (repaired.unfinished) repaired else {
+                            queueStore.clear(); null
+                        }
+                    }
+                } catch (_: Exception) {
+                    queueWarning = "A fila antiga não pôde ser verificada. Nenhuma chamada foi reiniciada. " +
+                        "Os WAVs válidos continuam disponíveis."
+                    null
+                }
+                Triple(recoveredTakes, restoredQueue, queueWarning)
+            }
+            takes = recovery.first
+            savedQueue = recovery.second
             model = takes.firstOrNull()?.model
                 ?: project.audioTracks.firstOrNull { it.kind == VoiceIaPolicy.KIND }?.ttsModel
                 ?: GeminiModels.LITE
             defaultVoice = takes.firstOrNull()?.voiceId
                 ?: project.audioTracks.firstOrNull { it.kind == VoiceIaPolicy.KIND }?.voiceId
+            if (recovery.third.isNotBlank()) status = recovery.third
+            else if (recovery.second != null) status = "Fila recuperada: " +
+                "${recovery.second!!.pending} pendente(s), ${recovery.second!!.review} para revisar. " +
+                "Nenhuma chamada Gemini foi iniciada automaticamente."
             loaded = true
         } catch (e: CancellationException) { throw e }
         catch (_: Exception) {
             loaded = true
-            status = "Não foi possível ler o rascunho de vozes. Os áudios já inseridos continuam no projeto."
+            status = "Não foi possível ler os rascunhos. Os áudios já inseridos continuam no projeto."
         }
     }
     fun displayVoiceName(id: String?): String = if (id.isNullOrBlank()) "Escolher voz" else {
@@ -155,63 +190,150 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
         if (onSave(changed)) status = "Voz salva na linha Vozes. Toque na faixa no editor para ajustar ou substituir."
         else status = "Falha ao salvar o projeto. O WAV preparado continua disponível."
     }
-    fun generate(ids: List<String>, regenerateId: String? = null, quickId: String? = null) {
+    /** Registra cada transição antes da chamada de rede e após salvar o WAV. */
+    suspend fun saveQueue(snapshot: VoiceIaQueueSnapshot): VoiceIaQueueSnapshot {
+        withContext(Dispatchers.IO) { queueStore.save(snapshot) }
+        savedQueue = snapshot
+        return snapshot
+    }
+    fun generate(ids: List<String>, regenerateId: String? = null, quickId: String? = null,
+        resumeQueued: Boolean = false) {
         if (busy || !loaded || catalogBusy) return
-        val chosen = cues.filter { it.id in ids }
+        val source = savedQueue
+        if (!resumeQueued && ids.size > 1 && source?.unfinished == true) {
+            status = "Há uma fila anterior. Retome ou descarte a fila antes de iniciar outro lote."
+            return
+        }
+        if (resumeQueued && source == null) return
+        val selectedIds = if (resumeQueued) source!!.items.filter {
+            it.stage == VoiceIaQueueStage.PENDING
+        }.map { it.cueId } else ids
+        val chosen = cues.filter { it.id in selectedIds }
         if (chosen.isEmpty()) return
         generationJob = scope.launch {
             busy = true; completed = 0; total = chosen.size
+            var journal: VoiceIaQueueSnapshot? = null
+            var inflightId: String? = null
             try {
+                journal = if (resumeQueued) {
+                    val current = source!!
+                    val reconciled = VoiceIaQueuePolicy.recover(current,
+                        cues.associate { it.id to VoiceIaPolicy.fingerprint(it) }) { item ->
+                        val cue = cues.firstOrNull { it.id == item.cueId }
+                        cue != null && takes.any { take ->
+                            VoiceIaPolicy.matches(take, cue, item.voiceId, item.model, item.style)
+                        }
+                    }
+                    saveQueue(reconciled)
+                } else if (chosen.size > 1) {
+                    val planned = chosen.map { cue ->
+                        val voiceId = voiceFor(cue) ?: error("Selecione a voz de todas as legendas antes do lote.")
+                        val direction = GeminiNarrationStyling.instruction(styleFor(cue))
+                        val nextStart = cues.firstOrNull { it.startMs > cue.startMs }?.startMs
+                        val available = (minOf(cue.endMs, nextStart ?: Long.MAX_VALUE,
+                            project.durationMs) - cue.startMs).coerceAtLeast(250L)
+                        VoiceIaQueueItem(cue.id, VoiceIaPolicy.fingerprint(cue), voiceId,
+                            model, direction, VoiceIaSync.guidance(direction, available, false))
+                    }
+                    saveQueue(VoiceIaQueuePolicy.create(project.id, planned))
+                } else null
                 val key = withContext(Dispatchers.IO) { credentials.read() }
                     ?: error("Configure uma chave Gemini em Serviços e APIs.")
                 for (group in chosen.chunked(SubtitleNarrationTimeline.MAX_SEGMENTS)) {
-                    // Lotes limitados a 12, com WAV salvo antes de passar à próxima chamada.
                     for (cue in group) {
                         coroutineContext.ensureActive()
+                        val task = journal?.items?.firstOrNull { it.cueId == cue.id }
+                        if (resumeQueued && task?.stage != VoiceIaQueueStage.PENDING) continue
+                        if (task != null && task.cueFingerprint != VoiceIaPolicy.fingerprint(cue)) {
+                            journal = saveQueue(VoiceIaQueuePolicy.transition(journal!!, cue.id,
+                                VoiceIaQueueStage.STALE))
+                            continue
+                        }
                         generatingCueId = cue.id
-                        val voiceId = voiceFor(cue) ?: error("Selecione a voz da legenda ${completed + 1}.")
-                        val direction = GeminiNarrationStyling.instruction(styleFor(cue))
+                        val voiceId = task?.voiceId ?: voiceFor(cue)
+                            ?: error("Selecione a voz da legenda ${completed + 1}.")
+                        val usedModel = task?.model ?: model
+                        val direction = task?.style ?: GeminiNarrationStyling.instruction(styleFor(cue))
                         val existing = takes.firstOrNull {
-                            cue.id != regenerateId && VoiceIaPolicy.matches(it, cue, voiceId, model, direction)
+                            cue.id != regenerateId && VoiceIaPolicy.matches(it, cue, voiceId, usedModel, direction)
                         }
                         if (existing == null) {
                             withContext(Dispatchers.IO) {
-                                pacing.beforeRequest(model) { waitMs ->
+                                pacing.beforeRequest(usedModel) { waitMs ->
                                     withContext(Dispatchers.Main) {
                                         status = "Aguardando ${((waitMs + 999L) / 1000L)} s: " +
-                                            "ritmo RPM configurado para o modelo. $completed/${chosen.size} concluídas."
+                                            "ritmo RPM configurado. $completed/${chosen.size} concluídas."
                                     }
                                 }
                             }
                             coroutineContext.ensureActive()
+                            if (journal != null) {
+                                journal = saveQueue(VoiceIaQueuePolicy.transition(journal!!,
+                                    cue.id, VoiceIaQueueStage.IN_FLIGHT))
+                                inflightId = cue.id
+                            }
                             status = "Gerando ${completed + 1}/${chosen.size}: ${cue.text.take(50)}"
                             val nextStart = cues.firstOrNull { it.startMs > cue.startMs }?.startMs
                             val available = (minOf(cue.endMs, nextStart ?: Long.MAX_VALUE,
                                 project.durationMs) - cue.startMs).coerceAtLeast(250L)
-                            val requestStyle = VoiceIaSync.guidance(direction, available, quickId == cue.id)
-                            val response = api.synthesize(key, model, voiceId, requestStyle, cue.text)
+                            val requestStyle = task?.requestStyle
+                                ?: VoiceIaSync.guidance(direction, available, quickId == cue.id)
+                            val response = api.synthesize(key, usedModel, voiceId, requestStyle, cue.text)
                             val savedFile = withContext(Dispatchers.IO) {
                                 coroutineContext.ensureActive()
                                 GeminiAudioFiles.save(context, response)
                             }
                             val take = VoiceIaTake(cue.id, VoiceIaPolicy.fingerprint(cue), voiceId,
-                                model, direction, savedFile.absolutePath, response.durationMs,
+                                usedModel, direction, savedFile.absolutePath, response.durationMs,
                                 GeminiNarrationCheckpoint.hash(response.bytes), requestStyle = requestStyle)
                             val updated = takes.filterNot { it.cueId == cue.id } + take
                             withContext(Dispatchers.IO) { store.save(updated) }
                             takes = updated
                         }
+                        if (journal != null) {
+                            // O WAV já está íntegro no rascunho antes de concluir a fila.
+                            if (journal!!.items.firstOrNull { it.cueId == cue.id }?.stage ==
+                                VoiceIaQueueStage.PENDING)
+                                journal = saveQueue(VoiceIaQueuePolicy.transition(journal!!,
+                                    cue.id, VoiceIaQueueStage.IN_FLIGHT))
+                            journal = saveQueue(VoiceIaQueuePolicy.transition(journal!!,
+                                cue.id, VoiceIaQueueStage.READY))
+                            inflightId = null
+                        }
                         completed++
                         generatingCueId = null
                     }
                 }
-                status = "${chosen.size} fala(s) preparada(s). Ouça e insira as faixas desejadas na timeline."
+                if (journal != null && !journal!!.unfinished) {
+                    withContext(Dispatchers.IO) { queueStore.clear() }
+                    savedQueue = null
+                }
+                status = "${completed} fala(s) preparada(s). Ouça e insira as faixas na timeline." +
+                    if (journal?.unfinished == true) " Revise as pendências da fila." else ""
             } catch (e: CancellationException) {
-                status = "Geração interrompida. Os WAVs concluídos permanecem salvos; chamadas em andamento podem consumir cota."
-            } catch (e: GeminiApiError) {
-                status = "Falha na chamada ${completed + 1}: ${e.message}. Arquivos concluídos foram mantidos."
+                status = "Geração interrompida. WAVs concluídos preservados. " +
+                    "Chamadas em andamento podem ter consumido cota."
+                inflightId?.let { id ->
+                    journal?.let { old ->
+                        withContext(NonCancellable + Dispatchers.IO) {
+                            runCatching { queueStore.save(VoiceIaQueuePolicy.transition(old,
+                                id, VoiceIaQueueStage.REVIEW)) }
+                        }
+                        savedQueue = VoiceIaQueuePolicy.transition(old, id, VoiceIaQueueStage.REVIEW)
+                    }
+                }
             } catch (e: Exception) {
-                status = "Interrompido em ${completed + 1}/${chosen.size}: ${e.message?.take(130) ?: "falha local"}. Não haverá repetição automática."
+                val id = inflightId
+                if (id != null && journal != null) {
+                    // 429 é rejeição explícita; outras falhas podem ter consumido cota.
+                    val next = if (e is GeminiApiError && e.http == 429)
+                        VoiceIaQueueStage.PENDING else VoiceIaQueueStage.REVIEW
+                    val updated = VoiceIaQueuePolicy.transition(journal!!, id, next)
+                    withContext(Dispatchers.IO) { queueStore.save(updated) }
+                    savedQueue = updated
+                }
+                status = "Parou em ${completed + 1}/${chosen.size}: " +
+                    "${e.message?.take(130) ?: "falha local"}. Sem novas tentativas automáticas."
             } finally { busy = false; generationJob = null; generatingCueId = null }
         }
     }
@@ -365,6 +487,27 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                     "Inserir todas as vozes prontas: $preparedCount",
                 modifier = Modifier.weight(.95f), enabled = !busy && loaded && preparedCount > 0,
                 onClick = { pendingBatchInsert = true })
+        }
+        savedQueue?.takeIf { it.unfinished }?.let { queue ->
+            Surface(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 3.dp),
+                shape = RoundedCornerShape(9.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+                Column(Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text("Fila salva: ${queue.pending} pendente(s) · ${queue.ready} pronta(s) · " +
+                        "${queue.review} a revisar" + if (queue.stale > 0) " · ${queue.stale} alterada(s)" else "",
+                        fontSize = 11.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(onClick = { resumeQueueConfirmation = true },
+                            enabled = !busy && loaded && queue.pending > 0) { Text("Retomar") }
+                        TextButton(onClick = { retryQueueConfirmation = true },
+                            enabled = !busy && queue.review > 0) { Text("Revisar") }
+                        TextButton(onClick = { discardQueueConfirmation = true }, enabled = !busy) {
+                            Text("Descartar fila")
+                        }
+                    }
+                }
+            }
         }
         if (status.isNotBlank()) Text(status, Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
@@ -789,6 +932,53 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                 status = "Estilo ${selected} aplicado às ${cues.size} falas. Gere para ouvir o resultado."
             }) { Text("Aplicar a todas") } },
             dismissButton = { TextButton(onClick = { pendingStyleForAll = null }) { Text("Cancelar") } })
+    }
+    if (resumeQueueConfirmation) {
+        val pendingCount = savedQueue?.pending ?: 0
+        AlertDialog(onDismissRequest = { resumeQueueConfirmation = false },
+            title = { Text("Retomar $pendingCount fala(s) pendente(s)?") },
+            text = { Text("Somente solicitações que ainda não foram iniciadas serão enviadas. " +
+                "Chamadas de resultado incerto não serão repetidas. A retomada pode consumir cota Gemini.") },
+            confirmButton = { TextButton(onClick = {
+                resumeQueueConfirmation = false
+                generate(savedQueue?.items?.filter { it.stage == VoiceIaQueueStage.PENDING }
+                    ?.map { it.cueId }.orEmpty(), resumeQueued = true)
+            }) { Text("Retomar") } },
+            dismissButton = { TextButton(onClick = { resumeQueueConfirmation = false }) { Text("Cancelar") } })
+    }
+    if (retryQueueConfirmation) {
+        AlertDialog(onDismissRequest = { retryQueueConfirmation = false },
+            title = { Text("Liberar chamadas de resultado incerto?") },
+            text = { Text("A chamada pode ter sido processada pelo Gemini antes da interrupção. " +
+                "Repeti-la pode consumir cota novamente. Esta ação apenas coloca as falas na fila; " +
+                "você precisará tocar em Retomar para gerar.") },
+            confirmButton = { TextButton(onClick = {
+                retryQueueConfirmation = false
+                savedQueue?.let { current -> scope.launch {
+                    try {
+                        saveQueue(VoiceIaQueuePolicy.retryReviewed(current))
+                        status = "Chamadas liberadas. Toque em Retomar quando quiser."
+                    } catch (_: Exception) { status = "Falha ao salvar revisão da fila." }
+                } }
+            }) { Text("Liberar para tentativa") } },
+            dismissButton = { TextButton(onClick = { retryQueueConfirmation = false }) { Text("Cancelar") } })
+    }
+    if (discardQueueConfirmation) {
+        AlertDialog(onDismissRequest = { discardQueueConfirmation = false },
+            title = { Text("Descartar o planejamento da fila?") },
+            text = { Text("O planejamento será removido. WAVs já concluídos e a timeline permanecerão intactos. " +
+                "Nenhuma geração será iniciada.") },
+            confirmButton = { TextButton(onClick = {
+                discardQueueConfirmation = false
+                scope.launch {
+                    try {
+                        withContext(Dispatchers.IO) { queueStore.clear() }
+                        savedQueue = null
+                        status = "Fila descartada; WAVs e legendas preservados."
+                    } catch (_: Exception) { status = "Falha ao descartar fila." }
+                }
+            }) { Text("Descartar") } },
+            dismissButton = { TextButton(onClick = { discardQueueConfirmation = false }) { Text("Cancelar") } })
     }
     promptGenerate?.let { ids ->
         val count = ids.size

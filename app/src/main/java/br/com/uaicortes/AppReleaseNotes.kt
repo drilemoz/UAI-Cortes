@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.154"
-    const val VERSION_CODE = 155
+    const val VERSION_NAME = "0.1.155"
+    const val VERSION_CODE = 156
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.155", listOf(
+            ReleaseFeature("gemini-queue-journal-155", "Fila de vozes recuperável",
+                "Registra pendentes e WAVs concluídos para retomar lotes somente após confirmação do usuário.", "captions"),
+            ReleaseFeature("gemini-queue-uncertain-155", "Revisão de chamadas interrompidas",
+                "Chamadas de resultado incerto não são repetidas automaticamente; oferecemos revisão explícita.", "check"),
+            ReleaseFeature("gemini-queue-long-155", "Lotes maiores com segurança",
+                "Rascunhos e fila local aceitam até 500 falas por projeto com limites de tamanho e escrita atômica.", "check")
+        )),
         ReleaseSummary("0.1.154", listOf(
             ReleaseFeature("gemini-usage-windows-154", "Cotas por minuto e por dia",
                 "Separação entre capacidade imediata RPM/TPM e projeção diária RPD, usando somente limites locais conhecidos.", "check"),
@@ -29,7 +37,7 @@ internal object AppReleaseNotes {
             ReleaseFeature("gemini-rpm-pacing-154", "Ritmo local de geração Gemini",
                 "Quando configurado, o RPM limita chamadas sequenciais; a geração fica em espera somente com a tela ativa.", "check")
         )),
-        ReleaseSummary("0.1.154", listOf(
+        ReleaseSummary("0.1.153", listOf(
             ReleaseFeature("gemini-voice-favorites-153", "Vozes Gemini favoritas",
                 "Marque vozes com estrela e filtre favoritas, mantendo preferências locais entre projetos e sessões.", "captions"),
             ReleaseFeature("gemini-voice-selected-153", "Nome da voz escolhida",

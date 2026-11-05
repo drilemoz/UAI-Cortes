@@ -3,7 +3,7 @@
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 ui=(root/'app/src/main/java/br/com/uaicortes/VoiceIaScreen.kt').read_text()
-bar=ui[ui.index('// Uma única barra compacta:'):ui.index('if (status.isNotBlank())')]
+bar=ui[ui.index('// Uma única barra compacta:'):ui.index('savedQueue?.takeIf { it.unfinished }')]
 assert bar.count('VoiceIaToolbarAction(')==6, 'Seis controles em uma única Row'
 for label in ['label = ""', 'label = if (allSameVoice) globalVoiceLabel else "Voz"', 'VoiceIaShortLabels.style(defaultStyle)',
               'label = "Gerar $pending"','label = "Inserir $preparedCount"',
@@ -21,7 +21,7 @@ assert 'heightIn(max = 310.dp)' in ui and 'fillMaxHeight(0.83f)' in ui
 assert 'currentStyle == preset.label' in ui
 assert 'VoiceIaShortLabels' in ui
 assert 'pendingVoiceForAll' in ui and 'pendingStyleForAll' in ui
-assert 'api.synthesize(key, model, voiceId, requestStyle, cue.text)' in ui
+assert 'api.synthesize(key, usedModel, voiceId, requestStyle, cue.text)' in ui
 assert 'Text("WAV' not in ui or 'VoiceIaDisplayPolicy.overrunMs' in ui
 assert 'SubtitleOverlayOnFrame(selected, editable = false' in ui
 print('OK: barra única, 6 ações, cantos 8dp, catálogos alfabéticos, listas menores e políticas preservadas')

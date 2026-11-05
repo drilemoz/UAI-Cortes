@@ -68,6 +68,8 @@ internal class VoiceIaDraftStore(context: Context, projectId: String) {
     private val folder = File(app.filesDir, "voice_ia_drafts")
     private val file = AtomicFile(File(folder, "${VoiceIaPolicy.digest(projectId)}.json"))
     private val audioDir = File(app.filesDir, "gemini_narrations").canonicalFile
+    private val maxEntries = 500
+    private val maxManifestBytes = 1_048_576L
 
     fun valid(take: VoiceIaTake): Boolean = try {
         val audio = File(take.filePath).canonicalFile
@@ -91,19 +93,21 @@ internal class VoiceIaDraftStore(context: Context, projectId: String) {
 
     fun load(): List<VoiceIaTake> {
         if (!file.baseFile.exists()) return emptyList()
+        require(file.baseFile.length() in 2..maxManifestBytes) { "Rascunhos de voz acima do limite local" }
         val json = JSONObject(file.openRead().bufferedReader().use { it.readText() })
         val entries = json.optJSONArray("takes") ?: JSONArray()
         return (0 until entries.length()).mapNotNull { i ->
             runCatching { VoiceIaTake.read(entries.getJSONObject(i)) }.getOrNull()
                 ?.takeIf(::valid)
-        }.distinctBy { it.cueId }.takeLast(150)
+        }.distinctBy { it.cueId }.takeLast(maxEntries)
     }
 
     fun save(takes: List<VoiceIaTake>) {
         if (!folder.exists() && !folder.mkdirs()) error("Não foi possível criar a pasta dos rascunhos")
         val payload = JSONObject().put("version", 1).put("takes", JSONArray().apply {
-            takes.takeLast(150).forEach { put(it.json()) }
+            takes.takeLast(maxEntries).forEach { put(it.json()) }
         }).toString().toByteArray(Charsets.UTF_8)
+        require(payload.size <= maxManifestBytes) { "Rascunhos de voz acima do limite local" }
         val output = file.startWrite()
         try {
             output.write(payload)

@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.155 (05/11/2026)
+- **Vozes IA:** fila local persistente para gerar lotes com confirmação de cota, retomada manual e sem serviço em segundo plano. O registro contém IDs, fingerprints e opções de voz, não a chave nem o texto das legendas.
+- Cada pedido registra **em andamento** antes da chamada Gemini e **concluído** somente depois do WAV salvo; ao reabrir, pedidos em andamento sem WAV verificado exigem revisão explícita para não repetir cobranças involuntariamente.
+- Ações compactas Retomar, Revisar e Descartar fila. Alterações de legenda invalidam as pendências correspondentes. WAVs e timeline permanecem intactos após descartar o planejamento.
+- Rascunhos e fila com limite de 500 falas e até 1 MiB por manifesto para suportar vídeos longos. Sem alteração do schemaVersion=4, credenciais, exportação ou limites da API.
+- Regressões Kotlin/JVM e Python incluídas. Android/Compose, reinício real de processo e geração Gemini precisam de validação no GitHub Actions/aparelho.
+
 # Uai Cortes · versão 0.1.154 (05/11/2026)
 - **Consumo Gemini:** agora e hoje (horário do Pacífico) aparecem separadamente; RPM, TPM de entrada e RPD mantêm significados próprios. Mostrar tempo aproximado até abrir a próxima janela RPM, quando há dados locais suficientes.
 - **Vozes IA:** planeja quantas chamadas novas são necessárias, contando WAVs existentes e válidos apenas quando a configuração da fala coincide. Arquivos concluídos permanecem disponíveis para retomar após interrupções.

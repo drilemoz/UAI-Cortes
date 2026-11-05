@@ -20,7 +20,7 @@ assert 'voiceOverrides.clear()' in ui and 'styleOverrides.clear()' in ui
 assert 'VoiceIaDisplayPolicy.overrunMs(' in ui
 assert 'maxLines = if (active) 3 else 1' in ui
 assert 'shape = RoundedCornerShape(8.dp)' in ui
-assert 'api.synthesize(key, model, voiceId, requestStyle, cue.text)' in ui
+assert 'api.synthesize(key, usedModel, voiceId, requestStyle, cue.text)' in ui
 assert 'editable = false' in ui
 policy = (root/'app/src/main/java/br/com/uaicortes/VoiceIaDisplayPolicy.kt').read_text()
 assert 'overrunMs(' in policy and 'fun seconds(' in policy

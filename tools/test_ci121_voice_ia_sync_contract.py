@@ -13,7 +13,7 @@ assert 'VoiceIaWavStretch.shorten(source.readBytes(), targetMs)' in ui
 assert 'GeminiAudioFiles.save(context, wave)' in ui
 assert 'sourceFilePath = source.absolutePath' in ui and 'sourceDurationMs' in draft
 assert 'VoiceIaSync.guidance(direction, available, quickId == cue.id)' in ui
-assert 'api.synthesize(key, model, voiceId, requestStyle, cue.text)' in ui
+assert 'api.synthesize(key, usedModel, voiceId, requestStyle, cue.text)' in ui
 assert 'promptGenerate = listOf(cue.id)' in ui and 'GeminiUsageHint("narração"' in ui
 assert 'GeminiVoiceSearch.byGender(' in ui and 'GeminiVoiceSearch.byPitch(' in ui
 assert 'GeminiVoiceSearch.filter(' in ui

@@ -21,6 +21,6 @@ assert '"$batchPercent% concluído · $completed/$total falas"' in ui
 assert 'generatingCueId = cue.id' in ui and 'generatingCueId = null' in ui
 assert 'progresso desta chamada indisponível pela API' in ui
 assert 'if (generationJob != null && busy)' in ui # ajuste offline não finge percentuais de TTS
-assert 'api.synthesize(key, model, voiceId, requestStyle, cue.text)' in ui
+assert 'api.synthesize(key, usedModel, voiceId, requestStyle, cue.text)' in ui
 assert '.put("schemaVersion", 4)' in (root/'app/src/main/java/br/com/uaicortes/ProjectStore.kt').read_text()
 print('OK: favoritos, nomes persistidos e progresso por WAV concluído sem percentuais falsos')
