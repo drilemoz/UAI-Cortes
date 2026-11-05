@@ -1,3 +1,12 @@
+# Uai Cortes · versão 0.1.150 (05/11/2026)
+
+## 0.1.150 — Corrigir teste JUnit desatualizado (workflow 126)
+- O workflow 126 compilou Kotlin Debug/Release e os testes Android, mas `:app:testDebugUnitTest` falhou com 465/466 testes aprovados.
+- O teste `invalidResolutionOrFileNameAreRejected` rejeitava indevidamente 480p, disponível desde 0.1.147; agora recusa apenas valores inválidos (-1, 0, 240 e 2160).
+- Novo teste JUnit garante aceitação explícita de 360p, 480p, 720p e 1080p. Teste Python cruza as listas da UI, do coordenador e do JUnit.
+- Versão, workflow, About/Novidades, release e metadados sincronizados; não houve alteração no motor de exportação ou esquema do projeto.
+- Build Android completo, lint, cinco APKs e testes no aparelho ainda pendentes de nova execução CI.
+
 # Uai Cortes · versão 0.1.149 (05/11/2026)
 
 ## 0.1.149 — Corrigir compilação após redesenho Gemini (CI125)

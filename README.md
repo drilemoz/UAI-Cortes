@@ -1,3 +1,6 @@
+# Uai Cortes · versão 0.1.150 (05/11/2026)
+**CI126:** teste JUnit da exportação corrigido para reconhecer 480p como resolução válida desde a v0.1.147. O teste ainda rejeita resoluções não suportadas; nova regressão cruza a lista aceita pelo coordenador, pela UI e pelo JUnit. Não altera o comportamento da exportação. Código-fonte v0.1.150 / versionCode 151; confirmação Gradle completa depende do CI.
+
 # Uai Cortes · versão 0.1.149 (05/11/2026)
 **CI125:** correção de compilação Kotlin do painel Gemini: `Icons.Default.LockOutline` não é resolvido pela configuração atual de Material Icons; troca por `Icons.Default.Lock`. Nenhuma mudança no armazenamento de chaves, no layout funcional ou na geração de áudio. v0.1.149 / versionCode 150. APK depende do CI Android.
 

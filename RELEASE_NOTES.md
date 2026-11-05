@@ -1,3 +1,6 @@
+# Uai Cortes · versão 0.1.150 (05/11/2026)
+**CI126 — correção de regressão na suíte JUnit:** resolução 480p deve ser aceita pela exportação. Corrigido teste antigo que a tratava como inválida; mantidos testes de 360/480/720/1080 e rejeição de resoluções não suportadas. Exportação, voz Gemini, consumo e segurança das chaves não foram alterados. O workflow 126 teve 1 falha em 466 testes, após compilação Kotlin Debug/Release aprovada. v0.1.150 / versionCode 151.
+
 # Uai Cortes · versão 0.1.149 (05/11/2026)
 
 ## 0.1.149 — Correção da compilação Gemini (CI125)

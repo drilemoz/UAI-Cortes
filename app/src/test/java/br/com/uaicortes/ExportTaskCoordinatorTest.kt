@@ -87,9 +87,20 @@ class ExportTaskCoordinatorTest {
         assertEquals(5L, tasks.snapshot.elapsedSeconds)
     }
 
+    @Test fun everyAdvertisedResolutionIsAccepted() {
+        val tasks = ExportTaskCoordinator()
+        for (resolution in listOf(360, 480, 720, 1080)) {
+            val id = tasks.start("valid-$resolution.mp4", resolution, 1L)!!
+            assertEquals(resolution, tasks.snapshot.quality)
+            assertTrue(tasks.cancel(id))
+        }
+    }
+
     @Test fun invalidResolutionOrFileNameAreRejected() {
         val tasks = ExportTaskCoordinator()
-        for (resolution in listOf(480, 2160)) {
+        // 360/480/720/1080 são suportados desde a v0.1.147.
+        // O CI126 falhou ao rejeitar 480p neste teste legado.
+        for (resolution in listOf(-1, 0, 240, 2160)) {
             try { tasks.start("arquivo.mp4", resolution, 0L); throw AssertionError("deveria falhar") }
             catch (_: IllegalArgumentException) { }
         }

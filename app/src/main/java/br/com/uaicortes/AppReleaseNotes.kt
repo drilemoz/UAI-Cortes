@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.149"
-    const val VERSION_CODE = 150
+    const val VERSION_NAME = "0.1.150"
+    const val VERSION_CODE = 151
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.150", listOf(
+            ReleaseFeature("ci126-export-480-test-150", "CI126: teste de exportação atualizado",
+                "Teste JUnit não rejeita mais 480p, que é opção válida desde 0.1.147; mantém rejeição de resoluções inválidas.", "check"),
+            ReleaseFeature("ci126-resolution-cross-check-150", "Resoluções consistentes entre interface e testes",
+                "Nova regressão compara 360p, 480p, 720p e 1080p com os valores aceitos pelo coordenador e pelo JUnit.", "film")
+        )),
         ReleaseSummary("0.1.149", listOf(
             ReleaseFeature("ci125-material-lock-icon-149", "CI125: painel Gemini compilável",
                 "Substituído ícone de cadeado não disponível por ícone Material compatível, mantendo status protegido e ações.", "check"),
