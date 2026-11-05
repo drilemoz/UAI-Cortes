@@ -56,7 +56,11 @@ internal fun FlowPromptScreen(project: VideoProject,
         title = { Text("Enviar cena ao Gemini?") },
         text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Somente a descrição da cena e seu contexto serão enviados. Nenhum MP4, áudio, imagem, URI ou estilo-base será enviado.")
-            GeminiUsageHint("refinar cena Flow", draft.scenes[selected].length + draft.context.length)
+            val flowPrefs = context.applicationContext.getSharedPreferences(
+                "caption_model_preferences", Context.MODE_PRIVATE)
+            val flowModel = GeminiCaptionModelPolicy.selectedOrDefault(flowPrefs.getString("model", null))
+            GeminiUsageHint("refinar cena Flow", draft.scenes[selected].length + draft.context.length,
+                model = flowModel)
             OutlinedButton(onClick = {
                 countingInput = true
                 countedInput = "Consultando entrada no Gemini…"

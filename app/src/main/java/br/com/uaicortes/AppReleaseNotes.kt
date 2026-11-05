@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.150"
-    const val VERSION_CODE = 151
+    const val VERSION_NAME = "0.1.151"
+    const val VERSION_CODE = 152
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.151", listOf(
+            ReleaseFeature("gemini-forecast-151", "Previsões Gemini baseadas em medições",
+                "Médias por modelo e operação após cinco amostras e limites manuais por projeto; saldos nunca são inventados.", "captions"),
+            ReleaseFeature("gemini-usage-hints-151", "Consumo previsto antes de gerar",
+                "Telas de voz, legendas e descrição mostram médias locais quando há dados suficientes.", "check"),
+            ReleaseFeature("gemini-safe-fallback-151", "Alternância 429 específica por modelo",
+                "Pausa por modelo e projeto preserva outras funções; troca permanece autorizada e restrita a projetos distintos.", "check")
+        )),
         ReleaseSummary("0.1.150", listOf(
             ReleaseFeature("ci126-export-480-test-150", "CI126: teste de exportação atualizado",
                 "Teste JUnit não rejeita mais 480p, que é opção válida desde 0.1.147; mantém rejeição de resoluções inválidas.", "check"),

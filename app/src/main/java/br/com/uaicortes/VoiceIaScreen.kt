@@ -726,7 +726,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                 Text("O pedido inclui a duração aproximada da legenda; o Gemini pode devolver um WAV mais longo. " +
                     "Nenhuma palavra será removida pelo aplicativo.", style = MaterialTheme.typography.labelSmall)
                 GeminiUsageHint("narração", inputChars = cues.filter { it.id in ids }.sumOf { it.text.length },
-                    model = model)
+                    model = model, requestedCount = count)
             } },
             confirmButton = { TextButton(onClick = {
                 promptGenerate = null

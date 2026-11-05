@@ -21,7 +21,7 @@ assert 'Adicionar chave Gemini' in pool and 'Editar chave Gemini' in pool
 assert 'Text("Usar"' not in pool or 'store.select(profile.id)' in pool
 for term in ('store.add(secret, label, project)', 'store.rename(editing!!.id, label, project)',
              'store.removeProfile(item.id)', 'store.setAutoFallback(true)', 'confirmAuto',
-             'store.temporarilyBlocked(profile.projectId)', 'Nenhuma tentativa ocorre em segundo plano.'):
+             'store.temporarilyBlocked(profile.projectId, it)', 'Nenhuma tentativa ocorre em segundo plano.'):
     assert term in pool, term
 assert 'entries.size}/8 protegidas' in pool
 assert 'Consumo da IA' in usage and 'Histórico local' in usage

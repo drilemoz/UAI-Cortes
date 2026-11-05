@@ -1,3 +1,13 @@
+# Uai Cortes · versão 0.1.151 (05/11/2026)
+
+## 0.1.151 — Central inteligente de consumo e fallback Gemini
+- Métricas por operação (narração, legendas, descrição, Flow), modelo e projeto conhecido; médias de tokens totais e entrada somente com 5 ou mais medições reais, sem estimar tokens ausentes como zero.
+- Limites opcionais e manuais por projeto/modelo: RPM, TPM de entrada e RPD. Previsão local conservadora, observando o mínimo das dimensões disponíveis, uso apenas neste aparelho e dia do Pacífico; jamais saldo oficial de créditos/custos.
+- Painel Gemini mostra modelos, médias e configura limites em diálogo próprio. Em geração, indica média e projeção quando há dados; Vozes IA considera a quantidade de falas.
+- Failover de erro 429 continua opt-in e restrito a outros projetos autorizados distintos; pausa temporária passa a ser por projeto e modelo, com proteção legada para pausas antigas. 401/403/erros de rede ambíguos não disparam novas gerações silenciosas.
+- Preferências de limites excluídas do backup assim como chaves e histórico; não guarda prompts, mídia ou tokens de acesso. Sem alterar schemaVersion=4.
+- Testes JVM e validação Android/Google API necessários antes de publicar e assegurar fidelidade no aparelho.
+
 # Uai Cortes · versão 0.1.150 (05/11/2026)
 
 ## 0.1.150 — Corrigir teste JUnit desatualizado (workflow 126)

@@ -114,7 +114,9 @@ internal class GeminiTtsClient(context: Context? = null) {
     fun cancel() { active.getAndSet(null)?.disconnect() }
     private suspend fun request(path: String, key: String, body: JSONObject? = null, max: Int = 1024 * 1024): JSONObject =
         if (failover == null) requestOnce(path, key, body, max)
-        else failover.run(key) { credential -> requestOnce(path, credential, body, max) }
+        else failover.run(key, body?.optString("model").orEmpty()) { credential ->
+            requestOnce(path, credential, body, max)
+        }
 
     private suspend fun requestOnce(path: String, key: String, body: JSONObject? = null, max: Int = 1024 * 1024): JSONObject =
         withContext(Dispatchers.IO) {

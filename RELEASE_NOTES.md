@@ -1,3 +1,13 @@
+# Uai Cortes · versão 0.1.151 (05/11/2026)
+
+## 0.1.151 — Estimativas de consumo Gemini
+- Consumo por função e modelo com média de tokens baseada em pelo menos cinco gerações medidas.
+- Campo de limites RPM, TPM de entrada e RPD por projeto, para estimar disponibilidade local sem afirmar saldo oficial.
+- Previsão antes de gerar, incluindo quantidade de vozes.
+- Troca autorizada após HTTP 429 agora pausa o modelo afetado, sem bloquear modelos de outras ferramentas.
+- IDs dos projetos Google Cloud precisam ser configurados nas chaves, e limites devem ser copiados do AI Studio.
+- Compilação Android e teste no aparelho continuam pendentes.
+
 # Uai Cortes · versão 0.1.150 (05/11/2026)
 **CI126 — correção de regressão na suíte JUnit:** resolução 480p deve ser aceita pela exportação. Corrigido teste antigo que a tratava como inválida; mantidos testes de 360/480/720/1080 e rejeição de resoluções não suportadas. Exportação, voz Gemini, consumo e segurança das chaves não foram alterados. O workflow 126 teve 1 falha em 466 testes, após compilação Kotlin Debug/Release aprovada. v0.1.150 / versionCode 151.
 

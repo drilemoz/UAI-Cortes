@@ -118,8 +118,19 @@ internal fun GeminiKeyPoolSettings(store: GeminiCredentialStore, onChanged: () -
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 2)
-                                if (store.temporarilyBlocked(profile.projectId)) Text(
-                                    "Projeto em pausa após limite 429. Tente novamente mais tarde.",
+                                if (profile.projectId.isBlank()) Text(
+                                    "Adicione o ID Google Cloud para habilitar médias por projeto e troca automática.",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                else Text("Configure limites por modelo em Consumo da IA.",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                val pausedModels = listOf(GeminiModels.LITE, GeminiModels.FLASH,
+                                    "gemini-3.5-transcribe").filter {
+                                    store.temporarilyBlocked(profile.projectId, it)
+                                }
+                                if (pausedModels.isNotEmpty()) Text(
+                                    "Pausa temporária por 429: ${pausedModels.joinToString()}",
                                     color = MaterialTheme.colorScheme.error,
                                     style = MaterialTheme.typography.bodySmall)
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -168,7 +179,7 @@ internal fun GeminiKeyPoolSettings(store: GeminiCredentialStore, onChanged: () -
                             verticalArrangement = Arrangement.spacedBy(5.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
-                                    Text("Alternância após limite 429", style = MaterialTheme.typography.titleSmall)
+                                    Text("Troca automática após limite 429", style = MaterialTheme.typography.titleSmall)
                                     Text("Somente entre projetos Google Cloud distintos",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -191,7 +202,7 @@ internal fun GeminiKeyPoolSettings(store: GeminiCredentialStore, onChanged: () -
                             }
                             if (explainLimits) Text(
                                 "Um erro HTTP 429 pode ser limite por minuto, tokens ou dia — não comprova créditos esgotados. " +
-                                "O app pausa temporariamente o projeto e tenta, no máximo uma vez por outro projeto autorizado. " +
+                                "O app pausa temporariamente o projeto para o modelo afetado e tenta, no máximo uma vez por outro projeto autorizado. " +
                                 "Não resolve bloqueios de faturamento, não cria chaves e não ultrapassa cotas de um mesmo projeto.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)

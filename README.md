@@ -1,3 +1,6 @@
+# Uai Cortes · versão 0.1.151 (05/11/2026)
+**Gemini 0.1.151:** novo painel de previsões locais por projeto/modelo/função, com médias de tokens de operações bem-sucedidas (mínimo 5 amostras) e limites RPM/TPM de entrada/RPD informados pelo usuário a partir do AI Studio. Não é uma consulta de saldo oficial; eventos antigos sem projeto não são atribuídos retroativamente. Dicas antes de gerar voz, legenda, descrição e Flow. Failover autorizado após HTTP 429 com pausa por projeto e modelo, sem mudar segurança das chaves. Compilação Android e testes de API reais pendentes.
+
 # Uai Cortes · versão 0.1.150 (05/11/2026)
 **CI126:** teste JUnit da exportação corrigido para reconhecer 480p como resolução válida desde a v0.1.147. O teste ainda rejeita resoluções não suportadas; nova regressão cruza a lista aceita pelo coordenador, pela UI e pelo JUnit. Não altera o comportamento da exportação. Código-fonte v0.1.150 / versionCode 151; confirmação Gradle completa depende do CI.
 

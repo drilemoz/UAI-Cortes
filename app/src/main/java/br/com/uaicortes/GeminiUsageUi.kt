@@ -22,10 +22,22 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** Aviso pequeno; não sugere saldo, cota restante ou preço fictício. */
+/** Estimativa local por operação/modelo; não confunde média com saldo oficial. */
 @Composable
 internal fun GeminiUsageHint(operation: String, inputChars: Int? = null,
-    durationMs: Long? = null, model: String = "") {
+    durationMs: Long? = null, model: String = "", requestedCount: Int = 1) {
+    val context = LocalContext.current
+    val ledger = remember(context) { GeminiUsageLedger(context) }
+    val quota = remember(context) { GeminiQuotaStore(context) }
+    val keys = remember(context) { GeminiCredentialStore(context) }
+    val activeProject = runCatching { keys.profiles().firstOrNull { it.id == keys.activeId() }?.projectId.orEmpty() }
+        .getOrDefault("")
+    val forecast = remember(operation, model, activeProject, requestedCount) {
+        if (model.isBlank() || activeProject.isBlank()) null else runCatching {
+            GeminiQuotaPolicy.compute(ledger.events(), activeProject, model, operation,
+                quota.get(activeProject, model))
+        }.getOrNull()
+    }
     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
         Text("Consumo da IA · $operation", style = MaterialTheme.typography.labelMedium)
         if (model.isNotBlank()) Text("Modelo: $model", style = MaterialTheme.typography.bodySmall)
@@ -35,7 +47,34 @@ internal fun GeminiUsageHint(operation: String, inputChars: Int? = null,
             "tokens de áudio e resposta não podem ser previstos com segurança.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("O uso pode consumir cota ou gerar cobrança. Créditos restantes: consulte o Google.",
+        if (forecast != null) {
+            forecast.averageTotal?.let { average ->
+                val total = average * requestedCount.coerceIn(1, 100)
+                Text("Média observada: $average tokens/geração · ~${total} tokens para " +
+                    "${requestedCount.coerceAtLeast(1)} solicitação(ões) semelhantes.",
+                    style = MaterialTheme.typography.bodySmall)
+            } ?: Text("Média: aguardando pelo menos 5 medições reais desta função e modelo.",
+                style = MaterialTheme.typography.bodySmall)
+            val paused = keys.temporarilyBlocked(activeProject, model)
+            if (paused) Text("Projeto em pausa temporária após 429 para este modelo.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.error)
+            if (!paused) forecast.remainingByLocalLimits?.let { remaining ->
+                Text("Capacidade local estimada: até $remaining geração(ões), sob limites manuais " +
+                    "e uso registrado neste aparelho.", style = MaterialTheme.typography.bodySmall)
+                if (requestedCount > remaining) Text(
+                    "Atenção: as $requestedCount solicitações ultrapassam a estimativa local atual.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error)
+            }
+            Text(forecast.label, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else Text("Previsão indisponível: configure o ID do projeto e o modelo.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (keys.autoFallbackEnabled()) Text("Troca de chave: ativa apenas entre projetos distintos autorizados após limite 429.",
+            style = MaterialTheme.typography.labelSmall)
+        Text("Estimativas locais não indicam créditos oficiais; confirme as cotas no Google AI Studio.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -50,6 +89,11 @@ internal fun GeminiUsagePanel() {
     var period by remember { mutableIntStateOf(1) }
     var entries by remember { mutableStateOf(emptyList<GeminiUsageEvent>()) }
     var confirmClear by remember { mutableStateOf(false) }
+    val keys = remember(context) { GeminiCredentialStore(context) }
+    val quotas = remember(context) { GeminiQuotaStore(context) }
+    var editProject by remember { mutableStateOf<String?>(null) }
+    var editModel by remember { mutableStateOf("") }
+    var revision by remember { mutableIntStateOf(0) }
     fun refresh() { entries = runCatching { ledger.events() }.getOrDefault(emptyList()) }
     Surface(shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surface,
@@ -103,6 +147,64 @@ internal fun GeminiUsagePanel() {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Custos e créditos: consulte os dados oficiais no Google.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                HorizontalDivider()
+                Text("Previsões por projeto e modelo", style = MaterialTheme.typography.titleSmall)
+                val profiles = runCatching { keys.profiles() }.getOrDefault(emptyList())
+                if (profiles.none { it.projectId.isNotBlank() }) {
+                    Text("Informe o ID Google Cloud em Minhas chaves. Sem ID não há estimativa por projeto.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    // Não somar duas chaves do mesmo projeto como se fossem cotas separadas.
+                    profiles.map { it.projectId }.filter { it.isNotBlank() }.distinct().forEach { project ->
+                        Surface(shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.33f)) {
+                            Column(Modifier.fillMaxWidth().padding(10.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("Projeto: $project", style = MaterialTheme.typography.labelLarge)
+                                val models = (filtered.filter { it.project == project }
+                                    .map { it.model }.filter { it.isNotBlank() } +
+                                    listOf(GeminiModels.LITE, GeminiModels.FLASH, "gemini-3.5-transcribe"))
+                                    .distinct().take(12)
+                                models.forEach { model ->
+                                    key(model, revision) {
+                                        Text(model, style = MaterialTheme.typography.labelMedium)
+                                        val groups = listOf("narracao", "legendas", "descricao", "flow")
+                                        val enabled = groups.filter { op ->
+                                            filtered.any { it.project == project && it.model == model &&
+                                                GeminiQuotaPolicy.operationName(it.operation) == op }
+                                        }
+                                        val limits = quotas.get(project, model)
+                                        val opList = if (enabled.isEmpty()) listOf("narracao") else enabled
+                                        opList.forEach { op ->
+                                            val f = GeminiQuotaPolicy.compute(entries, project, model, op, limits)
+                                            val avg = f.averageTotal?.let { "$it tokens/ação" }
+                                                ?: "média pendente (${f.samples}/5 amostras)"
+                                            val paused = keys.temporarilyBlocked(project, model)
+                                            val remaining = if (paused) " · pausa 429" else
+                                                f.remainingByLocalLimits?.let { " · até $it locais" } ?: ""
+                                            Text("${op.replaceFirstChar { it.uppercase() }}: $avg$remaining",
+                                                style = MaterialTheme.typography.bodySmall)
+                                        }
+                                        if (!limits.configured()) Text("Limites desconhecidos: sem saldo estimado.",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        OutlinedButton(onClick = { editProject = project; editModel = model },
+                                            shape = RoundedCornerShape(8.dp),
+                                            contentPadding = PaddingValues(horizontal = 9.dp),
+                                            modifier = Modifier.heightIn(min = 38.dp)) {
+                                            Text("Definir limites de $model", fontSize = 12.sp)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Text("Previsões usam somente solicitações deste aparelho e limites informados manualmente. " +
+                    "O uso externo, erros 429 e cotas oficiais podem reduzir o disponível.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (filtered.isNotEmpty()) {
@@ -177,6 +279,11 @@ internal fun GeminiUsagePanel() {
             }
         }
     }
+    editProject?.let { project ->
+        GeminiQuotaBudgetDialog(project, editModel, quotas,
+            onDismiss = { editProject = null },
+            onSaved = { editProject = null; revision++; refresh() })
+    }
     if (confirmClear) AlertDialog(onDismissRequest = { confirmClear = false },
         title = { Text("Limpar histórico de consumo?") },
         text = { Text("Apaga apenas contagens locais deste aplicativo. " +
@@ -195,7 +302,8 @@ private fun GeminiUsageMetric(label: String, number: String, modifier: Modifier,
     Surface(modifier = modifier, shape = RoundedCornerShape(10.dp),
         color = if (warning) scheme.errorContainer.copy(alpha = 0.54f)
             else scheme.primaryContainer.copy(alpha = 0.43f)) {
-        Column(Modifier.padding(horizontal = 9.dp, vertical = 12.dp),
+        Column(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(number, style = MaterialTheme.typography.titleLarge,
                 maxLines = 1, color = if (warning) scheme.error else scheme.onSurface)

@@ -178,7 +178,9 @@ internal class GeminiSubtitleClient(context: Context? = null) {
     suspend fun transcribe(context: Context, project: VideoProject, key: String,
         onProgress: suspend (Int?,String) -> Unit): List<SubtitleCue> =
         if (failover == null) transcribeOnce(context, project, key, onProgress)
-        else failover.run(key) { credential -> transcribeOnce(context, project, credential, onProgress) }
+        else failover.run(key, "gemini-3.5-transcribe") { credential ->
+            transcribeOnce(context, project, credential, onProgress)
+        }
 
     private suspend fun transcribeOnce(context: Context, project: VideoProject, key: String,
         onProgress: suspend (Int?,String) -> Unit): List<SubtitleCue> = withContext(Dispatchers.IO) {

@@ -159,7 +159,7 @@ Cena: ${scene.take(1800)}"""
     private suspend fun requestJson(url: URL, validKey: String, payload: JSONObject?,
         operation: String? = null, model: String = ""): JSONObject =
         if (failover == null) requestJsonOnce(url, validKey, payload, operation, model)
-        else failover.run(validKey) { credential ->
+        else failover.run(validKey, model) { credential ->
             requestJsonOnce(url, credential, payload, operation, model)
         }
 

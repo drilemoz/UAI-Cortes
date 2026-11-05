@@ -161,11 +161,14 @@ internal class GeminiCredentialStore(context: Context) {
     @Synchronized fun setAutoFallback(value: Boolean) {
         check(prefs.edit().putBoolean("auto_fallback_v2", value).commit())
     }
-    /** Bloqueio temporário por projeto, inclusive se houver mais de uma chave do mesmo projeto. */
-    @Synchronized fun temporarilyBlocked(project: String): Boolean =
-        project.isNotBlank() && prefs.getLong("pause_" + project, 0L) > System.currentTimeMillis()
-    @Synchronized fun markExhausted(project: String) {
-        if (project.isNotBlank()) prefs.edit().putLong("pause_" + project,
+    /** Pausa específica por projeto+modelo; não bloqueia transcrição por falha do TTS. */
+    private fun pauseKey(project: String, model: String): String = "pause_" + project +
+        if (model.isBlank()) "" else "_model_" + model
+    @Synchronized fun temporarilyBlocked(project: String, model: String = ""): Boolean =
+        project.isNotBlank() && (prefs.getLong(pauseKey(project, model), 0L) > System.currentTimeMillis() ||
+            (model.isNotBlank() && prefs.getLong("pause_" + project, 0L) > System.currentTimeMillis()))
+    @Synchronized fun markExhausted(project: String, model: String = "") {
+        if (project.isNotBlank()) prefs.edit().putLong(pauseKey(project, model),
             System.currentTimeMillis() + 10L * 60 * 1000).commit()
     }
     companion object {

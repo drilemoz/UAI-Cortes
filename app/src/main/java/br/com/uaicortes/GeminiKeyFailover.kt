@@ -13,7 +13,7 @@ internal class GeminiHttpException(val statusCode: Int, text: String) : IOExcept
  */
 internal class GeminiKeyFailover(context: Context) {
     private val store = GeminiCredentialStore(context)
-    suspend fun <T> run(initialKey: String, action: suspend (String) -> T): T {
+    suspend fun <T> run(initialKey: String, model: String = "", action: suspend (String) -> T): T {
         val profiles = store.profiles()
         val configured = profiles.firstOrNull { runCatching { store.readProfile(it.id) == initialKey }.getOrDefault(false) }
         // Após um failover anterior, as próximas chamadas da mesma ação usam a chave ativa.
@@ -26,7 +26,7 @@ internal class GeminiKeyFailover(context: Context) {
         for (candidate in listOf(source) + profiles.filterNot { it.id == source.id }) {
             val sameProject = candidate.projectId == source.projectId
             if (candidate.projectId.isBlank() || candidate.projectId in triedProjects ||
-                store.temporarilyBlocked(candidate.projectId)) continue
+                store.temporarilyBlocked(candidate.projectId, model)) continue
             if (!sameProject && !GeminiFailoverPolicy.canSwitch(429, true, source.projectId,
                     candidate.projectId, triedProjects, false)) continue
             triedProjects += candidate.projectId
@@ -42,7 +42,7 @@ internal class GeminiKeyFailover(context: Context) {
             } catch (cancel: CancellationException) { throw cancel }
             catch (error: Exception) {
                 if (!quota429(error)) throw error
-                store.markExhausted(candidate.projectId)
+                store.markExhausted(candidate.projectId, model)
                 lastError = error
             }
         }

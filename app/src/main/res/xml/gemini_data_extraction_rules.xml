@@ -3,11 +3,13 @@
     <cloud-backup>
         <exclude domain="sharedpref" path="gemini_secret_local.xml" />
         <exclude domain="sharedpref" path="gemini_usage_local_v1.xml" />
+        <exclude domain="sharedpref" path="gemini_limits_local_v1.xml" />
         <exclude domain="file" path="gemini_narrations/" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="gemini_secret_local.xml" />
         <exclude domain="sharedpref" path="gemini_usage_local_v1.xml" />
+        <exclude domain="sharedpref" path="gemini_limits_local_v1.xml" />
         <exclude domain="file" path="gemini_narrations/" />
     </device-transfer>
 </data-extraction-rules>
