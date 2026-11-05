@@ -1,4 +1,6 @@
-# Uai Cortes · versão 0.1.144 (04/11/2026)
+# Uai Cortes · versão 0.1.145 (04/11/2026)
+**Vozes IA v0.1.145:** seletor de voz Gemini com janela ampla e responsiva, filtros de gênero/timbre sem corte lateral, pesquisa sempre visível e lista mais densa com destaque da seleção atual.
+
 
 **Vozes IA v0.1.144:** sincronização assistida com análise de conflito, ajuste local moderado de WAV que preserva o original, regeneração por ritmo confirmada, catálogo filtrável por características reais e botões compactos.
 

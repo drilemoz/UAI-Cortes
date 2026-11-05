@@ -17,7 +17,7 @@ assert 'semantics { contentDescription = accessibilityLabel }' in ui
 assert 'Collator.getInstance(Locale.forLanguageTag("pt-BR"))' in ui
 assert 'sortedVoices = catalog.sortedWith' in ui
 assert 'sortedStyles = GeminiNarrationStyling.presets.sortedWith' in ui
-assert 'heightIn(max = 310.dp)' in ui and 'heightIn(max = 245.dp)' in ui
+assert 'heightIn(max = 310.dp)' in ui and 'fillMaxHeight(0.83f)' in ui
 assert 'currentStyle == preset.label' in ui
 assert 'VoiceIaShortLabels' in ui
 assert 'pendingVoiceForAll' in ui and 'pendingStyleForAll' in ui

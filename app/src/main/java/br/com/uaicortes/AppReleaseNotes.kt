@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.144"
-    const val VERSION_CODE = 145
+    const val VERSION_NAME = "0.1.145"
+    const val VERSION_CODE = 146
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.145", listOf(
+            ReleaseFeature("voice-picker-wide-145", "Seletor Gemini mais amplo e compacto",
+                "Diálogo próximo à largura do celular, busca fixa, filtros sem cortes laterais e lista aproveitando a altura disponível.", "check"),
+            ReleaseFeature("voice-picker-natural-order-145", "Catálogo mais fácil de navegar",
+                "Atendente 2 vem antes de Atendente 10, seleção atual destacada, pesquisa e filtros preservados sem nova chamada Gemini.", "captions")
+        )),
         ReleaseSummary("0.1.144", listOf(
             ReleaseFeature("voice-ia-sync-144", "Sincronização assistida de voz",
                 "Diferença real de duração, aviso de sobreposição e ajuste WAV offline limitado com original preservado; regeneração guiada exige confirmação.", "captions"),

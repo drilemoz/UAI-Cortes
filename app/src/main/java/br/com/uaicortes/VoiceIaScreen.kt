@@ -23,6 +23,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import kotlinx.coroutines.CancellationException
@@ -482,8 +484,18 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
         val targetId = voicePickerCueId
         val forAll = voicePickerForAll
         val comparator = Collator.getInstance(Locale.forLanguageTag("pt-BR"))
+        // Ordem natural: Atendente 2 vem antes de Atendente 10, sem alterar IDs da API.
+        val suffix = Regex("""^(.*?)(\d+)$""")
         val sortedVoices = catalog.sortedWith { a, b ->
-            comparator.compare(GeminiVoicePresentation.label(a), GeminiVoicePresentation.label(b))
+            val first = GeminiVoicePresentation.label(a)
+            val second = GeminiVoicePresentation.label(b)
+            val firstParts = suffix.matchEntire(first)
+            val secondParts = suffix.matchEntire(second)
+            if (firstParts != null && secondParts != null &&
+                comparator.compare(firstParts.groupValues[1], secondParts.groupValues[1]) == 0) {
+                (firstParts.groupValues[2].toIntOrNull() ?: 0).compareTo(
+                    secondParts.groupValues[2].toIntOrNull() ?: 0)
+            } else comparator.compare(first, second)
         }
         var voiceQuery by remember(targetId, forAll) { mutableStateOf("") }
         var genderFilter by remember(targetId, forAll) { mutableStateOf("Todas") }
@@ -491,55 +503,153 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
         val filteredVoices = GeminiVoiceSearch.byPitch(
             GeminiVoiceSearch.byGender(GeminiVoiceSearch.filter(sortedVoices, voiceQuery), genderFilter),
             pitchFilter)
-        AlertDialog(onDismissRequest = { voicePickerCueId = null; voicePickerForAll = false },
-            modifier = Modifier.padding(horizontal = 10.dp), shape = RoundedCornerShape(14.dp),
-            title = { Text(if (forAll) "Voz para todas" else "Escolher voz Gemini", fontSize = 18.sp) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    if (sortedVoices.isEmpty()) Text("Busque o catálogo Gemini no ícone ✨ antes de selecionar.")
-                    else {
-                        OutlinedTextField(value = voiceQuery, onValueChange = { voiceQuery = it },
-                            label = { Text("Buscar nome ou característica") },
-                            singleLine = true, modifier = Modifier.fillMaxWidth(),
-                            textStyle = MaterialTheme.typography.bodySmall)
-                        Row(Modifier.horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                            listOf("Todas", "Femininas", "Masculinas").forEach { filter ->
-                                FilterChip(selected = genderFilter == filter, onClick = { genderFilter = filter },
-                                    label = { Text(filter, fontSize = 11.sp) })
+        val currentId = if (forAll) defaultVoice else
+            cues.firstOrNull { it.id == targetId }?.let { voiceFor(it) }
+        val closePicker = { voicePickerCueId = null; voicePickerForAll = false }
+        Dialog(onDismissRequest = closePicker,
+            properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            // A largura usa quase toda a tela: nenhuma pílula pode sair pela lateral.
+            Surface(modifier = Modifier.fillMaxWidth(0.96f).widthIn(max = 600.dp)
+                    .fillMaxHeight(0.83f),
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp) {
+                Column(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.RecordVoiceOver, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("Escolher voz Gemini", fontWeight = FontWeight.SemiBold,
+                                style = MaterialTheme.typography.titleMedium)
+                            Text(if (forAll) "Aplicar a todas as legendas" else "Voz desta legenda",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 12.sp)
+                        }
+                        IconButton(onClick = closePicker, modifier = Modifier.size(40.dp)) {
+                            Icon(Icons.Default.Close, contentDescription = "Fechar seleção de voz")
+                        }
+                    }
+                    OutlinedTextField(value = voiceQuery, onValueChange = { voiceQuery = it },
+                        placeholder = { Text("Buscar voz ou característica", fontSize = 13.sp) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null,
+                            modifier = Modifier.size(19.dp)) },
+                        trailingIcon = {
+                            if (voiceQuery.isNotBlank()) IconButton(onClick = { voiceQuery = "" }) {
+                                Icon(Icons.Default.Close, "Limpar pesquisa", Modifier.size(18.dp))
                             }
+                        },
+                        singleLine = true, modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        textStyle = MaterialTheme.typography.bodyMedium)
+                    Text("GÊNERO", style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        listOf("Todas", "Femininas", "Masculinas").forEach { option ->
+                            VoiceIaPickerFilter(option, genderFilter == option,
+                                Modifier.weight(1f), onClick = { genderFilter = option })
                         }
-                        Row(Modifier.horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                            listOf("Todos", "Graves", "Médias", "Agudas", "Não informado").forEach { filter ->
-                                FilterChip(selected = pitchFilter == filter, onClick = { pitchFilter = filter },
-                                    label = { Text(filter, fontSize = 11.sp) })
-                            }
+                    }
+                    Text("ALTURA DA VOZ", style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf("Todos" to "Todas", "Graves" to "Grave",
+                            "Médias" to "Média", "Agudas" to "Aguda",
+                            "Não informado" to "N/D").forEach { (value, label) ->
+                            VoiceIaPickerFilter(label, pitchFilter == value,
+                                Modifier.weight(1f), accessibilityLabel = value,
+                                onClick = { pitchFilter = value })
                         }
-                        Text("${filteredVoices.size} de ${sortedVoices.size} vozes · filtros por dados da API",
-                            style = MaterialTheme.typography.labelSmall)
-                        if (filteredVoices.isEmpty()) Text("Nenhuma voz corresponde aos filtros selecionados.")
-                        LazyColumn(Modifier.fillMaxWidth().heightIn(max = 245.dp)) {
-                            itemsIndexed(filteredVoices, key = { _, voice -> voice.id }) { _, voice ->
-                        Column(Modifier.fillMaxWidth().clickable {
-                            if (forAll) pendingVoiceForAll = voice.id
-                            else if (targetId != null) voiceOverrides[targetId] = voice.id
-                            voicePickerCueId = null
-                            voicePickerForAll = false
-                        }.padding(horizontal = 5.dp, vertical = 7.dp)) {
-                            Text(VoiceIaShortLabels.voice(voice, voice.id), fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium)
-                            Text(GeminiVoicePresentation.shortDetails(voice),
-                                style = MaterialTheme.typography.labelSmall)
-                        }
-                        HorizontalDivider()
+                    }
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("${filteredVoices.size} de ${sortedVoices.size} vozes",
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (voiceQuery.isNotBlank() || genderFilter != "Todas" || pitchFilter != "Todos") {
+                            TextButton(onClick = {
+                                voiceQuery = ""; genderFilter = "Todas"; pitchFilter = "Todos"
+                            }, contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)) {
+                                Text("Limpar filtros", fontSize = 12.sp)
                             }
                         }
                     }
+                    HorizontalDivider()
+                    if (sortedVoices.isEmpty()) {
+                        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            Text("Carregue o catálogo no botão ✨ da tela Vozes IA.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    } else if (filteredVoices.isEmpty()) {
+                        Column(Modifier.weight(1f).fillMaxWidth(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.SearchOff, contentDescription = null,
+                                modifier = Modifier.size(32.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.height(8.dp))
+                            Text("Nenhuma voz encontrada", fontWeight = FontWeight.Medium)
+                            Text("Experimente remover um filtro.", fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    } else {
+                        LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(),
+                            contentPadding = PaddingValues(vertical = 3.dp),
+                            verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            itemsIndexed(filteredVoices, key = { _, voice -> voice.id }) { _, voice ->
+                                val selected = currentId == voice.id
+                                Surface(onClick = {
+                                    if (forAll) pendingVoiceForAll = voice.id
+                                    else if (targetId != null) voiceOverrides[targetId] = voice.id
+                                    closePicker()
+                                }, modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = if (selected) MaterialTheme.colorScheme.primaryContainer
+                                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)) {
+                                    Row(Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically) {
+                                        Box(Modifier.size(34.dp).clip(RoundedCornerShape(9.dp))
+                                                .background(MaterialTheme.colorScheme.surface),
+                                            contentAlignment = Alignment.Center) {
+                                            Icon(Icons.Default.GraphicEq, contentDescription = null,
+                                                modifier = Modifier.size(20.dp),
+                                                tint = MaterialTheme.colorScheme.primary)
+                                        }
+                                        Spacer(Modifier.width(9.dp))
+                                        Column(Modifier.weight(1f)) {
+                                            Text(VoiceIaShortLabels.voice(voice, voice.id),
+                                                fontSize = 14.sp, fontWeight = FontWeight.Medium,
+                                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Text(GeminiVoicePresentation.shortDetails(voice),
+                                                fontSize = 11.sp, lineHeight = 14.sp, maxLines = 2,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                overflow = TextOverflow.Ellipsis)
+                                        }
+                                        if (selected) {
+                                            Spacer(Modifier.width(6.dp))
+                                            Icon(Icons.Default.CheckCircle, "Voz selecionada",
+                                                modifier = Modifier.size(19.dp),
+                                                tint = MaterialTheme.colorScheme.primary)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    HorizontalDivider()
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (forAll) "A alteração geral pede confirmação."
+                             else "Toque em uma voz para escolher.",
+                            fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f))
+                        TextButton(onClick = closePicker) { Text("Fechar") }
+                    }
                 }
-            }, confirmButton = { TextButton(onClick = {
-                voicePickerCueId = null; voicePickerForAll = false
-            }) { Text("Fechar") } })
+            }
+        }
     }
     if (stylePickerCueId != null || stylePickerForAll) {
         val targetId = stylePickerCueId
@@ -927,5 +1037,26 @@ internal object VoiceIaShortLabels {
         "Publicitária" -> "Anúncio"
         "Sarcástica" -> "Sarcasmo"
         else -> name
+    }
+}
+
+/** Segmento de filtro: largura dividida igualmente, sem scroll ou corte lateral. */
+@Composable
+private fun VoiceIaPickerFilter(label: String, selected: Boolean, modifier: Modifier = Modifier,
+    accessibilityLabel: String = label, onClick: () -> Unit) {
+    val color = if (selected) MaterialTheme.colorScheme.primaryContainer
+        else MaterialTheme.colorScheme.surface
+    Surface(onClick = onClick, modifier = modifier.height(40.dp)
+            .semantics { contentDescription = "Filtro $accessibilityLabel" },
+        shape = RoundedCornerShape(9.dp), color = color,
+        border = BorderStroke(1.dp, if (selected) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.outlineVariant)) {
+        Box(Modifier.fillMaxSize().padding(horizontal = 2.dp), contentAlignment = Alignment.Center) {
+            Text(label, fontSize = 11.sp, maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                    else MaterialTheme.colorScheme.onSurface,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
+        }
     }
 }

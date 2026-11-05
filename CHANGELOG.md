@@ -1,4 +1,11 @@
-# Uai Cortes · versão 0.1.144 (04/11/2026)
+# Uai Cortes · versão 0.1.145 (04/11/2026)
+
+## 0.1.145 — Seletor de vozes Gemini redesenhado
+- Diálogo quase na largura total do dispositivo, com dimensões limitadas também para tablets e altura útil para a lista.
+- Filtros distribuídos igualmente em linhas fixas; sem rolagem horizontal ou opção Agudas cortada. Filtro N/D = altura não informada pela API.
+- Busca com limpar, contagem e limpar filtros, listagem com cartões compactos e seleção atual marcada. Ordenação numérica natural de vozes enumeradas (2 antes de 10).
+- Sem mudanças em geração, áudio, credenciais, legendas, exportação e contratos do projeto.
+
 
 - **Vozes IA:** assistente verifica fim da legenda, próxima fala e fim do projeto; oferece derivação offline em WAV (até 1,25×, com pré-escuta recomendada), ou regeneração Gemini com orientação aproximada, sem cortes silenciosos nem edição automática das legendas.
 - **Catálogo e UI:** pesquisa e filtros combináveis por gênero e altura declarados, nomes amigáveis dos IDs conhecidos, ações compactas; dados originais e WAV anterior preservados.

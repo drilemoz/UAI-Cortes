@@ -1,4 +1,10 @@
-# Uai Cortes · versão 0.1.144 (04/11/2026)
+# Uai Cortes · versão 0.1.145 (04/11/2026)
+
+## 0.1.145 — Janela de vozes aprimorada
+- Busca e filtros mais acessíveis, seleção atual destacada, lista rolável aproveitando a altura da tela.
+- Filtros de gênero e timbre sem elementos cortados nas laterais.
+- O catálogo continua vindo da API; nenhuma nova chamada é feita ao apenas filtrar/escolher.
+
 
 - Novo ajuste assistido: detectar sobreposição, gerar WAV local derivado para pequenos desvios, preservar o original e exigir escuta antes de inserir. Para grandes diferenças, regenerar com ritmo orientado após confirmação de consumo Gemini.
 - Busca e filtros de vozes (feminina/masculina; grave/média/aguda) usando dados reais, botões curtos e nomes amigáveis para padrões reconhecidos.
