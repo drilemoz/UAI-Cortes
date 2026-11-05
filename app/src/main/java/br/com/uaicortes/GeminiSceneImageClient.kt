@@ -38,6 +38,7 @@ internal object StudioImagePricing {
 /** Endpoint de IMAGEM Gemini apenas; nunca usa endpoints Veo ou pagamento automático. */
 internal class GeminiSceneImageClient(context: Context) {
     private val ledger = GeminiUsageLedger(context)
+    private val failover = GeminiKeyFailover(context)
     private val running = AtomicReference<HttpURLConnection?>(null)
     fun cancel() { running.getAndSet(null)?.disconnect() }
 
@@ -50,7 +51,9 @@ internal class GeminiSceneImageClient(context: Context) {
         do {
             val address = "https://generativelanguage.googleapis.com/v1beta/models?pageSize=100" +
                 (next?.let { "&pageToken=" + URLEncoder.encode(it, "UTF-8") } ?: "")
-            val data = fetch(URL(address), safe, null, 300_000)
+            val data = failover.run(safe) { credential ->
+                fetch(URL(address), credential, null, 300_000)
+            }
             val rows = data.optJSONArray("models") ?: JSONArray()
             for (index in 0 until rows.length()) {
                 val row = rows.optJSONObject(index) ?: continue
@@ -86,8 +89,15 @@ internal class GeminiSceneImageClient(context: Context) {
             .put("generationConfig", JSONObject()
                 .put("responseModalities", JSONArray().put("IMAGE").put("TEXT"))
                 .put("imageConfig", JSONObject().put("aspectRatio", "9:16")))
+        // Somente troca de projeto após HTTP 429 confirmado e opção global ativada.
+        // Cada tentativa é registrada no projeto realmente utilizado.
+        failover.run(GeminiKeyParser.validate(key), model) { credential ->
+            createImageOnce(credential, model, request)
+        }
+    }
+
+    private suspend fun createImageOnce(safe: String, model: String, request: JSONObject): ByteArray {
         val started = System.nanoTime()
-        val safe = GeminiKeyParser.validate(key)
         var actualResponse: JSONObject? = null
         var recorded = false
         try {
@@ -109,7 +119,7 @@ internal class GeminiSceneImageClient(context: Context) {
                     recorded = true
                     ledger.safeRecord(safe, model, "studio_image", result,
                         latencyMs = (System.nanoTime() - started) / 1_000_000)
-                    return@withContext bytes
+                    return bytes
                 }
             }
             throw IOException("Nenhuma imagem utilizável foi retornada pelo Gemini.")

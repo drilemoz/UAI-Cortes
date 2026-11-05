@@ -16,17 +16,20 @@ internal class GeminiKeyFailover(context: Context) {
     suspend fun <T> run(initialKey: String, model: String = "", action: suspend (String) -> T): T {
         val profiles = store.profiles()
         val configured = profiles.firstOrNull { runCatching { store.readProfile(it.id) == initialKey }.getOrDefault(false) }
-        // Após um failover anterior, as próximas chamadas da mesma ação usam a chave ativa.
-        val source = if (configured != null && store.autoFallbackEnabled())
-            profiles.firstOrNull { it.id == store.activeId() } ?: configured else configured
+        // A seleção feita em Configurações é global para TODAS as novas operações.
+        // Nunca usar uma cópia antiga da chave capturada pela tela antes da troca manual.
+        val source = profiles.firstOrNull { it.id == store.activeId() } ?: configured
         val selectedKey = source?.let { store.readProfile(it.id) } ?: initialKey
         if (source == null || source.projectId.isBlank() || !store.autoFallbackEnabled()) return action(selectedKey)
         val triedProjects = mutableSetOf<String>()
         var lastError: Exception? = null
+        val sourceWasPaused = store.temporarilyBlocked(source.projectId, model)
         for (candidate in listOf(source) + profiles.filterNot { it.id == source.id }) {
             val sameProject = candidate.projectId == source.projectId
             if (candidate.projectId.isBlank() || candidate.projectId in triedProjects ||
                 store.temporarilyBlocked(candidate.projectId, model)) continue
+            // O 429 deve ter ocorrido nesta operação, ou ter pausado previamente o projeto ativo.
+            if (!sameProject && lastError == null && !sourceWasPaused) break
             if (!sameProject && !GeminiFailoverPolicy.canSwitch(429, true, source.projectId,
                     candidate.projectId, triedProjects, false)) continue
             triedProjects += candidate.projectId

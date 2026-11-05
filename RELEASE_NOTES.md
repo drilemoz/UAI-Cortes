@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.163 — Estúdio em clipes e Gemini global
+
+- **Cada cena é um clipe:** o fluxo agora permite criar Cena 1, Cena 2 etc. manualmente, sem história obrigatória; cada uma tem ação, fala, câmera, sons, imagem inicial e prompt próprios.
+- **Gemini opcional:** pode sugerir história/cenas, aprimorar um único clipe, gerar imagem vertical ou deixar o usuário preparar localmente o prompt em inglês, sem cobrança.
+- **Chave compartilhada:** seleção da credencial em Configurações aplica-se às novas chamadas de IA; Estúdio de texto, imagem e listagem de imagens agora respeitam alternância 429 por projetos distintos quando habilitada.
+- **Limites:** não repetir 503, timeout, erros de autorização ou respostas incertas; modelo de outro projeto não é automaticamente trocado. Testes Android e chamadas reais seguem pendentes.
+
 # Uai Cortes · versão 0.1.162 (05/11/2026)
 - **Estúdio de Cenas mais simples:** apenas a ideia na entrada, com opções de duração/estilo/gênero recolhidas, resumo legível de título/sinopse/roteiro e campos detalhados sob demanda. "Surpreenda-me" fornece sugestão local imediata e explica que não usa Gemini.
 - **Cenas inteligentes:** Gemini solicita falas por personagem e duração estimada por cena; cartões mostram cena, personagens, falas, câmera, sons e ações sem longos formulários. Edição estruturada de falas, menu de ferramentas e um botão principal por vez.

@@ -70,12 +70,13 @@ internal fun FlowWorkspaceScreen(back: () -> Unit) {
         Heading("Estúdio de Cenas", back)
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Prepare cenas sem importar vídeo. Cada conjunto possui suas cenas e compartilha o mesmo estilo-base 3D salvo no aparelho.",
+            Text("Dê um nome ao projeto, escreva sua ideia e crie cada cena como um clipe separado para o Flow. " +
+                "A história com Gemini é opcional; o modo manual permanece disponível.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Button(onClick = { title = ""; creating = true }, modifier = Modifier.fillMaxWidth(),
                 enabled = entries != null && entries.orEmpty().size < 30) {
-                Icon(Icons.Default.Add, null); Text(" Criar conjunto de cenas")
+                Icon(Icons.Default.Add, null); Text(" Novo projeto de cenas")
             }
             if (entries == null) Text("O catálogo salvo não pôde ser lido. Os dados foram preservados; recupere o armazenamento antes de criar novos projetos.",
                 color = MaterialTheme.colorScheme.error)

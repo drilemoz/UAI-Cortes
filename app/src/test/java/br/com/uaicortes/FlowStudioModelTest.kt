@@ -82,6 +82,32 @@ class FlowStudioModelTest {
         assertEquals("Sem nome", lines[2].speech)
     }
 
+    @Test fun manualClipDoesNotRequireStoryApprovalOrGemini() {
+        val idea = StudioStory(idea = "Abacate e banana brigando", approved = false)
+        val scene1 = StudioScene(title = "Encontro", actions = "Os dois se olham em silêncio", finalState = "Os dois se olham")
+        val scene2 = StudioScene(title = "O abacate fala", actions = "Abacate gesticula",
+            camera = "close no abacate", dialogueLines = listOf(
+                StudioDialogueLine("Abacate", "Não gosto de vitamina com banana!")))
+        val draft = FlowStudioDraft(story = idea, scenes = listOf(scene1, scene2))
+        assertTrue(FlowStudioClipPolicy.canDivide(idea))
+        assertFalse(idea.ready())
+        assertTrue(FlowStudioClipPolicy.canPrepare(scene1))
+        val output = FlowStudioClipPolicy.prepare(scene2, draft, 1)
+        assertEquals(scene2.id, output.id)
+        assertTrue(output.prompt.contains("Não gosto de vitamina com banana!"))
+        assertTrue(output.prompt.contains("close no abacate"))
+        assertTrue(output.prompt.contains("Os dois se olham"))
+        assertFalse(output.prompt.contains("9:16"))
+        assertEquals("", scene2.prompt) // Original nunca alterado implicitamente
+    }
+
+    @Test fun incompleteSpeakerDoesNotCreateFakeSpeechOrRequireApi() {
+        val empty = StudioScene(dialogueLines = listOf(StudioDialogueLine("Banana", "")))
+        assertEquals("", empty.effectiveDialogue())
+        assertFalse(FlowStudioClipPolicy.canPrepare(empty))
+        assertFalse(FlowStudioClipPolicy.canDivide(StudioStory()))
+    }
+
     @Test fun sceneTimeBudgetMatchesStoryWithoutPuttingDurationInPrompts() {
         assertEquals(listOf(9, 9, 9, 8, 8, 8, 8, 8, 8), StudioSceneTiming.distribute(75, 9))
         assertEquals(75, StudioSceneTiming.distribute(75, 9).sum())

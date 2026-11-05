@@ -158,8 +158,9 @@ CONTEXTO:\n${contextText.take(1200)}"""
             .put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", instruction)))))
             .put("generationConfig", JSONObject().put("responseMimeType", "application/json")
                 .put("maxOutputTokens", if (operation == "studio_scenes") 14000 else 4500))
-        // Sem failover implícito em ações de geração: após interrupção o resultado pode ter sido cobrado.
-        val response = requestJsonOnce(URL(
+        // Uma ação confirmada pode usar o failover OPT-IN somente após HTTP 429 inequívoco.
+        // Falhas de rede/5xx e respostas inválidas não são reenviadas automaticamente.
+        val response = requestJson(URL(
             "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent"),
             GeminiKeyParser.validate(key), payload, operation, model)
         val parts = response.optJSONArray("candidates")?.optJSONObject(0)?.optJSONObject("content")
@@ -221,7 +222,7 @@ CONTEXTO:\n${contextText.take(1200)}"""
         } catch (_: UnknownHostException) {
             throw IOException("Sem conexão com a internet.")
         } catch (_: SocketTimeoutException) {
-            throw IOException("O Gemini demorou a responder. Tente novamente.")
+            throw IOException("Tempo esgotado sem resposta confirmada. Confira o consumo antes de tentar novamente.")
         } finally {
             connection.compareAndSet(http, null)
             http.disconnect()
@@ -249,7 +250,7 @@ CONTEXTO:\n${contextText.take(1200)}"""
             "Cota Gemini esgotada. Consulte os limites do seu projeto antes de tentar novamente."
         status == 429 -> "Limite de requisições Gemini atingido. Aguarde antes de tentar novamente."
         status == 408 || status == 503 || status == 504 || status in 500..599 ->
-            "O Gemini está temporariamente indisponível. Tente novamente mais tarde."
+            "Gemini indisponível (HTTP $status). Verifique o modelo e tente manualmente mais tarde; nenhuma nova geração foi iniciada automaticamente."
         else -> "Não foi possível consultar o Gemini (HTTP $status)."
     }
 }

@@ -68,7 +68,7 @@ internal fun GeminiKeyPoolSettings(store: GeminiCredentialStore, onChanged: () -
                         tint = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("Minhas chaves", style = MaterialTheme.typography.titleSmall)
+                    Text("Chave Gemini para todo o aplicativo", style = MaterialTheme.typography.titleSmall)
                     Text("${entries.size}/8 protegidas · Limites por projeto Google Cloud",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -135,7 +135,7 @@ internal fun GeminiKeyPoolSettings(store: GeminiCredentialStore, onChanged: () -
                                     style = MaterialTheme.typography.bodySmall)
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     OutlinedButton(onClick = {
-                                        runCatching { store.select(profile.id); refresh(); feedback = "Chave ativa alterada." }
+                                        runCatching { store.select(profile.id); refresh(); feedback = "Chave global alterada para as próximas chamadas de IA do aplicativo." }
                                             .onFailure { feedback = "Não foi possível selecionar a chave." }
                                     }, enabled = !busy && !active,
                                         modifier = Modifier.weight(1f).heightIn(min = 40.dp),

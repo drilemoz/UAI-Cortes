@@ -15,7 +15,7 @@ assert 'Gemini: dividindo história e preparando as cenas' in ui
 assert 'Câmera · ${scene.camera}' in ui and 'Sons · ${scene.effects}' in ui
 assert 'Falas por personagem' in ui and 'Quem fala?' in ui
 assert 'Duração estimada da cena (1–60 s)' in ui
-assert 'Câmera, sons, visual e continuidade' in ui
+assert 'Mais detalhes, visual e continuidade' in ui
 assert 'Editar título e detalhes manualmente' in ui
 assert 'StudioSceneTiming.total(draft.scenes)' in ui
 assert 'dialogueLines' in model and 'durationSeconds' in model

@@ -116,8 +116,9 @@ internal data class StudioScene(
         .put("videoName", videoName).put("durationSeconds", durationSeconds)
         .put("dialogueLines", JSONArray().also { a -> dialogueLines.take(20).forEach { a.put(it.json()) } })
     fun effectiveDialogue() = if (dialogueLines.isNotEmpty())
-        dialogueLines.joinToString("\n") { "${it.speaker.ifBlank { "Personagem" }}: ${it.speech}" }
-        else dialogue
+        dialogueLines.filter { it.speech.isNotBlank() }.joinToString("\n") {
+            "${it.speaker.ifBlank { "Personagem" }}: ${it.speech}"
+        } else dialogue
     fun ready() = title.isNotBlank() && prompt.isNotBlank() && imageAsset.isNotBlank()
     fun status() = when {
         videoUri.isNotBlank() -> "Vídeo importado"
