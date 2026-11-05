@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -54,6 +55,24 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
     var generatedSize by remember(project.id) { mutableIntStateOf(20) }
     var editIndex by remember { mutableStateOf<Int?>(null) }
     var editText by remember { mutableStateOf("") }
+    val geminiCheckpoint = remember(context, project.id) {
+        GeminiTaskCheckpointStore(context, GeminiTaskKind.LEGENDAS, project.id)
+    }
+    val mediaFingerprint = remember(project.clips, project.overlays, project.audioTracks, project.music) {
+        GeminiTaskRecoveryPolicy.digest(buildString {
+            project.clips.forEach { append(it.json().toString()) }
+            project.overlays.forEach { append(it.json().toString()) }
+            project.audioTracks.forEach { append(it.json().toString()) }
+            append(project.music?.json()?.toString().orEmpty())
+            append(project.durationMs)
+        })
+    }
+    var savedGeminiTask by remember(project.id) { mutableStateOf<GeminiTaskCheckpoint?>(null) }
+    LaunchedEffect(project.id, mediaFingerprint) {
+        savedGeminiTask = withContext(Dispatchers.IO) {
+            runCatching { geminiCheckpoint.load(mediaFingerprint) }.getOrNull()
+        }
+    }
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal=16.dp)) {
         Row(Modifier.fillMaxWidth().height(58.dp), verticalAlignment=Alignment.CenterVertically) {
             IconButton(onClick=back, enabled=!busy) { Icon(Icons.Default.ArrowBack, "Voltar") }
@@ -122,6 +141,41 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                 Icon(Icons.Default.AutoAwesome,null)
                 Spacer(Modifier.width(8.dp))
                 Text("Transcrever com Gemini (online)")
+            }
+            savedGeminiTask?.let { saved ->
+                if (!busy) Surface(shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant) {
+                    Column(Modifier.fillMaxWidth().padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(if (saved.stage == GeminiTaskStage.READY)
+                            "Legendas Gemini recuperáveis neste aparelho (sem nova chamada)."
+                        else "A transcrição anterior foi interrompida ou tem resultado incerto. " +
+                            "Repetir pode consumir cota novamente.",
+                            style = MaterialTheme.typography.bodySmall)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (saved.stage == GeminiTaskStage.READY) {
+                                OutlinedButton(onClick = { scope.launch {
+                                    try {
+                                        results = withContext(Dispatchers.IO) {
+                                            val persisted = geminiCheckpoint.load(mediaFingerprint)
+                                                ?: throw java.io.IOException("Resultado não encontrado")
+                                            geminiCheckpoint.subtitles(persisted)
+                                        }
+                                        replace = false
+                                        message = "Resultado local restaurado. Revise as legendas antes de aplicar."
+                                    } catch (e: Exception) {
+                                        message = "Não foi possível recuperar as legendas: " +
+                                            (e.message ?: "cache inválido")
+                                    }
+                                } }) { Text("Restaurar") }
+                            }
+                            TextButton(onClick = { scope.launch {
+                                withContext(Dispatchers.IO) { runCatching { geminiCheckpoint.clear() } }
+                                savedGeminiTask = null
+                            } }) { Text("Descartar registro") }
+                        }
+                    }
+                }
             }
             if(busy) {
                 Surface(shape=RoundedCornerShape(14.dp),
@@ -224,23 +278,48 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                 elapsedSeconds=0L
                 busy=true;runningCloud=true;progress=null;results=emptyList();replace=false
                 message="Preparando áudio para IA…"
+                var geminiStarted = false
                 try {
                     val apiKey=withContext(Dispatchers.IO) {
                         geminiStore.read() ?: throw IllegalStateException("Configure sua chave Gemini.")
                     }
+                    withContext(Dispatchers.IO) {
+                        geminiCheckpoint.start(mediaFingerprint, "gemini-3.5-transcribe")
+                    }
+                    savedGeminiTask = null
+                    geminiStarted = true
                     val generated=geminiClient.transcribe(context,project,apiKey) { pct,step ->
                         withContext(Dispatchers.Main) { progress=pct; message=step }
                     }
+                    withContext(Dispatchers.IO) {
+                        geminiCheckpoint.saveSubtitles(mediaFingerprint, "gemini-3.5-transcribe", generated)
+                    }
+                    savedGeminiTask = GeminiTaskCheckpoint(mediaFingerprint, "gemini-3.5-transcribe",
+                        GeminiTaskStage.READY, System.currentTimeMillis()) // resultado está no arquivo privado
                     results=generated
                     message=if(generated.isEmpty()) "Nenhuma palavra reconhecida."
                         else "${generated.size} legendas geradas por Gemini. Revise antes de aplicar. " +
                             GeminiUsageLedger(context).lastMessage("legendas")
                     progress=100
                 } catch(_: CancellationException) {
-                    message="Envio/transcrição cancelados. Nenhuma legenda foi aplicada."
+                    if (geminiStarted) {
+                        withContext(NonCancellable + Dispatchers.IO) {
+                            runCatching { geminiCheckpoint.review(mediaFingerprint, "gemini-3.5-transcribe") }
+                        }
+                        savedGeminiTask = GeminiTaskCheckpoint(mediaFingerprint, "gemini-3.5-transcribe",
+                            GeminiTaskStage.REVIEW, System.currentTimeMillis())
+                    }
+                    message="Transcrição cancelada. Nenhuma legenda aplicada; verifique a tentativa anterior."
                 } catch(e: Exception) {
-                    // Não registrar chave, áudio ou corpo da resposta da API.
-                    message="Não foi possível transcrever: ${e.message?.take(160) ?: "falha na API"}"
+                    if (geminiStarted) {
+                        withContext(NonCancellable + Dispatchers.IO) {
+                            runCatching { geminiCheckpoint.review(mediaFingerprint, "gemini-3.5-transcribe") }
+                        }
+                        savedGeminiTask = GeminiTaskCheckpoint(mediaFingerprint, "gemini-3.5-transcribe",
+                            GeminiTaskStage.REVIEW, System.currentTimeMillis())
+                    }
+                    message = GeminiOperationFailure.label(GeminiOperationFailure.fromThrowable(e)) +
+                        ". Nenhuma legenda foi aplicada."
                 } finally {busy=false;task=null}
             }
         }) { Text("Enviar e transcrever") }},

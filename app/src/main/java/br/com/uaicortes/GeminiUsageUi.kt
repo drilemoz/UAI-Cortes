@@ -255,6 +255,14 @@ internal fun GeminiUsagePanel() {
                                     style = MaterialTheme.typography.bodySmall)
                             }
                         }
+                        Text("Consumo por função e classificação de falhas", style = MaterialTheme.typography.titleSmall)
+                        for ((operation, events) in filtered.groupBy { it.operation }.toSortedMap()) {
+                            val successes = events.count { it.status == "ok" }
+                            val failures = events.size - successes
+                            val tokens = events.mapNotNull { it.tokens?.total }.sum()
+                            Text("$operation: $successes concluída(s), $failures falha(s), " +
+                                "$tokens tokens informados", style = MaterialTheme.typography.bodySmall)
+                        }
                         Text("Últimas operações", style = MaterialTheme.typography.titleSmall)
                         val time = remember { SimpleDateFormat("dd/MM HH:mm", Locale("pt", "BR")) }
                         for (event in filtered.takeLast(5).asReversed()) {
@@ -273,7 +281,9 @@ internal fun GeminiUsagePanel() {
                                     Column(Modifier.weight(1f)) {
                                         Text("${event.operation} · ${time.format(Date(event.at))}",
                                             style = MaterialTheme.typography.labelMedium)
-                                        Text("${if (event.status == "429") "limite 429" else if (event.status == "ok") "gerado" else "falha"} · $amount",
+                                        Text("${if (event.status == "ok") "gerado" else GeminiOperationFailure.label(
+                                            GeminiOperationFailure.fromHttp(
+                                                event.status.removePrefix("erro_").toIntOrNull() ?: -1))} · $amount",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }

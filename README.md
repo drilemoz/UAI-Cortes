@@ -1,3 +1,6 @@
+# Uai Cortes · versão 0.1.156 (05/11/2026)
+**Gemini 0.1.156:** recuperação local e manual de legendas e descrição geradas, com checkpoint atômico temporário privado e validação por fingerprint; chamadas interrompidas não são repetidas automaticamente. Diagnóstico de erros categorizado e consumo agrupado por operação no painel Gemini. Sem alterar chaves, mídia de origem, projetos JSON (schema 4) ou exportação. Build Android e testes reais pendentes.
+
 # Uai Cortes · versão 0.1.155 (05/11/2026)
 - **Vozes IA:** fila local persistente para gerar lotes com confirmação de cota, retomada manual e sem serviço em segundo plano. O registro contém IDs, fingerprints e opções de voz, não a chave nem o texto das legendas.
 - Cada pedido registra **em andamento** antes da chamada Gemini e **concluído** somente depois do WAV salvo; ao reabrir, pedidos em andamento sem WAV verificado exigem revisão explícita para não repetir cobranças involuntariamente.

@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.156 (05/11/2026)
+- **Transcrição Gemini:** snapshot durável de até 1 MiB por projeto, válido por até 7 dias e somente para a mesma mídia/cortes/áudios. Restaurar gera rascunho para revisão, sem aplicar legendas nem refazer a API.
+- **Descrição para publicar:** salvar resultado em cache privado e também tentar persistir no projeto; restaurar sem nova chamada apenas após ação do usuário.
+- **Interrupções:** status IN_FLIGHT vira REVIEW após reinício; erro/cancelamento após iniciar chamada não causa repetição automática. Dados de áudio, URI, chave e prompt não entram no manifesto; rascunho recuperável contém somente o texto já produzido.
+- **Consumo Gemini:** erros classificados por tipo e contagem de sucesso/falhas por operação. Histórico local não é saldo oficial.
+- 0.1.156 / versionCode 157, schemaVersion 4, cinco APKs Release no CI mantidos. Compilação Android e testes físicos ainda pendentes.
+
 # Uai Cortes · versão 0.1.155 (05/11/2026)
 - **Vozes IA:** fila local persistente para gerar lotes com confirmação de cota, retomada manual e sem serviço em segundo plano. O registro contém IDs, fingerprints e opções de voz, não a chave nem o texto das legendas.
 - Cada pedido registra **em andamento** antes da chamada Gemini e **concluído** somente depois do WAV salvo; ao reabrir, pedidos em andamento sem WAV verificado exigem revisão explícita para não repetir cobranças involuntariamente.

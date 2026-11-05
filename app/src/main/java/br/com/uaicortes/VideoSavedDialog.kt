@@ -29,6 +29,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -110,6 +111,18 @@ internal fun VideoSavedDialog(
     val contextToSend = remember(videoContext, topic) {
         listOf(videoContext.trim().take(900), topic.trim().take(280))
             .filter { it.isNotBlank() }.joinToString("\n")
+    }
+    val descriptionCheckpoint = remember(uri) {
+        GeminiTaskCheckpointStore(context, GeminiTaskKind.DESCRICAO, uri.toString())
+    }
+    val descriptionFingerprint = remember(contextToSend, selectedModel) {
+        GeminiTaskRecoveryPolicy.digest("$selectedModel\n$contextToSend")
+    }
+    var savedDescriptionTask by remember(uri) { mutableStateOf<GeminiTaskCheckpoint?>(null) }
+    LaunchedEffect(uri, descriptionFingerprint) {
+        savedDescriptionTask = withContext(Dispatchers.IO) {
+            runCatching { descriptionCheckpoint.load(descriptionFingerprint) }.getOrNull()
+        }
     }
 
     var showCaptionDialog by remember(uri) { mutableStateOf(false) }
@@ -470,6 +483,39 @@ internal fun VideoSavedDialog(
                 }
 
 
+                        savedDescriptionTask?.let { checkpoint ->
+                            Surface(shape = RoundedCornerShape(9.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant) {
+                                Column(Modifier.fillMaxWidth().padding(9.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(if (checkpoint.stage == GeminiTaskStage.READY)
+                                        "Descrição anterior recuperável localmente, sem Gemini."
+                                    else "Uma geração anterior foi interrompida. Repetir pode consumir cota.",
+                                        style = MaterialTheme.typography.bodySmall)
+                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        if (checkpoint.stage == GeminiTaskStage.READY)
+                                            TextButton(onClick = { scope.launch {
+                                                val recovered = withContext(Dispatchers.IO) {
+                                                    runCatching { descriptionCheckpoint.load(descriptionFingerprint)
+                                                        ?.let(descriptionCheckpoint::description) }.getOrNull()
+                                                }
+                                                if (recovered != null) {
+                                                    description = recovered.description
+                                                    hashtags = recovered.hashtags
+                                                    failure = if (persistDraft()) null
+                                                        else "Não foi possível salvar o rascunho recuperado."
+                                                } else failure = "Rascunho recuperável indisponível."
+                                            } }) { Text("Restaurar") }
+                                        TextButton(onClick = { scope.launch {
+                                            withContext(Dispatchers.IO) {
+                                                runCatching { descriptionCheckpoint.clear() }
+                                            }
+                                            savedDescriptionTask = null
+                                        } }) { Text("Descartar") }
+                                    }
+                                }
+                            }
+                        }
                         if (usageInfo.isNotBlank()) Text(usageInfo,
                             style = MaterialTheme.typography.labelSmall)
                         failure?.let { Text(it, color = MaterialTheme.colorScheme.error,
@@ -514,21 +560,44 @@ internal fun VideoSavedDialog(
                 generating = true
                 failure = null
                 scope.launch {
+                    var geminiStarted = false
                     try {
                         val key = withContext(Dispatchers.IO) {
                             GeminiCredentialStore(context).read()
                         } ?: throw IOException("Configure sua chave Gemini em Configurações antes de gerar.")
+                        withContext(Dispatchers.IO) {
+                            descriptionCheckpoint.start(descriptionFingerprint, selectedModel)
+                        }
+                        savedDescriptionTask = null
+                        geminiStarted = true
                         val result = generator.generate(key, contextToSend, selectedModel)
+                        withContext(Dispatchers.IO) {
+                            descriptionCheckpoint.saveDescription(descriptionFingerprint, selectedModel,
+                                VideoPublicationDraft(result.description, result.hashtags))
+                        }
+                        savedDescriptionTask = GeminiTaskCheckpoint(descriptionFingerprint, selectedModel,
+                            GeminiTaskStage.READY, System.currentTimeMillis())
                         description = result.description
                         hashtags = result.hashtags
                         copied = false
                         hasGenerated = true
                         usageInfo = GeminiUsageLedger(context).lastMessage("descricao")
+                        if (!persistDraft()) failure = "Descrição gerada e preservada localmente, " +
+                            "mas o projeto não pôde ser salvo."
                     } catch (cancelled: CancellationException) {
+                        if (geminiStarted) withContext(NonCancellable + Dispatchers.IO) {
+                            runCatching { descriptionCheckpoint.review(descriptionFingerprint, selectedModel) }
+                        }
                         throw cancelled
                     } catch (error: Exception) {
-                        failure = if (error is IOException || error is IllegalStateException)
-                            error.message ?: "Falha na geração." else "Não foi possível gerar a descrição."
+                        if (geminiStarted) {
+                            withContext(NonCancellable + Dispatchers.IO) {
+                                runCatching { descriptionCheckpoint.review(descriptionFingerprint, selectedModel) }
+                            }
+                            savedDescriptionTask = GeminiTaskCheckpoint(descriptionFingerprint, selectedModel,
+                                GeminiTaskStage.REVIEW, System.currentTimeMillis())
+                        }
+                        failure = GeminiOperationFailure.label(GeminiOperationFailure.fromThrowable(error))
                     } finally { generating = false }
                 }
             }, enabled = !countingInput) { Text("Autorizar geração") } },

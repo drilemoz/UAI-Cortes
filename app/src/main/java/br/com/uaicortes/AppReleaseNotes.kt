@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.155"
-    const val VERSION_CODE = 156
+    const val VERSION_NAME = "0.1.156"
+    const val VERSION_CODE = 157
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.156", listOf(
+            ReleaseFeature("gemini-checkpoint-subtitles-156", "Legendas Gemini recuperáveis",
+                "Resultados concluídos ficam em cache local temporário, para revisar e restaurar sem nova chamada.", "captions"),
+            ReleaseFeature("gemini-caption-draft-156", "Descrição recuperável",
+                "Rascunhos de descrição gerados são salvos localmente, com restauração manual e sem duplicar cota.", "check"),
+            ReleaseFeature("gemini-failure-class-156", "Erros Gemini mais claros",
+                "Falhas de rede, cota, autorização e modelo recebem orientações específicas; tentativas incertas exigem revisão.", "check")
+        )),
         ReleaseSummary("0.1.155", listOf(
             ReleaseFeature("gemini-queue-journal-155", "Fila de vozes recuperável",
                 "Registra pendentes e WAVs concluídos para retomar lotes somente após confirmação do usuário.", "captions"),

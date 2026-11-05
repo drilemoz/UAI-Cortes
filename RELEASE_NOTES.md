@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.156 (05/11/2026)
+- Recuperação manual de legendas Gemini geradas e ainda não aplicadas após fechar/reabrir a tela. Rascunhos privados ficam até 7 dias, com tamanho máximo de 1 MiB.
+- Recuperação de descrição e hashtags geradas, mesmo sem salvar o projeto, quando o vídeo/contexto/modelo coincidem; nenhuma regeneração automática.
+- Falhas de cota, autorização, modelo e rede classificadas. O painel Gemini resume operações concluídas e reprovadas.
+- Nenhuma mudança nos dados de chave, áudio, exportação ou esquema de projetos. A validação Android real é pendente.
+
 # Uai Cortes · versão 0.1.155 (05/11/2026)
 - **Vozes IA:** fila local persistente para gerar lotes com confirmação de cota, retomada manual e sem serviço em segundo plano. O registro contém IDs, fingerprints e opções de voz, não a chave nem o texto das legendas.
 - Cada pedido registra **em andamento** antes da chamada Gemini e **concluído** somente depois do WAV salvo; ao reabrir, pedidos em andamento sem WAV verificado exigem revisão explícita para não repetir cobranças involuntariamente.
