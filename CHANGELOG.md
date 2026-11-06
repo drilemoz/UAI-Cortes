@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.191 — Correção CI157
+
+## v0.1.191 · versionCode 192
+- Corrigido teste JUnit obsoleto que exigia mudar o ID da prévia ao trocar de chave Gemini, contrariando a regra vigente da Central de Vozes 0.1.190.
+- Testes agora comprovam que a mesma voz/modelo/interpretação/frase reutilizam o WAV mesmo com outra credencial, e que mudanças em modelo, voz ou tom geram IDs diferentes.
+- Sem alteração do comportamento TTS, da segurança das credenciais, do catálogo, de arquivos WAV ou de projetos.
+- Build Android completo e testes no aparelho dependem de uma nova execução do GitHub Actions.
+
 # Uai Cortes · versão 0.1.190 — Central de Vozes Google
 
 ## v0.1.190 · versionCode 191

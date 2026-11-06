@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.191 — Correção CI157
+
+A versão 0.1.191 atualiza o teste JUnit da identidade de prévia de voz, que bloqueou o workflow **Gerar APK Uai Cortes 157**. O teste antigo exigia IDs diferentes para chaves Gemini distintas. A Central de Vozes 0.1.190 passou a reutilizar amostras WAV entre chaves, desde que modelo, voz, interpretação e texto fixo coincidam. Esse comportamento está preservado; o teste agora reflete o contrato real. Nenhuma geração é disparada pela troca de chave.
+
+O projeto continua com catálogo persistente, cache durável de prévias, vozes e interpretações por personagem, cinco APKs Release, assinaturas e projetos existentes. Sem implementação de voz de narrador padrão/global ou específica por projeto nesta correção; isso fica para a próxima evolução.
+
+**Validação:** código-fonte e testes locais não substituem o próximo workflow Android nem os testes reais em aparelho.
+
 # Uai Cortes · versão 0.1.190 — Central de Vozes
 
 Use **Vozes Google** na Home para acessar o catálogo sem abrir um projeto. O mesmo componente central aparece nos seletores de **Vozes IA** e **Narração**. A lista é persistida dentro do armazenamento interno do app; por padrão, não há consulta à API ao abrir. Toque em Atualizar para renovar a lista, ou habilite atualização automática. Falhas mantêm o último catálogo válido.

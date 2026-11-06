@@ -36,13 +36,15 @@ class GeminiVoicePresentationTest {
         assertEquals(listOf(voice), GeminiVoiceSearch.filter(listOf(voice), "voz feminina"))
         assertEquals(listOf(voice), GeminiVoiceSearch.filter(listOf(voice), "ADVISOR"))
     }
-    @Test fun previewIdentityChangesWithAccountModelVoiceOrStyle() {
+    @Test fun previewIdentityIgnoresApiKeyButChangesWithModelVoiceOrStyle() {
         fun id(key: String = "Key_for_test_only", model: String = "lite", voice: String = "Zephyr",
             style: String = "calm") = GeminiPreviewIdentity.id(key, model, voice, style)
         val first = id()
         assertEquals(first, id())
         assertTrue(first.matches(Regex("[a-f0-9]{64}")))
-        assertNotEquals(first, id(key = "Another_test_key"))
+        // Alterar a credencial nao deve invalidar a previa WAV ja armazenada.
+        assertEquals(first, id(key = "Another_test_key"))
+        assertEquals(first, id(key = ""))
         assertNotEquals(first, id(model = "flash"))
         assertNotEquals(first, id(voice = "Puck"))
         assertNotEquals(first, id(style = "cheerful"))

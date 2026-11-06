@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.191 — Correção dos testes CI157
+
+- Corrigida a expectativa do teste de identidade da prévia que bloqueou o workflow 157 (613 testes aprovados, 1 falha).
+- A Central de Vozes mantém o cache reutilizável entre chaves Gemini diferentes, desde que modelo, voz, interpretação e frase sejam os mesmos.
+- Sem alterações nos recursos de edição, geração, personagens ou narração.
+- Código-fonte v0.1.191/versionCode 192. Novo build Android no GitHub Actions e teste físico ainda necessários.
+
 # Uai Cortes · versão 0.1.190 — Central de Vozes
 
 - Abra **Vozes Google** pela Home ou selecione pela própria tela Vozes IA/Narração. Não é mais necessário consultar o catálogo a cada acesso.

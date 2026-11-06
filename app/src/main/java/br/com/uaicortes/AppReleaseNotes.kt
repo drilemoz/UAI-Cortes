@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.190"
-    const val VERSION_CODE = 191
+    const val VERSION_NAME = "0.1.191"
+    const val VERSION_CODE = 192
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.191", listOf(
+            ReleaseFeature("ci157-cache-test-191", "Correção do teste da Central de Vozes",
+                "Atualizado o teste unitário que bloqueava o APK: a mesma amostra de voz pode ser reutilizada ao trocar apenas a chave Gemini, sem perder a proteção para modelo, voz e interpretação diferentes.", "check"),
+            ReleaseFeature("ci157-reuse-191", "Prévia reutilizável preservada",
+                "Amostras já armazenadas continuam disponíveis sem nova geração quando a credencial muda; catálogo, personagens, fila e narração mantêm seu comportamento anterior.", "check")
+        )),
         ReleaseSummary("0.1.190", listOf(
             ReleaseFeature("voice-center-190", "Central de Vozes do Uai Cortes",
                 "Acesse Vozes Google na Home ou nos seletores de Vozes IA e Narração. Catálogo e favoritos compartilhados, com acesso offline à lista salva.", "check"),

@@ -1,3 +1,8 @@
+# v0.1.191 — CI157: correção do teste da identidade de prévia
+- O workflow 157 compilou Kotlin principal e instrumentado, mas falhou com 1/614 testes unitários, `GeminiVoicePresentationTest.previewIdentityChangesWithAccountModelVoiceOrStyle`.
+- `GeminiPreviewIdentity` ignora deliberadamente a API key na identidade de amostras: troca de credencial não altera áudio compatível. O teste agora exige igualdade para chaves diferentes e diferença para modelo, voz ou interpretação; algoritmo e WAV existentes não são modificados.
+- v0.1.191/versionCode 192. Preservar Central de Vozes, 5 APKs por ABI, assinaturas, backups e schema de projeto 4. Validar novamente no CI; implementação do narrador global/por projeto permanece futura.
+
 # v0.1.190 — Central de Vozes, catálogo local e prévias duráveis
 - A Central de Vozes é acessível pela Home, Vozes IA e Narração; catálogo local é carregado sem rede por padrão. Atualização manual ou opt-in explícito e erros nunca apagam a última lista válida. Lista é pública e não armazena chave, URIs nem texto de projetos.
 - `GeminiVoiceLibrary` persiste JSON schema próprio 1 em `filesDir`, sem alterar `VideoProject` schemaVersion 4. Escrita via arquivo temporário, limits 500 vozes e 1 MiB. Uma lista vazia ou falha de atualização não sobrescreve o catálogo.
