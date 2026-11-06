@@ -1,3 +1,14 @@
+# v0.1.179 — Edição só se torna projeto após consentimento
+- `EditorProjectViewModel.stage` não pode chamar o ProjectStore. Salvar/Salvar cópia chamam `commit`/`commitCopy`, e Descartar retorna à versão anterior no armazenamento, sem apagar arquivos originais. Sempre confirmar saída com alterações, inclusive botão Voltar do Android.
+- `ProjectDraftRecoveryStore` usa AtomicFile/sha256 no armazenamento privado; rascunhos nunca entram no catálogo nem em `project_backups`, devem validar o baseline salvo e pedir recuperação explicitamente. Operações assíncronas canceladas não podem recriar rascunho após descarte.
+- `ProjectBackupLifecycle` não deve capturar uma edição não confirmada. Backups históricos só de projetos salvos; limpar órfãos apenas sob confirmação, exclusivamente na pasta privada gerada e sem excluir mídias ou cópias externas.
+- Versão 0.1.179, versionCode 180, `schemaVersion=4`, cinco APKs Release, metadados sincronizados. Sem build real confirmado até CI.
+
+# v0.1.178 — Recuperação segura de fontes locais
+- Novo fluxo `media_repair` no editor: localizar arquivos com acesso perdido por `OpenDocument`, verificar tipo, origem, duração necessária para trim e concessão persistente SAF (ou cópia privada no caso de imagem). Rejeitar picks atrasados; nunca inventar duração, substituir arquivos sem consentimento ou tratar URI inacessível como mídia apagada.
+- `ProjectMediaRelink` troca apenas `uri` do item correto por ID e URI original; preservar IDs, trims, sourceStartMs, volume, PiPs, áudio, legendas e schemaVersion 4. Não modificar projeto antes de validar a nova mídia e concluir o salvamento atômico via `ProjectStore`.
+- 0.1.178/versionCode 179, cinco APKs Release, Meta/Gemini/Flow e mídia original preservados; Gradle/Android real pendente, não afirmar build aprovado sem CI.
+
 # CI147 / v0.1.177 — Teste compatível com a escala PiP atual
 - `OverlayEditorLogic.MIN_SCALE=0.05f` e `MAX_SCALE=1.50f`: `parsePercentage` deve aceitar de 5% a 150%, inclusive 91%, 100% e 150%. Testes legados não podem exigir `91` como inválido; `151`, `0` e strings inválidas continuam rejeitados.
 - Workflow 147 compilou Debug e Release, mas parou em `:app:testDebugUnitTest` após 553 testes aprovados e 1 falha de expectativa desatualizada. Manter regressão JUnit atualizada; não modificar o algoritmo do PiP para satisfazer o teste obsoleto.

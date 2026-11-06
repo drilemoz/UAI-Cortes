@@ -1,3 +1,19 @@
+# Uai Cortes · versão 0.1.179 — Sessões temporárias e saída confirmada
+
+- `ProjectDraftSession` mantém edições em memória até confirmação. `EditorProjectViewModel` separa `stage`, `commit`, `commitCopy` e `finishWithoutSaving`; novas importações não criam projeto permanente silenciosamente.
+- Voltar do editor pergunta Salvar, Salvar cópia (existente), Descartar ou Continuar. Projeto sem mudanças sai sem confirmação.
+- `ProjectDraftRecoveryStore` registra sessão em arquivo privado com AtomicFile/sha256 e solicita escolha para recuperação após interrupção; não substitui versão salva modificada.
+- Histórico automático somente após confirmação, tela de backup com tamanho/pasta e limpeza explícita de backups órfãos. Versão 0.1.179/versionCode 180, `schemaVersion=4`.
+- Sem build Gradle/Android local; validar no CI e dispositivo físico.
+
+# Uai Cortes · versão 0.1.178 — Recuperação de mídias inacessíveis
+
+- Adicionada tela `ProjectMediaRepairScreen` no editor com lista de vídeos, fotos, PiPs, música e vozes inacessíveis, sem registrar URI privada no diagnóstico.
+- Seleção por `OpenDocument`: verifica MIME, leitura, duração em relação ao recorte, permissão SAF persistida para vídeo/áudio e cópia privada para foto.
+- `ProjectMediaRelink.replace()` troca somente a referência do item por ID e URI original, rejeitando seleções atrasadas; preserva cortes, duração, ordem, legendas, PiP e schema JSON 4.
+- Nova rota `media_repair` e testes Kotlin/JUnit de referências e proteção de estado. VersionName 0.1.178 e versionCode 179 sincronizados no Gradle, README, RELEASE_NOTES, sobre/novidades, CI e metadados.
+- Testes locais são estruturais/isolados; CI Android e validação física continuam pendentes.
+
 # Uai Cortes · versão 0.1.177 — Correção JUnit do PiP (workflow 147)
 
 - Corrigida a expectativa desatualizada em `OverlayEditorLogicTest.acceptsSmallAndManualPercentages`: após a ampliação do PiP para 150%, **91% é válido**.

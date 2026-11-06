@@ -12,6 +12,15 @@ import kotlinx.coroutines.withContext
 
 /** Diagnóstico local. Uma URI sem permissão não equivale necessariamente a arquivo apagado. */
 internal object ProjectMediaAvailability {
+    fun canOpen(context: Context, raw: String): Boolean = runCatching {
+        val uri = Uri.parse(raw)
+        when (uri.scheme) {
+            "file" -> File(uri.path.orEmpty()).canRead()
+            "content" -> context.contentResolver.openFileDescriptor(uri, "r")?.use { true } ?: false
+            else -> false
+        }
+    }.getOrDefault(false)
+
     fun inaccessibleCount(context: Context, project: VideoProject): Int {
         val sources = buildList {
             addAll(project.clips.map { it.uri })
@@ -19,16 +28,7 @@ internal object ProjectMediaAvailability {
             project.music?.let { add(it.uri) }
             addAll(project.audioTracks.map { it.uri })
         }.filter { it.isNotBlank() }.distinct().take(100)
-        return sources.count { raw ->
-            runCatching {
-                val uri = Uri.parse(raw)
-                when (uri.scheme) {
-                    "file" -> File(uri.path.orEmpty()).canRead()
-                    "content" -> context.contentResolver.openFileDescriptor(uri, "r")?.use { true } ?: false
-                    else -> false
-                }
-            }.getOrDefault(false).not()
-        }
+        return sources.count { !canOpen(context, it) }
     }
 }
 

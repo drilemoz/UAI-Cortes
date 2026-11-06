@@ -1,3 +1,18 @@
+# Uai Cortes · versão 0.1.179 — Controle sobre o salvamento dos projetos
+
+- Ao voltar da edição, escolher **Salvar projeto**, **Salvar cópia** (em projeto existente), **Descartar e sair** ou **Continuar editando**. As mudanças não são cadastradas como projeto salvo até sua confirmação.
+- Em caso de interrupção, permite recuperar um rascunho local separado, sem sobrescrever versões salvas alteradas posteriormente. Mídias originais não são duplicadas.
+- **Salvamento e segurança:** tamanho e pasta privada dos backups, contagem de cópias órfãs e botão de limpeza com confirmação. Backups históricos só são gerados a partir de projetos confirmados.
+- Limitações: rascunho de recuperação assíncrono pode não conter os últimos instantes antes de falha; imagens privadas descartadas não são removidas automaticamente para evitar perdas em referências de backups.
+- Testes de contrato e sintaxe não substituem o build/Lint Android e o teste real de Voltar/recuperar/cópia; `schemaVersion=4` preservado.
+
+# Uai Cortes · versão 0.1.178 — Reparação de arquivos de mídia
+
+- **Reparar mídias:** abra o editor e toque no ícone de pasta. Para arquivos que não abrem, escolha o original usando Arquivos do Android. O app valida formato e duração e reconecta a referência.
+- Fotos recebem cópia privada; vídeos e áudios exigem concessão de leitura persistente. Cortes, legendas, sobreposições e horários são preservados.
+- Esta atualização não recupera arquivos apagados nem identifica automaticamente a mesma gravação por seu conteúdo. Nenhuma mídia original é apagada.
+- **Pendente:** executar build Android, Lint, seleção SAF e exportação de vídeo após reparo em aparelho.
+
 # Uai Cortes · versão 0.1.177 — Correção de testes da escala PiP
 
 - Corrigido o teste que impedia o workflow 147 de avançar após a ampliação do PiP de 90% para 150%.

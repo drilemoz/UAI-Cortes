@@ -12,6 +12,12 @@ import java.io.ByteArrayOutputStream
 /** A cópia histórica contém apenas o projeto (JSON schemaVersion 4), não os arquivos de mídia. */
 internal data class ProjectBackupEntry(val file: File, val project: VideoProject, val timestamp: Long)
 
+internal data class BackupStorageUsage(
+    val snapshotCount: Int, val bytes: Long,
+    val orphanDirectories: Int, val orphanBytes: Long,
+    val privateFolder: String
+)
+
 /** Checagem de integridade antes de restaurar ou importar; arquivos truncados são rejeitados. */
 internal object ProjectBackupCodec {
     const val MAX_BYTES = 2 * 1024 * 1024
@@ -63,6 +69,41 @@ internal class ProjectBackupStore(private val context: Context) {
     private fun projectKey(id: String) = ProjectBackupPolicy.hash(id).take(24)
     private fun comparable(project: VideoProject): String = project.json().apply { remove("updated") }.toString()
     private fun folder(id: String) = File(root, projectKey(id))
+
+    /** Contagem limitada a arquivos sob project_backups; não toca no armazenamento do usuário. */
+    fun storageUsage(savedIds: Set<String>): BackupStorageUsage = synchronized(guard) {
+        val allowed = savedIds.map(::projectKey).toSet()
+        var snapshots = 0
+        var bytes = 0L
+        var orphanFolders = 0
+        var orphanBytes = 0L
+        root.listFiles()?.filter { it.isDirectory && Regex("[0-9a-f]{24}").matches(it.name) }
+            ?.forEach { dir ->
+                val files = dir.listFiles()?.filter { it.isFile && it.name.endsWith(".json") }.orEmpty()
+                val size = files.sumOf { it.length().coerceAtLeast(0L) }
+                snapshots += files.size
+                bytes += size
+                if (dir.name !in allowed) {
+                    orphanFolders++
+                    orphanBytes += size
+                }
+            }
+        BackupStorageUsage(snapshots, bytes, orphanFolders, orphanBytes, root.absolutePath)
+    }
+
+    /** Exclusão deliberada apenas de diretórios órfãos criados pelo aplicativo. */
+    fun deleteOrphanedSnapshots(savedIds: Set<String>): Int = synchronized(guard) {
+        val allowed = savedIds.map(::projectKey).toSet()
+        var removed = 0
+        root.listFiles()?.filter { it.isDirectory && Regex("[0-9a-f]{24}").matches(it.name) &&
+            it.name !in allowed }?.forEach { dir ->
+            val children = dir.listFiles().orEmpty()
+            // Evitar apagar arquivos inesperados mesmo dentro da pasta privada.
+            if (children.all { it.isFile && (it.name.endsWith(".json") || it.name.endsWith(".json.bak") || it.name.endsWith(".json.new")) } &&
+                children.all { it.delete() } && dir.delete()) removed++
+        }
+        removed
+    }
 
     /** Snapshot diferente do último; só executado na thread IO. Nunca substitui o ProjectStore. */
     fun snapshot(projectId: String, force: Boolean = false): Boolean = synchronized(guard) {

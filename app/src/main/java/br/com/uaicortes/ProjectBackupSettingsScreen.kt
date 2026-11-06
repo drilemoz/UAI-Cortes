@@ -47,8 +47,16 @@ internal fun ProjectBackupSettingsScreen(
     }
     var chooseProject by remember { mutableStateOf(false) }
     var pendingRestore by remember { mutableStateOf<VideoProject?>(null) }
+    var confirmOrphanCleanup by remember { mutableStateOf(false) }
+    var storageUsage by remember { mutableStateOf<BackupStorageUsage?>(null) }
     val selectedProject = projects.firstOrNull { it.id == selectedId }
-    LaunchedEffect(refresh) { history = withContext(Dispatchers.IO) { backups.listAll() } }
+    LaunchedEffect(refresh, projects) {
+        val (records, stats) = withContext(Dispatchers.IO) {
+            backups.listAll() to backups.storageUsage(projects.map { it.id }.toSet())
+        }
+        history = records
+        storageUsage = stats
+    }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         val p = selectedProject
@@ -81,7 +89,7 @@ internal fun ProjectBackupSettingsScreen(
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
         .padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Heading("Salvamento e segurança", back)
-        Text("As mudanças do projeto já são gravadas durante a edição. O histórico abaixo cria versões recuperáveis.",
+        Text("Edições são temporárias até você escolher Salvar ao sair. Cópias históricas são feitas somente de projetos confirmados.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.weight(1f)) {
@@ -166,6 +174,23 @@ internal fun ProjectBackupSettingsScreen(
             Icon(Icons.Default.Backup, null); Spacer(Modifier.width(8.dp)); Text("Criar cópia agora")
         }
         HorizontalDivider()
+        Text("Armazenamento dos backups", fontWeight = FontWeight.SemiBold)
+        storageUsage?.let { usage ->
+            Text("${usage.snapshotCount} cópias locais · ${usage.bytes / 1024L} KiB usados",
+                style = MaterialTheme.typography.bodySmall)
+            Text("Pasta privada: ${usage.privateFolder}",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Rascunho emergencial separado: files/editor_draft_recovery.json. Não aparece em Projetos e não é backup permanente.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("${usage.orphanDirectories} pasta(s) de backup de projetos excluídos · ${usage.orphanBytes / 1024L} KiB",
+                style = MaterialTheme.typography.bodySmall)
+            OutlinedButton(onClick = { confirmOrphanCleanup = true },
+                enabled = !busy && usage.orphanDirectories > 0,
+                modifier = Modifier.fillMaxWidth()) { Text("Limpar backups órfãos") }
+        }
+        Text("Backups externos ficam exclusivamente na pasta que você autorizou; esta limpeza não toca neles.",
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        HorizontalDivider()
         Text("Recuperar versão anterior", fontWeight = FontWeight.SemiBold)
         if (history.isEmpty()) Text("Nenhuma cópia histórica disponível.", style = MaterialTheme.typography.bodySmall)
         history.take(20).forEach { entry ->
@@ -188,6 +213,25 @@ internal fun ProjectBackupSettingsScreen(
         message?.let { Text(it, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall) }
         Spacer(Modifier.height(16.dp))
     }
+    if (confirmOrphanCleanup) AlertDialog(
+        onDismissRequest = { confirmOrphanCleanup = false },
+        title = { Text("Excluir backups de projetos apagados?") },
+        text = { Text("Serão removidas apenas as cópias locais de projetos que não existem mais no catálogo. Projetos salvos e arquivos de vídeo, foto e áudio não serão apagados. Backups externos não serão modificados.") },
+        confirmButton = { TextButton(onClick = {
+            confirmOrphanCleanup = false
+            scope.launch {
+                busy = true
+                val count = withContext(Dispatchers.IO) {
+                    runCatching { backups.deleteOrphanedSnapshots(projects.map { it.id }.toSet()) }
+                }
+                message = count.fold(
+                    onSuccess = { "$it pasta(s) de cópias órfãs removida(s)." },
+                    onFailure = { "Não foi possível concluir a limpeza; outras cópias foram preservadas." })
+                refresh++
+                busy = false
+            }
+        }) { Text("Excluir cópias órfãs") } },
+        dismissButton = { TextButton(onClick = { confirmOrphanCleanup = false }) { Text("Cancelar") } })
     pendingRestore?.let { restored ->
         AlertDialog(onDismissRequest = { pendingRestore = null },
             title = { Text("Restaurar projeto?") },

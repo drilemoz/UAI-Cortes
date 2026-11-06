@@ -500,7 +500,8 @@ assert 'vosk-model-small-pt-0.3.zip' in auto and 'MAX_EXTRACTED' in auto
 assert 'Modelo de reconhecimento de voz' in auto_ui and 'Passo 2' in auto_ui and 'Passo 3' in auto_ui
 assert 'SpeechModelSettingsScreen' in (root/'app/src/main/java/br/com/uaicortes/SpeechModelSettingsScreen.kt').read_text()
 assert 'AutoSubtitleScreen(current' in ui and 'onAutoSubtitles' in ui
-assert 'pendingProjectDelete' in ui and 'Excluir projeto?' in ui and 'projectSession.delete(target.id)' in ui
+assert 'pendingProjectDelete' in ui and 'ConfirmDeleteProjectDialog' in ui and 'projectSession.delete(target.id)' in ui
+assert 'Excluir projeto?' in (root/'app/src/main/java/br/com/uaicortes/ProjectEditorDialogs.kt').read_text()
 assert 'getScaledFrameAtTime' in ui and 'Miniatura do projeto' in ui
 assert 'ClipMotionTransitionEffect(' in source and 'MatrixTransformation' in motion
 assert 'ZOOM_IN' in (root/'app/src/main/java/br/com/uaicortes/TransitionEffects.kt').read_text()
@@ -581,7 +582,7 @@ assert 'val project = projectSession.project' in main
 assert 'val projects = projectSession.projects' in main
 assert 'state[ACTIVE_ID] = it' in vm
 assert 'ProjectController(StoredProjectRepository(store))' in vm
-assert all(token in vm for token in ['fun save(', 'fun open(', 'fun delete(', 'fun append('])
+assert all(token in vm for token in ['fun stage(', 'fun commit(', 'fun open(', 'fun delete(', 'fun append('])
 assert 'state[ACTIVE_ID]' in vm and 'state[ACTIVE_ID] ?: ""' in vm
 assert 'projectController.' not in main
 assert 'controller.load(restoredId)' in session
@@ -604,7 +605,7 @@ main = (root/'app/src/main/java/br/com/uaicortes/MainActivity.kt').read_text()
 assert all(v in operations for v in ['class ProjectController(', 'interface ProjectRepository', 'fun delete(', 'fun append('])
 assert all(v in pip_operations for v in ['object OverlayOperations', 'fun insert(', 'fun apply(', 'fun remove('])
 assert all(v in import_operations for v in ['object MediaImportRules', 'class MediaImportController', 'fun videoClips(', 'fun audio('])
-assert all(v in main for v in ['projectSession.save(ClipAudioBindings.pruneDeleted(p))', 'projectSession.append(', 'OverlayOperations.apply(', 'OverlayOperations.insert(', 'mediaTasks.videos('])
+assert all(v in main for v in ['projectSession.stage(ClipAudioBindings.pruneDeleted(p))', 'projectSession.append(', 'OverlayOperations.apply(', 'OverlayOperations.insert(', 'mediaTasks.videos('])
 assert 'store.save(p)' not in main and 'store.delete(target.id)' not in main
 for name in ['ProjectOperationsTest.kt', 'OverlayOperationsTest.kt', 'MediaImportOperationsTest.kt']:
     assert (root/'app/src/test/java/br/com/uaicortes'/name).exists()
@@ -648,7 +649,7 @@ assert 'catch (cancelled: CancellationException)' not in main  # tratamento fica
 assert all(s in main for s in ['MediaImportTasks(mediaController)', 'startMediaTask(MediaTaskKind.VIDEO, origin)',
                               'startMediaTask(MediaTaskKind.AUDIO, origin)', 'startMediaTask(MediaTaskKind.OVERLAY, origin)'])
 assert 'mediaController.duration(uri)' not in main and 'mediaController.title(uri)' not in main
-assert 'if (activeMediaTask != null)' in main and 'Text("Cancelar importação")' in main
+assert 'if (activeMediaTask != null) ActiveMediaImportDialog' in main and 'Text("Cancelar importação")' in (app_files/'ProjectAppNoticeDialogs.kt').read_text()
 assert 'DisposableEffect(mediaTaskCoordinator)' in main
 assert 'mediaTaskCoordinator.cancelIfDestinationChanged(activeProjectId, screen, mediaAction)' in main
 media_tasks = (app_files/'MediaImportTasks.kt').read_text()
@@ -668,7 +669,7 @@ vm = (app_files/'EditorProjectViewModel.kt').read_text()
 session = (app_files/'ProjectSessionCoordinator.kt').read_text()
 assert 'lifecycle-viewmodel-compose:2.9.0' in gradle
 assert 'class EditorProjectViewModel(' in vm and 'SavedStateHandle' in vm
-assert 'ProjectSessionCoordinator' in vm and 'fun save(' in vm and 'fun delete(' in vm
+assert 'ProjectSessionCoordinator' in vm and 'fun stage(' in vm and 'fun commit(' in vm and 'fun delete(' in vm
 assert 'state[ACTIVE_ID] = it' in vm and 'state[ACTIVE_ID] ?: ""' in vm
 assert 'ProjectStore(application.applicationContext)' in vm
 assert 'fun save(project: VideoProject): ProjectSnapshot = accept(controller.save(project))' in session
@@ -746,8 +747,8 @@ assert 'fun prepareWrite(primary: String?, backup: String?, projects: List<Video
 assert 'lastGoodRaw' in codec and 'usedBackup' in codec
 assert 'projects.map { it.id }.distinct().size == projects.size' in codec
 assert 'lastReadIssue' in codec and 'storageWarning' in vm
-assert 'catalogAlertDismissed' in main and 'Atenção ao armazenamento de projetos' in main
-assert 'if (write(p)) screen = "home"' in main
+assert 'catalogAlertDismissed' in main and 'CatalogStorageWarning(' in main and 'Atenção ao armazenamento de projetos' in (app_files/'ProjectAppNoticeDialogs.kt').read_text()
+assert 'onSaveHome = { if (write(p)) leaveEditor("save") }' in main
 assert (root/'app/src/test/java/br/com/uaicortes/ProjectCatalogRecoveryTest.kt').exists()
 print('OK: v0.1.69 / versionCode 74, recuperação de backup, aviso e escrita protegida')
 
@@ -1080,7 +1081,7 @@ assert all(x in backup for x in ['AtomicFile(', 'ProjectBackupCodec.decode', 'wr
 assert all(x in backup_ui for x in ['OpenDocumentTree()', 'OpenDocument()', 'CreateDocument(', 'AlertDialog(', '"Restaurar"', '"Exportar"'])
 assert all(x in backup_policy for x in ['15, 30, 60, 120, 300', '3, 5, 10', 'SHA-256'])
 assert '"backup_settings" -> ProjectBackupSettingsScreen(' in main
-assert 'ProjectBackupLifecycle(backupStore, activeProjectId, screen)' in main
+assert 'ProjectBackupLifecycle(backupStore, if (projectSession.isEditingDraft) "" else activeProjectId, screen)' in main
 assert 'Lifecycle.Event.ON_STOP' in (app_files/'ProjectBackupLifecycle.kt').read_text()
 assert 'Environment.DIRECTORY_MOVIES + "/UaiCortes"' in (root/'app/src/main/java/br/com/uaicortes/GalleryVideoSaver.kt').read_text()
 assert '"backup_settings"' in nav

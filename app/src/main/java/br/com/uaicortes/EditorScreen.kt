@@ -47,7 +47,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     onPiP:()->Unit,onAudio:()->Unit,
     onSelectOverlay:(String)->Unit,onTransition:(Int)->Unit,onSaveHome:()->Unit,
     onSelectAudio:(String)->Unit,onSelectSubtitle:(String)->Unit,
-    onClipAudio:(String)->Unit,
+    onClipAudio:(String)->Unit, onRepairMedia:()->Unit,
     autoPlayOnReturn: Boolean = false,
     onReturnPlaybackConsumed: () -> Unit = {}) {
     val context=LocalContext.current
@@ -157,6 +157,9 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 Text(if(imageFrameDraft != null) "Enquadrar imagem" else "Projeto em edição",
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (imageFrameDraft == null) IconButton(onClick = onRepairMedia) {
+                Icon(Icons.Default.FolderOpen, "Reparar arquivos de mídia")
             }
             if (imageFrameDraft == null) BlueButton("Exportar",{ onEdit("export") },
                 Modifier.width(102.dp),enabled=p.clips.isNotEmpty())

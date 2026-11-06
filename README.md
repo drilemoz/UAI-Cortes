@@ -1,3 +1,17 @@
+# Uai Cortes · versão 0.1.179 — Salvar, descartar e recuperar sessões
+
+- A edição agora utiliza um rascunho separado da lista de projetos. Projeto novo só passa a existir na Home após Salvar. Ao sair com mudanças, o usuário escolhe Salvar, Salvar cópia (projeto existente), Descartar ou Continuar editando.
+- Recuperação emergencial em arquivo privado `editor_draft_recovery.json`, com integridade SHA-256, validação da versão original e confirmação para restaurar. Backups históricos são feitos apenas de projetos confirmados.
+- Configurações → Salvamento e segurança mostra pasta e tamanho dos backups locais e permite limpeza confirmada de cópias de projetos excluídos; arquivos originais e backups externos preservados.
+- **Pendente:** testes Gradle Android, rotação/process death, comportamento de teclado e validação da prévia/exportação no aparelho. Ver `docs/EDITOR_SAVE_SESSION_0.1.179.md`.
+
+# Uai Cortes · versão 0.1.178 — Reparar arquivos de projetos antigos
+
+- O editor agora possui **Reparar mídias** (ícone de pasta). Ele lista mídias locais cujo arquivo ou permissão deixou de estar acessível e permite selecioná-las novamente pelo Storage Access Framework do Android.
+- A recuperação valida tipo, duração suficiente para os cortes existentes e concessão persistente para vídeos/áudios; fotos são copiadas para armazenamento privado, usando a validação de importação existente.
+- Nenhum corte, legenda, posição de PiP, trilha, ID ou arquivo original é modificado. Projetos não passam por migração (`schemaVersion=4`).
+- **Pendente:** compilação Gradle Android, testes SAF e reprodução/exportação real após reconectar arquivos. A identidade do conteúdo não pode ser comprovada apenas por metadados; escolha o arquivo original.
+
 # Uai Cortes · versão 0.1.177 — Teste de limite do PiP corrigido
 
 - O workflow 147 falhou em `:app:testDebugUnitTest`: a implementação já aceitava tamanho de PiP até 150%, mas um teste antigo ainda rejeitava 91%.

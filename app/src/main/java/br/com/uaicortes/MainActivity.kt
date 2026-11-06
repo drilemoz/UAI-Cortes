@@ -3,7 +3,6 @@ import android.net.Uri
 import android.os.Bundle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -31,7 +30,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.*
-import androidx.compose.ui.geometry.Offset
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -67,6 +65,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     val projectSession: EditorProjectViewModel = viewModel()
     val store = projectSession.store
     val backupStore = remember(context) { ProjectBackupStore(context.applicationContext) }
+    val draftRecoveryStore = remember(context) { ProjectDraftRecoveryStore(context.applicationContext) }
     val whatsNewSeen = remember(context) { WhatsNewSeenStore(context.applicationContext) }
     val githubUpdates = remember(context) { GitHubUpdateManager(context.applicationContext) }
     val mediaController = remember(context) { MediaImportController(context.applicationContext) }
@@ -112,7 +111,15 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     val project = projectSession.project
     val narrationDraft = remember(project?.id) { GeminiNarrationDraft() }
     var resumeVideoPreview by remember { mutableStateOf(false) }
-    ProjectBackupLifecycle(backupStore, activeProjectId, screen)
+    // Nunca criar backups históricos a partir de alterações ainda não confirmadas.
+    ProjectBackupLifecycle(backupStore, if (projectSession.isEditingDraft) "" else activeProjectId, screen)
+    var interruptedDraft by remember { mutableStateOf(draftRecoveryStore.load(projects)) }
+    var invalidRecovery by remember { mutableStateOf(interruptedDraft == null && draftRecoveryStore.hasStoredDraft()) }
+    LaunchedEffect(interruptedDraft, invalidRecovery) {
+        if ((interruptedDraft != null || invalidRecovery) && screen != "home") screen = "home"
+    }
+    ProjectDraftRecoveryLifecycle(draftRecoveryStore, project,
+        projectSession.draftBaseline, projectSession.hasPendingChanges)
     ProjectMediaAlert(if (screen == "editor") project else null)
     var selectedClip by workspace::selectedClip
     var selectedAudioTrackId by workspace::selectedAudioTrackId
@@ -141,6 +148,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     var pendingSequential by remember { mutableStateOf<SequentialConfirmation?>(null) }
     var pendingProjectDelete by remember { mutableStateOf<VideoProject?>(null) }
     var pendingDeleteAll by remember { mutableStateOf(false) }
+    var pendingExitEditor by remember { mutableStateOf(false) }
     var pendingNewProjectName by remember { mutableStateOf(false) }
     var newProjectName by rememberSaveable { mutableStateOf("Meu vídeo") }
     var catalogAlertDismissed by rememberSaveable { mutableStateOf(false) }
@@ -158,15 +166,43 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
         previous = screen; screen = "social_publish"
     }
     fun write(p: VideoProject): Boolean = try {
-        projectSession.save(ClipAudioBindings.pruneDeleted(p))
-        DiagnosticRecorder.action(screen, "project_saved")
+        projectSession.stage(ClipAudioBindings.pruneDeleted(p))
+        DiagnosticRecorder.action(screen, "project_draft_changed")
         true
     } catch (failure: Exception) {
-        DiagnosticRecorder.exception("project_save_failure", failure)
+        DiagnosticRecorder.exception("project_draft_failure", failure)
         android.widget.Toast.makeText(context,
-            "Não foi possível salvar. O projeto anterior foi preservado.",
+            "Não foi possível aplicar a alteração; o projeto foi preservado.",
             android.widget.Toast.LENGTH_LONG).show()
         false
+    }
+    fun leaveEditor(decision: String) {
+        val completed = runCatching {
+            val savedProject = when (decision) {
+                "save" -> projectSession.commit()
+                "copy" -> projectSession.commitCopy()
+                "discard" -> null
+                else -> return
+            }
+            // Snapshot histórico somente depois do commit do cadastro.
+            if (savedProject != null && backupStore.preferences.enabled)
+                importScope.launch(Dispatchers.IO) {
+                    runCatching { backupStore.snapshot(savedProject.id) }
+                        .onFailure { DiagnosticRecorder.exception("backup_snapshot", it) }
+                }
+            draftRecoveryStore.clear()
+            projectSession.finishWithoutSaving()
+            workspace.reconcile(null)
+            pendingExitEditor = false
+            screen = "home"
+            DiagnosticRecorder.action("editor", "project_${decision}")
+        }
+        completed.onFailure { failure ->
+            DiagnosticRecorder.exception("project_commit_failure", failure)
+            android.widget.Toast.makeText(context,
+                "Não foi possível concluir. A edição permanece aberta; tente novamente.",
+                android.widget.Toast.LENGTH_LONG).show()
+        }
     }
     fun openProject(id: String) {
         val opened = projectSession.open(id)
@@ -250,7 +286,8 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
             }
             val base = projectSession.append(project, imported.clips, createNew = request.createNew)
             val updated = if (request.createNew) base.copy(title = ProjectNaming.title(newProjectName)) else base
-            if (!write(updated)) return@startMediaTask
+            if (request.createNew) projectSession.beginNew(ClipAudioBindings.pruneDeleted(updated))
+            else if (!write(updated)) return@startMediaTask
             if (selectedClip.isBlank()) selectedClip = imported.clips.first().id
             screen = "editor"
             if (imported.rejected > 0) android.widget.Toast.makeText(context,
@@ -338,7 +375,17 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 android.widget.Toast.LENGTH_SHORT).show()
         }
         DiagnosticRecorder.action(screen, "back")
-        screen = EditorNavigation.back(screen, previous, mediaOrigin, animationDestination)
+        val destination = EditorNavigation.back(screen, previous, mediaOrigin, animationDestination)
+        if (screen == "editor" && destination == "home") {
+            if (projectSession.hasPendingChanges) {
+                pendingExitEditor = true
+                return
+            }
+            projectSession.finishWithoutSaving()
+            draftRecoveryStore.clear()
+            workspace.reconcile(null)
+        }
+        screen = destination
     }
     BackHandler(screen != "home") { back() }
     LaunchedEffect(screen, diagnosticsEnabled) { DiagnosticRecorder.screen(screen) }
@@ -397,10 +444,13 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                             val clip = Clip(uri=uri.toString(),title="Vídeo animado",sourceDurationMs=duration)
                             val target = if(animationDestination=="append") project ?: VideoProject()
                                 else VideoProject()
-                            if (write(target.copy(clips=target.clips+clip,
-                                    publicationDraft=publicationDraft.takeUnless {
-                                        it.description.isBlank() && it.hashtags.isBlank()
-                                    } ?: target.publicationDraft))) {
+                            val edited = target.copy(clips=target.clips+clip,
+                                publicationDraft=publicationDraft.takeUnless {
+                                    it.description.isBlank() && it.hashtags.isBlank()
+                                } ?: target.publicationDraft)
+                            val accepted = if (animationDestination == "append") write(edited)
+                                else { projectSession.beginNew(edited); true }
+                            if (accepted) {
                                 selectedClip=clip.id
                                 screen="editor"
                                 true
@@ -423,13 +473,17 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 "diagnostics" -> DiagnosticScreen(::back, onEnabledChanged = { diagnosticsEnabled = it })
                 "general" -> GeneralScreen(store, ::back)
                 "backup_settings" -> ProjectBackupSettingsScreen(backupStore, projects,
-                    onRestore = { restored -> write(restored) }, back = ::back)
+                    onRestore = { restored -> runCatching { projectSession.persistRestored(restored); true }
+                        .getOrElse { DiagnosticRecorder.exception("project_restore_failure", it); false } }, back = ::back)
                 "speech_model" -> SpeechModelSettingsScreen(::back)
                 "gemini_settings" -> GeminiSettingsScreen(::back)
                 "appearance" -> AppearanceScreen(theme, { theme = it; store.setTheme(it) }, ::back)
                 "about" -> AboutScreen(::back,
                     onShowWhatsNew = { previous = "about"; screen = "whats_new" },
                     onUpdates = { previous = "about"; screen = "updates" })
+                "media_repair" -> project?.let { p -> ProjectMediaRepairScreen(p, ::back) { changed ->
+                    if (projectSession.project != p) false else write(changed)
+                } }
                 "editor" -> project?.let { p -> EditorScreen(p, selectedClip, positionMs,
                     onSelected = { selectedClip = it }, onPosition = { positionMs = it }, onBack = ::back,
                     onEdit = {
@@ -461,8 +515,9 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     onSelectSubtitle = { id -> selectedSubtitleId = id; navTo("subtitles") },
                     onSelectOverlay = { selectedOverlayId = it },
                     onTransition = { index -> selectedBoundary = index; screen = "transition" },
-                    onSaveHome = { if (write(p)) screen = "home" },
+                    onSaveHome = { if (write(p)) leaveEditor("save") },
                     onClipAudio = { id -> selectedClip=id; navTo("clip_audio") },
+                    onRepairMedia = { navTo("media_repair") },
                     autoPlayOnReturn = resumeVideoPreview,
                     onReturnPlaybackConsumed = { resumeVideoPreview = false }) }
                 "watermark" -> project?.let { current -> TextWatermarkScreen(current, ::back) { changed ->
@@ -586,28 +641,30 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     onSocialPublish = { uri, name, draft -> openSocialPublish(uri, name.ifBlank { "Vídeo exportado.mp4" }, draft) }) }
             }
         }
-        if (projectSession.storageWarning != null && !catalogAlertDismissed) {
-            AlertDialog(
-                onDismissRequest = { catalogAlertDismissed = true },
-                title = { Text("Atenção ao armazenamento de projetos") },
-                text = { Text(projectSession.storageWarning.orEmpty()) },
-                confirmButton = { TextButton(onClick = { catalogAlertDismissed = true }) {
-                    Text("Entendi")
-                } }
-            )
+        if (pendingExitEditor) ConfirmEditorExit(projectSession.hasSavedOriginal, ::leaveEditor) {
+            pendingExitEditor = false
         }
-        if (activeMediaTask != null) {
-            AlertDialog(onDismissRequest = {},
-                title = { Text("Importando mídia") },
-                text = { Row(verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    CircularProgressIndicator(modifier = Modifier.size(28.dp))
-                    Text("Lendo duração e informações dos arquivos locais…")
-                } },
-                confirmButton = { TextButton(onClick = { mediaTaskCoordinator.cancel() }) {
-                    Text("Cancelar importação")
-                } })
+        if (screen == "home" && interruptedDraft != null) {
+            val recovery = interruptedDraft!!
+            ConfirmRecoverDraft(onRecover = {
+                if (projectSession.restoreDraft(recovery)) {
+                    selectedClip = TrimTimelineEdit.resumeClipId(recovery.project)
+                    screen = "editor"
+                } else android.widget.Toast.makeText(context,
+                    "Projeto salvo mudou; rascunho não foi aplicado.", android.widget.Toast.LENGTH_LONG).show()
+                interruptedDraft = null
+            }, onDiscard = {
+                draftRecoveryStore.clear()
+                interruptedDraft = null
+            })
         }
+        if (screen == "home" && invalidRecovery) InvalidEditorDraft {
+            draftRecoveryStore.clear()
+            invalidRecovery = false
+        }
+        if (projectSession.storageWarning != null && !catalogAlertDismissed)
+            CatalogStorageWarning(projectSession.storageWarning.orEmpty()) { catalogAlertDismissed = true }
+        if (activeMediaTask != null) ActiveMediaImportDialog { mediaTaskCoordinator.cancel() }
         GitHubUpdatePrompt(githubUpdates) {
             previous = screen
             screen = "updates"
@@ -633,57 +690,35 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
             pendingDeleteAll = false
         }, onCancel = { pendingDeleteAll = false })
         pendingProjectDelete?.let { target ->
-            AlertDialog(onDismissRequest = { pendingProjectDelete = null },
-                icon = { Icon(Icons.Default.DeleteOutline, null) },
-                title = { Text("Excluir projeto?") },
-                text = { Text("O projeto \"${target.title}\" e suas edições salvas serão removidos. Os vídeos e fotos originais não serão apagados. Esta ação não pode ser desfeita.") },
-                confirmButton = { TextButton(onClick = {
-                    val wasActive = project?.id == target.id
-                    try {
-                        projectSession.delete(target.id)
-                        if (wasActive) workspace.reconcile(null)
-                        pendingProjectDelete = null
-                    } catch (failure: Exception) {
-                        DiagnosticRecorder.exception("project_delete_failure", failure)
-                        android.widget.Toast.makeText(context,
-                            "Não foi possível excluir o projeto. Os dados foram preservados.",
-                            android.widget.Toast.LENGTH_LONG).show()
-                        pendingProjectDelete = null
-                    }
-                }) { Text("Excluir projeto", color = MaterialTheme.colorScheme.error) } },
-                dismissButton = { TextButton(onClick = { pendingProjectDelete = null }) { Text("Cancelar") } })
+            ConfirmDeleteProjectDialog(target.title, onDelete = {
+                val wasActive = project?.id == target.id
+                try {
+                    projectSession.delete(target.id)
+                    if (wasActive) workspace.reconcile(null)
+                } catch (failure: Exception) {
+                    DiagnosticRecorder.exception("project_delete_failure", failure)
+                    android.widget.Toast.makeText(context, "Não foi possível excluir o projeto.",
+                        android.widget.Toast.LENGTH_LONG).show()
+                }
+                pendingProjectDelete = null
+            }, onCancel = { pendingProjectDelete = null })
         }
         pendingSequential?.let { pending ->
-            AlertDialog(onDismissRequest = { pendingSequential = null },
-                icon = { Icon(Icons.Default.Schedule, null) },
-                title = { Text("O PiP anterior já chega ao final") },
-                text = { Text("Não há tempo disponível depois do último PiP. Quer adicionar o novo no mesmo intervalo do anterior? A posição será conferida para evitar que cubra outro PiP.") },
-                confirmButton = { TextButton(onClick = {
-                    pendingSequential = null
-                    insertOverlay(pending.uri, pending.isImage, pending.mediaMs, allowTimeOverlap = true)
-                }) { Text("Adicionar no mesmo período") } },
-                dismissButton = { TextButton(onClick = { pendingSequential = null }) { Text("Cancelar") } })
+            ConfirmSequentialOverlay(onConfirm = {
+                pendingSequential = null
+                insertOverlay(pending.uri, pending.isImage, pending.mediaMs, allowTimeOverlap = true)
+            }, onCancel = { pendingSequential = null })
         }
         pendingOverlap?.let { pending ->
-            AlertDialog(onDismissRequest = { pendingOverlap = null },
-                icon = { Icon(Icons.Default.Layers, null) },
-                title = { Text("PiPs sobrepostos") },
-                text = { Text("Os PiPs ocupam a mesma região durante parte do vídeo. Você pode reorganizá-los automaticamente ou confirmar que deseja manter um PiP sobre o outro.") },
-                confirmButton = { Column {
-                    TextButton(onClick = {
-                        pendingOverlap = null
-                        if (saveOverlays(pending.project, pending.requested, pending.preferredId, "keep")) {
-                            selectedOverlayId = pending.preferredId
-                        }
-                    }) { Text("Manter sobreposição") }
-                    TextButton(onClick = {
-                        pendingOverlap = null
-                        if (saveOverlays(pending.project, pending.requested, pending.preferredId, "rearrange")) {
-                            selectedOverlayId = pending.preferredId
-                        }
-                    }) { Text("Reposicionar automaticamente") }
-                } },
-                dismissButton = { TextButton(onClick = { pendingOverlap = null }) { Text("Cancelar") } })
+            ConfirmOverlayConflict(onKeep = {
+                pendingOverlap = null
+                if (saveOverlays(pending.project, pending.requested, pending.preferredId, "keep"))
+                    selectedOverlayId = pending.preferredId
+            }, onRearrange = {
+                pendingOverlap = null
+                if (saveOverlays(pending.project, pending.requested, pending.preferredId, "rearrange"))
+                    selectedOverlayId = pending.preferredId
+            }, onCancel = { pendingOverlap = null })
         }
     }
 }

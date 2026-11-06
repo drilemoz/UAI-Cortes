@@ -16,12 +16,20 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.177"
-    const val VERSION_CODE = 178
+    const val VERSION_NAME = "0.1.179"
+    const val VERSION_CODE = 180
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
-        ReleaseSummary("0.1.177", listOf(
+        ReleaseSummary("0.1.179", listOf(
+            ReleaseFeature("editor-confirm-save-179", "Salvar ou descartar ao sair",
+                "Ao voltar do editor, escolha salvar o projeto, salvar cópia ou descartar as alterações sem apagar a mídia original.", "check"),
+            ReleaseFeature("editor-draft-recovery-179", "Edição temporária com recuperação",
+                "Projetos novos só entram no catálogo após confirmação; uma sessão interrompida pode ser recuperada localmente.", "captions"),
+            ReleaseFeature("backup-storage-179", "Backups visíveis e limpeza segura",
+                "Salvamento e segurança mostra o espaço usado e permite remover backups órfãos com confirmação.", "check")
+        )),
+        ReleaseSummary("0.1.178", listOf(
             ReleaseFeature("ci147-pip-test-177", "Teste de escala PiP corrigido",
                 "O teste agora aceita valores válidos de 91% até 150%, sem liberar valores fora do intervalo de 5% a 150%.", "check"),
             ReleaseFeature("ci147-preserve-editor-177", "Editor e projetos preservados",
