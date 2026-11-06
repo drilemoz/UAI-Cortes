@@ -133,7 +133,14 @@ gesture=(root/'app/src/main/java/br/com/uaicortes/AudioTimelineEdit.kt').read_te
 assert 'internal fun InteractiveAudioTimeline(' in ui
 assert 'internal fun AudioTrimGestureTimeline(' in ui
 assert 'onSelectAudio = { id ->' in ui
-assert 'onMoveAudio={ trackId, start ->' in ui and 'AudioDragSurface(visual,total,widthPx' in ui
+# A timeline principal da 0.1.174 usa o mesmo controlador de gestos para todas as pistas;
+# as telas de Audio e Legendas conservam os respectivos editores avançados.
+assert 'onTimelineEdit={kind,id,handle,delta,target->' in ui
+assert 'TimelineDirectEdit.audio(p,id,handle,delta,' in ui
+assert 'TimelineDirectEdit.main(p,id,handle,delta,target)' in ui
+assert 'TimelineDirectEdit.subtitle(p,id,handle,delta)' in ui
+assert 'TimelineDirectEdit.overlay(p,id,handle,delta,' in ui
+assert 'detectDragGestures' in (root/'app/src/main/java/br/com/uaicortes/UnifiedEditorTimeline.kt').read_text()
 assert 'AudioTimelineEdit.move(' in ui
 assert 'AudioTimelineEdit.left(' in ui
 assert 'AudioTimelineEdit.right(' in ui
@@ -968,7 +975,9 @@ assert 'SubtitleAutoFit.factor(' in (root/'app/src/main/java/br/com/uaicortes/Su
 assert 'val frozenMs = projectPosition(player, p.clips, p.durationMs)' in full_ui
 assert 'player.pause()\n                val frozenMs' in full_ui
 assert 'Capturando quadro em' in full_ui
-assert 'UnifiedTimelinePolicy.mainSpans(project.clips, false)' in (app_files/'UnifiedEditorTimeline.kt').read_text()
+timeline_source = (app_files/'UnifiedEditorTimeline.kt').read_text()
+assert 'UnifiedTimelinePolicy.mainSpans(project.clips,false)' in timeline_source
+assert 'UnifiedTimelinePolicy.mainSpans(project.clips,true)' in timeline_source
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleAutoFitTest.kt').exists()
 assert (root/'app/src/test/java/br/com/uaicortes/PipOpacityPersistenceTest.kt').exists()
 print('OK: v0.1.79 posição inferior, ajuste de texto, PiP alpha e captura pausada')

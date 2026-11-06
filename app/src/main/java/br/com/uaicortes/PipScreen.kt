@@ -54,7 +54,8 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
     }
     fun applyPreset(period: PipTimePresets.Period) {
         val selected = pip ?: return
-        val adjusted = PipTimePresets.limited(period, selected.isImage, overlaySourceDuration)
+        val adjusted = PipTimePresets.limited(period, selected.isImage,
+            overlaySourceDuration?.minus(selected.sourceStartMs)?.coerceAtLeast(0L))
         if (adjusted == null) {
             android.widget.Toast.makeText(context,
                 "Não foi possível confirmar a duração do vídeo do PiP.",
@@ -336,7 +337,7 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                                                     val i = row * 3 + col
                                                     OutlinedButton(onClick = {
                                                         val (wf, hf) = OverlayEditorLogic.dimensions(
-                                                            pip.scale, sourceAspect, canvasAspect)
+                                                            pip.scale, sourceAspect, canvasAspect,pip.fitMode)
                                                         val (x, y) = OverlayEditorLogic.preset(row, col, wf, hf)
                                                         onChange(pip.copy(x = x, y = y))
                                                     }, modifier = Modifier.weight(1f).height(50.dp)
@@ -353,7 +354,7 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                                         if (pip != null) {
                                             Text("Tamanho: ${(pip.scale * 100f).toInt()}%",
                                                 fontWeight = FontWeight.Medium)
-                                            listOf(5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 90).chunked(4).forEach { row ->
+                                            listOf(5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 90, 100, 125, 150).chunked(4).forEach { row ->
                                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                                                     row.forEach { percent ->
                                                         OutlinedButton(onClick = {
@@ -371,11 +372,22 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                                                     repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
                                                 }
                                             }
-                                            Slider(value = pip.scale.coerceIn(.05f, .90f),
+                                            Text("Enquadramento",fontWeight=FontWeight.Medium)
+                                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                                                FilterChip(selected=pip.fitMode==OverlayEditorLogic.FIT,
+                                                    onClick={onChange(pip.copy(fitMode=OverlayEditorLogic.FIT))},
+                                                    label={Text("Ajustar")})
+                                                FilterChip(selected=pip.fitMode==OverlayEditorLogic.FILL,
+                                                    onClick={onChange(pip.copy(fitMode=OverlayEditorLogic.FILL))},
+                                                    label={Text("Preencher")})
+                                            }
+                                            Text("Preencher amplia a imagem sem deformar, recortando as bordas.",
+                                                style=MaterialTheme.typography.bodySmall)
+                                            Slider(value = pip.scale.coerceIn(.05f, 1.50f),
                                                 onValueChange = {
                                                     onChange(pip.copy(scale = it))
                                                     manual = (it * 100f).toInt().toString()
-                                                }, valueRange = .05f..90f/100f)
+                                                }, valueRange = .05f..1.50f)
                                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                                                 horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                                 OutlinedTextField(value = manual, onValueChange = { value ->
@@ -393,7 +405,7 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                                                     Text(" Usar")
                                                 }
                                             }
-                                            Text("De 5% a 90%; aspecto original preservado.",
+                                            Text("De 5% a 150%; acima de 100% o excedente pode ser recortado.",
                                                 style = MaterialTheme.typography.bodySmall)
                                         }
                                     }
@@ -401,16 +413,24 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                                         if (pip != null) {
                                             val end = (pip.startAtMs + pip.durationMs).coerceAtMost(total)
                                             val minLength = minOf(500L, total)
+                                            // A edição por horários deve respeitar também o recorte
+                                            // da origem feito com as alças da timeline.
+                                            val sourceRemaining = if (pip.isImage) total else
+                                                (overlaySourceDuration?.minus(pip.sourceStartMs)
+                                                    ?.coerceAtLeast(minLength) ?: pip.durationMs)
+                                            fun limitedEnd(at: Long): Long =
+                                                minOf(total,at+sourceRemaining)
+                                                    .coerceAtLeast(at+minLength).coerceAtMost(total)
                                             Row(Modifier.fillMaxWidth(),
                                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                                 verticalAlignment = Alignment.CenterVertically) {
                                                 TimeDigitsField("Início", pip.startAtMs, total,
                                                     valid={it in 0L..(end-minLength).coerceAtLeast(0L)},
                                                     onCommit={ typed -> onChange(pip.copy(
-                                                        startAtMs=typed,durationMs=end-typed)) },
+                                                        startAtMs=typed,durationMs=minOf(end,limitedEnd(typed))-typed)) },
                                                     modifier=Modifier.weight(1f),compact=true)
                                                 TimeDigitsField("Fim", end, total,
-                                                    valid={it in (pip.startAtMs+minLength).coerceAtMost(total)..total},
+                                                    valid={it in (pip.startAtMs+minLength).coerceAtMost(total)..limitedEnd(pip.startAtMs)},
                                                     onCommit={ typed -> onChange(pip.copy(
                                                         durationMs=typed-pip.startAtMs)) },
                                                     modifier=Modifier.weight(1f),compact=true)
@@ -423,7 +443,8 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                                                 onValueChange={ range ->
                                                     val begin=range.start.toLong().coerceIn(0L,total-minLength)
                                                     val finish=range.endInclusive.toLong().coerceIn(begin+minLength,total)
-                                                    onChange(pip.copy(startAtMs=begin,durationMs=finish-begin))
+                                                    onChange(pip.copy(startAtMs=begin,
+                                                        durationMs=minOf(finish,limitedEnd(begin))-begin))
                                                 },
                                                 valueRange=0f..total.toFloat())
                                             Text("Toque em Início ou Fim para digitar; use a barra para ajustar ambos.",

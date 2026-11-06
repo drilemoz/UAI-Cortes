@@ -29,6 +29,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -524,21 +525,21 @@ internal fun PipLayer(pip: Overlay, timeMs: Long, playing: Boolean,
     LaunchedEffect(pip.uri) {
         pipPlayer?.apply { setMediaItem(MediaItem.fromUri(pip.uri)); prepare() }
     }
-    LaunchedEffect(playing, timeMs, pip.volume, pip.muted, speed, previewGain) {
+    LaunchedEffect(playing, timeMs, pip.sourceStartMs, pip.volume, pip.muted, speed, previewGain) {
         pipPlayer?.apply {
             setPlaybackParameters(PlaybackParameters(speed))
             volume = if (pip.muted) 0f else EditorPreviewVolume.output(pip.volume, previewGain)
-            if (kotlin.math.abs(currentPosition - timeMs) > 400L) seekTo(timeMs.coerceAtLeast(0L))
+            if (kotlin.math.abs(currentPosition - (timeMs + pip.sourceStartMs)) > 400L) seekTo((timeMs+pip.sourceStartMs).coerceAtLeast(0L))
             if (playing) play() else pause()
         }
     }
     val currentPip by rememberUpdatedState(pip)
     val currentUpdate by rememberUpdatedState(onUpdate)
-    BoxWithConstraints(Modifier.fillMaxSize()) {
+    BoxWithConstraints(Modifier.fillMaxSize().clipToBounds()) {
         val canvasW = constraints.maxWidth.coerceAtLeast(1)
         val canvasH = constraints.maxHeight.coerceAtLeast(1)
         val (wFrac, hFrac) = OverlayEditorLogic.dimensions(pip.scale, sourceAspect,
-            canvasW.toFloat() / canvasH)
+            canvasW.toFloat() / canvasH,pip.fitMode)
         val centerX = OverlayEditorLogic.clampCenter(pip.x, wFrac)
         val centerY = OverlayEditorLogic.clampCenter(pip.y, hFrac)
         val pipWidth = maxWidth * wFrac
@@ -561,10 +562,10 @@ internal fun PipLayer(pip: Overlay, timeMs: Long, playing: Boolean,
                     detectTransformGestures { _, pan, zoom, _ ->
                         val live = currentPip
                         val (wf, hf) = OverlayEditorLogic.dimensions(
-                            (live.scale * zoom).coerceIn(.05f, .90f), sourceAspect,
-                            canvasW.toFloat() / canvasH)
+                            (live.scale * zoom).coerceIn(.05f, 1.50f), sourceAspect,
+                            canvasW.toFloat() / canvasH,pip.fitMode)
                         currentUpdate(live.copy(
-                            scale = (live.scale * zoom).coerceIn(.05f, .90f),
+                            scale = (live.scale * zoom).coerceIn(.05f, 1.50f),
                             x = OverlayEditorLogic.clampCenter(live.x + pan.x / canvasW, wf),
                             y = OverlayEditorLogic.clampCenter(live.y + pan.y / canvasH, hf)
                         ))
@@ -613,40 +614,45 @@ internal fun PipLayer(pip: Overlay, timeMs: Long, playing: Boolean,
 internal object NumericTimeMask : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         val output = NumericTime.format(text.text)
-        val length = text.length
+        val digits = output.indices.filter { output[it].isDigit() }
+        val padding = (digits.size - text.length).coerceAtLeast(0)
         val mapping = object : OffsetMapping {
-            override fun originalToTransformed(offset: Int): Int =
-                if (offset <= 0 && length == 0) 0 else output.length
-            override fun transformedToOriginal(offset: Int): Int = length
+            override fun originalToTransformed(offset: Int): Int {
+                if (text.isEmpty()) return output.length
+                val at = offset.coerceIn(0, text.length)
+                return if (at == 0) digits[padding] else digits[padding + at - 1] + 1
+            }
+            override fun transformedToOriginal(offset: Int): Int =
+                (digits.count { it < offset } - padding).coerceIn(0, text.length)
         }
         return TransformedText(AnnotatedString(output), mapping)
     }
 }
 
-/** Campo numérico compartilhado, com a opção de aplicar cada valor válido imediatamente.
- * Na prévia, não exige botão de confirmar; o player é reposicionado a cada digitação.
- * No PiP, mantém os botões de confirmar/limpar existentes. */
+/** Não apaga o horário ao receber foco. Seleciona os dígitos existentes, permitindo
+ * substituição imediata ou reposicionamento do cursor para uma alteração parcial. */
 @Composable
 internal fun TimeDigitsField(label: String, timeMs: Long, totalMs: Long,
     valid: (Long) -> Boolean = { it in 0L..totalMs },
     onCommit: (Long) -> Unit, modifier: Modifier = Modifier,
     autoApply: Boolean = false, compact: Boolean = false) {
-    var digits by remember { mutableStateOf(NumericTime.fromMs(timeMs)) }
+    var entry by remember { mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(NumericTime.fromMs(timeMs))) }
     var editing by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
-    LaunchedEffect(timeMs) { if (!editing) digits = NumericTime.fromMs(timeMs) }
-    val parsed = NumericTime.toMs(digits)
+    LaunchedEffect(timeMs) { if (!editing) entry = androidx.compose.ui.text.input.TextFieldValue(NumericTime.fromMs(timeMs)) }
+    val parsed = NumericTime.toMs(entry.text)
     val allowed = parsed != null && valid(parsed)
     Row(modifier, verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         OutlinedTextField(
-            value = digits,
+            value = entry,
             onValueChange = { typed ->
-                digits = NumericTime.sanitize(typed)
+                val value = NumericTime.sanitize(typed.text)
+                val begin = typed.selection.start.coerceIn(0,value.length)
+                val end = typed.selection.end.coerceIn(0,value.length)
+                entry = typed.copy(text=value,selection=androidx.compose.ui.text.TextRange(begin,end))
                 editing = true
-                if (autoApply) {
-                    NumericTime.toMs(digits)?.takeIf(valid)?.let(onCommit)
-                }
+                if (autoApply) NumericTime.toMs(value)?.takeIf(valid)?.let(onCommit)
             },
             visualTransformation = NumericTimeMask,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
@@ -657,28 +663,29 @@ internal fun TimeDigitsField(label: String, timeMs: Long, totalMs: Long,
             }),
             modifier = Modifier.weight(1f).onFocusChanged { state ->
                 if (state.isFocused && !editing) {
-                    digits = "" // uma nova digitação começa do zero, sem precisar apagar separadores
-                    editing = true
+                    // A seleção, e não uma limpeza, prepara o valor para substituir.
+                    entry=entry.copy(selection=androidx.compose.ui.text.TextRange(0,entry.text.length))
+                    editing=true
                 } else if (!state.isFocused && editing) {
-                    editing = false
+                    editing=false
                     if(compact && allowed) onCommit(parsed!!)
-                    // Entradas inválidas não substituem o último horário válido.
-                    digits = NumericTime.fromMs(timeMs)
+                    entry=androidx.compose.ui.text.input.TextFieldValue(NumericTime.fromMs(timeMs))
                 }
             },
-            label = { Text(label) }, singleLine = true, isError = digits.isNotBlank() && !allowed,
-            supportingText = if (!compact && digits.isNotBlank() && !allowed && !autoApply) {
+            label = { Text(label) }, singleLine = true,
+            isError = entry.text.isNotBlank() && !allowed,
+            supportingText = if (!compact && entry.text.isNotBlank() && !allowed && !autoApply) {
                 { Text("Fora do intervalo") }
             } else null
         )
         if (!autoApply && !compact) {
-            IconButton(onClick = { digits = ""; editing = true }) {
+            IconButton(onClick = { entry = androidx.compose.ui.text.input.TextFieldValue(""); editing = true }) {
                 Icon(Icons.Default.Backspace, "Limpar $label")
             }
             IconButton(onClick = {
                 if (allowed) {
                     onCommit(parsed!!)
-                    editing = false
+                    editing=false
                     focusManager.clearFocus()
                 }
             }, enabled = allowed) {

@@ -1,3 +1,28 @@
+# Uai Cortes · versão 0.1.176 — Enquadre suas fotos na linha do tempo
+
+- Toque na foto na linha do tempo e escolha **Enquadrar imagem**.
+- Ajuste ou preencha o quadro, arraste a imagem para reposicionar e use o gesto de pinça ou controle de zoom de 100% a 300%.
+- **Salvar** registra o enquadramento daquela foto; **Cancelar** mantém o anterior. Imagens antigas continuam sem recorte extra.
+- O Media3 recebe a mesma transformação na exportação; qualidade e fidelidade entre tela/MP4 precisam ser validadas no Android.
+- Transições com sobreposição real de dois clipes ainda não foram implementadas, pois o Media3 Transformer 1.11.1 não as oferece diretamente.
+
+# Uai Cortes · versão 0.1.175 — Mais controle, menos toques
+
+- **Horários:** toque em Início ou Fim para editar o número existente sem perder o valor.
+- **PiP:** use Ajustar ou Preencher, alinhamento sem bordas e escala de até 150% para logos e imagens, mantendo a opção anterior por padrão.
+- **Timeline:** só aparecem as faixas ocupadas; Adicionar abre os tipos ausentes.
+- **Transições:** seis cartões visuais principais e opção de revelar todos os efeitos originais.
+- **Limitações:** não inclui dissolvência real entre clipes nem transformação livre das fotos de fundo; validar zoom PiP na prévia e no MP4 em aparelho.
+
+# Uai Cortes · versão 0.1.174 — Linha do tempo com ajuste direto
+
+- Encaixe magnético ativável/desativável e pausa da reprodução durante o arrasto.
+- **Selecione:** tocar num clipe agora seleciona; botão Editar abre as ferramentas completas se necessário.
+- **Mova e apare:** arrastar o centro muda posição/ordem, puxar as alças modifica começo/fim; controles exibem zoom e Desfazer/Refazer.
+- **Regras de mídia:** vídeo/áudio limitados à duração do arquivo, fotos podem ficar mais tempo, PiP de vídeo usa a entrada correta após recortar.
+- **Preservação:** original intacto, schemaVersion=4 e projetos antigos compatíveis pelo campo opcional de offset de PiP.
+- **Verificação necessária:** build/Lint no GitHub Actions e testes físicos da timeline, de mídia e do MP4.
+
 # Uai Cortes · versão 0.1.173 — Fotos importáveis novamente
 
 - Corrige o aviso indevido “Não foi possível ler a imagem escolhida” após selecionar uma foto na galeria integrada.

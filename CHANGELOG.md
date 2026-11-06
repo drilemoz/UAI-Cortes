@@ -1,3 +1,32 @@
+# Uai Cortes · versão 0.1.176 — Enquadramento livre de fotos no editor
+
+- Adicionado editor visual de foto na faixa principal, com Ajustar/Preencher, zoom, arrasto, centralizar, confirmar/cancelar e seleção preservada.
+- Foto mantém quatro novos parâmetros opcionais no JSON (`imageFrameMode`, `imageZoom`, `imagePanX`, `imagePanY`) e é aplicada pela matriz de transformação tanto na prévia como nas sequências Media3 durante a exportação.
+- Adicionado cálculo puro de geometria com limites de deslocamento e proteção contra números não finitos. Fotos de projetos legados permanecem em modo Ajustar e zoom 1×.
+- Incluídos testes de contrato e JUnit (default legado, preenchimento de aspecto, limites de pan e JSON) e verificação sintática.
+- Preservados schemaVersion 4, PiPs, legendas, áudio, transições existentes, cinco APKs Release e integrações de APIs.
+- Não há suporte comprovado a crossfade ou virada 3D; compilação e execução no Android ainda são pendentes.
+
+# Uai Cortes · versão 0.1.175 — Editor de tempo, layout e PiP mais flexível
+
+- Corrigido campo de tempo compartilhado: foco não limpa os dígitos; permite seleção e alteração parcial antes de salvar.
+- Aumentado limite de escala PiP de 90% para 150%, removida margem obrigatória e mantida proporção; novas opções de enquadramento Ajustar/Preencher e campo `Overlay.fitMode` opcional com default `fit`.
+- Prévia e compositor Media3 usam a mesma função de geometria normalizada; colisões entre PiPs continuam exigindo aprovação.
+- Ocultadas faixas de timeline sem conteúdo, mantendo o acesso por menu Adicionar e o cursor sincronizado.
+- Seis efeitos reais já existentes reorganizados em cartões visuais; os demais preservados em Ver todos, sem reivindicar dissolvência real.
+- Acrescentados testes unitários de geometria, bordas, zoom, fallback e persistência, além de teste de contrato visual; schemaVersion=4, cinco APKs Release e integrações existentes mantidas.
+- Pendências: fotos da faixa principal em modo livre, dissolvência verdadeiramente sobreposta, compilação Gradle/Android e testes físicos da prévia/exportação.
+
+# Uai Cortes · versão 0.1.174 — Edição gestual direta na timeline
+
+- Encaixe magnético opcional (até 350 ms de um ponto existente), pausa da prévia durante arrasto e alerta quando um recorte descartaria legenda, PiP ou áudio totalmente contido no trecho.
+- Adicionadas seleção sem navegação, alças visuais, arrasto horizontal de imagens, vídeos, PiPs, áudio, vozes independentes e legendas, com commit único ao soltar.
+- Adicionado zoom 1×/2×/4×/8×, espaço extra após o vídeo para alongar fotos e desfazer/refazer para alterações gestuais.
+- `TimelineDirectEdit` centraliza limites: recortes de vídeo e áudio respeitam a fonte e mínimo de 250ms; foto principal permite 1s até 15min; PiP não ultrapassa o projeto e bloqueia novas colisões não aprovadas.
+- Campo opcional `Overlay.sourceStartMs` (default 0) persiste o recorte pela esquerda e passa para a prévia e exportação Media3 do vídeo/áudio PiP, preservando schemaVersion 4.
+- Ao reordenar clipes principais, elementos totalmente contidos acompanham o clipe, elementos que atravessam bordas mantêm horários e provocam aviso para revisão.
+- Mantidos gallery/SAF da 0.1.173, APIs, diagnósticos, funções avançadas, cinco variantes Release. Android/Media3 real permanece pendente.
+
 # Uai Cortes · versão 0.1.173 — Importação de imagens da galeria
 
 - Corrigida a exceção de `image_import` em `StaticImageClip.kt`, identificada no diagnóstico de 05/11/2026 e reproduzida por vídeo: `BitmapFactory.decodeStream` devolve `null` quando `inJustDecodeBounds=true`, sem indicar erro.

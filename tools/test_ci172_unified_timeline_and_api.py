@@ -12,14 +12,14 @@ paths=(r/'app/src/main/res/xml/diagnostic_file_paths.xml').read_text()
 record=(src/'DiagnosticRecorder.kt').read_text()
 policy=(src/'ApiDiagnosticPolicy.kt').read_text()
 ledger=(src/'GeminiUsageLedger.kt').read_text()
-for token in ('UnifiedEditorTimeline(p,currentMs','onClip={ id ->','onOverlay={ id ->','onAudio=onSelectAudio',
-              'onSubtitle=onSelectSubtitle', 'onMoveAudio={ trackId, start ->'):
+for token in ('UnifiedEditorTimeline(p,currentMs','onClip={id->','onOverlay={id->','onAudio=onSelectAudio',
+              'onSubtitle=onSelectSubtitle', 'onTimelineEdit={kind,id,handle,delta,target->'):
     assert token in editor,token
 for token in ('mainSpans(clips: List<Clip>, image: Boolean)', 'clip.isImage == image',
               'cursorFraction(positionMs: Long, durationMs: Long)', 'detectDragGestures',
-              'detectTapGestures', 'AudioDragSurface(visual,total,widthPx',
-              'transitions=project.clips','Icons.Default.Image', 'Icons.Default.ClosedCaption',
-              'Icons.Default.RecordVoiceOver','onMove=onMoveAudio'):
+              'detectTapGestures','TimelineSegment(span,kind,total,width,tint',
+              'transitions=if(index==0)project.clips','Icons.Default.Image', 'Icons.Default.ClosedCaption',
+              'Icons.Default.RecordVoiceOver','onEdit={kind,id,handle,delta,target ->'):
     assert token in timeline,token
 assert 'MainImageInsertionUi(project, screen, mediaAction, selectedClip,' in activity
 assert 'openGallery("editor", "image_insert")' in activity

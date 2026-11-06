@@ -16,11 +16,37 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.173"
-    const val VERSION_CODE = 174
+    const val VERSION_NAME = "0.1.176"
+    const val VERSION_CODE = 177
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.176", listOf(
+            ReleaseFeature("image-frame-176", "Enquadrar imagens no editor",
+                "Selecione uma foto da faixa principal, abra Enquadrar e escolha Ajustar ou Preencher; arraste e amplie com pinça.", "check"),
+            ReleaseFeature("image-preview-176", "Zoom salvo por imagem",
+                "Zoom e deslocamento ficam salvos por foto, sem alterar o arquivo ou o enquadramento dos projetos antigos.", "check"),
+            ReleaseFeature("image-export-176", "Exportação com enquadramento",
+                "A prévia e o Media3 usam parâmetros de transformação correspondentes; confirme o resultado no APK e no MP4.", "captions")
+        )),
+        ReleaseSummary("0.1.175", listOf(
+            ReleaseFeature("time-edit-175", "Horários sem perder o valor",
+                "Tocar no horário seleciona o valor existente em vez de zerar o campo; alteração parcial e confirmação continuam disponíveis.", "check"),
+            ReleaseFeature("pip-frame-175", "PiP sem margens obrigatórias",
+                "Tamanho até 150%, alinhamento de borda e opções Ajustar ou Preencher; padrão dos projetos existentes preservado.", "check"),
+            ReleaseFeature("compact-timeline-175", "Linha do tempo mais limpa",
+                "Faixas vazias são ocultadas; o botão Adicionar oferece acesso a vídeos, imagens, PiP, áudio, vozes e legendas.", "check"),
+            ReleaseFeature("transition-cards-175", "Transições visuais compactas",
+                "Seis efeitos existentes em cartões visuais, mantendo os demais em Ver todos e a prévia com quadros reais.", "check")
+        )),
+        ReleaseSummary("0.1.174", listOf(
+            ReleaseFeature("timeline-direct-174", "Edite diretamente na linha do tempo",
+                "Toque para selecionar, arraste para posicionar e use as alças para aparar vídeos, fotos, PiPs, áudio e legendas.", "check"),
+            ReleaseFeature("timeline-source-174", "Limites da mídia respeitados",
+                "Vídeos e áudios não ultrapassam a origem; PiP mantém o ponto de leitura na prévia e exportação.", "captions"),
+            ReleaseFeature("timeline-history-174", "Zoom, desfazer e refazer",
+                "Amplie a régua, use encaixe magnético opcional e reverta gestos sem alterar o arquivo original.", "check")
+        )),
         ReleaseSummary("0.1.173", listOf(
             ReleaseFeature("image-bounds-fix-173", "Fotos novamente importáveis",
                 "Corrigida a leitura de dimensões que rejeitava imagens válidas na galeria integrada.", "check"),

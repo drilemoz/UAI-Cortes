@@ -1,3 +1,30 @@
+# Uai Cortes · versão 0.1.176 — Novo enquadramento de imagens da faixa principal
+
+- O editor oferece **Enquadrar imagem** no cartão da foto principal: dois modos, **Ajustar** (mostra tudo) e **Preencher** (amplia para cobrir o quadro), zoom de 100–300% e arrasto com um ou dois dedos. O arquivo original permanece intacto; Salvar aplica apenas à foto selecionada e Cancelar descarta o rascunho.
+- `Clip.imageFrameMode`, `imageZoom`, `imagePanX` e `imagePanY` são campos JSON **opcionais**, com defaults `fit`, `1`, `0` e `0`; schemaVersion 4 não muda. PiP mantém `Overlay.fitMode` e campos próprios.
+- Uma transformação de matriz `ImageFrameEffect` após a apresentação do Media3 utiliza a mesma política de geometria da prévia do editor. Fotos personalizadas prevalecem sobre o recorte global da exportação vertical. Conteúdo da foto não sofre alteração de pixels na origem.
+- **Limitação:** a prévia adota quadro de referência do primeiro vídeo do projeto, ou 9:16 para projeto composto só por fotos. Se o destino de exportação tiver outra proporção, o enquadramento precisa ser revisado. Igualdade pixel a pixel exige build e MP4 real.
+- **Pendente:** transições reais de duas faixas de vídeo sobrepostas (crossfade/virada 3D) requerem renderizador especializado; a própria documentação atual do Media3 Transformer não suporta crossfade nativo em Composition. As transições anteriores continuam funcionando.
+
+# Uai Cortes · versão 0.1.175 — Edição mais direta, PiP sem margem e timeline compacta
+
+- Campos numéricos de tempo não são apagados ao receber foco. A seleção inicial permite substituir os dígitos existentes; o cursor permanece ajustável e entradas inválidas não se tornam horários salvos.
+- PiP pode chegar a **100% da largura** e até 150% do controle de escala, alinhando com as bordas. O modo padrão **Ajustar** preserva a proporção; **Preencher** usa zoom e recorte intencional. O novo `Overlay.fitMode` é opcional e assume `fit` nos projetos anteriores, sem mudar schemaVersion 4.
+- Galeria de transições começa com seis efeitos existentes (Corte direto, Zoom, Recuo, Deslocamento, Flash e Fade preto), com cartões gráficos e simulação de quadros reais; os demais efeitos são acessíveis em Ver todos. NÃO é dissolvência real nem virada 3D.
+- Timeline oculta faixas vazias e oferece botão **Adicionar** para todas as mídias. O conteúdo oculto nunca é removido do projeto e volta a aparecer quando inserido.
+- **Ainda não implementados:** livre transformação das fotos de fundo/quadros principais e uma verdadeira dissolvência por sobreposição de quadros. Os ajustes de enquadramento desta versão se aplicam ao PiP de imagem/vídeo.
+- Testes JUnit e Android do compositor Media3 continuam necessários antes de declarar fidelidade exata da prévia/exportação e touch no aparelho.
+
+# Uai Cortes · versão 0.1.174 — Edição direta nas faixas da timeline
+
+- **Ajuste fino:** zoom com botões 1×/2×/4×/8× e encaixe magnético opcional, que pode ser desativado para movimentação livre.
+- **Editor:** seleção por toque sem trocar de tela; arraste o centro dos blocos para reposicionar, use alças de início/fim para aparar e zoom de 1× a 8× para precisão.
+- **Clipes principais:** vídeos/fotos continuam sequenciais; arrastar reordena, aparar ajusta o trecho/duração e recalcula o projeto. Foto pode durar até 15 minutos ao redimensionar.
+- **PiP, música e vozes:** PiPs/áudios não vinculados são movidos e aparados sem exceder a fonte ou o projeto; PiP de vídeo preserva offset da fonte em `sourceStartMs` (default legado 0). Voz vinculada permanece no clipe.
+- **Legendas:** edição de horários e palavras existentes; confirmação ao soltar; histórico de 15 operações em memória e controle Desfazer/Refazer.
+- **Proteções:** PiPs novos que colidirem sem autorização são recusados com orientação; elementos globais contidos em clipes reordenados acompanham sua posição, os atravessados exigem revisão.
+- **Limites:** é necessário validar a prévia e o MP4 exportado num Android real; não afirmar compilação sem CI.
+
 # Uai Cortes · versão 0.1.173 — Correção da importação de fotos
 
 - Corrigido o fluxo do botão Imagem: o leitor de dimensões BitmapFactory em modo `inJustDecodeBounds` não rejeita mais `null` de `decodeStream` para uma imagem válida.

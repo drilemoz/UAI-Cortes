@@ -70,7 +70,7 @@ class PipCompositor(private val overlays: List<Overlay>) : VideoCompositorSettin
             val input = inputSizes[index]
             val inW = input.width.coerceAtLeast(1).toFloat()
             val inH = input.height.coerceAtLeast(1).toFloat()
-            val (wf, hf) = OverlayEditorLogic.dimensions(pip.scale, inW / inH, outW / outH)
+            val (wf, hf) = OverlayEditorLogic.dimensions(pip.scale, inW / inH, outW / outH,pip.fitMode)
             Placement(wf * outW / inW, hf * outH / inH,
                 OverlayEditorLogic.clampCenter(pip.x, wf),
                 OverlayEditorLogic.clampCenter(pip.y, hf))
@@ -210,17 +210,29 @@ class ExportEngine(private val context: Context) {
             // Quando a composição era reescalada por último, textos nascidos de uma
             // fonte 480p/720p também eram ampliados como bitmap até a saída 1080p.
             // A ordem é relevante: vídeo -> dimensão final -> transições -> texto.
+            val hasImageFrame = clip.isImage && (clip.imageFrameMode == ImageFraming.FILL ||
+                clip.imageZoom != 1f || clip.imagePanX != 0f || clip.imagePanY != 0f)
             val presentation = if (portraitSize == null) {
                 Presentation.createForShortSide(height)
             } else {
                 Presentation.createForWidthAndHeight(
                     portraitSize.first, portraitSize.second,
-                    if (frameMode == VerticalFrameMode.CENTER_CROP)
+                    if (frameMode == VerticalFrameMode.CENTER_CROP && !hasImageFrame)
                         Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP
                     else Presentation.LAYOUT_SCALE_TO_FIT
                 )
             }
             val videoEffects = mutableListOf<androidx.media3.common.Effect>(presentation)
+            if (hasImageFrame) {
+                // Transforma só imagens da faixa principal, sem afetar PiPs e vídeos.
+                // Para saída vertical, a geometria considera o quadro 9:16 final.
+                val targetAspect = portraitSize?.let { it.first.toFloat() / it.second }
+                    ?: project.clips.firstOrNull { !it.isImage }?.let { other ->
+                        mediaAspect(context, other.uri, false)
+                    } ?: mediaAspect(context, clip.uri, true)
+                videoEffects += ImageFrameEffect(clip,
+                    mediaAspect(context, clip.uri, true), targetAspect)
+            }
             if (fadeIn > 0 || fadeOut > 0) {
                 val entering = previous?.kind ?: TransitionEffects.CUT
                 val leaving = next?.kind ?: TransitionEffects.CUT
@@ -258,7 +270,9 @@ class ExportEngine(private val context: Context) {
             val media = if (pip.isImage) MediaItem.Builder().setUri(pip.uri)
                 .setImageDurationMs(pip.durationMs).build()
                 else MediaItem.Builder().setUri(pip.uri).setClippingConfiguration(
-                    MediaItem.ClippingConfiguration.Builder().setEndPositionMs(pip.durationMs).build()).build()
+                    MediaItem.ClippingConfiguration.Builder()
+                        .setStartPositionMs(pip.sourceStartMs)
+                        .setEndPositionMs(pip.sourceStartMs+pip.durationMs).build()).build()
             val edited = EditedMediaItem.Builder(media)
                 .apply { if (pip.isImage) setFrameRate(30) }.build()
             val overlayTrack = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_VIDEO))
@@ -272,7 +286,9 @@ class ExportEngine(private val context: Context) {
         for (pip in pipsTopFirst) {
             if (pip.isImage || pip.muted || pip.volume <= 0f) continue
             val media = MediaItem.Builder().setUri(pip.uri).setClippingConfiguration(
-                MediaItem.ClippingConfiguration.Builder().setEndPositionMs(pip.durationMs).build()).build()
+                MediaItem.ClippingConfiguration.Builder()
+                        .setStartPositionMs(pip.sourceStartMs)
+                        .setEndPositionMs(pip.sourceStartMs+pip.durationMs).build()).build()
             val audioTrack = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_AUDIO))
             if (pip.startAtMs > 0) audioTrack.addGap(pip.startAtMs * 1000L)
             audioTrack.addItem(EditedMediaItem.Builder(media)

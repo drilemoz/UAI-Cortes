@@ -144,6 +144,10 @@ internal fun TransitionScreen(p:VideoProject,back:()->Unit,update:(VideoProject)
         mutableFloatStateOf((stored(boundary)?.durationMs ?: 500L).coerceIn(250L,1000L).toFloat())
     }
     var applyAll by remember(p.id) { mutableStateOf(false) }
+    var showMore by remember(p.id) { mutableStateOf(false) }
+    val featured = listOf(TransitionEffects.CUT,TransitionEffects.ZOOM_IN,
+        TransitionEffects.ZOOM_OUT,TransitionEffects.PAN,
+        TransitionEffects.FLASH_WHITE,TransitionEffects.BLACK)
     Column(Modifier.fillMaxSize().statusBarsPadding().imePadding()
         .padding(horizontal=16.dp), verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Heading("Transições", back)
@@ -168,37 +172,62 @@ internal fun TransitionScreen(p:VideoProject,back:()->Unit,update:(VideoProject)
                 Text("Efeito",fontWeight=FontWeight.Bold)
                 Text("Escolha o efeito. As mudanças só são gravadas ao tocar em Aplicar.",
                     style=MaterialTheme.typography.bodySmall)
-                androidx.compose.foundation.lazy.LazyRow(
-                    horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    items(TransitionEffects.names.size) { index ->
-                        val value=TransitionEffects.names[index]
-                        val selected=kind==value
-                        Surface(onClick={kind=value},shape=RoundedCornerShape(9.dp),
-                            color=if(selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                            border=BorderStroke(if(selected) 2.dp else 1.dp,
-                                if(selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)) {
-                            Column(Modifier.width(105.dp).padding(7.dp),
-                                horizontalAlignment=Alignment.CenterHorizontally,
-                                verticalArrangement=Arrangement.spacedBy(5.dp)) {
-                                Box(Modifier.fillMaxWidth().height(48.dp)
-                                    .background(Color(0xFF292929),RoundedCornerShape(5.dp)),
-                                    contentAlignment=Alignment.Center) {
-                                    Text(when (value) {
-                                        TransitionEffects.CUT -> "A | B"
-                                        TransitionEffects.ZOOM_IN -> "A ⊕ B"
-                                        TransitionEffects.ZOOM_OUT -> "A ⊖ B"
-                                        TransitionEffects.PAN -> "A → B"
-                                        TransitionEffects.MONO -> "A ◐ B"
-                                        TransitionEffects.SEPIA -> "A ◒ B"
-                                        TransitionEffects.FLASH_WHITE,TransitionEffects.FLASH_BLACK -> "A ✦ B"
-                                        else -> "A ▪ B"
-                                    },color=Color.White)
+                // Seis escolhas iniciais com cartões visuais. Os demais efeitos
+                // permanecem disponíveis sem poluir a interface de quem só quer editar.
+                val shown = if (showMore) TransitionEffects.names else featured
+                shown.chunked(3).forEach { group ->
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                        group.forEach { value ->
+                            val selected=kind==value
+                            Surface(onClick={kind=value},modifier=Modifier.weight(1f),
+                                shape=RoundedCornerShape(12.dp),
+                                color=if(selected) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surfaceVariant,
+                                border=BorderStroke(if(selected)2.dp else 1.dp,
+                                    if(selected)MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.outlineVariant)) {
+                                Column(Modifier.padding(6.dp),verticalArrangement=Arrangement.spacedBy(6.dp),
+                                    horizontalAlignment=Alignment.CenterHorizontally) {
+                                    // Miniatura gráfica diferente por efeito; a prévia acima
+                                    // mostra o comportamento real com quadros dos dois clipes.
+                                    Row(Modifier.fillMaxWidth().height(53.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(Color(0xFF151924)),
+                                        verticalAlignment=Alignment.CenterVertically,
+                                        horizontalArrangement=Arrangement.spacedBy(0.dp)) {
+                                        val leftSize=when(value) {
+                                            TransitionEffects.ZOOM_IN->1.30f
+                                            TransitionEffects.ZOOM_OUT->.84f
+                                            else->1f
+                                        }
+                                        Box(Modifier.weight(1f).fillMaxHeight()
+                                            .graphicsLayer {scaleX=leftSize;scaleY=leftSize}
+                                            .background(Color(0xFF1986A9)),contentAlignment=Alignment.Center) {
+                                            Icon(Icons.Default.Movie,null,tint=Color.White,
+                                                modifier=Modifier.size(20.dp))
+                                        }
+                                        Box(Modifier.width(if(value==TransitionEffects.PAN)8.dp else 2.dp)
+                                            .fillMaxHeight().background(if(value==TransitionEffects.FLASH_WHITE)
+                                                Color.White else if(value==TransitionEffects.BLACK)
+                                                Color.Black else Color(0xFFB6E0FA)))
+                                        Box(Modifier.weight(1f).fillMaxHeight()
+                                            .background(Color(0xFF7146B5)),contentAlignment=Alignment.Center) {
+                                            Icon(Icons.Default.Movie,null,tint=Color.White,
+                                                modifier=Modifier.size(20.dp))
+                                        }
+                                    }
+                                    Text(value,fontSize=11.sp,maxLines=2,minLines=2,
+                                        textAlign=TextAlign.Center,lineHeight=13.sp)
                                 }
-                                Text(value,fontSize=11.sp,maxLines=2,textAlign=TextAlign.Center,
-                                    minLines=2)
                             }
                         }
+                        repeat(3-group.size){Spacer(Modifier.weight(1f))}
                     }
+                }
+                TextButton(onClick={showMore=!showMore},modifier=Modifier.align(Alignment.End)) {
+                    Text(if(showMore)"Mostrar seis principais" else "Ver todos os efeitos")
+                    Icon(if(showMore)Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        null,Modifier.size(17.dp))
                 }
                 Text(TransitionEffects.description(kind),
                     style=MaterialTheme.typography.bodySmall)

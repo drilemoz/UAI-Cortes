@@ -1,6 +1,8 @@
 package br.com.uaicortes
 
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -73,8 +75,36 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     var scrubbing by remember(player) { mutableStateOf(false) }
     val latestPosition by rememberUpdatedState(currentMs)
     var clipMenuId by remember(p.id) { mutableStateOf<String?>(null) }
+    // Rascunho local: nenhum gesto modifica o projeto antes de Salvar enquadramento.
+    var imageFrameDraft by remember(p.id) { mutableStateOf<Clip?>(null) }
     var deletionRequested by remember(p.id) { mutableStateOf<String?>(null) }
     var feedback by remember(p.id) { mutableStateOf("") }
+    // Histórico de gestos de timeline, sem gravações intermediárias no disco.
+    val timelineUndo = remember(p.id) { mutableStateListOf<VideoProject>() }
+    val timelineRedo = remember(p.id) { mutableStateListOf<VideoProject>() }
+    val timelineSources = remember(p.overlays,p.audioTracks) {
+        (p.overlays.filterNot { it.isImage }.map { it.uri } +
+            p.audioTracks.map { it.uri }).distinct()
+    }
+    val sourceDurations by produceState<Map<String,Long>>(emptyMap(),p.id,timelineSources) {
+        value=withContext(Dispatchers.IO) {
+            timelineSources.associateWith { source ->
+                runCatching { verifiedMediaDuration(context,android.net.Uri.parse(source)) }.getOrDefault(0L)
+            }
+        }
+    }
+    fun timelineCommit(result: TimelineEditResult) {
+        if (result.changed) {
+            timelineUndo.add(p)
+            if (timelineUndo.size>15) timelineUndo.removeAt(0)
+            timelineRedo.clear()
+            onUpdate(result.project)
+        }
+        if (result.explanation.isNotBlank()) {
+            feedback=result.explanation
+            if (!result.changed) Toast.makeText(context,result.explanation,Toast.LENGTH_SHORT).show()
+        }
+    }
     LaunchedEffect(player, p.clips.map { it.id to it.volume }, previewVolume) {
         while (true) {
             val clipGain = p.clips.getOrNull(player.currentMediaItemIndex)?.volume ?: 1f
@@ -120,13 +150,16 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     }
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().height(66.dp).padding(horizontal=8.dp),verticalAlignment=Alignment.CenterVertically) {
-            IconButton(onClick=onBack){Icon(Icons.Default.ArrowBack,"Voltar")}
+            IconButton(onClick={ if(imageFrameDraft != null) imageFrameDraft=null else onBack() }){
+                Icon(Icons.Default.ArrowBack,"Voltar")}
             Column(Modifier.weight(1f),horizontalAlignment=Alignment.CenterHorizontally) {
                 Text(p.title,fontWeight=FontWeight.Medium,maxLines=1,overflow=TextOverflow.Ellipsis)
-                Text("Projeto em edição",style=MaterialTheme.typography.bodySmall,
+                Text(if(imageFrameDraft != null) "Enquadrar imagem" else "Projeto em edição",
+                    style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            BlueButton("Exportar",{ onEdit("export") },Modifier.width(102.dp),enabled=p.clips.isNotEmpty())
+            if (imageFrameDraft == null) BlueButton("Exportar",{ onEdit("export") },
+                Modifier.width(102.dp),enabled=p.clips.isNotEmpty())
         }
         // Separate audio players track the editor playhead without modifying source media.
         p.music?.let { music ->
@@ -148,7 +181,12 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             val actualAspect=remember(previewClip?.uri, previewClip?.isImage) {
                 previewClip?.let { mediaAspect(context,it.uri,it.isImage) } ?: 16f/9f
             }
-            val fit=AdaptiveVideoLayout.fit(maxWidth.value,maxHeight.value,actualAspect)
+            val imageCanvasAspect=remember(p.clips.map { it.uri to it.isImage }) {
+                p.clips.firstOrNull { !it.isImage }?.let { mediaAspect(context,it.uri,false) }
+                    ?: 9f / 16f
+            }
+            val displayedAspect=if(previewClip?.isImage==true) imageCanvasAspect else actualAspect
+            val fit=AdaptiveVideoLayout.fit(maxWidth.value,maxHeight.value,displayedAspect)
             val videoW=fit.width.dp
             val videoH=fit.height.dp
             Box(Modifier.width(videoW).height(videoH).clipToBounds()) {
@@ -168,15 +206,35 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                     incoming?.kind ?: TransitionEffects.CUT, inMs,
                     outgoing?.kind ?: TransitionEffects.CUT, outMs)
                     else TransitionEffects.Motion(1f, 0f)
+                val frameClip = imageFrameDraft?.takeIf { it.id == clip?.id } ?: clip
+                val imageTransform = frameClip?.takeIf { it.isImage }?.let {
+                    ImageFraming.resolve(it.imageFrameMode,it.imageZoom,it.imagePanX,it.imagePanY,
+                        actualAspect,displayedAspect)
+                }
                 AndroidView(factory = { ctx -> previewPlayer(ctx).apply {
                     this.player = player
                     useController = false
                 } }, update = { it.player = player }, modifier = Modifier.fillMaxSize()
                     .graphicsLayer {
-                        scaleX = motion.scale
-                        scaleY = motion.scale
-                        translationX = motion.panX * size.width / 2f
+                        scaleX = imageTransform?.scale ?: motion.scale
+                        scaleY = imageTransform?.scale ?: motion.scale
+                        translationX = (imageTransform?.offsetX ?: motion.panX) * size.width / 2f
+                        translationY = (imageTransform?.offsetY ?: 0f) * size.height / 2f
                     })
+                if (frameClip?.isImage == true && imageFrameDraft?.id == frameClip.id) {
+                    // Camada de gestos intercepta a imagem, sem arrastar o PlayerView.
+                    Box(Modifier.matchParentSize().pointerInput(frameClip.id, actualAspect,displayedAspect) {
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            val draft=imageFrameDraft ?: return@detectTransformGestures
+                            val updatedZoom=ImageFraming.zoom(draft.imageZoom * zoom)
+                            val t=ImageFraming.resolve(draft.imageFrameMode,updatedZoom,
+                                draft.imagePanX,draft.imagePanY,actualAspect,displayedAspect)
+                            imageFrameDraft=draft.copy(imageZoom=updatedZoom,
+                                imagePanX=ImageFraming.dragPan(draft.imagePanX,pan.x,size.width,t.availableX),
+                                imagePanY=ImageFraming.dragPan(draft.imagePanY,pan.y,size.height,t.availableY))
+                        }
+                    }.border(1.dp,MaterialTheme.colorScheme.primary))
+                }
                 // Prévia de tintura ainda aproximada em efeitos monocromáticos/sépia.
                 if (clip != null) TransitionPreviewTint(incoming, inMs, outgoing, outMs,
                     local, clip.durationMs)
@@ -197,6 +255,45 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 }
             }
         }
+        if (imageFrameDraft != null) {
+            val draft=imageFrameDraft!!
+            Column(Modifier.fillMaxWidth().padding(horizontal=16.dp, vertical=12.dp),
+                verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                Text("Arraste a foto para reposicionar. Use dois dedos para ampliar.",
+                    style=MaterialTheme.typography.bodySmall)
+                Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                    if (draft.imageFrameMode==ImageFraming.FIT)
+                        Button(onClick={imageFrameDraft=draft.copy(imageFrameMode=ImageFraming.FIT,
+                            imagePanX=0f,imagePanY=0f)}, modifier=Modifier.weight(1f)) {Text("Ajustar")}
+                    else OutlinedButton(onClick={imageFrameDraft=draft.copy(imageFrameMode=ImageFraming.FIT,
+                        imagePanX=0f,imagePanY=0f)}, modifier=Modifier.weight(1f)) {Text("Ajustar")}
+                    if (draft.imageFrameMode==ImageFraming.FILL)
+                        Button(onClick={imageFrameDraft=draft.copy(imageFrameMode=ImageFraming.FILL,
+                            imagePanX=0f,imagePanY=0f)}, modifier=Modifier.weight(1f)) {Text("Preencher")}
+                    else OutlinedButton(onClick={imageFrameDraft=draft.copy(imageFrameMode=ImageFraming.FILL,
+                        imagePanX=0f,imagePanY=0f)}, modifier=Modifier.weight(1f)) {Text("Preencher")}
+                }
+                Text("Zoom: ${(draft.imageZoom*100).toInt()}%",style=MaterialTheme.typography.labelMedium)
+                Slider(value=draft.imageZoom.coerceIn(1f,ImageFraming.MAX_ZOOM),
+                    onValueChange={imageFrameDraft=draft.copy(imageZoom=ImageFraming.zoom(it))},
+                    valueRange=1f..ImageFraming.MAX_ZOOM)
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick={imageFrameDraft=draft.copy(imageZoom=1f,imagePanX=0f,imagePanY=0f)},
+                        modifier=Modifier.weight(1f)) {Text("Centralizar")}
+                    OutlinedButton(onClick={imageFrameDraft=null},modifier=Modifier.weight(1f)) {
+                        Text("Cancelar")
+                    }
+                    Button(onClick={
+                        timelineUndo.add(p)
+                        if (timelineUndo.size>15) timelineUndo.removeAt(0)
+                        timelineRedo.clear()
+                        onUpdate(p.copy(clips=p.clips.map { if(it.id==draft.id) draft else it }))
+                        imageFrameDraft=null
+                        feedback="Enquadramento salvo na imagem"
+                    },modifier=Modifier.weight(1f)) {Text("Salvar")}
+                }
+            }
+        } else {
         Row(Modifier.fillMaxWidth().padding(horizontal=4.dp,vertical=6.dp),horizontalArrangement=Arrangement.Center,
             verticalAlignment=Alignment.CenterVertically) {
             IconButton(onClick = {
@@ -286,19 +383,46 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 seekGlobal(ms)
             }, modifier = Modifier.weight(1f))
         }
-        // Faixas com origem temporal comum. A linha azul atravessa todas as pistas.
-        UnifiedEditorTimeline(p,currentMs, onSeek=::seekGlobal,
-            onClip={ id -> onSelected(id); clipMenuId=id },
+        // Um toque seleciona; arrastar o centro move, puxar uma borda apara.
+        // Todos os commits são únicos e só ocorrem quando o dedo é solto.
+        UnifiedEditorTimeline(p,currentMs,onSeek=::seekGlobal,
+            onClip={id->onSelected(id);clipMenuId=id},onSelectClip=onSelected,
             onTransition=onTransition,
-            onOverlay={ id -> onSelectOverlay(id); onEdit("pip") },
-            onAudio=onSelectAudio, onAddVideo=onAddVideo, onAddImage=onAddImage,
-            onOpenPiP=onPiP, onOpenAudio={onEdit("audio")},
-            onOpenVoice={onEdit("voices")},
-            onSubtitle=onSelectSubtitle, onOpenSubtitle={onEdit("subtitles")},
-            onMoveAudio={ trackId, start ->
-                onUpdate(p.copy(audioTracks=p.audioTracks.map { track ->
-                    if (track.id==trackId) track.copy(startMs=start) else track
-                }))
+            onOverlay={id->onSelectOverlay(id);onEdit("pip")},onSelectOverlay=onSelectOverlay,
+            onAudio=onSelectAudio,onAddVideo=onAddVideo,onAddImage=onAddImage,
+            onOpenPiP=onPiP,onOpenAudio={onEdit("audio")},
+            onOpenVoice={onEdit("voices")},onSubtitle=onSelectSubtitle,
+            onOpenSubtitle={onEdit("subtitles")},
+            onGestureStart={scrubbing=true;player.pause()},
+            onGestureEnd={scrubbing=false},
+            onTimelineEdit={kind,id,handle,delta,target->
+                val changed=when(kind) {
+                    TimelineKind.MAIN_VIDEO,TimelineKind.MAIN_IMAGE ->
+                        TimelineDirectEdit.main(p,id,handle,delta,target)
+                    TimelineKind.PIP -> TimelineDirectEdit.overlay(p,id,handle,delta,
+                        p.overlays.firstOrNull {it.id==id}?.uri?.let(sourceDurations::get),
+                        aspectRatio={layer->mediaAspect(context,layer.uri,layer.isImage)},
+                        canvasAspect=activeFrame?.let {mediaAspect(context,it.uri,it.isImage)}?:9f/16f)
+                    TimelineKind.AUDIO,TimelineKind.VOICE -> TimelineDirectEdit.audio(p,id,handle,delta,
+                        p.audioTracks.firstOrNull {it.id==id}?.uri?.let(sourceDurations::get))
+                    TimelineKind.SUBTITLE -> TimelineDirectEdit.subtitle(p,id,handle,delta)
+                }
+                timelineCommit(changed)
+            },
+            onUndo={
+                if(timelineUndo.isNotEmpty()) {
+                    val before=timelineUndo.removeAt(timelineUndo.lastIndex)
+                    timelineRedo.add(p);onUpdate(before);feedback="Edição desfeita"
+                }
+            },onRedo={
+                if(timelineRedo.isNotEmpty()) {
+                    val after=timelineRedo.removeAt(timelineRedo.lastIndex)
+                    timelineUndo.add(p);onUpdate(after);feedback="Edição refeita"
+                }
+            },canUndo=timelineUndo.isNotEmpty(),canRedo=timelineRedo.isNotEmpty(),
+            isEditable={kind,id ->
+                (kind!=TimelineKind.AUDIO && kind!=TimelineKind.VOICE) ||
+                    (id!="music" && p.audioTracks.firstOrNull {it.id==id}?.clipId==null)
             })
         Spacer(Modifier.height(5.dp));HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
         // Ferramentas em carrossel circular: salvar é um cartão, não um botão solto.
@@ -344,6 +468,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 }
             }
         }
+        } // Fim dos controles normais enquanto se enquadra uma imagem.
         if (feedback.isNotBlank()) Text(feedback, modifier=Modifier.padding(horizontal=12.dp,vertical=3.dp),
             color=MaterialTheme.colorScheme.primary, style=MaterialTheme.typography.bodySmall)
     }
@@ -367,6 +492,18 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                     onUpdate(EditFeatures.repositionAfterDelete(p,clips))
                     feedback=note
                     clipMenuId=null
+                }
+                if (active.isImage) {
+                    OutlinedButton(onClick={
+                        player.pause()
+                        seekGlobal(p.clips.take(idx).sumOf { it.durationMs })
+                        imageFrameDraft=active
+                        clipMenuId=null
+                    },modifier=Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.Crop,"Enquadrar imagem")
+                        Spacer(Modifier.width(8.dp))
+                        Text("Enquadrar imagem · arrastar e ampliar")
+                    }
                 }
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                     ClipSheetAction(if (active.isImage) "Duração" else "Cortar",

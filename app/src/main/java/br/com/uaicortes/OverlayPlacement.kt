@@ -37,7 +37,7 @@ object OverlayPlacement {
     fun arrange(items: List<PlacementItem>, preferredId: String? = null,
                 allowed: Set<Pair<String, String>> = emptySet()): Map<String, Pair<Float, Float>>? {
         if (items.size > MAX_PIPS || items.map { it.id }.distinct().size != items.size) return null
-        if (items.any { it.width <= 0f || it.height <= 0f || it.width > .95f || it.height > .95f }) return null
+        if (items.any { it.width <= 0f || it.height <= 0f || it.width > 12f || it.height > 12f }) return null
         if (items.isEmpty()) return emptyMap()
         val ordered = items.sortedWith(compareByDescending<PlacementItem> { it.id == preferredId }
             .thenBy { items.indexOf(it) })

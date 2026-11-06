@@ -18,7 +18,7 @@ internal object OverlayOperations {
               canvasAspect: Float, mediaAspect: (Overlay) -> Float,
               decision: String = "ask"): OverlayUpdate {
         val slots = requested.map { layer ->
-            val (width, height) = OverlayEditorLogic.dimensions(layer.scale, mediaAspect(layer), canvasAspect)
+            val (width, height) = OverlayEditorLogic.dimensions(layer.scale, mediaAspect(layer), canvasAspect,layer.fitMode)
             PlacementItem(layer.id, layer.startAtMs, layer.durationMs, layer.x, layer.y, width, height)
         }
         val ids = requested.map { it.id }.toSet()
@@ -60,7 +60,7 @@ internal object OverlayOperations {
             .coerceIn(0L, (project.durationMs - 1L).coerceAtLeast(0L))
         val remaining = (project.durationMs - start).coerceAtLeast(1L)
         val length = (if (isImage) previous?.durationMs ?: 5000L else mediaMs).coerceIn(1L, remaining)
-        val inserted = previous?.copy(uri = uri, isImage = isImage, durationMs = length)
+        val inserted = previous?.copy(uri = uri, isImage = isImage, durationMs = length, sourceStartMs = 0L)
             ?: Overlay(uri, isImage, length, startAtMs = start, scale = .30f)
         val requested = if (previous != null) project.overlays.map {
             if (it.id == previous.id) inserted else it

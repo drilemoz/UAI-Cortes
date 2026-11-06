@@ -15,18 +15,31 @@ data class Clip(
     val endMs: Long = sourceDurationMs,
     val volume: Float = 1f,
     val isImage: Boolean = false,
-    val imageMimeType: String? = null
+    val imageMimeType: String? = null,
+    /** Apenas fotos da faixa principal. Defaults preservam o enquadramento anterior. */
+    val imageFrameMode: String = ImageFraming.FIT,
+    val imageZoom: Float = 1f,
+    val imagePanX: Float = 0f,
+    val imagePanY: Float = 0f
 ) {
     val durationMs: Long get() = (endMs - startMs).coerceAtLeast(1L)
     fun json() = JSONObject().put("id", id).put("uri", uri).put("title", title)
         .put("sourceDurationMs", sourceDurationMs).put("startMs", startMs)
         .put("endMs", endMs).put("volume", volume.toDouble())
         .put("isImage", isImage).put("imageMimeType", imageMimeType)
+        .put("imageFrameMode", ImageFraming.mode(imageFrameMode))
+        .put("imageZoom", ImageFraming.zoom(imageZoom).toDouble())
+        .put("imagePanX", ImageFraming.pan(imagePanX).toDouble())
+        .put("imagePanY", ImageFraming.pan(imagePanY).toDouble())
     companion object {
         fun read(j: JSONObject) = Clip(j.optString("id", UUID.randomUUID().toString()),
             j.getString("uri"), j.optString("title", "Vídeo"), j.optLong("sourceDurationMs", 1000L),
             j.optLong("startMs"), j.optLong("endMs", 1000L), j.optDouble("volume", 1.0).toFloat(),
-            j.optBoolean("isImage", false), j.optString("imageMimeType").takeIf { it.isNotBlank() && it != "null" })
+            j.optBoolean("isImage", false), j.optString("imageMimeType").takeIf { it.isNotBlank() && it != "null" },
+            ImageFraming.mode(j.optString("imageFrameMode")),
+            ImageFraming.zoom(j.optDouble("imageZoom", 1.0).toFloat()),
+            ImageFraming.pan(j.optDouble("imagePanX", 0.0).toFloat()),
+            ImageFraming.pan(j.optDouble("imagePanY", 0.0).toFloat()))
     }
 }
 
@@ -38,13 +51,19 @@ data class Overlay(
     val overlapWith: List<String> = emptyList(),
     val id: String = UUID.randomUUID().toString(),
     /** 0 = invisível, 1 = opaco. Legado mantém 100% por padrão. */
-    val opacity: Float = 1f
+    val opacity: Float = 1f,
+    /** Ponto de entrada no arquivo do PiP de vídeo após aparar pela esquerda. */
+    val sourceStartMs: Long = 0L,
+    /** Enquadramento opcional: fit preserva a imagem completa; fill amplia e recorta. */
+    val fitMode: String = OverlayEditorLogic.FIT
 ) {
     fun json() = JSONObject().put("uri", uri).put("isImage", isImage)
         .put("durationMs", durationMs).put("startAtMs", startAtMs)
         .put("x", x.toDouble()).put("y", y.toDouble()).put("scale", scale.toDouble())
         .put("volume", volume.toDouble()).put("muted", muted)
         .put("opacity", opacity.coerceIn(0f, 1f).toDouble())
+        .put("sourceStartMs",sourceStartMs.coerceAtLeast(0L))
+        .put("fitMode",OverlayEditorLogic.fitMode(fitMode))
         .put("overlapWith", JSONArray().apply { overlapWith.forEach { put(it) } }).put("id", id)
     companion object {
         fun read(j: JSONObject) = Overlay(j.getString("uri"), j.optBoolean("isImage"),
@@ -58,7 +77,9 @@ data class Overlay(
                 }.distinct()
             } ?: emptyList(),
             j.optString("id").ifBlank { UUID.randomUUID().toString() },
-            j.optDouble("opacity", 1.0).toFloat().let { if (it.isFinite()) it.coerceIn(0f, 1f) else 1f })
+            j.optDouble("opacity", 1.0).toFloat().let { if (it.isFinite()) it.coerceIn(0f, 1f) else 1f },
+            j.optLong("sourceStartMs",0L).coerceAtLeast(0L),
+            OverlayEditorLogic.fitMode(j.optString("fitMode")))
     }
 }
 
