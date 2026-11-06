@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.197 — Correção CI163 para Media3 Lint
+
+**Correção:** A extração de áudio via Media3 agora utiliza `@androidx.annotation.OptIn(UnstableApi::class)` no próprio `AudioExtractionEngine`. O workflow 163 compilou Release, mas `:app:lintDebug` bloqueou a publicação; a alteração remove o requisito indevido sobre a tela de ferramentas rápidas, sem desabilitar as verificações.
+
+**0.1.197/versionCode 198**. Funcionalidades da 0.1.196, cinco APKs Release, projetos schemaVersion 4 e assinatura preservados. Validação real Android/Lint depende de novo workflow.
+
 # Uai Cortes · versão 0.1.196 — Divisor de vídeo e extração rápida de áudio
 
 **Novo na Home:** atalhos Dividir vídeo e Extrair áudio. Vídeos de origem podem ser divididos em trechos de 9,5 s ou 10 s, gerando MP4s independentes sem precisar criar projeto. A opção M4A por parte é exclusiva de Android 10+; no modo Extrair áudio separado, o destino é escolhido via SAF.

@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.197 — Correção CI163 Media3 Lint
+
+## v0.1.197 · versionCode 198
+- Corrigida a falha `UnsafeOptInUsageError` do workflow Gerar APK 163: `AudioExtractionEngine` agora faz opt-in local nas APIs instáveis Media3, sem repassar o requisito para `QuickVideoToolsScreen`.
+- Incluído teste contra regressão do uso indevido de `@UnstableApi` no extrator; Lint não foi desativado.
+- Atalhos Dividir vídeo/Extrair áudio, Media3, fluxo de salvamento, projetos e assinatura preservados. O Lint e APK completos precisam ser confirmados no GitHub Actions.
+
 # Uai Cortes · versão 0.1.196 — Ferramentas rápidas para Flow
 
 ## v0.1.196 · versionCode 197

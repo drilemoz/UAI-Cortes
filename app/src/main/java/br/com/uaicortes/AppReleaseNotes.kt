@@ -16,12 +16,18 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.196"
-    const val VERSION_CODE = 197
+    const val VERSION_NAME = "0.1.197"
+    const val VERSION_CODE = 198
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
-        ReleaseSummary("0.1.196", listOf(
+        ReleaseSummary("0.1.197", listOf(
+            ReleaseFeature("ci163-lint-media3-audio-197", "Correção de Lint do extrator de áudio",
+                "O extrator agora declara opt-in ao Media3 instável internamente, sem exigir a anotação nas telas que o utilizam. Corrige o bloqueio de Lint no workflow 163.", "check"),
+            ReleaseFeature("ci163-safety-197", "Ferramentas rápidas preservadas",
+                "Dividir vídeo em 9,5 ou 10 segundos e extrair M4A permanecem intactos; incluída regressão para impedir o retorno do erro.", "check")
+        )),
+        ReleaseSummary("0.1.197", listOf(
             ReleaseFeature("quick-split-196", "Dividir vídeo pela tela inicial",
                 "Selecione um MP4 e gere partes independentes de 9,5 ou 10 segundos. A última parte mantém a duração restante e os arquivos originais permanecem intactos.", "check"),
             ReleaseFeature("quick-extract-196", "Extrair áudio sem abrir projeto",

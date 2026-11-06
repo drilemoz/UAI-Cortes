@@ -1,3 +1,8 @@
+# v0.1.197 — CI163: Media3 UnstableApi no extrator rápido
+- O workflow 163 compilou Kotlin/Release, mas `:app:lintDebug` reprovou 5 usos de `AudioExtractionEngine` a partir de `QuickVideoToolsScreen`, começando na linha 31. A classe usava `@UnstableApi`, propagando a exigência aos chamadores.
+- Substituído marcador de API instável por `@androidx.annotation.OptIn(UnstableApi::class)` na implementação `AudioExtractionEngine`, conforme padrão existente em `QuickVideoSplitEngine`. O Media3 continua habilitado; o Lint permanece bloqueante, sem baseline ou supressão.
+- Teste de regressão `tools/test_ci163_media3_quick_audio_optin.py`. Não alterar recursos de vídeo e áudio, projetos, schemaVersion 4 ou assinatura. v0.1.197/versionCode 198 e 5 APKs Release preservados. Reexecutar CI :app:lintDebug / assembleRelease.
+
 # v0.1.196 — Dividir vídeo e extrair áudio sem projeto
 - Home mantém três cards principais e a Central de Vozes; adicionados dois atalhos de ferramentas rápidas.
 - `QuickVideoSplitPolicy` define intervalos exatos 9500/10000 ms e protege contra mais de 180 partes. Última parte não é descartada.

@@ -16,7 +16,8 @@ import androidx.media3.transformer.Transformer
 import java.io.File
 
 /** Media3 writes an AAC audio-only MP4 container, saved as .m4a via SAF. */
-@UnstableApi
+// Opt-in is private to this implementation; callers must not inherit @UnstableApi.
+@androidx.annotation.OptIn(UnstableApi::class)
 class AudioExtractionEngine(private val context: Context) {
     private var transformer: Transformer? = null
     private var temporary: File? = null

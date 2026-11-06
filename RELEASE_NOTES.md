@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.197 — Correção do Lint da extração rápida
+
+- Corrigido uso de anotação experimental Media3 em `AudioExtractionEngine`: a implementação assume sua própria instabilidade e não obriga a tela rápida a opt-in.
+- Mantidas as ferramentas de dividir MP4 em 9,5/10 segundos, extrair M4A, recursos de edição e vozes Gemini.
+- Adicionado teste de regressão; versionCode **198**. O build Android e o Lint completos devem ser reexecutados no GitHub Actions.
+
 # Uai Cortes · versão 0.1.196 — Dividir vídeo e extrair áudio
 
 - Divisão rápida em MP4s de **9,5 ou 10 segundos**, pelo menu inicial, sem projeto.
