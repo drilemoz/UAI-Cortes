@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.196 — Dividir vídeo e extrair áudio
+
+- Divisão rápida em MP4s de **9,5 ou 10 segundos**, pelo menu inicial, sem projeto.
+- Salve vídeos com ou sem áudio; opcionalmente exporte também M4As por parte (Android 10+).
+- Atalho independente para extrair um M4A completo com seletor de destino.
+- Progresso e cancelamento; saídas concluídas preservadas; fontes não modificadas.
+- versionCode **197**; compilação Android e verificação da precisão real dos cortes pendentes.
+
 # Uai Cortes · versão 0.1.195 — Correção CI161
 
 - Corrigido erro de compilação Kotlin `Unresolved reference 'height'` em `ProjectDraftUi.kt`, detectado pelo workflow 161, sem alterar o diálogo de saída do editor.

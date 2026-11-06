@@ -450,7 +450,11 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     onSettings = { previous = "home"; screen = "settings" },
                     onTab = { if (it == "settings") previous = "home"; screen = it },
                     onFlow = { navTo("flow_workspace") },
-                    onVoiceCenter = { navTo("voice_center") })
+                    onVoiceCenter = { navTo("voice_center") },
+                    onQuickSplit = { navTo("quick_split") },
+                    onQuickAudio = { navTo("quick_audio") })
+                "quick_split" -> QuickVideoToolsScreen(QuickToolMode.SPLIT_VIDEO, ::back)
+                "quick_audio" -> QuickVideoToolsScreen(QuickToolMode.EXTRACT_AUDIO, ::back)
                 "flow_workspace" -> FlowWorkspaceScreen(::back)
                 "animate" -> AnimateImagesScreen(animationImages.toList(),
                     onChoose = { openGallery("animate","animate_images") },

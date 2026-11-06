@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.196 — Divisor de vídeo e extração rápida de áudio
+
+**Novo na Home:** atalhos Dividir vídeo e Extrair áudio. Vídeos de origem podem ser divididos em trechos de 9,5 s ou 10 s, gerando MP4s independentes sem precisar criar projeto. A opção M4A por parte é exclusiva de Android 10+; no modo Extrair áudio separado, o destino é escolhido via SAF.
+
+**Funcionamento:** Media3 Transformer processa um trecho por vez; publicação na galeria por `IS_PENDING` com rollback; vídeo original não é alterado. Salva em Filmes/UaiCortes/Divididos; M4A por parte em Música/UaiCortes/Divididos. Limite de 180 partes por lote, com interrupção pelo usuário e preservação do que terminou. Cortes dependem de precisão de quadros/codec e devem ser testados em APK real.
+
+**0.1.196/versionCode 197**, schema do projeto 4 mantido, 5 APKs Release previstos e demais recursos preservados.
+
 # Uai Cortes · versão 0.1.195 — Correção de compilação CI161
 
 A versão 0.1.195 corrige o build Debug/Release bloqueado no workflow **Gerar APK 161**: faltava importar `androidx.compose.foundation.layout.height` em `ProjectDraftUi.kt`. O diálogo de saída preserva as três ações horizontais **Salvar**, **Descartar** e **Continuar** com ícones, sem alterar sua lógica.

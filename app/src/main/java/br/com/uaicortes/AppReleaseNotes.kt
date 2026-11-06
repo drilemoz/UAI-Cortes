@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.195"
-    const val VERSION_CODE = 196
+    const val VERSION_NAME = "0.1.196"
+    const val VERSION_CODE = 197
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.196", listOf(
+            ReleaseFeature("quick-split-196", "Dividir vídeo pela tela inicial",
+                "Selecione um MP4 e gere partes independentes de 9,5 ou 10 segundos. A última parte mantém a duração restante e os arquivos originais permanecem intactos.", "check"),
+            ReleaseFeature("quick-extract-196", "Extrair áudio sem abrir projeto",
+                "Acesse Extrair áudio na Home para criar um M4A local. Na divisão, escolha manter, remover ou extrair também o M4A de cada parte.", "check"),
+            ReleaseFeature("quick-split-safety-196", "Processamento sequencial e cancelável",
+                "Uma parte por vez, com progresso, cancelamento e salvamento em Filmes/UaiCortes/Divididos. Partes finalizadas não são apagadas ao interromper.", "check")
+        )),
         ReleaseSummary("0.1.195", listOf(
             ReleaseFeature("ci161-compose-height-195", "Correção de compilação do editor",
                 "Corrigida a referência height ausente no modal de saída, que bloqueou Debug e Release no workflow 161. O layout com três ações horizontais foi preservado.", "check"),

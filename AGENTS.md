@@ -1,3 +1,11 @@
+# v0.1.196 — Dividir vídeo e extrair áudio sem projeto
+- Home mantém três cards principais e a Central de Vozes; adicionados dois atalhos de ferramentas rápidas.
+- `QuickVideoSplitPolicy` define intervalos exatos 9500/10000 ms e protege contra mais de 180 partes. Última parte não é descartada.
+- `QuickVideoSplitEngine` processa 1 MP4 por vez com Media3 Transformer; salvar em galeria por entrada pendente e rollback, preservar arquivos já concluídos ao cancelar. M4A por parte é opcional e usa `AudioExtractionEngine` com destino MediaStore Android 10+.
+- `QuickVideoToolsScreen` usa SAF OpenDocument sem alterações ao projeto, e CreateDocument para a extração independente. Nunca excluir/substituir fonte ou projeto.
+- Seguir fluxo CI, Gradle :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin :app:lintDebug :app:assembleRelease; testar duração de segmentos, ausência de lacunas relevantes e compatibilidade de codecs em aparelho. Não afirmar build sem execução.
+- VersionName 0.1.196, versionCode 197, project schemaVersion 4, cinco APKs e assinatura preservados.
+
 # v0.1.195 — CI161: import Compose height no diálogo de saída
 - O workflow Gerar APK 161 falhou em `:app:compileDebugKotlin` e `:app:compileReleaseKotlin` com `Unresolved reference 'height'` em `ProjectDraftUi.kt` nas linhas 44 e 48 da v0.1.194.
 - Acrescentado `import androidx.compose.foundation.layout.height`. Sem mudanças na disposição das ações Salvar/Descartar/Continuar, no fluxo de Concluir, na inserção de vídeos/imagens ou na serialização de projetos.

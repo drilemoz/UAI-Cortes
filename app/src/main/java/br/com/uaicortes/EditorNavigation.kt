@@ -3,7 +3,7 @@ package br.com.uaicortes
 /** Rotas e regras de recuperação em um único lugar para todas as ferramentas. */
 internal object EditorNavigation {
     private val routes = setOf(
-        "home", "projects", "social", "social_publish", "api_center", "settings", "gemini_settings", "voice_center", "general", "backup_settings", "appearance", "about", "whats_new", "diagnostics", "speech_model",
+        "home", "quick_split", "quick_audio", "projects", "social", "social_publish", "api_center", "settings", "gemini_settings", "voice_center", "general", "backup_settings", "appearance", "about", "whats_new", "diagnostics", "speech_model",
         "editor", "media_repair", "media", "animate", "flow_workspace", "pip", "audio", "voices", "clip_audio", "trim", "transition", "subtitles",
         "watermark", "publication", "flow_prompt", "export", "autosubtitle"
     )
@@ -23,11 +23,12 @@ internal object EditorNavigation {
     }
 
     fun back(route: String, previous: String, mediaOrigin: String, animationDestination: String): String = when (route) {
-        "editor", "home", "projects", "social" -> "home"
+        "editor", "home", "quick_split", "quick_audio", "projects", "social" -> "home"
         "social_publish" -> "social"
         "api_center" -> if (previous == "social") "social" else "settings"
         "settings" -> if (previous == "audio" || previous == "voices") previous else "home"
         "media" -> knownRoute(mediaOrigin)
+        "quick_split", "quick_audio" -> "home"
         "flow_workspace" -> "home"
         "voice_center" -> if (previous == "settings") "settings" else "home"
         "animate" -> "home" // Voltar sempre leva à tela inicial; adicionar ao editor é outra ação.

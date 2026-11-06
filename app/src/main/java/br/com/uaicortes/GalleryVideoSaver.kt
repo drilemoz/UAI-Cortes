@@ -16,17 +16,20 @@ internal object GalleryVideoSaver {
     /** Cópia local em blocos: menos operações de I/O para MP4s grandes, memória limitada. */
     internal const val COPY_BUFFER_BYTES = 256 * 1024
 
-    fun save(context: Context, source: File, displayName: String): Uri {
+    fun save(context: Context, source: File, displayName: String, subfolder: String = ""): Uri {
         require(source.isFile && source.length() > 0L) {
             "O arquivo MP4 temporário está vazio ou não foi gerado."
         }
         require(displayName.isNotBlank() && displayName.endsWith(".mp4", ignoreCase = true)) {
             "Nome inválido para vídeo MP4."
         }
+        require(subfolder.isEmpty() || subfolder == "Divididos") { "Subpasta de vídeo não permitida." }
+        val folder = Environment.DIRECTORY_MOVIES + "/UaiCortes" +
+            (if (subfolder.isEmpty()) "" else "/$subfolder")
         val values = ContentValues().apply {
             put(MediaStore.Video.Media.DISPLAY_NAME, displayName)
             put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
-            put(MediaStore.Video.Media.RELATIVE_PATH, Environment.DIRECTORY_MOVIES + "/UaiCortes")
+            put(MediaStore.Video.Media.RELATIVE_PATH, folder)
             put(MediaStore.Video.Media.IS_PENDING, 1)
         }
         val resolver = context.contentResolver

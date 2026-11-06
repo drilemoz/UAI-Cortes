@@ -118,10 +118,27 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
     }
 }
 
+/** Acesso rápido às ferramentas sem abrir o editor e sem tocar em projetos. */
+@Composable internal fun HomeQuickMediaActions(onSplit: () -> Unit, onExtract: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(onClick = onSplit, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) {
+            Icon(Icons.Default.ContentCut, null)
+            Spacer(Modifier.width(6.dp))
+            Text("Dividir vídeo", maxLines = 2)
+        }
+        OutlinedButton(onClick = onExtract, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) {
+            Icon(Icons.Default.AudioFile, null)
+            Spacer(Modifier.width(6.dp))
+            Text("Extrair áudio", maxLines = 2)
+        }
+    }
+}
+
 @Composable internal fun MainHome(projects: List<VideoProject>, onCreate: () -> Unit, onAnimate: () -> Unit,
     onOpen: (VideoProject)->Unit, onDelete: (VideoProject)->Unit, onDeleteAll: ()->Unit,
     onSettings: ()->Unit, onTab:(String)->Unit, onFlow: () -> Unit = {},
-    onVoiceCenter: () -> Unit = {}) {
+    onVoiceCenter: () -> Unit = {}, onQuickSplit: () -> Unit = {},
+    onQuickAudio: () -> Unit = {}) {
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically) {
@@ -140,6 +157,8 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
             ItemCard(Icons.Default.RecordVoiceOver, "Vozes Google",
                 "Central de Vozes · catálogo salvo e prévias reutilizáveis",
                 onClick = onVoiceCenter)
+            Spacer(Modifier.height(12.dp))
+            HomeQuickMediaActions(onQuickSplit, onQuickAudio)
             Spacer(Modifier.height(20.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("Edições recentes",fontSize=19.sp, fontWeight=FontWeight.SemiBold,

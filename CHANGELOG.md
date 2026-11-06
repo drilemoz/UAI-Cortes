@@ -1,3 +1,13 @@
+# Uai Cortes · versão 0.1.196 — Ferramentas rápidas para Flow
+
+## v0.1.196 · versionCode 197
+- Novo atalho **Dividir vídeo** na Home: 9,5 ou 10 segundos, MP4 por parte e último trecho preservado.
+- Modos de áudio: manter original, remover ou extrair também M4A por parte (Android 10+).
+- Novo atalho **Extrair áudio** na Home reutiliza AudioExtractionEngine e SAF.
+- Processamento sequencial com cancelamento, nomes únicos por sessão, limite de 180 partes e galeria por IS_PENDING.
+- Novos testes de segmentação e contratos, docs e versionamento alinhados.
+- Build/Media3 real, qualidade de cortes e compatibilidade com formatos diversos ainda exigem validação em CI/aparelho.
+
 # Uai Cortes · versão 0.1.195 — Correção CI161
 
 ## v0.1.195 · versionCode 196
