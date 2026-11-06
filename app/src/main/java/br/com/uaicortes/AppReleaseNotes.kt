@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.192"
-    const val VERSION_CODE = 193
+    const val VERSION_NAME = "0.1.193"
+    const val VERSION_CODE = 194
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.193", listOf(
+            ReleaseFeature("voice-simple-list-193", "Vozes IA em linhas compactas",
+                "Cada fala tem apenas ouvir/gerar, tom e voz. Toque e segure para refazer, inserir, sincronizar ou remover faixa, sem perder o áudio pronto.", "captions"),
+            ReleaseFeature("voice-progress-193", "Progresso fácil de acompanhar",
+                "Contador de falas prontas, barra de progresso e ações Gerar/Inserir; personagens, fila salva e informações técnicas sob demanda.", "check"),
+            ReleaseFeature("voice-pending-return-193", "Aviso ao retornar ao projeto",
+                "Ao reabrir uma geração já iniciada com vozes pendentes, o app oferece continuar, sem disparar API automaticamente ou repetir chamadas incertas.", "check")
+        )),
         ReleaseSummary("0.1.192", listOf(
             ReleaseFeature("subtitle-speaker-styles-192", "Aparência por personagem",
                 "Defina cores, fonte, animação e posição para todas as falas de um personagem. Edições individuais continuam independentes e podem voltar ao estilo principal.", "captions"),

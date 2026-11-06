@@ -1,3 +1,7 @@
+## v0.1.193 (versionCode 194): Vozes IA compacta e lembrete de pendências
+
+- Ver `docs/VALIDATION_0.1.193.md` para testes, comportamento do retorno e limitações. A síntese só ocorre após confirmação; filas de resultado incerto exigem revisão. Gradle Android e teste visual continuam pendentes.
+
 ## v0.1.140 (versionCode 141): correção do pacote do workflow 117
 
 - `docs/VALIDATION_0.1.140.md`: workflow antes omitido do ZIP v0.1.139. ZIP desta versão deve incluir `.github/workflows/android-apk.yml` e passar no validador extraído. Compilação Android e 5 APKs pendentes.

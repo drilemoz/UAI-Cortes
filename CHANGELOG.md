@@ -1,3 +1,12 @@
+# Uai Cortes · versão 0.1.193 — Vozes IA Compacta
+
+## v0.1.193 · versionCode 194
+- Simplificação do painel Vozes IA: cada fala mostra texto compacto, personagem, estado real do WAV e somente os três ícones Ouvir/Gerar, Tom e Voz. Cards não expandem com botões grandes.
+- Ações antigas permanecem acessíveis no toque prolongado: Inserir/Substituir faixa, Refazer com confirmação Gemini, Ajustar WAV, Restaurar original e Excluir faixa com confirmação.
+- Barra com prontas/total, barra de progresso, restantes e botões globais. Personagens e detalhes da fila/revisão ficam recolhidos, com acesso explícito.
+- Novo aviso uma vez por retorno, somente após geração iniciada, para pendências de WAV; não gerar antes de confirmação. Se há fila antiga, abrir revisão em vez de substituí-la ou repetir chamada incerta.
+- Regras puras `VoiceIaCompactPolicy` e testes JUnit/contratos de UI. Manter schemaVersion 4, personagens, Central, cache e API sem mudanças.
+
 # Uai Cortes · versão 0.1.192 — Estilos por Personagem e Editor
 
 ## v0.1.192 · versionCode 193

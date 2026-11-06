@@ -22,7 +22,7 @@ assert 'cache.save(identity, sample.bytes, voice)' in ui
 assert 'GeminiPreviewIdentity.TEXT' in ui and 'previewFile?.delete()' not in ui
 assert 'previewSpeaker(speakerId)' in ui
 assert 'pode ter consumido cota' in ui
-assert 'Gerar somente pendentes do filtro' in ui
+assert 'Gerar pendentes do filtro' in ui
 assert 'requestSpeakerBatch(speaker.id)' in ui
 assert 'VoiceIaBatchReviewPolicy.review' in ui and 'installedOutdated' in ui
 assert 'currentStyles: Map<String, String>' in queue and 'changedStyle' in queue and 'changedModel' in queue

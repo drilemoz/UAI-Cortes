@@ -56,11 +56,11 @@ class VoiceCenter190Contract(unittest.TestCase):
 
     def test_voice_and_tone_are_separate(self):
         voice_ui = source('VoiceIaScreen.kt')
-        self.assertIn('label = "Central"', voice_ui)
-        self.assertIn('label = "Tom"', voice_ui)
+        self.assertIn('label = "Vozes"', voice_ui)
+        self.assertIn('Icons.Default.Mood, "Alterar tom da fala', voice_ui)
         self.assertIn('voicePickerSpeakerId', voice_ui)
         self.assertIn('speakerVoiceOverrides', voice_ui)
-        self.assertIn('stylePickerCueId = selectedCue.id', voice_ui)
+        self.assertIn('stylePickerCueId = cue.id', voice_ui)
 
     def test_catalog_never_contains_credentials(self):
         library = source('GeminiVoiceLibrary.kt')

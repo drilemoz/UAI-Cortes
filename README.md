@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.193 — Vozes IA mais simples
+
+Na tela **Vozes IA**, cada legenda agora aparece em uma linha com três controles: **ouvir/gerar**, **tom** e **voz**. A voz configurada no personagem continua sendo herdada; alterações por fala são exceções. Toque em uma fala para mostrá-la no vídeo; **mantenha pressionada** para encontrar Inserir/Trocar na timeline, Refazer, Sincronizar, Restaurar WAV original ou Remover faixa, conforme o estado da fala. Nada é gerado ao selecionar uma voz ou interpretação.
+
+A barra mostra WAVs prontos em relação ao total e o número faltante, com **Vozes**, **Gerar** e **Inserir**. Personagens e detalhes da fila são recolhíveis para deixar a lista maior. Ao retornar a um projeto em que a geração já começou e ainda há falas faltando, um aviso oferece gerar pendentes ou revisar a fila salva. A API não é chamada automaticamente; filas com resultados incertos continuam exigindo revisão explícita. Salve o projeto no editor para confirmar a configuração escolhida.
+
+**v0.1.193 (versionCode 194)**: formato de projeto 4, cinco APKs Release e cache de vozes existentes preservados. Compilação Gradle/Android e testes visuais no aparelho continuam obrigatórios.
+
 # Uai Cortes · versão 0.1.192 — Legendas por Personagem
 
 Na tela Legendas, abra **Mais > Estilos por personagem**, escolha Cliente, Agiota ou outro personagem e ajuste cor, fundo, fonte, tamanho, sombra, contorno, animação e posição. Confirme para aplicar a todas as falas daquele personagem que não possuem exceção individual. Nas falas isoladas, edite normalmente e use **Restaurar estilo do personagem** para voltar à herança. A associação de personagem já existente é reutilizada. Texto, horários, IDs e marcações de palavras não mudam na aplicação visual. As alterações fazem parte do rascunho; confirme **Salvar projeto**.

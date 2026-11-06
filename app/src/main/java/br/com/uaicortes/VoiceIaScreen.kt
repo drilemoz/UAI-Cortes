@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -42,6 +43,7 @@ import java.text.Collator
 import java.util.Locale
 
 /** Vozes IA: as legendas são fonte somente leitura. Áudio tradicional continua separado. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
     onSave: (VideoProject) -> Boolean, openGeminiSettings: () -> Unit,
@@ -91,6 +93,11 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
     var pendingPreviewSpeakerId by remember { mutableStateOf<String?>(null) }
     var previewFile by remember { mutableStateOf<File?>(null) }
     var batchReviewExpanded by remember { mutableStateOf(false) }
+    var showSpeakerSettings by remember(project.id) { mutableStateOf(false) }
+    var showTechnicalDetails by remember(project.id) { mutableStateOf(false) }
+    var showPendingReminder by remember(project.id) { mutableStateOf(false) }
+    var reminderChecked by remember(project.id) { mutableStateOf(false) }
+    var advancedCueId by remember { mutableStateOf<String?>(null) }
     var speakerFilter by remember(project.id) { mutableStateOf<String?>(null) }
     var speakerFilterOpen by remember { mutableStateOf(false) }
     var cueSearch by remember(project.id) { mutableStateOf("") }
@@ -267,6 +274,35 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
         val id = voiceFor(cue) ?: return null
         val direction = GeminiNarrationStyling.instruction(styleFor(cue))
         return takes.firstOrNull { VoiceIaPolicy.matches(it, cue, id, model, direction) }
+    }
+    // Só perguntar ao reabrir um trabalho já iniciado. Uma tela nova sem geração
+    // não deve mostrar aviso; carregar WAVs/fila é pré-requisito para decidir.
+    LaunchedEffect(loaded, project.id) {
+        if (loaded && !reminderChecked) {
+            reminderChecked = true
+            val ready = cues.count { cue -> readyFor(cue)?.let { File(it.filePath).isFile } == true }
+            val previouslyStarted = takes.isNotEmpty() || savedQueue != null ||
+                project.audioTracks.any { it.kind == VoiceIaPolicy.KIND }
+            showPendingReminder = VoiceIaCompactPolicy.shouldRemind(
+                total = cues.size, ready = ready, previouslyStarted = previouslyStarted)
+        }
+    }
+    fun requestPendingGeneration() {
+        val pendingIds = cues.filter { cue ->
+            readyFor(cue)?.let { File(it.filePath).isFile } != true
+        }.map { it.id }
+        if (pendingIds.isEmpty()) return
+        if (savedQueue?.unfinished == true) {
+            // Não sobrescrever uma fila anterior, sobretudo chamada incerta.
+            showTechnicalDetails = true
+            status = "Revise ou retome a fila salva antes de iniciar novas gerações."
+        } else if (cues.any { cue -> cue.id in pendingIds && voiceFor(cue).isNullOrBlank() }) {
+            status = "Escolha a voz do personagem na Central antes de gerar."
+            voicePickerForAll = true
+        } else {
+            forceCueId = null
+            promptGenerate = pendingIds
+        }
     }
     fun insert(cue: SubtitleCue, take: VoiceIaTake) {
         val current = latestProject
@@ -581,170 +617,12 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                 selectedCueId = id
             }
         }
-        // A Central guarda catálogo, modelo, voz e prévias; a barra de Vozes IA
-        // concentra somente seleção de tom da fala, geração e inserção.
+        // Visão principal: apenas progresso, três ações e lista de falas.
         val batchPlan = VoiceIaBatchPlanner.plan(cues.map { cue ->
             VoiceIaBatchItem(cue.id, readyFor(cue)?.let { File(it.filePath).isFile } == true)
         })
         val pending = batchPlan.toGenerate
         val preparedCount = batchPlan.reusable
-        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            VoiceIaToolbarAction(label = "Central", accessibilityLabel = "Central de Vozes Google",
-                icon = Icons.Default.RecordVoiceOver, modifier = Modifier.weight(1.12f),
-                enabled = !busy, onClick = { voicePickerForAll = true })
-            VoiceIaToolbarAction(label = "Tom", accessibilityLabel = "Interpretação desta fala",
-                icon = Icons.Default.Mood, modifier = Modifier.weight(.8f), enabled = !busy,
-                onClick = {
-                    if (selectedCue != null) stylePickerCueId = selectedCue.id
-                    else stylePickerForAll = true
-                })
-            VoiceIaToolbarAction(label = "Gerar $pending", accessibilityLabel =
-                    "Gerar vozes pendentes: $pending",
-                accent = true, modifier = Modifier.weight(1.16f),
-                enabled = !busy && loaded && pending > 0, onClick = {
-                    val missingVoice = cues.firstOrNull { voiceFor(it).isNullOrBlank() }
-                    if (missingVoice != null) {
-                        status = "Configure a voz dos personagens ou uma voz geral na Central antes de gerar."
-                        voicePickerForAll = true
-                    } else {
-                        forceCueId = null
-                        promptGenerate = cues.filter { cue ->
-                            readyFor(cue)?.let { File(it.filePath).isFile } != true
-                        }.map { it.id }
-                    }
-                })
-            VoiceIaToolbarAction(label = "Inserir $preparedCount", accessibilityLabel =
-                    "Inserir todas as vozes prontas: $preparedCount",
-                modifier = Modifier.weight(1.05f), enabled = !busy && loaded && preparedCount > 0,
-                onClick = { pendingBatchInsert = true })
-        }
-        savedQueue?.takeIf { it.unfinished }?.let { queue ->
-            Surface(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 3.dp),
-                shape = RoundedCornerShape(9.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
-                Column(Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
-                    verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text("Fila salva: ${queue.pending} pendente(s) · ${queue.ready} pronta(s) · " +
-                        "${queue.review} a revisar" + if (queue.stale > 0) " · ${queue.stale} alterada(s)" else "",
-                        fontSize = 11.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { resumeQueueConfirmation = true },
-                            enabled = !busy && loaded && queue.pending > 0) { Text("Retomar") }
-                        TextButton(onClick = { retryQueueConfirmation = true },
-                            enabled = !busy && queue.review > 0) { Text("Revisar") }
-                        TextButton(onClick = { discardQueueConfirmation = true }, enabled = !busy) {
-                            Text("Descartar fila")
-                        }
-                    }
-                }
-            }
-        }
-        if (status.isNotBlank()) Text(status, Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-        if (generationJob != null && busy) {
-            val batchPercent = VoiceIaBatchProgress.percent(completed, total)
-            LinearProgressIndicator(progress = { batchPercent / 100f },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
-            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("$batchPercent% concluído · $completed/$total falas", modifier = Modifier.weight(1f), fontSize = 12.sp)
-                TextButton(onClick = { generationJob?.cancel(); api.cancel() }) { Text("Cancelar") }
-            }
-        }
-        if (busy && generatingCueId != null) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 1.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
-                Text("Gerando fala ${completed + 1}/$total · progresso desta chamada indisponível pela API",
-                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        if (project.subtitleSpeakers.isNotEmpty()) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically) {
-                Text("Voz e interpretação por personagem", fontWeight = FontWeight.SemiBold,
-                    fontSize = 12.sp, modifier = Modifier.weight(1f))
-                Text("${project.subtitleSpeakers.size} personagens", fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            LazyRow(Modifier.fillMaxWidth().padding(horizontal = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                contentPadding = PaddingValues(vertical = 3.dp)) {
-                itemsIndexed(project.subtitleSpeakers, key = { _, speaker -> speaker.id }) { _, speaker ->
-                    val count = cues.count { it.speakerId == speaker.id }
-                    val chosenVoice = speakerVoiceOverrides[speaker.id]
-                        ?: project.voiceIaVoices.defaultVoiceId ?: defaultVoice
-                    val chosenStyle = speakerStyleOverrides[speaker.id] ?: defaultStyle
-                    Surface(shape = RoundedCornerShape(10.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant) {
-                        Column(Modifier.widthIn(min = 215.dp, max = 260.dp).padding(7.dp),
-                            verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                                Box(Modifier.size(11.dp).background(Color(speaker.color), RoundedCornerShape(3.dp)))
-                                Text(speaker.name, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-                                    maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f))
-                                Text("$count falas", fontSize = 10.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(chosenVoice?.let(::displayVoiceName) ?: "Sem voz configurada",
-                                        fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text("${VoiceIaShortLabels.style(chosenStyle)} · interpretação",
-                                        fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                                IconButton(onClick = { voicePickerSpeakerId = speaker.id },
-                                    enabled = !busy, modifier = Modifier.size(34.dp)) {
-                                    Icon(Icons.Default.RecordVoiceOver, "Escolher voz de ${speaker.name}",
-                                        Modifier.size(19.dp))
-                                }
-                                IconButton(onClick = { stylePickerSpeakerId = speaker.id },
-                                    enabled = !busy, modifier = Modifier.size(34.dp)) {
-                                    Icon(Icons.Default.Tune, "Interpretação de ${speaker.name}: $chosenStyle",
-                                        Modifier.size(19.dp))
-                                }
-                                IconButton(onClick = {
-                                    scope.launch {
-                                        val voiceId = speakerVoiceOverrides[speaker.id]
-                                            ?: project.voiceIaVoices.defaultVoiceId ?: defaultVoice
-                                        val style = speakerStyleOverrides[speaker.id] ?: defaultStyle
-                                        if (voiceId == null) {
-                                            status = "Escolha uma voz para ${speaker.name}."
-                                        } else {
-                                            val cache = GeminiVoicePreviewCache(context)
-                                            val id = GeminiPreviewIdentity.id("", model, voiceId,
-                                                GeminiNarrationStyling.instruction(style))
-                                            if (withContext(Dispatchers.IO) { cache.find(id) } != null)
-                                                previewSpeaker(speaker.id)
-                                            else pendingPreviewSpeakerId = speaker.id
-                                        }
-                                    }
-                                },
-                                    enabled = !busy && count > 0 && !(
-                                        speakerVoiceOverrides[speaker.id]
-                                            ?: project.voiceIaVoices.defaultVoiceId ?: defaultVoice).isNullOrBlank(),
-                                    modifier = Modifier.size(34.dp)) {
-                                    Icon(Icons.Default.PlayCircleOutline, "Testar voz e interpretação de ${speaker.name}",
-                                        Modifier.size(19.dp))
-                                }
-                                IconButton(onClick = { requestSpeakerBatch(speaker.id) },
-                                    enabled = !busy && loaded && count > 0,
-                                    modifier = Modifier.size(34.dp)) {
-                                    Icon(Icons.Default.AutoAwesome, "Gerar pendentes de ${speaker.name}",
-                                        Modifier.size(19.dp))
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
         val reviewItems = cues.map { cue ->
             val wav = readyFor(cue)?.takeIf { File(it.filePath).isFile }
             val inserted = project.audioTracks.firstOrNull {
@@ -763,44 +641,152 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                 queueUncertain)
         }
         val review = VoiceIaBatchReviewPolicy.review(reviewItems)
-        Surface(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 3.dp),
-            shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
-            Column(Modifier.padding(horizontal = 10.dp, vertical = 5.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 3.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("$preparedCount/${cues.size} prontas", fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Text("$pending faltando", fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                IconButton(onClick = { showTechnicalDetails = !showTechnicalDetails },
+                    modifier = Modifier.size(34.dp)) {
+                    Icon(Icons.Default.Info, "${if (showTechnicalDetails) "Ocultar" else "Exibir"} fila e detalhes",
+                        Modifier.size(19.dp))
+                }
+            }
+            LinearProgressIndicator(progress = { if (batchPlan.total == 0) 0f
+                else preparedCount.toFloat() / batchPlan.total },
+                modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(3.dp)))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                VoiceIaToolbarAction(label = "Vozes", accessibilityLabel = "Central de Vozes Google",
+                    icon = Icons.Default.RecordVoiceOver, modifier = Modifier.weight(.92f),
+                    enabled = !busy, onClick = { voicePickerForAll = true })
+                VoiceIaToolbarAction(label = "Gerar $pending", accessibilityLabel =
+                    "Gerar vozes pendentes: $pending", accent = true,
+                    modifier = Modifier.weight(1.15f), enabled = !busy && loaded && pending > 0,
+                    onClick = { requestPendingGeneration() })
+                VoiceIaToolbarAction(label = "Inserir $preparedCount", accessibilityLabel =
+                    "Inserir vozes prontas: $preparedCount", modifier = Modifier.weight(1.12f),
+                    enabled = !busy && loaded && preparedCount > 0,
+                    onClick = { pendingBatchInsert = true })
+            }
+            if (status.isNotBlank()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Lote: ${review.total} falas · ${review.ready} WAVs prontos · " +
-                        "${review.pending} pendentes", modifier = Modifier.weight(1f), fontSize = 11.sp)
-                    TextButton(onClick = { batchReviewExpanded = !batchReviewExpanded }) {
-                        Icon(Icons.Default.FactCheck, null, Modifier.size(16.dp))
-                        Spacer(Modifier.width(3.dp))
-                        Text(if (batchReviewExpanded) "Ocultar" else "Revisar lote", fontSize = 11.sp)
+                    Text(status, fontSize = 10.sp, maxLines = if (showTechnicalDetails) 6 else 1,
+                        overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            if (generationJob != null && busy) {
+                val batchPercent = VoiceIaBatchProgress.percent(completed, total)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(Modifier.size(15.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Gerando $completed/$total ($batchPercent%)", fontSize = 11.sp,
+                        modifier = Modifier.weight(1f))
+                    TextButton(onClick = { generationJob?.cancel(); api.cancel() }) {
+                        Text("Parar", fontSize = 11.sp)
                     }
                 }
-                if (batchReviewExpanded) {
-                    Text("Sem voz: ${review.missingVoice} · Áudio desatualizado: ${review.outdated} · " +
-                        "Sincronização a revisar: ${review.syncReview} · Fila incerta: ${review.uncertain}",
-                        fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("A contagem pode incluir a mesma fala em mais de uma categoria. " +
-                        "Nenhuma geração é iniciada ao revisar.", fontSize = 10.sp)
-                    project.subtitleSpeakers.forEach { speaker ->
-                        val row = VoiceIaBatchReviewPolicy.review(reviewItems.filter { it.speakerId == speaker.id })
-                        Text("${speaker.name}: ${row.ready}/${row.total} prontas · ${row.pending} pendentes" +
-                            if (row.missingVoice > 0) " · ${row.missingVoice} sem voz" else "",
+            }
+            if (project.subtitleSpeakers.isNotEmpty()) {
+                TextButton(onClick = { showSpeakerSettings = !showSpeakerSettings },
+                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
+                    modifier = Modifier.height(28.dp)) {
+                    Icon(Icons.Default.People, null, Modifier.size(17.dp))
+                    Spacer(Modifier.width(5.dp))
+                    Text("Personagens (${project.subtitleSpeakers.size})", fontSize = 11.sp)
+                    Icon(if (showSpeakerSettings) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        "Expandir vozes dos personagens", Modifier.size(17.dp))
+                }
+                if (showSpeakerSettings) LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    itemsIndexed(project.subtitleSpeakers, key = { _, speaker -> speaker.id }) { _, speaker ->
+                        val voiceId = speakerVoiceOverrides[speaker.id]
+                            ?: project.voiceIaVoices.defaultVoiceId ?: defaultVoice
+                        Surface(color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(9.dp)) {
+                            Column(Modifier.width(188.dp).padding(6.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(Modifier.size(10.dp).background(Color(speaker.color), RoundedCornerShape(2.dp)))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(speaker.name, fontSize = 11.sp, maxLines = 1,
+                                        modifier = Modifier.weight(1f), overflow = TextOverflow.Ellipsis)
+                                    Text("${cues.count { it.speakerId == speaker.id }}", fontSize = 10.sp)
+                                }
+                                Text(displayVoiceName(voiceId), fontSize = 10.sp, maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis)
+                                Row(horizontalArrangement = Arrangement.SpaceEvenly,
+                                    modifier = Modifier.fillMaxWidth()) {
+                                    IconButton(onClick = { voicePickerSpeakerId = speaker.id },
+                                        enabled = !busy, modifier = Modifier.size(32.dp)) {
+                                        Icon(Icons.Default.RecordVoiceOver, "Voz de ${speaker.name}", Modifier.size(19.dp))
+                                    }
+                                    IconButton(onClick = { stylePickerSpeakerId = speaker.id },
+                                        enabled = !busy, modifier = Modifier.size(32.dp)) {
+                                        Icon(Icons.Default.Mood, "Tom de ${speaker.name}", Modifier.size(19.dp))
+                                    }
+                                    IconButton(onClick = {
+                                        scope.launch {
+                                            if (voiceId.isNullOrBlank()) voicePickerSpeakerId = speaker.id
+                                            else {
+                                                val direction = GeminiNarrationStyling.instruction(
+                                                    speakerStyleOverrides[speaker.id] ?: defaultStyle)
+                                                val cacheId = GeminiPreviewIdentity.id("", model, voiceId, direction)
+                                                val cached = withContext(Dispatchers.IO) {
+                                                    GeminiVoicePreviewCache(context).find(cacheId)
+                                                }
+                                                if (cached != null) previewSpeaker(speaker.id)
+                                                else pendingPreviewSpeakerId = speaker.id
+                                            }
+                                        }
+                                    }, enabled = !busy && !voiceId.isNullOrBlank(),
+                                        modifier = Modifier.size(32.dp)) {
+                                        Icon(Icons.Default.PlayCircleOutline, "Testar voz de ${speaker.name}", Modifier.size(19.dp))
+                                    }
+                                    IconButton(onClick = { requestSpeakerBatch(speaker.id) },
+                                        enabled = !busy && loaded, modifier = Modifier.size(32.dp)) {
+                                        Icon(Icons.Default.AutoAwesome, "Gerar falas de ${speaker.name}", Modifier.size(19.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (showTechnicalDetails) {
+                Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(9.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant) {
+                    Column(Modifier.padding(9.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text("Revisão · ${review.total} falas · ${review.pending} pendentes · " +
+                            "${review.missingVoice} sem voz · ${review.outdated} desatualizadas",
                             fontSize = 11.sp)
-                    }
-                    val unassigned = VoiceIaBatchReviewPolicy.review(reviewItems.filter { item ->
-                        project.subtitleSpeakers.none { it.id == item.speakerId }
-                    })
-                    if (unassigned.total > 0) Text("Sem personagem: ${unassigned.ready}/${unassigned.total} prontas",
-                        fontSize = 11.sp)
-                    val subset = filteredCues.filter { cue ->
-                        reviewItems.any { it.cueId == cue.id && it.hasVoice && !it.wavReady }
-                    }
-                    OutlinedButton(onClick = { promptGenerate = subset.map { it.id } },
-                        enabled = !busy && loaded && subset.isNotEmpty(),
-                        modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.AutoAwesome, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Gerar somente pendentes do filtro (${subset.size})")
+                        if (review.syncReview > 0 || review.uncertain > 0) Text(
+                            "Sincronização: ${review.syncReview} · Chamada incerta: ${review.uncertain}",
+                            fontSize = 11.sp)
+                        savedQueue?.takeIf { it.unfinished }?.let { queue ->
+                            Text("Fila salva: ${queue.pending} pendentes, ${queue.review} em revisão, " +
+                                "${queue.stale} alteradas", fontSize = 11.sp)
+                            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                TextButton(onClick = { resumeQueueConfirmation = true },
+                                    enabled = !busy && loaded && queue.pending > 0) { Text("Retomar") }
+                                TextButton(onClick = { retryQueueConfirmation = true },
+                                    enabled = !busy && queue.review > 0) { Text("Revisar") }
+                                TextButton(onClick = { discardQueueConfirmation = true },
+                                    enabled = !busy) { Text("Descartar fila") }
+                            }
+                        }
+                        val subset = filteredCues.filter { cue ->
+                            reviewItems.any { it.cueId == cue.id && it.hasVoice && !it.wavReady }
+                        }
+                        if (subset.isNotEmpty()) TextButton(onClick = {
+                            if (savedQueue?.unfinished == true) status = "Revise a fila antiga primeiro."
+                            else promptGenerate = subset.map { it.id }
+                        }, enabled = !busy && loaded) {
+                            Text("Gerar pendentes do filtro (${subset.size})", fontSize = 11.sp)
+                        }
+                        Text("Toque e segure uma fala para inserir, refazer, sincronizar ou excluir.",
+                            fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -859,154 +845,123 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                     val inserted = project.audioTracks.firstOrNull {
                         it.kind == VoiceIaPolicy.KIND && it.subtitleId == cue.id
                     }
-                    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
-                        tonalElevation = if (active) 3.dp else 1.dp,
+                    val wav = take?.takeIf { File(it.filePath).isFile }
+                    val character = project.subtitleSpeakers.firstOrNull { it.id == cue.speakerId }
+                    val isGenerating = generatingCueId == cue.id && busy
+                    val insertedCompatible = wav != null && inserted != null &&
+                        inserted.voiceId == wav.voiceId && inserted.ttsModel == wav.model &&
+                        inserted.ttsStyle == wav.style
+                    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(9.dp),
+                        tonalElevation = if (active) 2.dp else 0.dp,
                         color = if (active) MaterialTheme.colorScheme.primaryContainer
                             else MaterialTheme.colorScheme.surfaceVariant) {
-                        Column(Modifier.fillMaxWidth().clickable { selectedCueId = cue.id }
-                            .padding(horizontal = 10.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("${index + 1}", fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                val character = project.subtitleSpeakers.firstOrNull { it.id == cue.speakerId }
-                                Box(Modifier.size(11.dp).background(
-                                    character?.let { Color(it.color) }
-                                        ?: MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(3.dp)))
-                                Column(Modifier.weight(1f)) {
-                                    Text(cue.text, maxLines = if (active) 3 else 1,
-                                        overflow = TextOverflow.Ellipsis, fontSize = 13.sp)
-                                    Text(character?.name ?: "Sem personagem", fontSize = 10.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                                IconButton(onClick = { voicePickerCueId = cue.id },
-                                    enabled = !busy, modifier = Modifier.size(38.dp)) {
-                                    Icon(Icons.Default.RecordVoiceOver,
-                                        "Escolher voz da legenda ${index + 1}", Modifier.size(20.dp),
-                                        tint = if (voiceFor(cue) != null) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                                Icon(if (active) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                    "Expandir fala", Modifier.size(20.dp))
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("${formatPipMs(cue.startMs)} – ${formatPipMs(cue.endMs)}", fontSize = 10.sp)
-                                Text(when {
-                                    inserted != null -> "Na timeline"
-                                    take != null -> "WAV pronto"
+                        Row(Modifier.fillMaxWidth().combinedClickable(
+                            onClick = { selectedCueId = cue.id },
+                            onLongClickLabel = "Mais ações desta fala",
+                            onLongClick = { selectedCueId = cue.id; advancedCueId = cue.id })
+                            .padding(horizontal = 7.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("${index + 1}", fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Box(Modifier.size(10.dp).background(
+                                character?.let { Color(it.color) }
+                                    ?: MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(3.dp)))
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                                Text(cue.text, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    fontSize = 12.sp, fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal)
+                                Text("${character?.name ?: "Sem personagem"} · " + when {
+                                    isGenerating -> "Gerando"
+                                    insertedCompatible -> "Inserida"
+                                    wav != null && inserted != null -> "Atualizar"
+                                    wav != null -> "Pronta"
+                                    voiceFor(cue).isNullOrBlank() -> "Sem voz"
                                     else -> "Pendente"
-                                }, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                }, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            if (active) {
-                                if (busy && generatingCueId == cue.id) {
-                                    Row(verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        CircularProgressIndicator(Modifier.size(13.dp), strokeWidth = 2.dp)
-                                        Text("Gerando voz...", style = MaterialTheme.typography.labelSmall)
-                                    }
+                            IconButton(onClick = {
+                                selectedCueId = cue.id
+                                if (wav == null) {
+                                    if (voiceFor(cue).isNullOrBlank()) voicePickerCueId = cue.id
+                                    else { forceCueId = null; promptGenerate = listOf(cue.id) }
+                                } else if (playingFile == wav.filePath) {
+                                    wavePlayer.pause(); playingFile = null
+                                } else {
+                                    wavePlayer.setMediaItem(MediaItem.fromUri(Uri.fromFile(File(wav.filePath))))
+                                    wavePlayer.prepare(); wavePlayer.play(); playingFile = wav.filePath
                                 }
-                                HorizontalDivider()
-                                Row(verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text(displayVoiceName(voiceFor(cue)), maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis, fontSize = 11.sp,
-                                        modifier = Modifier.weight(1f),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    IconButton(onClick = { voicePickerCueId = cue.id }, enabled = !busy,
-                                        modifier = Modifier.size(40.dp)) {
-                                        Icon(Icons.Default.RecordVoiceOver,
-                                            "Alterar voz desta fala", Modifier.size(20.dp))
-                                    }
-                                    IconButton(onClick = { stylePickerCueId = cue.id }, enabled = !busy,
-                                        modifier = Modifier.size(40.dp)) {
-                                        Icon(Icons.Default.Tune, "Interpretação: ${styleFor(cue)}",
-                                            Modifier.size(20.dp))
-                                    }
-                                }
-                                if (catalog.isEmpty() && voiceFor(cue).isNullOrBlank())
-                                    Text("Busque as vozes Gemini acima.",
-                                        style = MaterialTheme.typography.labelSmall)
-                                if (take != null) {
-                                    val overrunMs = VoiceIaDisplayPolicy.overrunMs(
-                                        cue.startMs, cue.endMs, take.durationMs)
-                                    val nextCue = cues.firstOrNull { it.startMs > cue.startMs }
-                                    val voiceStart = inserted?.startMs ?: cue.startMs
-                                    val review = VoiceIaSync.review(voiceStart, cue.endMs,
-                                        nextCue?.startMs, project.durationMs, take.durationMs)
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(if (review.excessMs > 0)
-                                            "WAV ${formatPipMs(take.durationMs)} · +${VoiceIaDisplayPolicy.seconds(review.excessMs)} s fora da janela"
-                                        else "WAV ${formatPipMs(take.durationMs)} · sincronizado",
-                                            modifier = Modifier.weight(1f),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = if (review.excessMs > 0L) MaterialTheme.colorScheme.error
-                                            else MaterialTheme.colorScheme.onSurfaceVariant)
-                                        if (take.sourceFilePath != null) TextButton(onClick = {
-                                            restoreOriginal(cue, take)
-                                        }, enabled = !busy, contentPadding = PaddingValues(horizontal = 4.dp)) {
-                                            Text("Original", fontSize = 11.sp)
-                                        }
-                                        if (review.excessMs > 0L) TextButton(onClick = {
-                                            pendingSyncId = cue.id
-                                        }, enabled = !busy, contentPadding = PaddingValues(horizontal = 5.dp)) {
-                                            Icon(Icons.Default.Tune, "Ajustar sincronização", Modifier.size(15.dp))
-                                            Text("Ajustar", fontSize = 11.sp)
-                                        }
-                                    }
-                                }
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Button(onClick = {
-                                        if (voiceFor(cue).isNullOrBlank()) voicePickerCueId = cue.id
-                                        else {
-                                            forceCueId = if (take != null) cue.id else null
-                                            promptGenerate = listOf(cue.id)
-                                        }
-                                    }, enabled = !busy && loaded, shape = RoundedCornerShape(8.dp),
-                                        modifier = Modifier.weight(1f), contentPadding = PaddingValues(6.dp)) {
-                                        Icon(if (take == null) Icons.Default.AutoAwesome else Icons.Default.Refresh,
-                                            contentDescription = null, modifier = Modifier.size(15.dp))
-                                        Spacer(Modifier.width(4.dp))
-                                        Text(if (take == null) "Gerar" else "Refazer", fontSize = 11.sp)
-                                    }
-                                    OutlinedButton(onClick = {
-                                        if (take == null) return@OutlinedButton
-                                        if (playingFile == take.filePath) {
-                                            wavePlayer.pause(); playingFile = null
-                                        } else {
-                                            wavePlayer.setMediaItem(MediaItem.fromUri(Uri.fromFile(File(take.filePath))))
-                                            wavePlayer.prepare(); wavePlayer.play()
-                                            playingFile = take.filePath
-                                        }
-                                    }, enabled = take != null && !busy, shape = RoundedCornerShape(8.dp),
-                                        modifier = Modifier.weight(1f), contentPadding = PaddingValues(6.dp)) {
-                                        Icon(if (playingFile == take?.filePath) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                            contentDescription = null, modifier = Modifier.size(15.dp))
-                                        // Ícone com descrição acessível; a ação fica na mesma posição.
-                                    }
-                                    Button(onClick = { pendingInsertId = cue.id },
-                                        enabled = take != null && !busy, shape = RoundedCornerShape(8.dp),
-                                        modifier = Modifier.weight(1.3f), contentPadding = PaddingValues(6.dp)) {
-                                        Icon(if (inserted == null) Icons.Default.AddCircleOutline
-                                            else Icons.Default.SwapHoriz,
-                                            if (inserted == null) "Inserir voz na timeline" else "Trocar voz da timeline",
-                                            Modifier.size(20.dp))
-                                    }
-                                }
-                                if (inserted != null) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("Faixa: ${formatPipMs(inserted.startMs)} · volume ${(inserted.volume * 100).toInt()}%",
-                                            style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
-                                        TextButton(onClick = { pendingDeleteId = cue.id }, enabled = !busy) {
-                                            Icon(Icons.Default.DeleteOutline, null, Modifier.size(17.dp))
-                                            Text("Excluir")
-                                        }
-                                    }
-                                }
+                            }, enabled = !busy && loaded, modifier = Modifier.size(40.dp)) {
+                                Icon(when {
+                                    isGenerating -> Icons.Default.HourglassEmpty
+                                    wav == null -> Icons.Default.AutoAwesome
+                                    playingFile == wav.filePath -> Icons.Default.Pause
+                                    else -> Icons.Default.PlayArrow
+                                }, if (wav == null) "Gerar fala ${index + 1}"
+                                else if (playingFile == wav.filePath) "Pausar fala ${index + 1}"
+                                else "Ouvir fala ${index + 1}", Modifier.size(21.dp))
+                            }
+                            IconButton(onClick = { selectedCueId = cue.id; stylePickerCueId = cue.id },
+                                enabled = !busy, modifier = Modifier.size(40.dp)) {
+                                Icon(Icons.Default.Mood, "Alterar tom da fala ${index + 1}: ${styleFor(cue)}",
+                                    Modifier.size(21.dp))
+                            }
+                            IconButton(onClick = { selectedCueId = cue.id; voicePickerCueId = cue.id },
+                                enabled = !busy, modifier = Modifier.size(40.dp)) {
+                                Icon(Icons.Default.RecordVoiceOver, "Trocar voz da fala ${index + 1}",
+                                    Modifier.size(21.dp))
                             }
                         }
                     }
                 }
             }
+        }
+    }
+    advancedCueId?.let { id ->
+        val cue = cues.firstOrNull { it.id == id }
+        if (cue == null) LaunchedEffect(id) { advancedCueId = null }
+        else {
+            val take = readyFor(cue)?.takeIf { File(it.filePath).isFile }
+            val inserted = project.audioTracks.firstOrNull {
+                it.kind == VoiceIaPolicy.KIND && it.subtitleId == cue.id
+            }
+            val nextCue = cues.firstOrNull { it.startMs > cue.startMs }
+            val review = take?.let { VoiceIaSync.review(inserted?.startMs ?: cue.startMs,
+                cue.endMs, nextCue?.startMs, project.durationMs, it.durationMs) }
+            AlertDialog(onDismissRequest = { advancedCueId = null },
+                title = { Text("Fala ${cues.indexOf(cue) + 1} · Opções") },
+                text = { Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text(cue.text, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    Text("${formatPipMs(cue.startMs)} – ${formatPipMs(cue.endMs)} · " +
+                        displayVoiceName(voiceFor(cue)) + " · ${styleFor(cue)}",
+                        fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (take != null) {
+                        Text("WAV ${formatPipMs(take.durationMs)}" +
+                            if ((review?.excessMs ?: 0L) > 0L) " · Revisar sincronização" else " · Pronto",
+                            fontSize = 11.sp)
+                        TextButton(onClick = { advancedCueId = null; pendingInsertId = cue.id },
+                            enabled = !busy) {
+                            Icon(if (inserted == null) Icons.Default.AddCircleOutline else Icons.Default.SwapHoriz,
+                                null, Modifier.size(18.dp))
+                            Text(if (inserted == null) "Inserir na timeline" else "Substituir na timeline")
+                        }
+                        if ((review?.excessMs ?: 0L) > 0L) TextButton(onClick = {
+                            advancedCueId = null; pendingSyncId = cue.id
+                        }, enabled = !busy) { Text("Ajustar sincronização") }
+                        if (take.sourceFilePath != null) TextButton(onClick = {
+                            advancedCueId = null; restoreOriginal(cue, take)
+                        }, enabled = !busy) { Text("Restaurar WAV original") }
+                    }
+                    TextButton(onClick = {
+                        advancedCueId = null
+                        if (voiceFor(cue).isNullOrBlank()) voicePickerCueId = cue.id
+                        else { forceCueId = cue.id; promptGenerate = listOf(cue.id) }
+                    }, enabled = !busy) { Text(if (take == null) "Gerar fala" else "Refazer voz") }
+                    if (inserted != null) TextButton(onClick = {
+                        advancedCueId = null; pendingDeleteId = cue.id
+                    }, enabled = !busy) { Text("Remover faixa da timeline") }
+                } },
+                confirmButton = { TextButton(onClick = { advancedCueId = null }) { Text("Fechar") } })
         }
     }
     if (voicePickerCueId != null || voicePickerForAll || voicePickerSpeakerId != null) {
@@ -1257,6 +1212,20 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                 }
             }) { Text("Descartar") } },
             dismissButton = { TextButton(onClick = { discardQueueConfirmation = false }) { Text("Cancelar") } })
+    }
+    if (showPendingReminder && !busy) {
+        val missing = cues.count { readyFor(it)?.let { take -> File(take.filePath).isFile } != true }
+        if (missing > 0) AlertDialog(onDismissRequest = { showPendingReminder = false },
+            title = { Text("Faltam $missing falas") },
+            text = { Text(if (savedQueue?.unfinished == true)
+                "Há uma fila salva. Deseja revisar as pendências antes de continuar?"
+                else "Deseja gerar as vozes restantes? Os áudios prontos serão reutilizados.") },
+            confirmButton = { TextButton(onClick = {
+                showPendingReminder = false
+                requestPendingGeneration()
+            }) { Text(if (savedQueue?.unfinished == true) "Ver fila" else "Gerar $missing") } },
+            dismissButton = { TextButton(onClick = { showPendingReminder = false }) { Text("Depois") } })
+        else LaunchedEffect(missing) { showPendingReminder = false }
     }
     promptGenerate?.let { ids ->
         val count = ids.size

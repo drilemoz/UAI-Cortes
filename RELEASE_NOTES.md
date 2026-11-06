@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.193 — Vozes IA Compacta
+
+- Legendas com três ícones: ouvir/gerar, tom e voz; ações avançadas por toque prolongado.
+- Progresso de WAVs prontos e falas faltantes com botões de lote Gerar e Inserir; detalhes da fila e personagens recolhidos.
+- Ao reabrir Vozes IA depois de iniciar um trabalho, o aplicativo oferece continuar se houver falas pendentes. Não há chamada automática ao Gemini e a fila salva não é sobrescrita.
+- VersionCode 194, cinco APKs Release e formatos anteriores preservados; Gradle/Android real pendente.
+
 # Uai Cortes · versão 0.1.192 — Estilos por Personagem e Editor
 
 - Escolha um personagem em **Legendas > Mais > Estilos por personagem** e aplique o visual às falas dele, preservando exceções individuais e permitindo restaurá-las ao padrão.

@@ -11,11 +11,11 @@ assert 'MAX_FAVORITES = 200' in fav and 'fun toggle(ids: Set<String>, id: String
 assert 'GeminiVoiceFavorites.toggle(favoriteIds, voice.id)' in center
 assert 'favorites.save(next)' in center
 assert 'GeminiVoicePresentation.label(voice)' in center
-assert 'Text(displayVoiceName(voiceFor(cue))' in ui
+assert 'displayVoiceName(voiceFor(cue))' in ui
 assert 'VoiceIaBatchProgress.percent(completed, total)' in ui
-assert '"$batchPercent% concluído · $completed/$total falas"' in ui
+assert '"Gerando $completed/$total ($batchPercent%)"' in ui
 assert 'generatingCueId = cue.id' in ui and 'generatingCueId = null' in ui
-assert 'progresso desta chamada indisponível pela API' in ui
+assert 'CircularProgressIndicator(Modifier.size(15.dp)' in ui
 assert 'if (generationJob != null && busy)' in ui
 assert 'api.synthesize(key, usedModel, voiceId, requestStyle, cue.text)' in ui
 assert '.put("schemaVersion", 4)' in (src/'ProjectStore.kt').read_text()
