@@ -23,7 +23,8 @@ assert 'manager.download(release)' in ui and 'confirmDownload' in ui
 assert 'manager.installDownloaded()' in ui
 assert 'getPackageArchiveInfo' in manager and 'release.sha256' in manager
 assert 'FileProvider.getUriForFile' in manager
-for label in ('Salvar projeto','Salvar cópia','Descartar e sair','Continuar editando'):
+for label in ('EditorExitAction("Salvar"', 'Salvar como cópia',
+              'EditorExitAction("Descartar"', 'EditorExitAction("Continuar"'):
     assert label in modal
 assert 'onDecision("discard")' in modal and 'onDecision("save")' in modal
 print('OK: v0.1.186 Sobre, atualizador integrado, download consentido e saída clara')

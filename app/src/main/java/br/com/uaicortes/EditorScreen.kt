@@ -433,7 +433,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         val actions = remember { listOf(
             Triple("Salvar", Icons.Default.Save, "save"),
             Triple("Cortar", Icons.Default.ContentCut, "trim"),
-            Triple("Unir", Icons.Default.Add, "add"),
+            Triple("Vídeo +", Icons.Default.Add, "add"),
             Triple("Imagem", Icons.Default.AddPhotoAlternate, "image"),
             Triple("PiP", Icons.Default.Layers, "pip"),
             Triple("Áudio", Icons.Default.MusicNote, "audio"),
@@ -447,11 +447,11 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         ) }
         val toolsScroll = rememberLazyListState()
         LazyRow(state = toolsScroll, modifier = Modifier.fillMaxWidth().navigationBarsPadding()
-            .padding(vertical = 10.dp), contentPadding = PaddingValues(horizontal = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+            .padding(vertical = 10.dp), contentPadding = PaddingValues(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             items(count = actions.size) { index ->
                 val (name, icon, key) = actions[index]
-                Column(Modifier.width(66.dp).clip(RoundedCornerShape(12.dp)).clickable {
+                Column(Modifier.width(56.dp).clip(RoundedCornerShape(12.dp)).clickable {
                     when (key) {
                         "save" -> onSaveHome()
                         "add" -> onAddVideo()
@@ -461,7 +461,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                         else -> onEdit(key)
                     }
                 }, horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(Modifier.size(52.dp).clip(RoundedCornerShape(16.dp))
+                    Box(Modifier.size(48.dp).clip(RoundedCornerShape(14.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
                         Icon(icon, name, modifier = Modifier.size(22.dp))
                     }

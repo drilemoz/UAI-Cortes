@@ -16,11 +16,21 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.193"
-    const val VERSION_CODE = 194
+    const val VERSION_NAME = "0.1.194"
+    const val VERSION_CODE = 195
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.194", listOf(
+            ReleaseFeature("export-complete-194", "Concluir a exportação salva o projeto",
+                "Depois de exportar, toque em Concluir para gravar o projeto no catálogo e voltar à página inicial. Se falhar, o editor permanece aberto; o MP4 já exportado é preservado.", "check"),
+            ReleaseFeature("editor-exit-horizontal-194", "Saída mais simples",
+                "Salvar, Descartar e Continuar estão lado a lado com ícones; salvar cópia permanece disponível para projetos existentes.", "check"),
+            ReleaseFeature("video-placement-194", "Escolha onde inserir vídeos",
+                "A ferramenta Vídeo + permite inserir um ou vários arquivos no início, antes ou depois do clipe selecionado ou no final, deslocando os elementos posteriores.", "check"),
+            ReleaseFeature("image-placement-194", "Inserção de imagem compacta",
+                "As quatro posições da imagem ficam em uma linha e a barra inferior do editor ocupa menos espaço.", "check")
+        )),
         ReleaseSummary("0.1.193", listOf(
             ReleaseFeature("voice-simple-list-193", "Vozes IA em linhas compactas",
                 "Cada fala tem apenas ouvir/gerar, tom e voz. Toque e segure para refazer, inserir, sincronizar ou remover faixa, sem perder o áudio pronto.", "captions"),

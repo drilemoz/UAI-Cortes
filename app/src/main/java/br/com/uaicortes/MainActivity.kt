@@ -127,6 +127,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     var positionMs by workspace::positionMs
     var pendingPicker by rememberSaveable { mutableStateOf("") }
     var incomingMainImage by remember { mutableStateOf<Uri?>(null) }
+    var pendingVideoInsertion by remember { mutableStateOf<PendingVideoInsertion?>(null) }
     var importedAudioSourceVideo by rememberSaveable { mutableStateOf<Uri?>(null) }
     var mediaOrigin by rememberSaveable { mutableStateOf("editor") }
     var selectedOverlayId by workspace::selectedOverlayId
@@ -175,13 +176,13 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
             android.widget.Toast.LENGTH_LONG).show()
         false
     }
-    fun leaveEditor(decision: String) {
+    fun leaveEditor(decision: String): Boolean {
         val completed = runCatching {
             val savedProject = when (decision) {
                 "save" -> projectSession.commit()
                 "copy" -> projectSession.commitCopy()
                 "discard" -> null
-                else -> return
+                else -> return false
             }
             // Snapshot histórico somente depois do commit do cadastro.
             if (savedProject != null && backupStore.preferences.enabled)
@@ -202,6 +203,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 "Não foi possível concluir. A edição permanece aberta; tente novamente.",
                 android.widget.Toast.LENGTH_LONG).show()
         }
+        return completed.isSuccess
     }
     fun openProject(id: String) {
         val opened = projectSession.open(id)
@@ -269,6 +271,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     fun importVideoClips(uris: List<Uri>, persistDocumentAccess: Boolean) {
         if (uris.isEmpty()) return
         val request = VideoImportRequest(project?.id.orEmpty(), pendingPicker == "new")
+        val selectedBeforePicker = selectedClip
         val origin = MediaTaskOrigin(project?.id.orEmpty(), screen, mediaAction)
         startMediaTask(MediaTaskKind.VIDEO, origin) {
             val imported = mediaTasks.videos(uris, persistDocumentAccess)
@@ -281,6 +284,12 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
             if (imported.clips.isEmpty()) {
                 android.widget.Toast.makeText(context, "Não foi possível abrir os vídeos selecionados",
                     android.widget.Toast.LENGTH_LONG).show()
+                return@startMediaTask
+            }
+            if (!request.createNew && mediaAction == "append" && project != null) {
+                pendingVideoInsertion = PendingVideoInsertion(project!!.id, selectedBeforePicker,
+                    imported.clips, imported.rejected)
+                screen = "editor"
                 return@startMediaTask
             }
             val base = projectSession.append(project, imported.clips, createNew = request.createNew)
@@ -393,6 +402,17 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
         mediaTaskCoordinator, incomingMainImage, { incomingMainImage = null },
         { openGallery("editor", "image_insert") }) { changed, clip, index ->
         write(changed).also { saved -> if (saved) { positionMs = changed.clips.take(index).sumOf { it.durationMs }; selectedClip = clip.id } } }
+    MainVideoInsertionUi(project, screen, pendingVideoInsertion,
+        onInserted = { changed, first, index ->
+            write(changed).also { saved ->
+                if (saved) {
+                    selectedClip = first.id
+                    positionMs = changed.clips.take(index).sumOf { it.durationMs }
+                    pendingVideoInsertion = null
+                }
+            }
+        },
+        onCancel = { pendingVideoInsertion = null })
         val tapMonitor = if (diagnosticsEnabled) Modifier.pointerInput(screen) {
             val touches = mutableMapOf<PointerId, androidx.compose.ui.geometry.Offset>()
             val tolerance = viewConfiguration.touchSlop * 1.5f
@@ -638,10 +658,12 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 "export" -> project?.let { current -> ExportScreen(current, store.quality(), ::back,
                     onPublicationDraftSave = { draft -> projectSession.project?.takeIf { it.id == current.id }
                         ?.let { write(it.copy(publicationDraft = draft)) } ?: false },
-                    onSocialPublish = { uri, name, draft -> openSocialPublish(uri, name.ifBlank { "Vídeo exportado.mp4" }, draft) }) }
+                    onSocialPublish = { uri, name, draft -> openSocialPublish(uri, name.ifBlank { "Vídeo exportado.mp4" }, draft) },
+                    onComplete = { leaveEditor("save") }) }
             }
         }
-        if (pendingExitEditor) ConfirmEditorExit(projectSession.hasSavedOriginal, ::leaveEditor) {
+        if (pendingExitEditor) ConfirmEditorExit(projectSession.hasSavedOriginal,
+            onDecision = { leaveEditor(it) }) {
             pendingExitEditor = false
         }
         if (screen == "home" && interruptedDraft != null) {

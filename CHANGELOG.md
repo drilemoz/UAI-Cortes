@@ -1,3 +1,13 @@
+# Uai Cortes · versão 0.1.194 — Exportação, retorno e inserção de mídias
+
+## v0.1.194 · versionCode 195
+- Exportação: botão Concluir substitui Fechar e só retorna à Home depois do commit do projeto. Se o commit falhar, permanece no editor/exportação sem apagar o MP4 salvo.
+- Saída: modal com três ações e ícones em linha (Salvar/Descartar/Continuar); Salvar como cópia separado para projetos existentes.
+- Vídeo +: após seleção de um ou vários vídeos, confirmar Início/Antes/Depois/Final; sem alterar projeto antes do consentimento. Inserção temporal reusa ImageClipPolicy, deslocando legendas, tempos por palavra, sobreposições e áudios desvinculados dos clipes quando posteriores; áudio ligado a clipe mantém vínculo.
+- Imagem: seleção das mesmas quatro posições lado a lado, título Inserir imagem, duração mantida.
+- Barra inferior finita e mais compacta: cartão 56 dp, ícone 48 dp, espaçamento 4 dp, padding 8 dp.
+- Testes de contrato para navegação e UI, JUnit para inserção de vídeos e sincronização. Integrações anteriores preservadas; Android completo pendente no CI.
+
 # Uai Cortes · versão 0.1.193 — Vozes IA Compacta
 
 ## v0.1.193 · versionCode 194

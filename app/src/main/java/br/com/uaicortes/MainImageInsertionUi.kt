@@ -76,7 +76,7 @@ internal fun MainImageInsertionUi(
         AlertDialog(
             onDismissRequest = { cancelPending() },
             icon = { Icon(Icons.Default.AddPhotoAlternate, null) },
-            title = { Text("Adicionar imagem ao vídeo") },
+            title = { Text("Inserir imagem") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(source.title, maxLines = 2)
@@ -84,19 +84,8 @@ internal fun MainImageInsertionUi(
                     Slider(value = seconds.toFloat(), valueRange = 1f..30f, steps = 28,
                         onValueChange = { seconds = it.toInt().coerceIn(1, 30) })
                     Text("Onde inserir?", fontWeight = FontWeight.SemiBold)
-                    listOf(
-                        ImageClipPolicy.Placement.START to "Capa no início",
-                        ImageClipPolicy.Placement.BEFORE_SELECTED to "Antes do selecionado",
-                        ImageClipPolicy.Placement.AFTER_SELECTED to "Depois do selecionado",
-                        ImageClipPolicy.Placement.END to "No final"
-                    ).forEach { (choice, label) ->
-                        Row(modifier = Modifier.fillMaxWidth().clickable { placement = choice },
-                            verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(selected = placement == choice,
-                                onClick = { placement = choice })
-                            Text(label, style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
+                    MediaPlacementChoices(placement,
+                        project.clips.any { it.id == selectedClipId }) { placement = it }
                     Text("Imagem estática, sem som original. O vídeo existente não será apagado.",
                         style = MaterialTheme.typography.bodySmall)
                 }
@@ -114,7 +103,7 @@ internal fun MainImageInsertionUi(
                             Toast.makeText(context, "Imagem adicionada à timeline.", Toast.LENGTH_SHORT).show()
                         }
                     } else cancelPending()
-                }) { Text("Adicionar imagem") }
+                }) { Text("Inserir imagem") }
             },
             dismissButton = { TextButton(onClick = { cancelPending() }) { Text("Cancelar") } }
         )

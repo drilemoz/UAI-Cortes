@@ -18,7 +18,8 @@ assert 'projectSession.finishWithoutSaving()' in ui
 assert 'if (screen == "editor" && destination == "home")' in ui
 assert 'pendingExitEditor = true' in ui
 assert 'onSaveHome = { if (write(p)) leaveEditor("save") }' in ui
-for label in ['Salvar projeto','Salvar cópia','Descartar e sair','Continuar editando']:
+for label in ['EditorExitAction("Salvar"', 'Salvar como cópia',
+              'EditorExitAction("Descartar"', 'EditorExitAction("Continuar"']:
     assert label in dialogs, label
 for token in ['fun begin(', 'fun stage(', 'fun committed(', 'fun discard()', 'val dirty']:
     assert token in draft

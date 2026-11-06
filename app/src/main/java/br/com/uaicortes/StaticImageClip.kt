@@ -61,10 +61,21 @@ internal object ImageClipPolicy {
     fun insertIntoProject(project: VideoProject, clip: Clip, placement: Placement,
         selectedId: String? = null): VideoProject {
         require(clip.isImage) { "Insira um clipe de imagem." }
+        return insertMediaIntoProject(project, listOf(clip), placement, selectedId)
+    }
+
+    /** Insere múltiplos vídeos/fotos sem perder o vínculo de faixas e sem sobrescrever mídias.
+     * Usa o mesmo deslocamento temporal já validado na inserção de capa de imagem.
+     */
+    fun insertMediaIntoProject(project: VideoProject, incoming: List<Clip>,
+        placement: Placement, selectedId: String? = null): VideoProject {
+        require(incoming.isNotEmpty() && incoming.all { it.durationMs > 0L }) {
+            "Selecione mídias válidas para inserir."
+        }
         val at = index(project.clips, selectedId, placement)
         val begin = project.clips.take(at).sumOf { it.durationMs }
-        val shifted = shiftTimedElements(project, begin, clip.durationMs)
-        val changedClips = project.clips.toMutableList().apply { add(at, clip) }
+        val shifted = shiftTimedElements(project, begin, incoming.sumOf { it.durationMs })
+        val changedClips = project.clips.toMutableList().apply { addAll(at, incoming) }
         return EditFeatures.repositionAfterDelete(shifted, changedClips)
     }
 

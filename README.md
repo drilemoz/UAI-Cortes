@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.194 — Exportação e inserção de mídias
+
+Após exportar um MP4, **Concluir** confirma o salvamento do projeto no catálogo e retorna à página inicial; caso a gravação do projeto falhe, o editor não é descartado e o vídeo exportado permanece disponível. **Voltar ao editor** continua independente. Projetos continuam em formato schemaVersion 4, com snapshots gerados somente após o commit confirmado.
+
+**Salvar edição?** mostra as ações Salvar / Descartar / Continuar lado a lado com ícones, e Salvar como cópia para projetos já existentes. A ferramenta **Vídeo +** abre a galeria e, antes de modificar o rascunho, pergunta onde inserir: Início, Antes, Depois ou Final. A inserção de múltiplos clipes usa o mesmo deslocamento de legendas, áudio e PiPs da inserção de imagens, preservando mídias e links. A ferramenta **Inserir imagem** exibe as quatro posições na mesma linha e mantém o controle de duração. Barra inferior mais compacta, rolagem finita.
+
+**v0.1.194/versionCode 195**: preservar cinco APKs Release, assinatura, Central de Vozes, histórico e backups. Build Android real, testes de layout em tela pequena e verificação física de sincronização após múltiplas inserções ainda são necessários.
+
 # Uai Cortes · versão 0.1.193 — Vozes IA mais simples
 
 Na tela **Vozes IA**, cada legenda agora aparece em uma linha com três controles: **ouvir/gerar**, **tom** e **voz**. A voz configurada no personagem continua sendo herdada; alterações por fala são exceções. Toque em uma fala para mostrá-la no vídeo; **mantenha pressionada** para encontrar Inserir/Trocar na timeline, Refazer, Sincronizar, Restaurar WAV original ou Remover faixa, conforme o estado da fala. Nada é gerado ao selecionar uma voz ou interpretação.

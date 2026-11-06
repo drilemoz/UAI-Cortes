@@ -1,3 +1,10 @@
+# v0.1.194 — Exportação concluída, diálogo de saída e inserção de mídias
+- A tela "Vídeo salvo!" do ExportScreen usa Concluir para confirmar commit do projeto ativo e voltar à Home; exportação de MP4 e gravação de projeto são operações distintas. Não dispensar rascunho nem navegar se o commit falhar. AnimateImages mantém comportamento próprio de fechar o diálogo.
+- Editor: modal de saída com Salvar/Descartar/Continuar horizontal, cada ação com ícone e toque mínimo apropriado; Salvar como cópia quando já existe original.
+- Vídeo + abre importação (galeria SAF existente) e só modifica rascunho depois de escolher posição Início/Antes/Depois/Final. Admite múltiplos vídeos, valida projetos e IDs, não duplica clipes nem perde conteúdos antigos. Reutilizar deslocamento temporal de ImageClipPolicy para legendas, wordTimings, overlays e áudios sem clipId; clip-bound audio não recebe deslocamento duplo.
+- Inserir imagem mantém 1–30 s e apresenta as mesmas quatro posições na horizontal; antes/depois indisponíveis sem clipe selecionado. Barra inferior finita com cartões 56 dp, ícones 48 dp, 4 dp de gap.
+- Versão 0.1.194/versionCode 195, project schemaVersion 4, cinco APKs, backups, vozes e progresso preservados. Testes de contrato/PSI não substituem build Gradle e teste físico de timeline, especialmente em junções e cortes.
+
 # v0.1.193 — Vozes IA compacta e retomada consentida
 - A tela Vozes IA apresenta cada fala em uma única linha: ouvir/gerar, tom e voz. O toque na fala seleciona a prévia; toque prolongado abre as ações avançadas (refazer, inserir/trocar, sincronizar, restaurar WAV original, remover faixa). Ícones têm rótulos acessíveis. Não criar síntese ao tocar em tom/voz.
 - Progresso global com WAVs compatíveis efetivamente existentes, botão Gerar pendentes, Inserir e acesso à Central. Detalhes de fila, cota, sincronização e personagens são recolhidos por padrão, mas disponíveis. Filtro não oculta as falas do lote global.

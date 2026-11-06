@@ -2,6 +2,14 @@ package br.com.uaicortes
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,6 +34,25 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/** Três ações igualmente tocáveis sem empilhar botões em telas estreitas. */
+@Composable
+private fun androidx.compose.foundation.layout.RowScope.EditorExitAction(
+    label: String, icon: androidx.compose.ui.graphics.vector.ImageVector,
+    danger: Boolean = false, action: () -> Unit
+) {
+    OutlinedButton(onClick = action,
+        modifier = Modifier.weight(1f).height(76.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(2.dp)) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center) {
+            Icon(icon, contentDescription = null, modifier = Modifier.height(22.dp),
+                tint = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+            Text(label, fontSize = 11.sp, maxLines = 1, textAlign = TextAlign.Center,
+                color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
+        }
+    }
+}
+
 /** UI da decisão de saída, sem disparar gravação permanente por conta própria. */
 @Composable
 internal fun ConfirmEditorExit(hasSavedOriginal: Boolean, onDecision: (String) -> Unit,
@@ -33,25 +60,26 @@ internal fun ConfirmEditorExit(hasSavedOriginal: Boolean, onDecision: (String) -
     AlertDialog(
         onDismissRequest = onContinue,
         icon = { Icon(Icons.Default.Save, contentDescription = null) },
-        title = { Text(if (hasSavedOriginal) "Salvar alterações?" else "Salvar este projeto?") },
+        title = { Text("Salvar edição?") },
         text = { Text(if (hasSavedOriginal)
-            "Você fez alterações neste projeto."
-        else "Se sair sem salvar, esta edição será descartada. Os arquivos originais continuam no celular.") },
+            "Deseja guardar as alterações antes de sair?"
+        else "Guardar este projeto antes de sair? Os arquivos originais permanecem no celular.") },
         confirmButton = {
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Button(onClick = { onDecision("save") }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Salvar projeto")
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    EditorExitAction("Salvar", Icons.Default.Save) { onDecision("save") }
+                    EditorExitAction("Descartar", Icons.Default.DeleteOutline, danger = true) {
+                        onDecision("discard")
+                    }
+                    EditorExitAction("Continuar", Icons.Default.Edit) { onContinue() }
                 }
                 if (hasSavedOriginal) {
-                    OutlinedButton(onClick = { onDecision("copy") }, modifier = Modifier.fillMaxWidth()) {
-                        Text("Salvar cópia")
+                    TextButton(onClick = { onDecision("copy") },
+                        modifier = Modifier.align(Alignment.End)) {
+                        Icon(Icons.Default.ContentCopy, contentDescription = null,
+                            modifier = Modifier.padding(end = 6.dp))
+                        Text("Salvar como cópia")
                     }
-                }
-                TextButton(onClick = { onDecision("discard") }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Descartar e sair", color = MaterialTheme.colorScheme.error)
-                }
-                TextButton(onClick = onContinue, modifier = Modifier.fillMaxWidth()) {
-                    Text("Continuar editando")
                 }
             }
         }

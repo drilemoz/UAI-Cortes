@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.194 — Exportação e Inserção
+
+- O botão **Concluir** depois do vídeo salvo grava o projeto e retorna à página inicial; não fecha o projeto se o salvamento falhar.
+- A saída do editor oferece Salvar, Descartar e Continuar na mesma linha com ícones. Salvar cópia continua disponível.
+- **Vídeo +** substitui o nome impreciso Unir e pergunta em qual posição inserir os novos clipes. A inserção ajusta elementos posteriores da timeline, mantendo vídeos originais.
+- **Inserir imagem** tem quatro opções horizontais compactas, com ícones e rótulos. A barra de ferramentas está mais próxima, com rolagem finita.
+- v0.1.194/versionCode 195, cinco APKs Release previstos. Compilação Android e validação no aparelho pendentes.
+
 # Uai Cortes · versão 0.1.193 — Vozes IA Compacta
 
 - Legendas com três ícones: ouvir/gerar, tom e voz; ações avançadas por toque prolongado.

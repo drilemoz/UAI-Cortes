@@ -45,7 +45,8 @@ internal fun VideoSavedDialog(
     initialPublicationDraft: VideoPublicationDraft? = null,
     onPublicationDraftSave: ((VideoPublicationDraft) -> Boolean)? = null,
     onSocialPublish: ((Uri, String, VideoPublicationDraft) -> Unit)? = null,
-    onEdit: (VideoPublicationDraft) -> Unit, onClose: () -> Unit
+    onEdit: (VideoPublicationDraft) -> Unit, onClose: () -> Unit,
+    closeLabel: String = "Fechar"
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -302,7 +303,7 @@ internal fun VideoSavedDialog(
                     TextButton(onClick = { if (persistDraft()) onEdit(currentDraft()) }) {
                         Text(editLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    TextButton(onClick = { if (persistDraft()) onClose() }) { Text("Fechar") }
+                    TextButton(onClick = { if (persistDraft()) onClose() }) { Text(closeLabel) }
                 }
             }
         }

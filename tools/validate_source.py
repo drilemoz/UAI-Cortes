@@ -550,8 +550,9 @@ print('OK: v0.1.64 / versionCode 74, rascunho, voltar, sucesso compartilhado e a
 
 # v0.1.56: contratos de modularização e serviços compartilhados.
 app_files = root/'app/src/main/java/br/com/uaicortes'
-# v139: uma rota de ferramenta foi acrescentada, sem mover a UI para MainActivity.
-assert len((app_files/'MainActivity.kt').read_text().splitlines()) < 725
+# v194: fluxo de importação de vídeo tem estado de confirmação no activity; diálogo e política
+# foram extraídos para MediaInsertionUi.kt. Guardar limite sem exigir minificação ilegível.
+assert len((app_files/'MainActivity.kt').read_text().splitlines()) < 760
 assert all('internal fun ' in (app_files/name).read_text() for name in [
     'HomeScreens.kt', 'EditorScreen.kt', 'EditorTimelineUi.kt', 'TrimScreen.kt',
     'AudioScreen.kt', 'PipScreen.kt', 'TransitionScreen.kt', 'SubtitleScreen.kt',
