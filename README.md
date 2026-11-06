@@ -1,3 +1,7 @@
+# Uai Cortes · versão 0.1.184 — Linha do tempo de legendas compacta
+
+A tela de legendas aproveita melhor o espaço do celular: título, player, seguir e fullscreen na mesma barra, Zoom 1×/2×/4× em menu do progresso, filtro de personagem em menu junto a Legendas, ações avançadas em Mais e geração automática reunida em Automáticas. A timeline sempre desenha todas as legendas, atenuando as que não correspondem ao filtro; a lista continua filtrada e tocar um bloco fora do filtro restaura Todas. O toque manual na lista pausa Seguir; o ícone permite retomar. O botão Apagar todas ainda confirma antes de excluir. Projetos, schemaVersion 4, transcrição e exportação preservados. Compilação e testes de toque no Android pendentes.
+
 # Uai Cortes · versão 0.1.183 — Vozes sugeridas e revisão de personagens
 
 A transcrição Gemini 3.5 Transcribe ganhou opção para pedir diarização e horários de palavras na mesma chamada após consentimento. Voz 1 e Voz 2 são apenas rótulos de voz, não nomes; no painel de revisão, o usuário pode criar personagens, vincular a personagens existentes ou deixar falas sem personagem. Texto, cortes, horários, cores e arquivos originais permanecem preservados; a aplicação só ocorre quando confirmada. Modelos Vosk locais não sugerem locutores. O API pode errar, cobrar ou não retornar rótulos. `schemaVersion=4`, cinco APKs Release no CI, testes Android em aparelho pendentes.

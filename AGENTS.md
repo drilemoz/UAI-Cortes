@@ -1,3 +1,9 @@
+# v0.1.184 — Legendas compactas, filtros visuais e navegação
+- `SubtitlePositionPreview` reúne título Linha do tempo, ajuda, controles do player, alternância seguir e ampliar em uma única barra; dropdown Zoom ao lado do progresso, sem esconder controle de navegação. `followPlayback` não altera seleção manual nem texto/tempo. Toque físico na lista suspende seguir sem consumir gestos; usuário pode reativar pelo ícone.
+- `SubtitleCompactTimeline` recebe todos os cues ordenados mesmo sob filtro de personagem/busca. Cues não pertencentes ao filtro continuam visíveis atenuados, e tocar nelas limpa filtro e busca; a lista é que permanece filtrada. Nunca exportar somente o subconjunto filtrado.
+- Ações principais compactas: Salvar, Desfazer, Buscar e menu Mais com Importar, Exportar, Editar todas e Apagar todas (confirmar). Filtro permite Gerenciar personagens. Offline/Gemini navegam pela mesma tela de automação anterior, sem nova cobrança. Prévia compacta limitada a 190 dp.
+- Preservar `schemaVersion=4`, todos os personagens e rascunhos, Vosk/Gemini, cinco APKs Release, `versionCode=185`. Validar navegação e overflow visual em aparelhos; testes locais não equivalem a build Android.
+
 # v0.1.183 — Diarização Gemini com revisão explícita
 - A transcrição Gemini online pode solicitar `diarization_mode: speaker` junto com `timestamp_granularities: [word]`, dentro de `transcription_config.mode`, na MESMA chamada confirmada pelo usuário. O modo offline Vosk não inventa locutores. A API pode cobrar e errar a atribuição, sobretudo com 3+ vozes.
 - Anotações `word_info.speaker` são opcionais; apenas `spk_1` a `spk_8` geram rótulos provisórios, com namespace aleatório POR TRANSCRIÇÃO. Nunca usar `Voz 1` de sessões diferentes como identidade comum. Se faltar marcação, não inventar nomes ou horários; separar cue na troca de voz.

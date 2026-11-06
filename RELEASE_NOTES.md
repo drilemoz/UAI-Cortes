@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.184 — Legendas com mais espaço
+- A barra do player agora inclui Linha do tempo à esquerda e os botões de Acompanhar e Ampliar à direita.
+- Zoom passa para menu suspenso ao lado da barra de progresso. A prévia compacta fica mais baixa, liberando espaço para a lista.
+- Personagens e filtros ficam em um único menu; todas as legendas continuam visíveis nas faixas, mas as não filtradas ficam mais discretas.
+- Importar, Exportar, Editar todas e Apagar todas ficam no menu Mais, com proteção contra exclusão involuntária; Nova e Automáticas seguem acessíveis.
+- O áudio e os arquivos originais não são alterados. Vosk e Gemini continuam como antes. Validar build e layout no Android antes de considerar comprovado.
+
 # Uai Cortes · versão 0.1.183 — Identificação sugerida de vozes
 - Ao usar **Gemini IA** em Legendas automáticas, ative ou desative a sugestão de locutores antes de confirmar o envio do áudio.
 - Na revisão, cada Voz 1/Voz 2 pode criar um personagem, vincular a um já existente ou continuar sem identificação. Nomes e cores exportadas não são inferidos nem aplicados automaticamente.

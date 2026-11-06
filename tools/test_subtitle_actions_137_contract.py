@@ -8,6 +8,6 @@ text = FILE.read_text(encoding='utf-8')
 assert 'Icons.Default.Undo' in text, 'Ação de desfazer deve existir na barra principal das legendas.'
 assert 'undoAvailable' in text and 'undoLatestChange()' in text, 'Desfazer deve ser centralizado em helper.'
 assert 'Text("Desfazer")' not in text, 'Não deve manter botão textual Desfazer ocupando espaço na lista.'
-assert 'Legenda: ${formatPipMs(selected.startMs)} – ${formatPipMs(selected.endMs)}' in text, 'Resumo da legenda selecionada deve aparecer acima da timeline.'
+assert 'Legenda: ${formatPipMs(selected.startMs)} – ${formatPipMs(selected.endMs)}' not in text, 'Não reintroduzir resumo de horário duplicado na tela principal.'
 assert 'Text("${formatPipMs(cue.startMs)}–${formatPipMs(cue.endMs)}"' not in text, 'Tempo duplicado não deve permanecer na barra do player.'
 print('ok')

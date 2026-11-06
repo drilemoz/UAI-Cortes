@@ -322,7 +322,8 @@ internal fun SubtitleCompactTimeline(cues: List<SubtitleCue>, clips: List<Clip>,
     totalMs: Long, selectedId: String, cursorMs: Long,
     onSelect: (String) -> Unit, onSeek: (Long) -> Unit,
     windowMs: Long = SubtitleCompactLayout.WINDOW_MS,
-    speakers: List<SubtitleSpeaker> = emptyList(), activeId: String? = null) {
+    speakers: List<SubtitleSpeaker> = emptyList(), activeId: String? = null,
+    emphasizedIds: Set<String>? = null) {
     val segmentMs = windowMs
     val duration = totalMs.coerceAtLeast(1L)
     val count = SubtitleCompactLayout.windowCount(totalMs, segmentMs)
@@ -408,7 +409,10 @@ internal fun SubtitleCompactTimeline(cues: List<SubtitleCue>, clips: List<Clip>,
                             val width = (260.dp * span).coerceAtLeast(10.dp).coerceAtMost(260.dp)
                             val x = (260.dp * fraction).coerceIn(0.dp, 260.dp - width)
                             val lane = (cues.indexOf(cue) % 2) * 18
+                            val emphasized = emphasizedIds == null || cue.id in emphasizedIds ||
+                                cue.id == selectedId || cue.id == activeId
                             Box(Modifier.offset(x = x, y = lane.dp).width(width).height(18.dp)
+                                .graphicsLayer { alpha=if(emphasized) 1f else .28f }
                                 .background(if (cue.id == selectedId) Blue
                                     else speakers.firstOrNull { it.id == cue.speakerId }?.let { Color(it.color) }
                                         ?: Color(0xFFC38A38), RoundedCornerShape(3.dp))

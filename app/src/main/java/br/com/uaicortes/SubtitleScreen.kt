@@ -4,6 +4,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
 import kotlin.math.abs
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
@@ -209,12 +211,16 @@ internal fun SubtitlePositionPreview(p: VideoProject, cue: SubtitleCue?,
     onCursorChange: (Long) -> Unit,
     onSeekRequest: (Long) -> Unit, onPositionCommit: (Float, Float) -> Unit,
     onPrevious: () -> Unit, onNext: () -> Unit,
-    hasPrevious: Boolean, hasNext: Boolean, compactPreview: Boolean = true) {
+    hasPrevious: Boolean, hasNext: Boolean, compactPreview: Boolean = true,
+    followPlayback: Boolean, onToggleFollow: () -> Unit,
+    onToggleCompact: () -> Unit, onTimelineHelp: () -> Unit,
+    zoomFactor: Int, onZoomChange: (Int) -> Unit) {
     val context = LocalContext.current
     val player = remember(p.id) { diagnosticPlayer(context) }
     var playing by remember(p.id) { mutableStateOf(false) }
     var scrubbing by remember(p.id) { mutableStateOf(false) }
     var scrubMs by remember(p.id) { mutableLongStateOf(0L) }
+    var zoomMenuExpanded by remember(p.id) { mutableStateOf(false) }
     val latestCursor by rememberUpdatedState(cursorMs)
     DisposableEffect(player) { onDispose { player.release() } }
     LaunchedEffect(player, p.clips.map { Triple(it.uri, it.startMs, it.endMs) },
@@ -265,7 +271,7 @@ internal fun SubtitlePositionPreview(p: VideoProject, cue: SubtitleCue?,
     }
     val total = p.durationMs.coerceAtLeast(1L)
     Column {
-        InlineVideoPreview(aspect, maxHeightDp = if (compactPreview) 225f else null) {
+        InlineVideoPreview(aspect, maxHeightDp = if (compactPreview) 190f else null) {
             if (p.clips.isNotEmpty()) {
                 AndroidView(factory = { ctx -> previewPlayer(ctx).apply {
                     this.player = player
@@ -288,58 +294,89 @@ internal fun SubtitlePositionPreview(p: VideoProject, cue: SubtitleCue?,
                 color = Color.White, fontSize = 12.sp,
                 modifier = Modifier.align(Alignment.Center))
         }
-        Row(Modifier.fillMaxWidth().height(38.dp),
+        // Uma barra única: título e ajuda à esquerda; navegação e opções à direita.
+        // Não há rótulos de legenda duplicados enquanto o vídeo está em reprodução.
+        Row(Modifier.fillMaxWidth().heightIn(min=40.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center) {
-            IconButton(enabled = hasPrevious, onClick = onPrevious,
-                modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.ChevronLeft, "Legenda anterior",
-                    modifier = Modifier.size(25.dp))
+            horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Linha do tempo", fontSize=12.sp, fontWeight=FontWeight.SemiBold,
+                maxLines=1, softWrap=false, modifier=Modifier.weight(1f, fill=false))
+            IconButton(onClick=onTimelineHelp,modifier=Modifier.size(30.dp)) {
+                Icon(Icons.Default.HelpOutline,"Ajuda da linha do tempo",modifier=Modifier.size(18.dp))
             }
-            IconButton(enabled = p.clips.isNotEmpty(), onClick = {
+            IconButton(enabled=hasPrevious,onClick=onPrevious,modifier=Modifier.size(34.dp)) {
+                Icon(Icons.Default.ChevronLeft,"Legenda anterior",modifier=Modifier.size(23.dp))
+            }
+            IconButton(enabled=p.clips.isNotEmpty(),onClick={
                 onSeekRequest(cue?.startMs ?: 0L)
-            }, modifier = Modifier.size(34.dp)) {
+            },modifier=Modifier.size(34.dp)) {
                 Icon(Icons.Default.SkipPrevious,
-                    if (cue == null) "Voltar ao início do vídeo" else "Reiniciar legenda",
-                    modifier = Modifier.size(22.dp))
+                    if(cue==null) "Voltar ao início" else "Reiniciar legenda",
+                    modifier=Modifier.size(20.dp))
             }
-            IconButton(enabled = p.clips.isNotEmpty(), onClick = {
-                if (playing) { player.pause(); playing = false }
+            IconButton(enabled=p.clips.isNotEmpty(),onClick={
+                if (playing) { player.pause(); playing=false }
                 else {
                     if (player.playbackState == Player.STATE_ENDED ||
-                        projectPosition(player, p.clips, p.durationMs) >= p.durationMs) {
+                        projectPosition(player,p.clips,p.durationMs)>=p.durationMs) {
                         seekProjectPosition(player, p.clips, 0L)
                         onCursorChange(0L)
                     }
-                    player.play()
-                    playing = true
+                    player.play(); playing=true
                 }
-            }, modifier = Modifier.size(36.dp)) {
-                Icon(if (playing) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
-                    "Reproduzir ou pausar vídeo", modifier = Modifier.size(28.dp))
+            },modifier=Modifier.size(36.dp)) {
+                Icon(if(playing) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
+                    "Reproduzir ou pausar vídeo",modifier=Modifier.size(27.dp))
             }
-            IconButton(enabled = hasNext, onClick = onNext,
-                modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.ChevronRight, "Próxima legenda",
-                    modifier = Modifier.size(25.dp))
+            IconButton(enabled=hasNext,onClick=onNext,modifier=Modifier.size(34.dp)) {
+                Icon(Icons.Default.ChevronRight,"Próxima legenda",modifier=Modifier.size(23.dp))
+            }
+            IconButton(onClick=onToggleFollow,modifier=Modifier.size(34.dp)) {
+                Icon(if(followPlayback) Icons.Default.Sync else Icons.Default.SyncDisabled,
+                    if(followPlayback) "Desativar acompanhamento automático" else "Acompanhar legenda em reprodução",
+                    tint=if(followPlayback) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier=Modifier.size(21.dp))
+            }
+            IconButton(onClick=onToggleCompact,modifier=Modifier.size(34.dp)) {
+                Icon(if(compactPreview) Icons.Default.Fullscreen else Icons.Default.FullscreenExit,
+                    if(compactPreview) "Ampliar prévia" else "Compactar prévia",
+                    modifier=Modifier.size(23.dp))
             }
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            Text(formatPipMs(if (scrubbing) scrubMs else cursorMs), fontSize = 11.sp,
-                modifier = Modifier.width(62.dp), textAlign = TextAlign.Center)
-            Slider(value = (if (scrubbing) scrubMs else cursorMs).toFloat()
-                    .coerceIn(0f, total.toFloat()),
-                onValueChange = { value ->
-                    scrubbing = true
-                    scrubMs = value.toLong().coerceIn(0L, p.durationMs)
-                }, onValueChangeFinished = {
-                    scrubbing = false
+        Row(Modifier.fillMaxWidth().padding(horizontal=2.dp),
+            verticalAlignment=Alignment.CenterVertically) {
+            Text(formatPipMs(if(scrubbing) scrubMs else cursorMs),fontSize=10.sp,
+                modifier=Modifier.width(55.dp),textAlign=TextAlign.Center)
+            Slider(value=(if(scrubbing) scrubMs else cursorMs).toFloat()
+                    .coerceIn(0f,total.toFloat()),
+                onValueChange={value->
+                    scrubbing=true
+                    scrubMs=value.toLong().coerceIn(0L,p.durationMs)
+                },onValueChangeFinished={
+                    scrubbing=false
                     onSeekRequest(scrubMs)
-                }, valueRange = 0f..total.toFloat(),
-                enabled = p.clips.isNotEmpty(), modifier = Modifier.weight(1f))
-            Text(formatPipMs(p.durationMs), fontSize = 11.sp,
-                modifier = Modifier.width(62.dp), textAlign = TextAlign.Center)
+                },valueRange=0f..total.toFloat(),
+                enabled=p.clips.isNotEmpty(),modifier=Modifier.weight(1f))
+            Text(formatPipMs(p.durationMs),fontSize=10.sp,
+                modifier=Modifier.width(55.dp),textAlign=TextAlign.Center)
+            Box {
+                TextButton(onClick={zoomMenuExpanded=true},
+                    contentPadding=PaddingValues(horizontal=2.dp,vertical=2.dp),
+                    modifier=Modifier.width(55.dp).height(36.dp)) {
+                    Text("${zoomFactor}×",fontSize=11.sp)
+                    Icon(Icons.Default.ArrowDropDown,"Selecionar zoom da timeline",
+                        modifier=Modifier.size(16.dp))
+                }
+                DropdownMenu(expanded=zoomMenuExpanded,
+                    onDismissRequest={zoomMenuExpanded=false}) {
+                    listOf(1,2,4).forEach { factor ->
+                        DropdownMenuItem(text={Text("Zoom ${factor}×")},
+                            onClick={onZoomChange(factor);zoomMenuExpanded=false},
+                            leadingIcon={if(zoomFactor==factor) Icon(Icons.Default.Check,null)})
+                    }
+                }
+            }
         }
     }
 }
@@ -456,6 +493,8 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
     var zoomFactor by remember(p.id) { mutableIntStateOf(1) }
     val zoomWindowMs = SubtitleCompactLayout.WINDOW_MS / zoomFactor
     var speakerFilter by remember(p.id) { mutableStateOf<String?>(null) }
+    var speakerFilterMenu by remember(p.id) { mutableStateOf(false) }
+    var autoSubtitlesMenu by remember(p.id) { mutableStateOf(false) }
     var speakerManagerOpen by remember(p.id) { mutableStateOf(false) }
     var speakerPickerCueId by remember(p.id) { mutableStateOf<String?>(null) }
     var moreSubtitleTools by remember(p.id) { mutableStateOf(false) }
@@ -521,136 +560,128 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
             },
             hasPrevious = SubtitleListNavigation.adjacentIndex(selectedIndex, sorted.size, -1) != null,
             hasNext = SubtitleListNavigation.adjacentIndex(selectedIndex, sorted.size, 1) != null,
-            compactPreview = compactPreview)
-        Row(Modifier.fillMaxWidth().padding(top=2.dp),horizontalArrangement=Arrangement.SpaceBetween,
-            verticalAlignment=Alignment.CenterVertically) {
-            Row(verticalAlignment=Alignment.CenterVertically) {
-                Text("Linha do tempo",fontSize=13.sp,fontWeight=FontWeight.SemiBold)
-                IconButton(onClick={helpPosition=true},modifier=Modifier.size(28.dp)) {
-                    Icon(Icons.Default.HelpOutline,"Ajuda para posicionar legendas",
-                        modifier=Modifier.size(17.dp))
-                }
-            }
-            Text(if (selected == null) "Vídeo: ${formatPipMs(cursorMs)}" else
-                "Legenda: ${formatPipMs(selected.startMs)} – ${formatPipMs(selected.endMs)}",
-                fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines=1,overflow=TextOverflow.Ellipsis)
-            IconButton(onClick={compactPreview = !compactPreview}, modifier=Modifier.size(35.dp)) {
-                Icon(if (compactPreview) Icons.Default.Fullscreen else Icons.Default.FullscreenExit,
-                    if (compactPreview) "Ampliar prévia" else "Compactar prévia")
-            }
-        }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Em reprodução: " + (activeCue?.let { cue ->
-                val speaker = p.subtitleSpeakers.firstOrNull { it.id == cue.speakerId }
-                (speaker?.name?.let { "$it · " } ?: "") + cue.text.take(30)
-            } ?: "sem fala"), fontSize = 11.sp, maxLines = 1,
-                overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            TextButton(onClick = { followPlayback = !followPlayback }) {
-                Text(if (followPlayback) "Seguindo" else "Acompanhar", fontSize = 11.sp)
-            }
-        }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.End) {
-            Text("Zoom", fontSize = 11.sp)
-            listOf(1, 2, 4).forEach { factor ->
-                FilterChip(selected = zoomFactor == factor, onClick = { zoomFactor = factor },
-                    label = { Text("${factor}×", fontSize = 11.sp) },
-                    modifier = Modifier.padding(start = 5.dp))
-            }
-        }
-        SubtitleCompactTimeline(filtered, p.clips, p.durationMs, selectedId, cursorMs,
+            compactPreview = compactPreview,
+            followPlayback = followPlayback, onToggleFollow = { followPlayback = !followPlayback },
+            onToggleCompact = { compactPreview = !compactPreview },
+            onTimelineHelp = { helpPosition = true },
+            zoomFactor = zoomFactor, onZoomChange = { zoomFactor = it })
+        // A faixa mostra TODAS as legendas; filtro/busca só reduzem a lista.
+        // Legendas fora do filtro ficam esmaecidas, nunca desaparecem da linha do tempo.
+        SubtitleCompactTimeline(sorted, p.clips, p.durationMs, selectedId, cursorMs,
             onSelect = { id ->
+                if (filtered.none { it.id == id }) {
+                    speakerFilter = null
+                    searchQuery = ""
+                }
                 selectedId = id
+                followPlayback = false
                 editorOpen = false
                 p.subtitles.firstOrNull { it.id == id }?.let { requestSeek(it.startMs) }
             }, onSeek = ::requestSeek, windowMs = zoomWindowMs,
-            speakers = p.subtitleSpeakers, activeId = activeCue?.id)
+            speakers = p.subtitleSpeakers, activeId = activeCue?.id,
+            emphasizedIds = filtered.map { it.id }.toSet())
         Row(Modifier.fillMaxWidth().padding(vertical=2.dp),
             verticalAlignment=Alignment.CenterVertically) {
-            Text("Legendas (${p.subtitles.size})",fontSize=14.sp,maxLines=1,
+            Text("Legendas (${p.subtitles.size})",fontSize=13.sp,maxLines=1,
                 fontWeight=FontWeight.SemiBold,modifier=Modifier.weight(1f))
-            TextButton(onClick=onSaveEditor,
-                contentPadding=PaddingValues(horizontal=5.dp,vertical=4.dp)) {
+            Box {
+                val filterLabel = when(speakerFilter) {
+                    null -> "Todas"
+                    "__unassigned__" -> "Sem personagem"
+                    else -> p.subtitleSpeakers.firstOrNull { it.id==speakerFilter }?.name ?: "Todas"
+                }
+                TextButton(onClick={speakerFilterMenu=true},
+                    contentPadding=PaddingValues(horizontal=2.dp,vertical=3.dp),
+                    modifier=Modifier.widthIn(max=110.dp)) {
+                    Text(filterLabel,fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
+                    Icon(Icons.Default.ArrowDropDown,"Filtrar por personagem",modifier=Modifier.size(16.dp))
+                }
+                DropdownMenu(expanded=speakerFilterMenu,onDismissRequest={speakerFilterMenu=false}) {
+                    DropdownMenuItem(text={Text("Todas as legendas")},onClick={
+                        speakerFilter=null;speakerFilterMenu=false })
+                    DropdownMenuItem(text={Text("Sem personagem")},onClick={
+                        speakerFilter="__unassigned__";speakerFilterMenu=false })
+                    p.subtitleSpeakers.forEach { speaker ->
+                        DropdownMenuItem(text={Text(speaker.name,maxLines=1)},onClick={
+                            speakerFilter=speaker.id;speakerFilterMenu=false })
+                    }
+                    HorizontalDivider()
+                    DropdownMenuItem(text={Text("Gerenciar personagens")},onClick={
+                        speakerFilterMenu=false;speakerManagerOpen=true },
+                        leadingIcon={Icon(Icons.Default.Groups,null)})
+                }
+            }
+            TextButton(onClick=onSaveEditor,modifier=Modifier.widthIn(min=49.dp),
+                contentPadding=PaddingValues(horizontal=2.dp,vertical=4.dp)) {
                 Icon(Icons.Default.Save,"Salvar legendas e voltar ao editor",modifier=Modifier.size(19.dp))
-                Spacer(Modifier.width(3.dp))
-                Text("Salvar",fontSize=12.sp)
+                Spacer(Modifier.width(2.dp))
+                Text("Salvar",fontSize=11.sp)
             }
-            IconButton(onClick={deleteAllConfirm=true},enabled=p.subtitles.isNotEmpty(),
-                modifier=Modifier.size(40.dp)) {
-                Icon(Icons.Default.DeleteSweep,"Apagar todas as legendas",
-                    tint=if(p.subtitles.isNotEmpty()) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.size(21.dp))
-            }
-            IconButton(onClick={ if(undoAvailable) undoLatestChange() },enabled=undoAvailable,
-                modifier=Modifier.size(40.dp)) {
+            IconButton(onClick={if(undoAvailable)undoLatestChange()},enabled=undoAvailable,
+                modifier=Modifier.size(34.dp)) {
                 Icon(Icons.Default.Undo,undoDescription,
-                    tint=if(undoAvailable) MaterialTheme.colorScheme.primary
+                    tint=if(undoAvailable)MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier=Modifier.size(20.dp))
             }
-            IconButton(onClick={searchOpen=!searchOpen; if(!searchOpen) searchQuery=""},
-                modifier=Modifier.size(40.dp)) {
-                Icon(if(searchOpen) Icons.Default.SearchOff else Icons.Default.Search,
-                    if(searchOpen) "Fechar busca" else "Buscar legendas",modifier=Modifier.size(21.dp))
+            IconButton(onClick={searchOpen=!searchOpen;if(!searchOpen)searchQuery=""},
+                modifier=Modifier.size(34.dp)) {
+                Icon(if(searchOpen)Icons.Default.SearchOff else Icons.Default.Search,
+                    if(searchOpen)"Fechar busca" else "Buscar legendas",modifier=Modifier.size(20.dp))
             }
-        }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { speakerManagerOpen = true }) {
-                Icon(Icons.Default.Groups, null, modifier = Modifier.size(17.dp))
-                Spacer(Modifier.width(4.dp))
-                Text("Personagens", fontSize = 12.sp)
-            }
-            Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                FilterChip(selected = speakerFilter == null, onClick = { speakerFilter = null },
-                    label = { Text("Todas", fontSize = 11.sp) })
-                FilterChip(selected = speakerFilter == "__unassigned__",
-                    onClick = { speakerFilter = "__unassigned__" },
-                    label = { Text("Sem personagem", fontSize = 11.sp) })
-                p.subtitleSpeakers.forEach { speaker ->
-                    FilterChip(selected = speakerFilter == speaker.id,
-                        onClick = { speakerFilter = speaker.id },
-                        label = { Text(speaker.name, fontSize = 11.sp) })
+            Box {
+                IconButton(onClick={moreSubtitleTools=true},modifier=Modifier.size(34.dp)) {
+                    Icon(Icons.Default.MoreVert,"Mais ferramentas de legendas",modifier=Modifier.size(21.dp))
+                }
+                DropdownMenu(expanded=moreSubtitleTools,onDismissRequest={moreSubtitleTools=false}) {
+                    DropdownMenuItem(text={Text("Importar SRT")},onClick={
+                        moreSubtitleTools=false
+                        importer.launch(arrayOf("text/*","application/x-subrip","*/*"))
+                    },leadingIcon={Icon(Icons.Default.FileOpen,null)})
+                    DropdownMenuItem(text={Text("Exportar legendas")},enabled=p.subtitles.isNotEmpty(),
+                        onClick={moreSubtitleTools=false;exportMenu=true},
+                        leadingIcon={Icon(Icons.Default.FileUpload,null)})
+                    DropdownMenuItem(text={Text("Editar todas")},enabled=p.subtitles.isNotEmpty(),
+                        onClick={moreSubtitleTools=false;batchOpen=true},
+                        leadingIcon={Icon(Icons.Default.Tune,null)})
+                    HorizontalDivider()
+                    DropdownMenuItem(text={Text("Apagar todas")},enabled=p.subtitles.isNotEmpty(),
+                        onClick={moreSubtitleTools=false;deleteAllConfirm=true},
+                        leadingIcon={Icon(Icons.Default.DeleteSweep,null,
+                            tint=MaterialTheme.colorScheme.error)})
                 }
             }
         }
-        Column(Modifier.fillMaxWidth().padding(vertical=2.dp),
-            verticalArrangement=Arrangement.spacedBy(6.dp)) {
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                SubtitleToolButton(Icons.Default.Add,"Nova",p.durationMs>0,
-                    Modifier.weight(1f)) {
-                    SubtitleListNavigation.newInterval(p.durationMs, cursorMs)?.let { (start,end) ->
-                        val cue=SubtitleCue(text="Nova legenda",startMs=start,endMs=end)
-                        if(update(p.copy(subtitles=p.subtitles+cue))) {
-                            batchUndo=null;deletedSnapshot=null
-                            searchQuery="";selectedId=cue.id;editorOpen=true;showAdvanced=false
-                            requestSeek(cue.startMs)
-                        }
+        Row(Modifier.fillMaxWidth().padding(vertical=1.dp),
+            horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            SubtitleToolButton(Icons.Default.Add,"Nova",p.durationMs>0,
+                Modifier.weight(1f)) {
+                SubtitleListNavigation.newInterval(p.durationMs,cursorMs)?.let { (start,end) ->
+                    val cue=SubtitleCue(text="Nova legenda",startMs=start,endMs=end)
+                    if(update(p.copy(subtitles=p.subtitles+cue))) {
+                        batchUndo=null;deletedSnapshot=null
+                        searchQuery="";speakerFilter=null;selectedId=cue.id
+                        editorOpen=true;showAdvanced=false
+                        requestSeek(cue.startMs)
                     }
                 }
-                SubtitleToolButton(Icons.Default.RecordVoiceOver,"Offline",true,
-                    Modifier.weight(1f),onAutoSubtitles)
-                SubtitleToolButton(Icons.Default.AutoAwesome,"Gemini IA",true,
-                    Modifier.weight(1f),onAutoSubtitles)
             }
-            TextButton(onClick = { moreSubtitleTools = !moreSubtitleTools },
-                modifier = Modifier.align(Alignment.End)) {
-                Icon(if (moreSubtitleTools) Icons.Default.ExpandLess else Icons.Default.MoreHoriz,
-                    null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(if (moreSubtitleTools) "Ocultar ferramentas" else "Mais ferramentas", fontSize = 12.sp)
-            }
-            if (moreSubtitleTools) Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                SubtitleToolButton(Icons.Default.FileOpen,"Importar",true,
-                    Modifier.weight(1f)) {
-                    importer.launch(arrayOf("text/*","application/x-subrip","*/*"))
+            Box(Modifier.weight(1f)) {
+                OutlinedButton(onClick={autoSubtitlesMenu=true},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
+                    contentPadding=PaddingValues(horizontal=4.dp,vertical=6.dp)) {
+                    Icon(Icons.Default.AutoAwesome,"Legendas automáticas",modifier=Modifier.size(17.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Automáticas",fontSize=12.sp,maxLines=1)
+                    Icon(Icons.Default.ArrowDropDown,null,modifier=Modifier.size(16.dp))
                 }
-                SubtitleToolButton(Icons.Default.FileUpload,"Exportar",p.subtitles.isNotEmpty(),
-                    Modifier.weight(1f)) { exportMenu=true }
-                SubtitleToolButton(Icons.Default.Tune,"Editar todas",p.subtitles.isNotEmpty(),
-                    Modifier.weight(1f)) { batchOpen=true }
+                DropdownMenu(expanded=autoSubtitlesMenu,onDismissRequest={autoSubtitlesMenu=false}) {
+                    DropdownMenuItem(text={Text("Offline · Vosk")},onClick={
+                        autoSubtitlesMenu=false;onAutoSubtitles()
+                    },leadingIcon={Icon(Icons.Default.RecordVoiceOver,null)})
+                    DropdownMenuItem(text={Text("Gemini IA")},onClick={
+                        autoSubtitlesMenu=false;onAutoSubtitles()
+                    },leadingIcon={Icon(Icons.Default.AutoAwesome,null)})
+                }
             }
         }
         if(searchOpen) {
@@ -665,7 +696,16 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
         }
         if(status.isNotBlank()) Text(status,fontSize=12.sp,
             color=MaterialTheme.colorScheme.primary)
-        LazyColumn(state=captionsState, modifier=Modifier.fillMaxWidth().weight(1f),
+        LazyColumn(state=captionsState, modifier=Modifier.fillMaxWidth().weight(1f)
+            .pointerInput(p.id) {
+                awaitPointerEventScope {
+                    while (true) {
+                        if (awaitPointerEvent(PointerEventPass.Initial).type == PointerEventType.Press) {
+                            followPlayback=false
+                        }
+                    }
+                }
+            },
             verticalArrangement=Arrangement.spacedBy(5.dp),
             contentPadding=PaddingValues(bottom=24.dp)) {
             if(filtered.isEmpty()) item {

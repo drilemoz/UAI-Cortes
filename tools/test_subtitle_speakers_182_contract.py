@@ -17,7 +17,7 @@ for marker in ['SubtitleSpeakerPicker(', 'SubtitleSpeakerManager(', 'Aplicar cor
     assert marker in manager
 for marker in ['val activeCue=SubtitlePreviewPolicy.firstAt', 'if (compactPreview)',
                'compactPreview = compactPreview', 'windowMs = zoomWindowMs',
-               'speakerFilter', 'followPlayback', 'Em reprodução:', 'moreSubtitleTools']:
+               'speakerFilter', 'followPlayback', 'onToggleFollow', 'moreSubtitleTools']:
     assert marker in s
 assert 'speakers.firstOrNull { it.id == cue.speakerId }' in t
 assert 'segmentMs' in (r/'app/src/main/java/br/com/uaicortes/SubtitleCompactLayout.kt').read_text() or 'windowMs' in (r/'app/src/main/java/br/com/uaicortes/SubtitleCompactLayout.kt').read_text()

@@ -16,10 +16,10 @@ assert 'player.setMediaItems(p.clips.map(ClipMediaItems::playback))' in s
 assert 'cursorMs = cursorMs, seekGeneration = seekGeneration' in s
 assert 'onCursorChange = { cursorMs =' in s
 assert 'onSeekRequest = ::requestSeek' in s
-assert 'Slider(value =' in s and 'onValueChangeFinished' in s
-assert 'SubtitleListNavigation.newInterval(p.durationMs, cursorMs)' in s
+assert ('Slider(value =' in s or 'Slider(value=' in s) and 'onValueChangeFinished' in s
+assert ('SubtitleListNavigation.newInterval(p.durationMs, cursorMs)' in s or 'SubtitleListNavigation.newInterval(p.durationMs,cursorMs)' in s)
 assert 'requestSeek(cue.startMs)' in s
-assert 'SubtitleCompactTimeline(filtered, p.clips, p.durationMs, selectedId, cursorMs,' in s
+assert 'SubtitleCompactTimeline(sorted, p.clips, p.durationMs, selectedId, cursorMs,' in s
 assert 'val visibleClips = remember(clips, segment, totalMs, segmentMs)' in t
 assert 'SubtitleCompactLayout.clipsInWindow(' in t
 assert 'TrimSegmentFrame(clip)' in t and 'SubtitleImageThumbnail(clip)' in t

@@ -246,7 +246,7 @@ print('OK: corte visual v0.1.171, persistência, retorno ao editor, divisão e r
 
 # v0.1.34: uma timeline geral, lista virtualizada e vídeo fixo no topo.
 assert 'internal fun SubtitleCompactTimeline(' in ui
-assert 'SubtitleCompactTimeline(filtered, p.clips, p.durationMs, selectedId, cursorMs,' in ui
+assert 'SubtitleCompactTimeline(sorted, p.clips, p.durationMs, selectedId, cursorMs,' in ui
 assert 'internal fun SubtitlePositionPreview(' in ui and 'player = remember(p.id)' in ui
 assert 'LazyColumn(state=captionsState' in ui and 'itemsIndexed(filtered,key=' in ui
 assert 'SubtitleEditDialog(cue=selected,totalMs=p.durationMs' in ui

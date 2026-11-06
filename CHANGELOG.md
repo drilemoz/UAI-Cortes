@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.184 — Interface de Legendas compacta
+- Barra superior do player combina Linha do tempo, ajuda, controles, Seguir e Ampliar; remove resumo de horário e mensagem de reprodução redundantes.
+- Zoom 1×/2×/4× agora fica em menu junto ao progresso, sem linha exclusiva.
+- Filtro de personagem em menu com opção Gerenciar personagens; timeline continua com todas as falas, atenuando as não filtradas. Selecionar bloco fora do filtro restaura visualização de todas as legendas.
+- Salvar, Desfazer, Buscar e Mais em cabeçalho compacto; Mais reúne Importar, Exportar, Editar todas e Apagar todas com confirmação. Nova e Automáticas ficam visíveis.
+- Toque manual na lista desativa acompanhamento automático e mantém seleção; reativação pelo ícone. Prévia compacta limitada a 190 dp para aumentar área da lista.
+- Preservados IDs/horários/cores, projetos legados schemaVersion 4, Vosk/Gemini e CI 5 APKs; build Android e testes físicos pendentes.
+
 # Uai Cortes · versão 0.1.183 — Diarização Gemini revisável
 - Gemini 3.5 Transcribe pode solicitar diarização (`mode.diarization_mode=speaker`) junto com marcações por palavra, opt-in e na mesma solicitação de transcrição.
 - Parser associa `word_info.speaker` a IDs provisórios únicos por execução, separa legendas na mudança de voz e deixa sem identidade quando a API não identifica; não adivinha nomes.
