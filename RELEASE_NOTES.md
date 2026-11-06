@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.192 — Estilos por Personagem e Editor
+
+- Escolha um personagem em **Legendas > Mais > Estilos por personagem** e aplique o visual às falas dele, preservando exceções individuais e permitindo restaurá-las ao padrão.
+- Ao salvar uma legenda, a lista mantém a posição; seguir a reprodução permanece opcional.
+- Vozes IA orienta criar/importar legendas quando o projeto não contém nenhuma fala válida. A Central de Vozes não é bloqueada.
+- Barra inferior Salvar/Cortar/Unir/... sem repetição infinita, e atualização da playlist de mídia em mudanças de duração de imagens.
+- Código-fonte v0.1.192/versionCode 193; build no CI e verificação física dos eventuais saltos do player continuam pendentes.
+
 # Uai Cortes · versão 0.1.191 — Correção dos testes CI157
 
 - Corrigida a expectativa do teste de identidade da prévia que bloqueou o workflow 157 (613 testes aprovados, 1 falha).

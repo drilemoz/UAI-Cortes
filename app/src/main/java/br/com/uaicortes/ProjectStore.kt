@@ -240,7 +240,9 @@ data class VideoProject(
     val publicationDraft: VideoPublicationDraft? = null,
     val flowPromptDraft: FlowPromptDraft? = null,
     val subtitleSpeakers: List<SubtitleSpeaker> = emptyList(),
-    val voiceIaVoices: VoiceIaVoiceAssignments = VoiceIaVoiceAssignments()
+    val voiceIaVoices: VoiceIaVoiceAssignments = VoiceIaVoiceAssignments(),
+    val subtitleSpeakerStyles: Map<String, SubtitleCue> = emptyMap(),
+    val subtitleStyleOverrides: Set<String> = emptySet()
 ) {
     val durationMs get() = clips.sumOf { it.durationMs }
     val pip: Overlay? get() = overlays.firstOrNull() // acesso legado somente leitura
@@ -258,6 +260,10 @@ data class VideoProject(
         .put("flowPromptDraft", flowPromptDraft?.json())
         .put("subtitleSpeakers", JSONArray().also { a -> subtitleSpeakers.take(16).forEach { a.put(it.json()) } })
         .put("voiceIaVoices", voiceIaVoices.json())
+        .put("subtitleSpeakerStyles", SubtitleSpeakerStyles.json(subtitleSpeakerStyles))
+        .put("subtitleStyleOverrides", JSONArray().also { a ->
+            subtitleStyleOverrides.take(2000).forEach { a.put(it) }
+        })
     companion object {
         fun read(j: JSONObject): VideoProject {
             val a = j.optJSONArray("clips") ?: JSONArray()
@@ -289,7 +295,13 @@ data class VideoProject(
                         runCatching { SubtitleSpeaker.read(arr.getJSONObject(index)) }.getOrNull()
                     }.distinctBy { it.id }
                 } ?: emptyList(),
-                VoiceIaVoiceAssignments.read(j.optJSONObject("voiceIaVoices")))
+                VoiceIaVoiceAssignments.read(j.optJSONObject("voiceIaVoices")),
+                SubtitleSpeakerStyles.read(j.optJSONObject("subtitleSpeakerStyles")),
+                j.optJSONArray("subtitleStyleOverrides")?.let { overrides ->
+                    (0 until minOf(overrides.length(), 2000)).mapNotNull { index ->
+                        overrides.optString(index).takeIf { it.isNotBlank() && it.length <= 100 }
+                    }.toSet()
+                } ?: emptySet())
         }
     }
 }

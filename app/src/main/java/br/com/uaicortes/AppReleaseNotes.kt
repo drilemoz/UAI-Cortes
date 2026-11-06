@@ -16,11 +16,21 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.191"
-    const val VERSION_CODE = 192
+    const val VERSION_NAME = "0.1.192"
+    const val VERSION_CODE = 193
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.192", listOf(
+            ReleaseFeature("subtitle-speaker-styles-192", "Aparência por personagem",
+                "Defina cores, fonte, animação e posição para todas as falas de um personagem. Edições individuais continuam independentes e podem voltar ao estilo principal.", "captions"),
+            ReleaseFeature("subtitle-scroll-192", "Lista de legendas no lugar",
+                "Ao editar uma legenda, a lista mantém sua posição. O acompanhamento automático do vídeo permanece disponível quando ativado pelo usuário.", "check"),
+            ReleaseFeature("voice-gate-192", "Vozes IA com legendas válidas",
+                "Sem legendas, o aplicativo orienta abrir Legendas. A Central de Vozes e a Narração independente não são bloqueadas.", "check"),
+            ReleaseFeature("editor-finite-tools-192", "Ferramentas sem rolagem infinita",
+                "Os cartões inferiores do editor aparecem uma única vez, com início e fim. O player também acompanha mudanças na duração de imagens do projeto.", "check")
+        )),
         ReleaseSummary("0.1.191", listOf(
             ReleaseFeature("ci157-cache-test-191", "Correção do teste da Central de Vozes",
                 "Atualizado o teste unitário que bloqueava o APK: a mesma amostra de voz pode ser reutilizada ao trocar apenas a chave Gemini, sem perder a proteção para modelo, voz e interpretação diferentes.", "check"),

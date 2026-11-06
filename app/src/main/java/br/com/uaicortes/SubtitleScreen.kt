@@ -224,7 +224,7 @@ internal fun SubtitlePositionPreview(p: VideoProject, cue: SubtitleCue?,
     val latestCursor by rememberUpdatedState(cursorMs)
     DisposableEffect(player) { onDispose { player.release() } }
     LaunchedEffect(player, p.clips.map { Triple(it.uri, it.startMs, it.endMs) },
-        p.clips.map { it.isImage to it.durationMs }) {
+        p.clips.map { Triple(it.id, it.isImage, it.durationMs) }) {
         playing = false
         player.pause()
         player.setMediaItems(p.clips.map(ClipMediaItems::playback))
@@ -407,7 +407,10 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
     }
     var status by remember { mutableStateOf("") }
     var batchOpen by remember(p.id) { mutableStateOf(false) }
+    var speakerStyleMenu by remember(p.id) { mutableStateOf(false) }
+    var speakerStyleEditId by remember(p.id) { mutableStateOf<String?>(null) }
     var batchUndo by remember(p.id) { mutableStateOf<SubtitleBatchUndo?>(null) }
+    var batchUndoSpeakerStyles by remember(p.id) { mutableStateOf<Map<String, SubtitleCue>?>(null) }
     var deleteAllConfirm by remember(p.id) { mutableStateOf(false) }
     var deletedSnapshot by remember(p.id) { mutableStateOf<List<SubtitleCue>?>(null) }
     var helpPosition by remember(p.id) { mutableStateOf(false) }
@@ -478,8 +481,10 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
             }
             canUndoBatch -> {
                 val restored = batchUndo?.restoreIfCurrent(p.subtitles)
-                if (restored != null && update(p.copy(subtitles = restored))) {
+                if (restored != null && update(p.copy(subtitles = restored,
+                    subtitleSpeakerStyles = batchUndoSpeakerStyles ?: p.subtitleSpeakerStyles))) {
                     batchUndo = null
+                    batchUndoSpeakerStyles = null
                     status = "Estilos anteriores restaurados"
                 }
             }
@@ -512,14 +517,15 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
     }
     val originalNumbers=remember(sorted) { sorted.mapIndexed { index,cue -> cue.id to index+1 }.toMap() }
     val captionsState=rememberLazyListState()
-    LaunchedEffect(selectedId,searchQuery,filtered) {
+    // Conteúdo alterado não é motivo para rolar: conserva o ID e o offset do LazyColumn.
+    // Somente uma nova seleção/filtro/busca ou acompanhamento explicitamente ativado move a lista.
+    var followPlayback by remember(p.id) { mutableStateOf(true) }
+    LaunchedEffect(selectedId, searchQuery, speakerFilter) {
         val index=filtered.indexOfFirst { it.id==selectedId }
         if(index>=0) captionsState.animateScrollToItem(index)
         else if(searchQuery.isNotBlank() && filtered.isNotEmpty()) captionsState.scrollToItem(0)
     }
-    // A lista acompanha a fala, sem sobrescrever a seleção manual nem abrir o editor.
-    var followPlayback by remember(p.id) { mutableStateOf(true) }
-    LaunchedEffect(activeCue?.id, followPlayback, editorOpen, speakerFilter, searchQuery) {
+    LaunchedEffect(activeCue?.id, followPlayback) {
         if (followPlayback && !editorOpen && searchQuery.isBlank()) {
             val index = filtered.indexOfFirst { it.id == activeCue?.id }
             if (index >= 0) captionsState.animateScrollToItem(index)
@@ -539,23 +545,22 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
             onSeekRequest = ::requestSeek,
             onPositionCommit = { x, y ->
                 selected?.let { chosen ->
-                    update(p.copy(subtitles = p.subtitles.map { cue ->
-                        if (cue.id == chosen.id) cue.copy(x = x, y = y) else cue
-                    }))
+                    followPlayback=false
+                    update(SubtitleSpeakerStyles.manualEdit(p, chosen, chosen.copy(x=x, y=y)))
                 }
             },
             onPrevious = {
                 SubtitleListNavigation.adjacentIndex(selectedIndex, sorted.size, -1)?.let { index ->
                     selectedId = sorted[index].id
                     requestSeek(sorted[index].startMs)
-                    editorOpen = true; showAdvanced = false; searchQuery = ""
+                    editorOpen = true; followPlayback = false; showAdvanced = false; searchQuery = ""
                 }
             },
             onNext = {
                 SubtitleListNavigation.adjacentIndex(selectedIndex, sorted.size, 1)?.let { index ->
                     selectedId = sorted[index].id
                     requestSeek(sorted[index].startMs)
-                    editorOpen = true; showAdvanced = false; searchQuery = ""
+                    editorOpen = true; followPlayback = false; showAdvanced = false; searchQuery = ""
                 }
             },
             hasPrevious = SubtitleListNavigation.adjacentIndex(selectedIndex, sorted.size, -1) != null,
@@ -642,8 +647,12 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                         onClick={moreSubtitleTools=false;exportMenu=true},
                         leadingIcon={Icon(Icons.Default.FileUpload,null)})
                     DropdownMenuItem(text={Text("Editar todas")},enabled=p.subtitles.isNotEmpty(),
-                        onClick={moreSubtitleTools=false;batchOpen=true},
+                        onClick={moreSubtitleTools=false;batchOpen=true;followPlayback=false},
                         leadingIcon={Icon(Icons.Default.Tune,null)})
+                    DropdownMenuItem(text={Text("Estilos por personagem")},
+                        enabled=p.subtitleSpeakers.isNotEmpty(),
+                        onClick={moreSubtitleTools=false;speakerStyleMenu=true;followPlayback=false},
+                        leadingIcon={Icon(Icons.Default.Palette,null)})
                     HorizontalDivider()
                     DropdownMenuItem(text={Text("Apagar todas")},enabled=p.subtitles.isNotEmpty(),
                         onClick={moreSubtitleTools=false;deleteAllConfirm=true},
@@ -719,7 +728,9 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                 Column {
                     Surface(onClick={
                         val same=selectedId==cue.id
+                        followPlayback=false
                         selectedId=cue.id
+                        followPlayback=false
                         requestSeek(cue.startMs)
                         editorOpen=if(same)!editorOpen else true
                         showAdvanced=false
@@ -767,16 +778,64 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
     }
     if(speakerManagerOpen) SubtitleSpeakerManager(p, update,
         dismiss = { speakerManagerOpen = false })
+    if(speakerStyleMenu) AlertDialog(onDismissRequest={speakerStyleMenu=false},
+        title={Text("Estilos por personagem")},
+        text={Column(Modifier.heightIn(max=320.dp).verticalScroll(rememberScrollState())) {
+            Text("Escolha um personagem para aplicar aparência e animação às suas falas. " +
+                "Exceções individuais são preservadas.",fontSize=12.sp)
+            p.subtitleSpeakers.forEach { speaker ->
+                val count=p.subtitles.count { it.speakerId == speaker.id }
+                TextButton(onClick={speakerStyleEditId=speaker.id;speakerStyleMenu=false},
+                    modifier=Modifier.fillMaxWidth()) {
+                    Box(Modifier.size(12.dp).background(Color(speaker.color),RoundedCornerShape(3.dp)))
+                    Spacer(Modifier.width(8.dp))
+                    Text(speaker.name,modifier=Modifier.weight(1f),maxLines=1)
+                    Text("$count falas",fontSize=11.sp)
+                    Icon(Icons.Default.ChevronRight,null)
+                }
+            }
+        }},
+        confirmButton={TextButton(onClick={speakerStyleMenu=false}) {Text("Fechar")}})
+    speakerStyleEditId?.let { id ->
+        val speaker=p.subtitleSpeakers.firstOrNull { it.id == id }
+        if (speaker != null) {
+            val source=p.subtitleSpeakerStyles[id]
+                ?: p.subtitles.firstOrNull { it.speakerId == id }
+                ?: SubtitleCue(text="Exemplo",startMs=0,endMs=3000)
+            val affected=p.subtitles.count { it.speakerId == id && it.id !in p.subtitleStyleOverrides }
+            SubtitleBatchEditDialog(source=source,count=affected,
+                title="Estilo · ${speaker.name}", scopeLabel="falas de ${speaker.name}",
+                onDismiss={speakerStyleEditId=null},
+                onApply={draft,options ->
+                    val changed=SubtitleSpeakerStyles.apply(p,id,draft,options)
+                    if(changed != null && update(changed)) {
+                        batchUndo=SubtitleBatchUndo(p.subtitles,changed.subtitles)
+                        batchUndoSpeakerStyles=p.subtitleSpeakerStyles
+                        speakerStyleEditId=null
+                        status="Estilo salvo para ${speaker.name} · $affected falas atualizadas"
+                    }
+                })
+        } else LaunchedEffect(id) { speakerStyleEditId=null }
+    }
     if(editorOpen && selected!=null) {
         SubtitleEditDialog(cue=selected,totalMs=p.durationMs,
             number=originalNumbers[selected.id] ?: 1,onDismiss={editorOpen=false},
             onDelete={editorOpen=false;pendingDeleteId=selected.id},
+            onRestoreSpeakerStyle=if(selected.speakerId?.let(p.subtitleSpeakerStyles::containsKey) == true)
+                ({
+                    SubtitleSpeakerStyles.reset(p,selected.id)?.let { restored ->
+                        if(update(restored)) { editorOpen=false;followPlayback=false }
+                    }
+                }) else null,
             onSave={draft,copyOptions ->
-                val updated=p.subtitles.map { cue -> if(cue.id==draft.id) draft else cue }
+                val single=SubtitleSpeakerStyles.manualEdit(p, selected, draft)
+                val updated=single.subtitles
                 val all=if(copyOptions!=null)
                     SubtitleStyles.applySelectedToAll(updated,draft,copyOptions) else updated
-                if(update(p.copy(subtitles=all))) {
+                if(update(single.copy(subtitles=all))) {
                     batchUndo=null
+                    batchUndoSpeakerStyles=null
+                    followPlayback=false
                     editorOpen=false
                 }
             })
@@ -790,6 +849,8 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                 val all=SubtitleStyles.applySelectedToAll(updated,draft,copyOptions)
                 if(update(p.copy(subtitles=all))) {
                     batchUndo=SubtitleBatchUndo(updated,all)
+                    batchUndoSpeakerStyles=null
+                    followPlayback=false
                     batchUndoMessage=copyOptions.summary(all.size)
                     batchOpen=false
                     status=batchUndoMessage
@@ -858,6 +919,7 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
 @Composable
 internal fun SubtitleEditDialog(cue: SubtitleCue,totalMs: Long,number: Int,
     onDismiss: () -> Unit,onDelete: () -> Unit,
+    onRestoreSpeakerStyle: (() -> Unit)? = null,
     onSave: (SubtitleCue,SubtitleStyles.CopyOptions?) -> Unit) {
     var draft by remember(cue.id) { mutableStateOf(cue) }
     var wordTimingOpen by remember(cue.id) { mutableStateOf(false) }
@@ -910,6 +972,12 @@ internal fun SubtitleEditDialog(cue: SubtitleCue,totalMs: Long,number: Int,
                         }
                     }
                     SubtitleVisualControls(draft=draft,onChange={draft=it})
+                    if (onRestoreSpeakerStyle != null) TextButton(
+                        onClick=onRestoreSpeakerStyle,modifier=Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.Restore,null,modifier=Modifier.size(16.dp))
+                        Spacer(Modifier.width(5.dp))
+                        Text("Restaurar estilo do personagem")
+                    }
                 }
                 if(!valid) Text("Informe texto e horários válidos.",fontSize=11.sp,
                     color=MaterialTheme.colorScheme.error)

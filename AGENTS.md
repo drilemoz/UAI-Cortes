@@ -1,3 +1,11 @@
+# v0.1.192 — estilos por personagem, lista estável e ferramentas finitas
+- `SubtitleSpeakerStyles` persiste templates visuais por speakerId e IDs de exceções individuais como campos JSON opcionais do `VideoProject`, mantendo schemaVersion 4. Materializa o estilo em SubtitleCue para prévia e exportação, sem duplicar renderizadores. Texto, ID, horários e wordTimings não são substituídos. Novas atribuições herdam estilo; exceções resistem a alterações posteriores; edição textual isolada não cria exceção; restaurar estilo remove exceção.
+- Em Legendas, menu Mais > Estilos por personagem aplica aparência/animação/posição apenas nas falas selecionadas, com confirmação e Desfazer. Perfis persistem no rascunho; Salvar projeto confirma. Apagar personagem remove seu perfil de estilo.
+- `SubtitleScreen` não usa a lista inteira como chave do efeito de rolagem. Seleção manual suspende acompanhamento e o fechamento do editor não move a lista. Seguir reprodução é explicitamente reativável.
+- `VoiceIaSubtitleGate` exige legenda com texto, intervalo válido e dentro da duração do projeto antes de entrar em Vozes IA. A Central de Vozes e Narração não dependem de legendas e permanecem disponíveis.
+- `EditorScreen` possui menu finito sem `Int.MAX_VALUE`. A preparação da playlist Media3 detecta mudança na duração e ordem de fotos. Os pulos apontados pelo usuário ainda requerem teste físico de player/arquivo original/exportado; não alegar correção completa sem confirmação.
+- v0.1.192/versionCode 193: preservar cinco APKs, assinatura, schema 4, backup, rascunhos e funcionalidades anteriores. Rodar CI Gradle/JUnit, Android instrumentado e comparar MP4 de origem, prévia e exportado.
+
 # v0.1.191 — CI157: correção do teste da identidade de prévia
 - O workflow 157 compilou Kotlin principal e instrumentado, mas falhou com 1/614 testes unitários, `GeminiVoicePresentationTest.previewIdentityChangesWithAccountModelVoiceOrStyle`.
 - `GeminiPreviewIdentity` ignora deliberadamente a API key na identidade de amostras: troca de credencial não altera áudio compatível. O teste agora exige igualdade para chaves diferentes e diferença para modelo, voz ou interpretação; algoritmo e WAV existentes não são modificados.

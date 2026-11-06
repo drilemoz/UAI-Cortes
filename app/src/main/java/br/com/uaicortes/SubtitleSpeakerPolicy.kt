@@ -27,13 +27,14 @@ internal object SubtitleSpeakerPolicy {
         if (project.subtitles.none { it.id == cueId }) return null
         if (speakerId != null && project.subtitleSpeakers.none { it.id == speakerId }) return null
         return project.copy(subtitles = project.subtitles.map {
-            if (it.id == cueId) it.copy(speakerId = speakerId) else it
+            if (it.id == cueId) SubtitleSpeakerStyles.inherit(project, it, speakerId) else it
         })
     }
 
     fun remove(project: VideoProject, speakerId: String): VideoProject {
         return project.copy(
             subtitleSpeakers = project.subtitleSpeakers.filterNot { it.id == speakerId },
+            subtitleSpeakerStyles = project.subtitleSpeakerStyles - speakerId,
             voiceIaVoices = project.voiceIaVoices.copy(
                 speakerVoices = project.voiceIaVoices.speakerVoices - speakerId,
                 speakerStyles = project.voiceIaVoices.speakerStyles - speakerId),

@@ -1,3 +1,13 @@
+# Uai Cortes · versão 0.1.192 — Estilos por Personagem e Editor
+
+## v0.1.192 · versionCode 193
+- Tela Legendas: menu Mais > Estilos por personagem, reutilizando o editor de estilo em lote; perfil visual persistido no projeto por speakerId, aplicado somente às falas do personagem, com exceções individuais e restauração explícita da herança.
+- A mesma legenda materializada é usada pelo Compose e exportador Media3; IDs, textos, horários e tempos por palavra são preservados na alteração visual.
+- Rolagem: salvar/cancelar uma edição não reposiciona a lista; acompanhar a reprodução continua sendo opção do usuário.
+- Vozes IA somente abre quando o projeto contém legenda válida; Central de Vozes e Narração permanecem independentes.
+- Menu inferior do editor é finito, sem repetição infinita. Playlist atualiza ao mudar duração de imagem; diagnóstico de reprodução ainda depende de teste Android real.
+- Novos testes JUnit para herança de estilo, exceções, JSON legado e atribuição; regressões Python e parser Kotlin não substituem Gradle completo.
+
 # Uai Cortes · versão 0.1.191 — Correção CI157
 
 ## v0.1.191 · versionCode 192

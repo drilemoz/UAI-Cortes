@@ -250,6 +250,7 @@ private fun SubtitleValueSlider(label:String, valueLabel:String, value:Float,
 /** Edição em lote com confirmação, sem modificar textos, IDs ou horários. */
 @Composable
 internal fun SubtitleBatchEditDialog(source:SubtitleCue,count:Int,onDismiss:()->Unit,
+    title: String = "Editar todas", scopeLabel: String = "legendas",
     onApply:(SubtitleCue,SubtitleStyles.CopyOptions)->Unit) {
     var draft by remember(source.id) { mutableStateOf(source) }
     var applyStyle by remember { mutableStateOf(true) }
@@ -263,7 +264,7 @@ internal fun SubtitleBatchEditDialog(source:SubtitleCue,count:Int,onDismiss:()->
             shape=RoundedCornerShape(18.dp),tonalElevation=5.dp) {
             Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment=Alignment.CenterVertically) {
-                    Text("Editar todas ($count)",fontWeight=FontWeight.Bold,
+                    Text("$title ($count)",fontWeight=FontWeight.Bold,
                         style=MaterialTheme.typography.titleMedium,modifier=Modifier.weight(1f))
                     IconButton(onClick=onDismiss) {Icon(Icons.Default.Close,"Fechar")}
                 }
@@ -272,7 +273,7 @@ internal fun SubtitleBatchEditDialog(source:SubtitleCue,count:Int,onDismiss:()->
                     verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     SubtitleVisualControls(draft,onChange={draft=it})
                     HorizontalDivider()
-                    Text("Aplicar em $count legendas · escolha os grupos",fontWeight=FontWeight.SemiBold,
+                    Text("Aplicar em $count $scopeLabel · escolha os grupos",fontWeight=FontWeight.SemiBold,
                         style=MaterialTheme.typography.bodyMedium)
                     LazyRow(horizontalArrangement=Arrangement.spacedBy(7.dp),
                         contentPadding=PaddingValues(end=12.dp)) {
@@ -311,13 +312,13 @@ internal fun SubtitleBatchEditDialog(source:SubtitleCue,count:Int,onDismiss:()->
                 Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick=onDismiss,modifier=Modifier.weight(1f)) {Text("Cancelar")}
                     Button(onClick={confirm=true},enabled=applyStyle||applyAnimation||applyPosition,
-                        modifier=Modifier.weight(1f)) {Text("Aplicar a todas")}
+                        modifier=Modifier.weight(1f)) {Text("Aplicar estilo")}
                 }
             }
         }
     }
     if(confirm) AlertDialog(onDismissRequest={confirm=false},
-        title={Text("Alterar $count legendas?")},
+        title={Text("Alterar $count $scopeLabel?")},
         text={Text("${SubtitleStyles.CopyOptions(appearance=applyStyle, position=applyPosition, animation=applyAnimation, wordColors=applyWordColors).summary(count)}. Textos, horários e IDs não mudam. Você poderá desfazer.")},
         confirmButton={TextButton(onClick={
             confirm=false

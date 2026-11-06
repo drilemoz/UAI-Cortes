@@ -120,7 +120,8 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         player.addListener(listener)
         onDispose { player.removeListener(listener); player.release() }
     }
-    LaunchedEffect(player, p.clips.map { Triple(it.uri, it.startMs, it.endMs) }) {
+    LaunchedEffect(player, p.clips.map { Triple(it.uri, it.startMs, it.endMs) },
+        p.clips.map { Triple(it.id, it.isImage, it.durationMs) }) {
         restoringMedia = true
         player.setMediaItems(p.clips.map(ClipMediaItems::playback))
         player.prepare()
@@ -428,8 +429,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                     (id!="music" && p.audioTracks.firstOrNull {it.id==id}?.clipId==null)
             })
         Spacer(Modifier.height(5.dp));HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
-        // Ferramentas em carrossel circular: salvar é um cartão, não um botão solto.
-        // Começamos no centro de Int.MAX_VALUE para permitir deslizar nas duas direções.
+        // Faixa finita: cada ferramenta aparece uma vez; a última é o limite da rolagem.
         val actions = remember { listOf(
             Triple("Salvar", Icons.Default.Save, "save"),
             Triple("Cortar", Icons.Default.ContentCut, "trim"),
@@ -445,13 +445,12 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             Triple("Prompt Flow", Icons.Default.AutoAwesome, "flow_prompt"),
             Triple("Animar Imagens", Icons.Default.AutoAwesomeMotion, "animate")
         ) }
-        val carouselStart = (Int.MAX_VALUE / 2 / actions.size) * actions.size
-        val toolsScroll = rememberLazyListState(initialFirstVisibleItemIndex = carouselStart)
+        val toolsScroll = rememberLazyListState()
         LazyRow(state = toolsScroll, modifier = Modifier.fillMaxWidth().navigationBarsPadding()
             .padding(vertical = 10.dp), contentPadding = PaddingValues(horizontal = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-            items(count = Int.MAX_VALUE) { index ->
-                val (name, icon, key) = actions[index % actions.size]
+            items(count = actions.size) { index ->
+                val (name, icon, key) = actions[index]
                 Column(Modifier.width(66.dp).clip(RoundedCornerShape(12.dp)).clickable {
                     when (key) {
                         "save" -> onSaveHome()

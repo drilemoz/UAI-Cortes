@@ -228,7 +228,7 @@ assert 'PathJoin' not in ui
 print('OK: build 26 — tipo StrokeJoin.Round existente no Compose, sem PathJoin')
 
 # v0.1.171: salvar e Pronto voltam ao editor principal sem apagar mídias.
-assert 'LazyRow(state = toolsScroll' in ui and 'items(count = Int.MAX_VALUE)' in ui
+assert 'LazyRow(state = toolsScroll' in ui and 'items(count = actions.size)' in ui and 'items(count = Int.MAX_VALUE)' not in ui
 assert 'Triple("Salvar", Icons.Default.Save, "save")' in ui
 assert 'Salvar e voltar à Home' not in ui
 assert 'onDone = { saved -> if (write(saved)) screen = "editor" }' in ui

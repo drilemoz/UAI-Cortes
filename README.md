@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.192 — Legendas por Personagem
+
+Na tela Legendas, abra **Mais > Estilos por personagem**, escolha Cliente, Agiota ou outro personagem e ajuste cor, fundo, fonte, tamanho, sombra, contorno, animação e posição. Confirme para aplicar a todas as falas daquele personagem que não possuem exceção individual. Nas falas isoladas, edite normalmente e use **Restaurar estilo do personagem** para voltar à herança. A associação de personagem já existente é reutilizada. Texto, horários, IDs e marcações de palavras não mudam na aplicação visual. As alterações fazem parte do rascunho; confirme **Salvar projeto**.
+
+A edição não desloca a lista de legendas ao topo. É possível reativar o acompanhamento da reprodução pelo ícone de seguir. Vozes IA depende de pelo menos uma legenda válida; sem ela, é mostrado um caminho para Legendas, enquanto a Central de Vozes e a Narração permanecem disponíveis. No editor, a faixa Salvar/Cortar/Unir/... possui limite de início/fim sem repetição circular. Mudanças de duração de fotos reconstroem a playlist de prévia; pulos visuais exigem comparação física com o MP4 de origem e exportado.
+
+Versão **0.1.192 / versionCode 193**, schemaVersion 4 preservado, cinco APKs no GitHub Actions e backups antigos compatíveis. Validações estáticas não são substituto do build Android e testes reais.
+
 # Uai Cortes · versão 0.1.191 — Correção CI157
 
 A versão 0.1.191 atualiza o teste JUnit da identidade de prévia de voz, que bloqueou o workflow **Gerar APK Uai Cortes 157**. O teste antigo exigia IDs diferentes para chaves Gemini distintas. A Central de Vozes 0.1.190 passou a reutilizar amostras WAV entre chaves, desde que modelo, voz, interpretação e texto fixo coincidam. Esse comportamento está preservado; o teste agora reflete o contrato real. Nenhuma geração é disparada pela troca de chave.
