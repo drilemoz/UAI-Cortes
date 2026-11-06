@@ -1,3 +1,18 @@
+# Uai Cortes · versão 0.1.181 — Legendas com prévia e faixa de vídeo
+
+- Corrigida prévia preta quando não existe legenda selecionada; player Media3 sempre disponível com clipes do projeto.
+- Linha do tempo virtualizada passa a exibir faixa de vídeo/foto e faixa de legendas, com cursor e miniaturas sob demanda.
+- O vídeo pode ser navegado pela faixa ou barra de progresso; Nova usa o horário atual e mantém limites do projeto.
+- Adicionados testes de limites entre clipes e contratos de UI; `versionCode 182`, sem alterar `schemaVersion=4`.
+
+# Uai Cortes · versão 0.1.180 — Correção do instalador Vosk
+
+- Novo `VoskArchiveInstaller` puro Kotlin/JVM valida ZIP completo com CRC, limites de 4.000 entradas e 300 MiB de extração, proteção contra Zip Slip/duplicação, estrutura compatível com modelo português oficial e instalação transacional após validação.
+- Mantém modelo já funcional; substitui apenas pasta incompleta após conferir o novo pacote e restaura instalação anterior em caso de interrupção detectada.
+- `VoskInstallFeedback` define categorias de erro e mensagens seguras, sem revelar URIs nem detalhes de arquivo. Diagnóstico local recebe código de falha controlado.
+- `VoskArchiveInstallerTest` cobre ZIP oficial, pasta extra, raiz, modelo moderno, ZIP inválido/errado/inseguro, limite de expansão e restauração.
+- 0.1.180/versionCode 181; `schemaVersion=4` e cinco APKs Release preservados. Gradle/Android real pendente.
+
 # Uai Cortes · versão 0.1.179 — Sessões temporárias e saída confirmada
 
 - `ProjectDraftSession` mantém edições em memória até confirmação. `EditorProjectViewModel` separa `stage`, `commit`, `commitCopy` e `finishWithoutSaving`; novas importações não criam projeto permanente silenciosamente.

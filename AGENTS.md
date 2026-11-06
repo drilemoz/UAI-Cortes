@@ -1,3 +1,15 @@
+# v0.1.181 — Vídeo sempre disponível nas Legendas
+- `SubtitlePositionPreview` não pode depender de `selected != null`: mostrar vídeo e fotos desde a primeira entrada, com Play/Pause e cursor visível mesmo em projeto sem legendas.
+- `SubtitleCompactTimeline` mantém as janelas virtuais de 10 s, com faixa de vídeo/foto acima da faixa de legendas; thumbnails em IO, sem ler todo o vídeo de uma vez.
+- `Nova` usa o instante atual do cursor, não o final da legenda selecionada; seleção de legenda posiciona o player em seu início; a prévia não grava o projeto ao mover o cursor.
+- Preservar `schemaVersion=4`, sessão temporária v0.1.179 e salvamento explícito, 5 APKs Release, versionCode 182. Executar Gradle/Android no CI antes de declarar o APK funcional.
+
+# v0.1.180 — Instalação de modelos Vosk com validação integral
+- `VoskArchiveInstaller.extract` aceita ZIP oficial PT-0.3, um wrapper externo ou arquivos do modelo na raiz, valida segurança de caminhos, duplicações, tamanho, limite de entradas e CRC antes de promover o conteúdo.
+- `VoskArchiveInstaller.installValidated` nunca substitui modelo válido; mantém rollback da pasta incompleta e recuperação de instalação interrompida. Nunca extrair direto sobre modelo existente.
+- Mensagens na UI derivadas de códigos controlados de `VoskInstallFeedback`, sem exibir caminhos/URIs privados. Diagnóstico Vosk opt-in grava categoria segura.
+- Preservar download voluntário, reconhecimento estritamente local, `schemaVersion=4`, rascunhos, backups, cinco APKs Release e versionCode sequencial 181. Não alegar teste físico sem Android.
+
 # v0.1.179 — Edição só se torna projeto após consentimento
 - `EditorProjectViewModel.stage` não pode chamar o ProjectStore. Salvar/Salvar cópia chamam `commit`/`commitCopy`, e Descartar retorna à versão anterior no armazenamento, sem apagar arquivos originais. Sempre confirmar saída com alterações, inclusive botão Voltar do Android.
 - `ProjectDraftRecoveryStore` usa AtomicFile/sha256 no armazenamento privado; rascunhos nunca entram no catálogo nem em `project_backups`, devem validar o baseline salvo e pedir recuperação explicitamente. Operações assíncronas canceladas não podem recriar rascunho após descarte.

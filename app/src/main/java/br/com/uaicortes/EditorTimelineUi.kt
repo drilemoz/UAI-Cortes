@@ -5,6 +5,7 @@ import android.os.Build
 import android.media.MediaMetadataRetriever
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import kotlin.math.abs
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -312,67 +313,147 @@ internal fun SubtitleOverviewTimeline(cues:List<SubtitleCue>,totalMs:Long,
     }
 }
 
-/** Linha do tempo única e virtualizada em janelas de 10 segundos.
- * Cada janela usa tempos absolutos: legendas sobrepostas continuam selecionáveis pela lista.
- * Não são criadas 30 (ou 300) trilhas individuais na tela.
+/** Faixa de referência dos vídeos/fotos + faixa de legendas sincronizadas.
+ * Janelas de 10 segundos são virtualizadas: não se carrega a timeline inteira
+ * nem se decodificam miniaturas de milhares de segundos de uma vez.
  */
 @Composable
-internal fun SubtitleCompactTimeline(cues: List<SubtitleCue>, totalMs: Long,
-    selectedId: String, onSelect: (String) -> Unit) {
+internal fun SubtitleCompactTimeline(cues: List<SubtitleCue>, clips: List<Clip>,
+    totalMs: Long, selectedId: String, cursorMs: Long,
+    onSelect: (String) -> Unit, onSeek: (Long) -> Unit) {
     val segmentMs = SubtitleCompactLayout.WINDOW_MS
     val duration = totalMs.coerceAtLeast(1L)
     val count = SubtitleCompactLayout.windowCount(totalMs)
     val listState = rememberLazyListState()
-    val selectedStart = cues.firstOrNull { it.id == selectedId }?.startMs
-    LaunchedEffect(selectedId, selectedStart, count) {
-        if (selectedStart != null) {
-            listState.animateScrollToItem(SubtitleCompactLayout.windowFor(selectedStart,totalMs))
+    val latestSeek by rememberUpdatedState(onSeek)
+    val currentWindow = SubtitleCompactLayout.windowFor(cursorMs, totalMs)
+    LaunchedEffect(currentWindow) {
+        if (listState.firstVisibleItemIndex != currentWindow) {
+            listState.animateScrollToItem(currentWindow)
         }
     }
-    LazyRow(state=listState, modifier=Modifier.fillMaxWidth().height(62.dp),
-        horizontalArrangement=Arrangement.spacedBy(3.dp)) {
-        items(count=count, key={ it }) { segment ->
+    LazyRow(state = listState, modifier = Modifier.fillMaxWidth().height(112.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        items(count = count, key = { it }) { segment ->
             val begin = segment.toLong() * segmentMs
             val end = minOf(begin + segmentMs, duration)
-            val visible = cues.filter {
-                SubtitleCompactLayout.visibleRange(segment,it.startMs,it.endMs,totalMs) != null
+            val visibleClips = remember(clips, segment, totalMs) {
+                SubtitleCompactLayout.clipsInWindow(clips.map { it.durationMs }, segment, totalMs)
+            }
+            val visibleCues = cues.filter {
+                SubtitleCompactLayout.visibleRange(segment, it.startMs, it.endMs, totalMs) != null
             }
             Column(Modifier.width(260.dp)) {
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
-                    Text(formatPipMs(begin),fontSize=10.sp,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(formatPipMs(end),fontSize=10.sp,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(formatPipMs(begin), fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(formatPipMs(end), fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Box(Modifier.fillMaxWidth().height(38.dp)
+                // A faixa superior sempre mostra o(s) clipe(s) correspondente(s),
+                // mesmo com zero legendas. Tocar em qualquer ponto move o cursor.
+                Box(Modifier.fillMaxWidth().height(48.dp)
+                    .clip(RoundedCornerShape(5.dp))
+                    .background(Color(0xFF252832))
+                    .pointerInput(begin, segment, totalMs) {
+                        detectTapGestures { offset ->
+                            val fraction = (offset.x / size.width.coerceAtLeast(1)).coerceIn(0f, 1f)
+                            latestSeek((begin + (fraction * segmentMs).toLong())
+                                .coerceIn(0L, totalMs.coerceAtLeast(0L)))
+                        }
+                    }
+                    .semantics { contentDescription = "Vídeos: toque para posicionar o cursor" }) {
+                    visibleClips.forEach { range ->
+                        val clip = clips[range.index]
+                        val fraction = (range.startMs - begin).toFloat() / segmentMs
+                        val span = (range.endMs - range.startMs).toFloat() / segmentMs
+                        val blockWidth = (260.dp * span).coerceAtLeast(1.dp).coerceAtMost(260.dp)
+                        val x = (260.dp * fraction).coerceIn(0.dp, 260.dp - blockWidth)
+                        key(clip.id, segment) {
+                            Box(Modifier.offset(x = x).width(blockWidth).fillMaxHeight()
+                                .clip(RoundedCornerShape(3.dp))
+                                .border(1.dp, Color(0xFF6A90C3), RoundedCornerShape(3.dp))) {
+                                if (clip.isImage) {
+                                    SubtitleImageThumbnail(clip)
+                                } else {
+                                    TrimSegmentFrame(clip)
+                                }
+                                Box(Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                                    .background(Color.Black.copy(alpha = .62f)).padding(horizontal = 3.dp)) {
+                                    Text(clip.title, color = Color.White, fontSize = 9.sp,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
+                        }
+                    }
+                    if (cursorMs in begin until (begin + segmentMs) ||
+                        segment == count - 1 && cursorMs == totalMs) {
+                        val fraction = ((cursorMs - begin).toFloat() / segmentMs).coerceIn(0f, 1f)
+                        Box(Modifier.offset(x = 260.dp * fraction).width(2.dp)
+                            .fillMaxHeight().background(Color(0xFFFFD34F)))
+                    }
+                }
+                Spacer(Modifier.height(3.dp))
+                Box(Modifier.fillMaxWidth().height(36.dp)
                     .clip(RoundedCornerShape(5.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)) {
-                    visible.forEach { cue ->
+                    visibleCues.forEach { cue ->
                         key(cue.id) {
                             val range = SubtitleCompactLayout.visibleRange(
-                                segment,cue.startMs,cue.endMs,totalMs)!!
-                            val leftMs = range.first
-                            val rightMs = range.second
-                            val fraction = (leftMs - begin).toFloat() / segmentMs
-                            val span = (rightMs - leftMs).toFloat() / segmentMs
+                                segment, cue.startMs, cue.endMs, totalMs)!!
+                            val fraction = (range.first - begin).toFloat() / segmentMs
+                            val span = (range.second - range.first).toFloat() / segmentMs
                             val width = (260.dp * span).coerceAtLeast(6.dp).coerceAtMost(260.dp)
                             val x = (260.dp * fraction).coerceIn(0.dp, 260.dp - width)
-                            val lane = (cues.indexOf(cue) % 2) * 19
-                            Box(Modifier.offset(x=x, y=lane.dp).width(width).height(18.dp)
-                                .background(if(cue.id==selectedId)Blue
-                                    else Color(0xFFC38A38),RoundedCornerShape(3.dp))
+                            val lane = (cues.indexOf(cue) % 2) * 18
+                            Box(Modifier.offset(x = x, y = lane.dp).width(width).height(18.dp)
+                                .background(if (cue.id == selectedId) Blue
+                                    else Color(0xFFC38A38), RoundedCornerShape(3.dp))
                                 .clickable { onSelect(cue.id) }
-                                .semantics { contentDescription="Selecionar legenda: ${cue.text.take(45)}" },
-                                contentAlignment=Alignment.Center) {
-                                Text(cue.text,color=Color.White,fontSize=9.sp,maxLines=1,
-                                    overflow=TextOverflow.Ellipsis,
-                                    modifier=Modifier.padding(horizontal=2.dp))
+                                .semantics {
+                                    contentDescription = "Selecionar legenda: ${cue.text.take(45)}"
+                                }, contentAlignment = Alignment.Center) {
+                                Text(cue.text, color = Color.White, fontSize = 9.sp,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(horizontal = 2.dp))
                             }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+/** Foto de capa na faixa de referência, decodificada com amostragem em IO. */
+@Composable
+internal fun SubtitleImageThumbnail(clip: Clip) {
+    val context = LocalContext.current
+    val frame by produceState<ImageBitmap?>(initialValue = null, clip.uri) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                val uri = Uri.parse(clip.uri)
+                val bounds = android.graphics.BitmapFactory.Options().apply {
+                    inJustDecodeBounds = true
+                }
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    android.graphics.BitmapFactory.decodeStream(input, null, bounds)
+                }
+                if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return@runCatching null
+                val sample = (maxOf(bounds.outWidth, bounds.outHeight) / 160)
+                    .coerceAtLeast(1)
+                val options = android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    android.graphics.BitmapFactory.decodeStream(input, null, options)?.asImageBitmap()
+                }
+            }.getOrNull()
+        }
+    }
+    Box(Modifier.fillMaxSize().background(Color(0xFF292B35)),
+        contentAlignment = Alignment.Center) {
+        if (frame != null) Image(frame!!, "Miniatura de imagem", Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop)
+        else Icon(Icons.Default.Image, "Imagem na timeline", tint = Color.LightGray)
     }
 }
 

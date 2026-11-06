@@ -152,7 +152,7 @@ print('OK: v0.1.24 / versionCode 25, timeline de áudio arrastável, seleção e
 # v0.1.25: coordenadas relativas da legenda na prévia, editor visual e busca fina.
 precision=(root/'app/src/main/java/br/com/uaicortes/TimelinePrecision.kt').read_text()
 assert 'SubtitleOverlayOnFrame(cue, editable = false, playbackMs=currentMs)' in ui
-assert 'SubtitlePositionPreview(p,selected,' in ui
+assert 'SubtitlePositionPreview(p, selected,' in ui
 assert 'SubtitlePlacement.anchorPixels(' in ui
 assert 'SubtitlePlacement.drag(' in ui
 assert 'fun step(positionMs:' in precision and 'FrameStepPolicy.target(' in ui
@@ -246,8 +246,8 @@ print('OK: corte visual v0.1.171, persistência, retorno ao editor, divisão e r
 
 # v0.1.34: uma timeline geral, lista virtualizada e vídeo fixo no topo.
 assert 'internal fun SubtitleCompactTimeline(' in ui
-assert 'SubtitleCompactTimeline(sorted,p.durationMs,selectedId,' in ui
-assert 'internal fun SubtitlePositionPreview(' in ui and 'player=remember(p.id)' in ui
+assert 'SubtitleCompactTimeline(sorted, p.clips, p.durationMs, selectedId, cursorMs,' in ui
+assert 'internal fun SubtitlePositionPreview(' in ui and 'player = remember(p.id)' in ui
 assert 'LazyColumn(state=captionsState' in ui and 'itemsIndexed(filtered,key=' in ui
 assert 'SubtitleEditDialog(cue=selected,totalMs=p.durationMs' in ui
 assert 'internal fun SubtitleEditDialog(' in ui and 'TimeDigitsField("Início",draft.startMs,totalMs' in ui
@@ -262,8 +262,8 @@ nav=(root/'app/src/main/java/br/com/uaicortes/SubtitleListNavigation.kt').read_t
 assert 'fun matches(' in nav and 'Normalizer.Form.NFD' in nav
 assert 'fun adjacentIndex(' in nav and 'fun newInterval(' in nav
 assert 'itemsIndexed(filtered,key=' in ui and 'Buscar texto da legenda' in ui
-assert 'hasPrevious=SubtitleListNavigation.adjacentIndex' in ui
-assert 'hasNext=SubtitleListNavigation.adjacentIndex' in ui
+assert 'hasPrevious = SubtitleListNavigation.adjacentIndex' in ui
+assert 'hasNext = SubtitleListNavigation.adjacentIndex' in ui
 assert 'pendingDeleteId?.let' in ui and 'Excluir esta legenda?' in ui
 assert 'SubtitleListNavigation.readSrtBounded(reader)' in ui
 assert 'fun readSrtBounded(' in nav and 'maxCharacters + 1' in nav
@@ -1170,11 +1170,11 @@ audio=(app_files/'AudioScreen.kt').read_text()
 narration=(app_files/'GeminiNarrationUi.kt').read_text()
 policy=(app_files/'SubtitlePreviewPolicy.kt').read_text()
 assert 'projectPosition(player,p.clips,p.durationMs)>=cue.endMs' not in subtitle
-assert 'if(player.playbackState==Player.STATE_ENDED)' in subtitle
-assert 'SubtitlePreviewPolicy.activeAt(p.subtitles,previewMs)' in subtitle
+assert 'if (player.playbackState == Player.STATE_ENDED)' in subtitle
+assert 'SubtitlePreviewPolicy.activeAt(p.subtitles, cursorMs)' in subtitle
 assert 'visibleCues.forEach' in subtitle and 'key(visible.id)' in subtitle
-assert 'playbackMs=previewMs' in subtitle
-assert 'seekProjectPosition(player,p.clips,0L)' in subtitle
+assert 'playbackMs = cursorMs' in subtitle
+assert 'seekProjectPosition(player, p.clips, 0L)' in subtitle
 assert 'AudioQuickAction("Extrair"' not in audio
 assert 'GeminiNarrationSection(p, timelinePositionMs, update, onOpenGeminiSettings,' in audio
 assert 'AudioQuickAction("Gerar por IA",Icons.Default.AutoAwesome' in narration

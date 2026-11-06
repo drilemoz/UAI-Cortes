@@ -1,3 +1,17 @@
+# Uai Cortes · versão 0.1.181 — Vídeo disponível na edição de legendas
+
+**Correção principal:** a tela Legendas mostra e reproduz os clipes do projeto mesmo com zero legendas. Use a faixa visual dos vídeos ou a barra de progresso para escolher o tempo e toque em Nova. As legendas aparecem em faixa separada, sincronizadas com a prévia.
+
+**Compatibilidade:** cortes, imagens, rascunhos e exportação anteriores preservados. A correção precisa ser compilada no GitHub Actions e validada em aparelho real; não foi gerado APK local.
+
+# Uai Cortes · versão 0.1.180 — Importação de modelos Vosk mais confiável
+
+- Em **Configurações → Reconhecimento de voz**, o instalador aceita o ZIP oficial português, inclusive quando veio com uma pasta externa adicional.
+- Rejeita pacotes incompletos, corrompidos, com caminhos inseguros ou maiores que o permitido, com indicação da causa; download por navegador e importação SAF permanecem disponíveis.
+- Um modelo funcional não é substituído durante tentativas de instalação. A extração só é aplicada após a validação completa; a recuperação de instalação anterior cobre interrupções específicas.
+- O diagnóstico grava códigos controlados, sem expor caminhos nem conteúdo do arquivo. A voz continua local/offline após instalação.
+- Compilação no GitHub Actions, instalação de ZIP real e uso efetivo do Vosk em Android continuam pendentes de validação.
+
 # Uai Cortes · versão 0.1.179 — Controle sobre o salvamento dos projetos
 
 - Ao voltar da edição, escolher **Salvar projeto**, **Salvar cópia** (em projeto existente), **Descartar e sair** ou **Continuar editando**. As mudanças não são cadastradas como projeto salvo até sua confirmação.

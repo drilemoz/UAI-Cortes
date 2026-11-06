@@ -1,3 +1,18 @@
+# Uai Cortes · versão 0.1.181 — Prévia de vídeo na tela de legendas
+
+- A tela de Legendas reproduz o vídeo mesmo quando o projeto ainda tem zero legendas.
+- Faixa de referência mostra os vídeos e imagens por tempo absoluto, com miniaturas sob demanda e cursor sincronizado.
+- O botão Nova inicia a legenda no cursor escolhido, inclusive após avançar/pausar o vídeo.
+- Preserva cortes, imagens estáticas, rascunhos, backups e `schemaVersion=4`; exportação MP4 não alterada.
+- Testes estruturais e Kotlin isolado não substituem a compilação Android nem teste visual.
+
+# Uai Cortes · versão 0.1.180 — Vosk: ZIP seguro, recuperação e diagnóstico
+
+- Instalação voluntária de modelo de fala português: ZIP oficial, pasta externa adicional ou arquivos do modelo na raiz são aceitos após validação do formato correto.
+- Extração verifica tamanho global, número de entradas, caminhos seguros, CRC e entradas duplicadas antes de instalar. Um modelo já válido não é substituído; instalação incompleta anterior tem proteção de recuperação.
+- Erros exibem orientações claras para ZIP inválido, modelo errado, conexão, permissão e armazenamento; diagnóstico registra apenas códigos controlados, não nomes/caminhos de arquivos.
+- Projeto, timeline, salvos/rascunhos e backups da 0.1.179 não são alterados; `schemaVersion=4` preservado. Testar instalação Vosk e reconhecimento real em Android após CI.
+
 # Uai Cortes · versão 0.1.179 — Salvar, descartar e recuperar sessões
 
 - A edição agora utiliza um rascunho separado da lista de projetos. Projeto novo só passa a existir na Home após Salvar. Ao sair com mudanças, o usuário escolhe Salvar, Salvar cópia (projeto existente), Descartar ou Continuar editando.

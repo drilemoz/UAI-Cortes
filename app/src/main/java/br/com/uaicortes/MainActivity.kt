@@ -626,7 +626,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                         screen = "subtitles"
                     }
                 }) }
-                "subtitles" -> project?.let { SubtitleScreen(it, ::back, { write(it) }, selectedSubtitleId,
+                "subtitles" -> project?.let { SubtitleScreen(it, ::back, { write(it) }, selectedSubtitleId, initialPositionMs = positionMs,
                     onSaveEditor = { if (write(it)) screen = "editor" },
                     onAutoSubtitles = { screen = "autosubtitle" }) }
                 "flow_prompt" -> project?.let { current -> FlowPromptScreen(current,

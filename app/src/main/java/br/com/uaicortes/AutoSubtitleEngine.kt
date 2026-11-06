@@ -22,7 +22,6 @@ import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.ByteOrder
-import java.util.zip.ZipInputStream
 
 /** Modelo PT pequeno oficial, baixado somente após ação explícita do usuário.
  * A transcrição e o áudio nunca são enviados pelo aplicativo à rede.
@@ -63,9 +62,11 @@ object AutoSubtitleEngine {
                     conn.connect()
                     if (conn.url.protocol != "https") error("Redirecionamento inseguro do download")
                     if (conn.responseCode !in 200..299)
-                        error("Servidor retornou HTTP ${conn.responseCode}")
+                        throw IOException("O servidor do modelo retornou HTTP ${conn.responseCode}.")
                     val total = conn.contentLengthLong.takeIf { it > 0 }
-                    if (total != null && total > MAX_DOWNLOAD) error("Modelo ultrapassa o limite permitido")
+                    if (total != null && total > MAX_DOWNLOAD)
+                        throw VoskArchiveInstaller.InstallException(
+                            VoskArchiveInstaller.Problem.TOO_LARGE, "Download acima do limite permitido.")
                     onStage("Baixando modelo Vosk…")
                     conn.inputStream.use { input ->
                         copyArchive(input, zip, total, onProgress, onTransfer)
@@ -136,7 +137,8 @@ object AutoSubtitleEngine {
                 if (n < 0) break
                 if (n == 0) continue
                 count += n
-                if (count > MAX_DOWNLOAD) error("ZIP maior que o limite permitido (90 MiB)")
+                if (count > MAX_DOWNLOAD) throw VoskArchiveInstaller.InstallException(
+                    VoskArchiveInstaller.Problem.TOO_LARGE, "ZIP maior que o limite permitido.")
                 output.write(buffer, 0, n)
                 val percent = ModelTransferProgress.percent(count, expected)
                 if (percent != lastPercent) {
@@ -151,8 +153,10 @@ object AutoSubtitleEngine {
         }
         onTransfer(count, expected)
         if (expected != null && count != expected)
-            error("Download incompleto: recebidos $count de $expected bytes")
-        if (count < 1024L) error("Arquivo ZIP vazio ou incompleto")
+            throw VoskArchiveInstaller.InstallException(
+                VoskArchiveInstaller.Problem.CHECKSUM, "Download incompleto.")
+        if (count < 1024L) throw VoskArchiveInstaller.InstallException(
+            VoskArchiveInstaller.Problem.INVALID_ZIP, "Arquivo ZIP vazio ou incompleto.")
     }
 
     private suspend fun extractAndInstall(
@@ -162,49 +166,19 @@ object AutoSubtitleEngine {
         onStage: suspend (String) -> Unit
     ) {
         onStage("Descompactando e verificando o modelo…")
-        unpack.deleteRecursively()
-        if (!unpack.mkdirs()) error("Não foi possível preparar pasta temporária")
-        val safeRoot = unpack.canonicalFile
-        var extracted = 0L
-        var entries = 0
-        ZipInputStream(zip.inputStream().buffered()).use { input ->
-            while (true) {
-                currentCoroutineContext().ensureActive()
-                val entry = input.nextEntry ?: break
-                entries++
-                if (entries > 4000) error("Muitos arquivos no ZIP")
-                val relative = entry.name.removePrefix("$MODEL_NAME/")
-                if (relative == entry.name || relative.isBlank()) {
-                    input.closeEntry()
-                    continue
-                }
-                val destination = File(safeRoot, relative).canonicalFile
-                if (!destination.path.startsWith(safeRoot.path + File.separator))
-                    error("Caminho inseguro dentro do ZIP")
-                if (entry.isDirectory) destination.mkdirs() else {
-                    destination.parentFile?.mkdirs()
-                    FileOutputStream(destination).use { output ->
-                        val buffer = ByteArray(32 * 1024)
-                        while (true) {
-                            currentCoroutineContext().ensureActive()
-                            val n = input.read(buffer)
-                            if (n < 0) break
-                            if (n == 0) continue
-                            extracted += n
-                            if (extracted > MAX_EXTRACTED) error("Modelo descompactado grande demais")
-                            output.write(buffer, 0, n)
-                        }
-                    }
-                }
-                input.closeEntry()
-            }
+        val context = currentCoroutineContext()
+        // Extração com limite global, CRC, caminhos seguros e cancelamento cooperativo.
+        val extracted = VoskArchiveInstaller.extract(zip, unpack.canonicalFile, MODEL_NAME,
+            MAX_EXTRACTED) { context.ensureActive() }
+        if (VoskModelLayout.detect(unpack) == null || extracted.files == 0) {
+            throw VoskArchiveInstaller.InstallException(
+                VoskArchiveInstaller.Problem.WRONG_MODEL, "O ZIP não contém o modelo esperado.")
         }
-        if (entries == 0 || VoskModelLayout.detect(unpack) == null)
-            error("ZIP não contém um modelo Vosk válido. Verifique o arquivo $MODEL_NAME.")
+        context.ensureActive()
+        onStage("Instalando modelo validado…")
         if (VoskModelLayout.detect(target) != null) return
-        // Só troca instalação antiga quando o pacote novo foi validado.
-        if (target.exists() && !target.deleteRecursively()) error("Falha ao remover instalação incompleta")
-        if (!unpack.renameTo(target)) error("Não foi possível instalar o modelo")
+        // Nunca substitui um modelo funcional: instalação somente após extração completa.
+        VoskArchiveInstaller.installValidated(unpack, target)
     }
 
     private data class Word(val text: String, val startMs: Long, val endMs: Long)

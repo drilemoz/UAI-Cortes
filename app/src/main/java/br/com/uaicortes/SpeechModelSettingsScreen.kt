@@ -56,8 +56,9 @@ internal fun SpeechModelSettingsScreen(back: () -> Unit) {
             } catch (_: CancellationException) {
                 stage = "Importação cancelada."
             } catch (e: Exception) {
+                DiagnosticRecorder.action("speech_model", "vosk_zip_" + VoskInstallFeedback.code(e))
                 DiagnosticRecorder.exception("vosk_zip_import", e)
-                failure = "Falha ao importar: ${e.message?.take(180) ?: "arquivo inválido"}"
+                failure = VoskInstallFeedback.message(e)
             } finally { task = null }
         }
     }
@@ -102,8 +103,9 @@ internal fun SpeechModelSettingsScreen(back: () -> Unit) {
                             } catch (_: CancellationException) {
                                 stage = "Download cancelado."
                             } catch (e: Exception) {
+                                DiagnosticRecorder.action("speech_model", "vosk_download_" + VoskInstallFeedback.code(e))
                                 DiagnosticRecorder.exception("vosk_install", e)
-                                failure = "Falha no download: ${e.message?.take(180) ?: "erro de rede"}"
+                                failure = VoskInstallFeedback.message(e)
                             } finally { task = null }
                         }
                     }, enabled = !busy, modifier = Modifier.weight(1f).heightIn(min = 76.dp),

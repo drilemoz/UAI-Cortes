@@ -197,108 +197,175 @@ internal fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
     }
 }
 
-/** Prévia da timeline completa: selecionar uma legenda posiciona o vídeo no
- * início dela, mas Play continua pelos demais clipes até o fim do projeto.
- * Enquanto toca, exibe as legendas do instante real (inclusive sobrepostas).
- * Pausado, permite editar a posição da legenda selecionada sem alterar o vídeo.
+/** Prévia independente da existência de legendas. Usa os mesmos MediaItems da
+ * timeline principal, inclusive cortes e fotos. Um único cursor em tempo absoluto
+ * alimenta player, régua, seleção e criação manual de legendas.
+ * Somente onSeekRequest faz seek; polling de reprodução não realimenta o player.
  */
 @Composable
-internal fun SubtitlePositionPreview(p:VideoProject,cue:SubtitleCue,
-    onPositionCommit:(Float,Float)->Unit,
-    onPrevious:()->Unit, onNext:()->Unit,
-    hasPrevious:Boolean, hasNext:Boolean) {
-    val context=LocalContext.current
-    val player=remember(p.id) { diagnosticPlayer(context) }
+internal fun SubtitlePositionPreview(p: VideoProject, cue: SubtitleCue?,
+    cursorMs: Long, seekGeneration: Int, seekTargetMs: Long,
+    onCursorChange: (Long) -> Unit,
+    onSeekRequest: (Long) -> Unit, onPositionCommit: (Float, Float) -> Unit,
+    onPrevious: () -> Unit, onNext: () -> Unit,
+    hasPrevious: Boolean, hasNext: Boolean) {
+    val context = LocalContext.current
+    val player = remember(p.id) { diagnosticPlayer(context) }
     var playing by remember(p.id) { mutableStateOf(false) }
-    var previewMs by remember(p.id) { mutableLongStateOf(cue.startMs) }
+    var scrubbing by remember(p.id) { mutableStateOf(false) }
+    var scrubMs by remember(p.id) { mutableLongStateOf(0L) }
+    val latestCursor by rememberUpdatedState(cursorMs)
     DisposableEffect(player) { onDispose { player.release() } }
-    LaunchedEffect(player,p.clips.map { Triple(it.uri,it.startMs,it.endMs) }) {
-        playing=false
+    LaunchedEffect(player, p.clips.map { Triple(it.uri, it.startMs, it.endMs) },
+        p.clips.map { it.isImage to it.durationMs }) {
+        playing = false
         player.pause()
-        player.setMediaItems(p.clips.map { clip ->
-            ClipMediaItems.playback(clip)
-        })
-        player.prepare()
+        player.setMediaItems(p.clips.map(ClipMediaItems::playback))
+        if (p.clips.isNotEmpty()) {
+            player.prepare()
+            seekProjectPosition(player, p.clips, latestCursor)
+        }
     }
-    LaunchedEffect(cue.id,cue.startMs,p.clips) {
-        previewMs=cue.startMs
-        playing=false
-        player.pause()
-        seekProjectPosition(player,p.clips,cue.startMs)
+    LaunchedEffect(seekGeneration) {
+        if (seekGeneration > 0 && p.clips.isNotEmpty()) {
+            player.pause()
+            playing = false
+            seekProjectPosition(player, p.clips, seekTargetMs)
+            onCursorChange(seekTargetMs)
+        }
     }
-    LaunchedEffect(playing,player,p.clips,p.durationMs) {
-        while(playing) {
-            previewMs=projectPosition(player,p.clips,p.durationMs)
-            if(player.playbackState==Player.STATE_ENDED) {
-                playing=false
+    LaunchedEffect(playing, player, p.clips.map { it.durationMs }, p.durationMs) {
+        while (playing) {
+            val position = projectPosition(player, p.clips, p.durationMs)
+            onCursorChange(position)
+            if (player.playbackState == Player.STATE_ENDED) {
+                playing = false
                 break
             }
             delay(120)
         }
     }
-    val visibleCues = if(playing) SubtitlePreviewPolicy.activeAt(p.subtitles,previewMs)
-        else listOf(cue)
-    val source=remember(p.clips,previewMs) {
-        TimelinePrecision.sourceAt(p.clips.map { it.uri to it.durationMs },previewMs)
+    val visibleCues = SubtitlePreviewPolicy.activeAt(p.subtitles, cursorMs)
+    val source = remember(p.clips, cursorMs) {
+        TimelinePrecision.sourceAt(p.clips.map { it.uri to it.durationMs }, cursorMs)
     }
-    val clip=p.clips.getOrNull(source?.first ?: -1)
-    val aspect=remember(clip?.uri) {
-        clip?.let { mediaAspect(context,it.uri,false) } ?: 16f/9f
+    val clip = p.clips.getOrNull(source?.first ?: -1)
+    val originalAspect = remember(clip?.uri, clip?.isImage) {
+        clip?.let { mediaAspect(context, it.uri, it.isImage) } ?: 16f / 9f
     }
+    val imageCanvasAspect = remember(p.clips.map { it.uri to it.isImage }) {
+        p.clips.firstOrNull { !it.isImage }?.let { mediaAspect(context, it.uri, false) }
+            ?: 9f / 16f
+    }
+    val aspect = if (clip?.isImage == true) imageCanvasAspect else originalAspect
+    val imageTransform = clip?.takeIf { it.isImage }?.let {
+        ImageFraming.resolve(it.imageFrameMode, it.imageZoom, it.imagePanX, it.imagePanY,
+            originalAspect, aspect)
+    }
+    val total = p.durationMs.coerceAtLeast(1L)
     Column {
         InlineVideoPreview(aspect) {
-            AndroidView(factory={ctx->previewPlayer(ctx).apply {
-                this.player=player
-                useController=false
-            }},update={it.player=player},modifier=Modifier.fillMaxSize())
-            visibleCues.forEach { visible ->
-                key(visible.id) {
-                    SubtitleOverlayOnFrame(visible,editable=!playing && visible.id==cue.id,
-                        playbackMs=previewMs,onPositionCommit=onPositionCommit)
+            if (p.clips.isNotEmpty()) {
+                AndroidView(factory = { ctx -> previewPlayer(ctx).apply {
+                    this.player = player
+                    useController = false
+                } }, update = { it.player = player },
+                    modifier = Modifier.fillMaxSize().graphicsLayer {
+                        scaleX = imageTransform?.scale ?: 1f
+                        scaleY = imageTransform?.scale ?: 1f
+                        translationX = (imageTransform?.offsetX ?: 0f) * size.width / 2f
+                        translationY = (imageTransform?.offsetY ?: 0f) * size.height / 2f
+                    })
+                visibleCues.forEach { visible ->
+                    key(visible.id) {
+                        SubtitleOverlayOnFrame(visible,
+                            editable = !playing && visible.id == cue?.id,
+                            playbackMs = cursorMs, onPositionCommit = onPositionCommit)
+                    }
                 }
+            } else Text("Adicione um vídeo ou uma imagem ao projeto",
+                color = Color.White, fontSize = 12.sp,
+                modifier = Modifier.align(Alignment.Center))
+        }
+        Row(Modifier.fillMaxWidth().height(38.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center) {
+            IconButton(enabled = hasPrevious, onClick = onPrevious,
+                modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Default.ChevronLeft, "Legenda anterior",
+                    modifier = Modifier.size(25.dp))
+            }
+            IconButton(enabled = p.clips.isNotEmpty(), onClick = {
+                onSeekRequest(cue?.startMs ?: 0L)
+            }, modifier = Modifier.size(34.dp)) {
+                Icon(Icons.Default.SkipPrevious,
+                    if (cue == null) "Voltar ao início do vídeo" else "Reiniciar legenda",
+                    modifier = Modifier.size(22.dp))
+            }
+            IconButton(enabled = p.clips.isNotEmpty(), onClick = {
+                if (playing) { player.pause(); playing = false }
+                else {
+                    if (player.playbackState == Player.STATE_ENDED ||
+                        projectPosition(player, p.clips, p.durationMs) >= p.durationMs) {
+                        seekProjectPosition(player, p.clips, 0L)
+                        onCursorChange(0L)
+                    }
+                    player.play()
+                    playing = true
+                }
+            }, modifier = Modifier.size(36.dp)) {
+                Icon(if (playing) Icons.Default.PauseCircle else Icons.Default.PlayCircle,
+                    "Reproduzir ou pausar vídeo", modifier = Modifier.size(28.dp))
+            }
+            IconButton(enabled = hasNext, onClick = onNext,
+                modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Default.ChevronRight, "Próxima legenda",
+                    modifier = Modifier.size(25.dp))
             }
         }
-        Row(Modifier.fillMaxWidth().height(38.dp),verticalAlignment=Alignment.CenterVertically,
-            horizontalArrangement=Arrangement.Center) {
-            IconButton(enabled=hasPrevious,onClick=onPrevious,modifier=Modifier.size(36.dp)) {
-                Icon(Icons.Default.ChevronLeft,"Legenda anterior",modifier=Modifier.size(25.dp))
-            }
-            IconButton(onClick={
-                player.pause();playing=false
-                previewMs=cue.startMs
-                seekProjectPosition(player,p.clips,cue.startMs)
-            },modifier=Modifier.size(34.dp)) {
-                Icon(Icons.Default.SkipPrevious,"Reiniciar legenda",modifier=Modifier.size(22.dp))
-            }
-            IconButton(enabled=p.clips.isNotEmpty(),onClick={
-                if(playing) {player.pause();playing=false}
-                else {
-                    if(player.playbackState==Player.STATE_ENDED ||
-                        projectPosition(player,p.clips,p.durationMs)>=p.durationMs) {
-                        // Depois do fim, novo Play reproduz o projeto desde o início.
-                        seekProjectPosition(player,p.clips,0L)
-                        previewMs=0L
-                    }
-                    player.play();playing=true
-                }
-            },modifier=Modifier.size(36.dp)) {
-                Icon(if(playing)Icons.Default.PauseCircle else Icons.Default.PlayCircle,
-                    "Reproduzir ou pausar prévia",modifier=Modifier.size(28.dp))
-            }
-            IconButton(enabled=hasNext,onClick=onNext,modifier=Modifier.size(36.dp)) {
-                Icon(Icons.Default.ChevronRight,"Próxima legenda",modifier=Modifier.size(25.dp))
-            }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Text(formatPipMs(if (scrubbing) scrubMs else cursorMs), fontSize = 11.sp,
+                modifier = Modifier.width(62.dp), textAlign = TextAlign.Center)
+            Slider(value = (if (scrubbing) scrubMs else cursorMs).toFloat()
+                    .coerceIn(0f, total.toFloat()),
+                onValueChange = { value ->
+                    scrubbing = true
+                    scrubMs = value.toLong().coerceIn(0L, p.durationMs)
+                }, onValueChangeFinished = {
+                    scrubbing = false
+                    onSeekRequest(scrubMs)
+                }, valueRange = 0f..total.toFloat(),
+                enabled = p.clips.isNotEmpty(), modifier = Modifier.weight(1f))
+            Text(formatPipMs(p.durationMs), fontSize = 11.sp,
+                modifier = Modifier.width(62.dp), textAlign = TextAlign.Center)
         }
     }
 }
 
 @Composable
 internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Boolean,
-    initialSelectedId: String? = null, onSaveEditor: () -> Unit, onAutoSubtitles: () -> Unit) {
+    initialSelectedId: String? = null, initialPositionMs: Long = 0L,
+    onSaveEditor: () -> Unit, onAutoSubtitles: () -> Unit) {
     val context=LocalContext.current
     var selectedId by remember(p.id,initialSelectedId) {
         mutableStateOf(initialSelectedId?.takeIf { id -> p.subtitles.any { it.id==id } }
             ?: p.subtitles.firstOrNull()?.id.orEmpty())
+    }
+    // Mesmo com zero legendas, o cursor e o player existem e podem navegar o vídeo.
+    var cursorMs by remember(p.id) { mutableLongStateOf(
+        (p.subtitles.firstOrNull { it.id == initialSelectedId }?.startMs
+            ?: initialPositionMs).coerceIn(0L, p.durationMs.coerceAtLeast(0L))) }
+    var seekGeneration by remember(p.id) { mutableIntStateOf(0) }
+    var seekTargetMs by remember(p.id) { mutableLongStateOf(cursorMs) }
+    fun requestSeek(position: Long) {
+        val target = position.coerceIn(0L, p.durationMs.coerceAtLeast(0L))
+        cursorMs = target
+        seekTargetMs = target
+        seekGeneration++
+    }
+    LaunchedEffect(p.durationMs) {
+        if (cursorMs > p.durationMs) requestSeek(p.durationMs)
     }
     var status by remember { mutableStateOf("") }
     var batchOpen by remember(p.id) { mutableStateOf(false) }
@@ -404,30 +471,33 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
     }
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal=14.dp)) {
         Heading("Legendas",back)
-        if(selected!=null) {
-            SubtitlePositionPreview(p,selected,
-                onPositionCommit={ x,y ->
-                    update(p.copy(subtitles=p.subtitles.map { cue ->
-                        if(cue.id==selected.id) cue.copy(x=x,y=y) else cue
+        SubtitlePositionPreview(p, selected,
+            cursorMs = cursorMs, seekGeneration = seekGeneration, seekTargetMs = seekTargetMs,
+            onCursorChange = { cursorMs = it.coerceIn(0L, p.durationMs) },
+            onSeekRequest = ::requestSeek,
+            onPositionCommit = { x, y ->
+                selected?.let { chosen ->
+                    update(p.copy(subtitles = p.subtitles.map { cue ->
+                        if (cue.id == chosen.id) cue.copy(x = x, y = y) else cue
                     }))
-                },
-                onPrevious={
-                    SubtitleListNavigation.adjacentIndex(selectedIndex,sorted.size,-1)?.let { index ->
-                        selectedId=sorted[index].id;editorOpen=true;showAdvanced=false;searchQuery=""
-                    }
-                },
-                onNext={
-                    SubtitleListNavigation.adjacentIndex(selectedIndex,sorted.size,1)?.let { index ->
-                        selectedId=sorted[index].id;editorOpen=true;showAdvanced=false;searchQuery=""
-                    }
-                },
-                hasPrevious=SubtitleListNavigation.adjacentIndex(selectedIndex,sorted.size,-1)!=null,
-                hasNext=SubtitleListNavigation.adjacentIndex(selectedIndex,sorted.size,1)!=null)
-        } else Box(Modifier.fillMaxWidth().height(196.dp)
-            .background(Color(0xFF101014),RoundedCornerShape(12.dp)),
-            contentAlignment=Alignment.Center) {
-            Text("Adicione uma legenda para visualizar o quadro",color=Color.White,fontSize=12.sp)
-        }
+                }
+            },
+            onPrevious = {
+                SubtitleListNavigation.adjacentIndex(selectedIndex, sorted.size, -1)?.let { index ->
+                    selectedId = sorted[index].id
+                    requestSeek(sorted[index].startMs)
+                    editorOpen = true; showAdvanced = false; searchQuery = ""
+                }
+            },
+            onNext = {
+                SubtitleListNavigation.adjacentIndex(selectedIndex, sorted.size, 1)?.let { index ->
+                    selectedId = sorted[index].id
+                    requestSeek(sorted[index].startMs)
+                    editorOpen = true; showAdvanced = false; searchQuery = ""
+                }
+            },
+            hasPrevious = SubtitleListNavigation.adjacentIndex(selectedIndex, sorted.size, -1) != null,
+            hasNext = SubtitleListNavigation.adjacentIndex(selectedIndex, sorted.size, 1) != null)
         Row(Modifier.fillMaxWidth().padding(top=2.dp),horizontalArrangement=Arrangement.SpaceBetween,
             verticalAlignment=Alignment.CenterVertically) {
             Row(verticalAlignment=Alignment.CenterVertically) {
@@ -437,13 +507,17 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                         modifier=Modifier.size(17.dp))
                 }
             }
-            Text(if(selected==null)"Toque em uma legenda" else
+            Text(if (selected == null) "Vídeo: ${formatPipMs(cursorMs)}" else
                 "Legenda: ${formatPipMs(selected.startMs)} – ${formatPipMs(selected.endMs)}",
                 fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines=1,overflow=TextOverflow.Ellipsis)
         }
-        SubtitleCompactTimeline(sorted,p.durationMs,selectedId,
-            onSelect={ id -> selectedId=id;editorOpen=false })
+        SubtitleCompactTimeline(sorted, p.clips, p.durationMs, selectedId, cursorMs,
+            onSelect = { id ->
+                selectedId = id
+                editorOpen = false
+                p.subtitles.firstOrNull { it.id == id }?.let { requestSeek(it.startMs) }
+            }, onSeek = ::requestSeek)
         Row(Modifier.fillMaxWidth().padding(vertical=2.dp),
             verticalAlignment=Alignment.CenterVertically) {
             Text("Legendas (${p.subtitles.size})",fontSize=14.sp,maxLines=1,
@@ -478,11 +552,12 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                 SubtitleToolButton(Icons.Default.Add,"Nova",p.durationMs>0,
                     Modifier.weight(1f)) {
-                    SubtitleListNavigation.newInterval(p.durationMs,selected?.endMs)?.let { (start,end) ->
+                    SubtitleListNavigation.newInterval(p.durationMs, cursorMs)?.let { (start,end) ->
                         val cue=SubtitleCue(text="Nova legenda",startMs=start,endMs=end)
                         if(update(p.copy(subtitles=p.subtitles+cue))) {
                             batchUndo=null;deletedSnapshot=null
                             searchQuery="";selectedId=cue.id;editorOpen=true;showAdvanced=false
+                            requestSeek(cue.startMs)
                         }
                     }
                 }
@@ -529,6 +604,7 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                     Surface(onClick={
                         val same=selectedId==cue.id
                         selectedId=cue.id
+                        requestSeek(cue.startMs)
                         editorOpen=if(same)!editorOpen else true
                         showAdvanced=false
                     },shape=RoundedCornerShape(8.dp),

@@ -16,11 +16,27 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.179"
-    const val VERSION_CODE = 180
+    const val VERSION_NAME = "0.1.181"
+    const val VERSION_CODE = 182
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.181", listOf(
+            ReleaseFeature("subtitle-video-always-181", "Vídeo visível mesmo sem legendas",
+                "A tela de legendas carrega os vídeos e fotos do projeto antes da primeira legenda, com reprodução e cursor de tempo.", "captions"),
+            ReleaseFeature("subtitle-track-181", "Linha do tempo com vídeos e legendas",
+                "Uma faixa de miniaturas dos clipes permite navegar pelo vídeo; legendas continuam em faixa sincronizada.", "check"),
+            ReleaseFeature("subtitle-new-at-cursor-181", "Nova legenda no momento escolhido",
+                "Pause no trecho desejado e toque em Nova para criar a legenda exatamente no cursor da reprodução.", "check")
+        )),
+        ReleaseSummary("0.1.180", listOf(
+            ReleaseFeature("vosk-archive-180", "Modelos Vosk importados com segurança",
+                "ZIP oficial, pasta externa ou conteúdo extraído são verificados antes da instalação; arquivos inválidos recebem aviso claro.", "check"),
+            ReleaseFeature("vosk-crc-180", "Proteção contra arquivos corrompidos",
+                "Extração verifica CRC, tamanho, caminhos e entradas repetidas sem substituir um modelo funcional.", "captions"),
+            ReleaseFeature("vosk-diagnostics-180", "Diagnóstico de instalação",
+                "Erros de rede, modelo e armazenamento têm códigos seguros, sem registrar caminhos ou nomes privados.", "check")
+        )),
         ReleaseSummary("0.1.179", listOf(
             ReleaseFeature("editor-confirm-save-179", "Salvar ou descartar ao sair",
                 "Ao voltar do editor, escolha salvar o projeto, salvar cópia ou descartar as alterações sem apagar a mídia original.", "check"),

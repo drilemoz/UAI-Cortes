@@ -13,6 +13,29 @@ internal object SubtitleCompactLayout {
             (windowCount(totalMs) - 1).toLong()
         ).toInt()
 
+    /** Segmento de um clipe principal dentro de uma janela de tempo absoluto.
+     * A duração dos recortes é usada, não o horário original do arquivo.
+     * Fotos contam como clipes e não exigem legendas para serem desenhadas.
+     */
+    data class VisibleClip(val index: Int, val startMs: Long, val endMs: Long)
+
+    fun clipsInWindow(durationsMs: List<Long>, window: Int, totalMs: Long): List<VisibleClip> {
+        if (window !in 0 until windowCount(totalMs) || totalMs <= 0) return emptyList()
+        val start = window.toLong() * WINDOW_MS
+        val finish = minOf(start + WINDOW_MS, totalMs)
+        var position = 0L
+        val result = ArrayList<VisibleClip>()
+        durationsMs.forEachIndexed { index, raw ->
+            val length = raw.coerceAtLeast(0L)
+            val end = if (length > Long.MAX_VALUE - position) Long.MAX_VALUE else position + length
+            val first = maxOf(position, start)
+            val last = minOf(end, finish)
+            if (first < last) result.add(VisibleClip(index, first, last))
+            position = end
+        }
+        return result
+    }
+
     /** Intervalo absoluto da legenda visível na janela, ou null se não cruza a janela. */
     fun visibleRange(window: Int, startMs: Long, endMs: Long,
                      totalMs: Long): Pair<Long, Long>? {

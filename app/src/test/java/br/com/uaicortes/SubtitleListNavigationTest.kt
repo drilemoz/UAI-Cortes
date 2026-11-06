@@ -42,4 +42,11 @@ class SubtitleListNavigationTest {
         assertTrue(error!!.message!!.contains("Divida o arquivo"))
     }
 
+    @Test fun newSubtitleStartsAtPlaybackCursorInsteadOfPreviousCaptionEnd() {
+        assertEquals(4_200L to 7_200L,
+            SubtitleListNavigation.newInterval(20_000L, 4_200L))
+        assertEquals(19_900L to 20_000L,
+            SubtitleListNavigation.newInterval(20_000L, 19_900L))
+    }
+
 }
