@@ -1,3 +1,9 @@
+# v0.1.185 — Legendas automáticas com informação progressiva
+- Mostrar estado do modelo Vosk, limite/duração e ações de transcrição na tela principal. Detalhes sobre processamento, cache e diarização ficam em `SubtitleHelpButton` sob toque, sem remover instruções essenciais.
+- Confirmação de envio Gemini deve exibir SEMPRE que somente áudio é enviado ao Google e que a chamada pode consumir cota/cobrança. `GeminiUsageHint` permanece acessível por expansão sob demanda, sem segunda chamada nem prometer saldo oficial.
+- `SubtitleSpeakerPicker` usa diálogo proporcional ao conteúdo. Nunca atribuir personagem por imagem/nome presumido: somente ação manual. A revisão Gemini continua opcional e sem aplicar cores automaticamente.
+- Manter `schemaVersion=4`, editor/ráscunhos, backups, Vosk offline, cinco APKs e `versionCode=186`; CI e teste real da interface ainda necessários.
+
 # v0.1.184 — Legendas compactas, filtros visuais e navegação
 - `SubtitlePositionPreview` reúne título Linha do tempo, ajuda, controles do player, alternância seguir e ampliar em uma única barra; dropdown Zoom ao lado do progresso, sem esconder controle de navegação. `followPlayback` não altera seleção manual nem texto/tempo. Toque físico na lista suspende seguir sem consumir gestos; usuário pode reativar pelo ícone.
 - `SubtitleCompactTimeline` recebe todos os cues ordenados mesmo sob filtro de personagem/busca. Cues não pertencentes ao filtro continuam visíveis atenuados, e tocar nelas limpa filtro e busca; a lista é que permanece filtrada. Nunca exportar somente o subconjunto filtrado.

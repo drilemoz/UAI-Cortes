@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.185 — Legendas automáticas mais claras
+- A tela de Legendas automáticas prioriza o modelo disponível e os botões Offline/Gemini, sem parágrafos repetidos.
+- Informações de privacidade, limites e revisão ficam na ajuda `?`, com avisos essenciais visíveis antes do envio.
+- A confirmação Gemini exibe apenas envio de áudio, custo/cota e modelo; detalhes locais de uso podem ser expandidos.
+- Atribuir personagem usa diálogo proporcional à quantidade de pessoas, com seleção manual e cores.
+- Compatibilidade de projeto, Gemini, Vosk, salvamento e exportação preservada; compilação/testes Android pendentes.
+
 # Uai Cortes · versão 0.1.184 — Linha do tempo de legendas compacta
 
 A tela de legendas aproveita melhor o espaço do celular: título, player, seguir e fullscreen na mesma barra, Zoom 1×/2×/4× em menu do progresso, filtro de personagem em menu junto a Legendas, ações avançadas em Mais e geração automática reunida em Automáticas. A timeline sempre desenha todas as legendas, atenuando as que não correspondem ao filtro; a lista continua filtrada e tocar um bloco fora do filtro restaura Todas. O toque manual na lista pausa Seguir; o ícone permite retomar. O botão Apagar todas ainda confirma antes de excluir. Projetos, schemaVersion 4, transcrição e exportação preservados. Compilação e testes de toque no Android pendentes.

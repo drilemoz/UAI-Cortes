@@ -497,7 +497,7 @@ assert 'android.permission.INTERNET' in (root/'app/src/main/AndroidManifest.xml'
 assert 'MediaExtractor()' in auto and 'MediaCodec.createDecoderByType' in auto
 assert 'Recognizer(it, RATE.toFloat())' in auto and 'currentCoroutineContext().ensureActive()' in auto
 assert 'vosk-model-small-pt-0.3.zip' in auto and 'MAX_EXTRACTED' in auto
-assert 'Modelo de reconhecimento de voz' in auto_ui and 'Passo 2' in auto_ui and 'Passo 3' in auto_ui
+assert 'Modelo offline PT-BR pronto' in auto_ui and 'Transcrever' in auto_ui and 'Revisar' in auto_ui and 'SubtitleHelpButton' in auto_ui
 assert 'SpeechModelSettingsScreen' in (root/'app/src/main/java/br/com/uaicortes/SpeechModelSettingsScreen.kt').read_text()
 assert 'AutoSubtitleScreen(current' in ui and 'onAutoSubtitles' in ui
 assert 'pendingProjectDelete' in ui and 'ConfirmDeleteProjectDialog' in ui and 'projectSession.delete(target.id)' in ui

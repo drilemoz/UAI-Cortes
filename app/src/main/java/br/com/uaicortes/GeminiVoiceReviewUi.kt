@@ -19,11 +19,16 @@ internal fun GeminiVoiceReviewUi(cues: List<SubtitleCue>, existing: List<Subtitl
     val ids=GeminiDiarizationPolicy.suggestions(cues)
     if (ids.isEmpty()) return
     Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
-        Text("Passo 3A · Revisar quem está falando", fontWeight=FontWeight.SemiBold)
-        Text("O Gemini sugeriu ${ids.size} voz(es). Voz 1, Voz 2 etc. são rótulos " +
-            "anônimos, não nomes de pessoas. Confira ouvindo o vídeo; 3 ou mais " +
-            "vozes podem ser confundidas. Nenhuma associação será aplicada antes " +
-            "de tocar em Aplicar.", style=MaterialTheme.typography.bodySmall)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Vozes sugeridas (${ids.size})", fontWeight=FontWeight.SemiBold,
+                modifier=Modifier.weight(1f))
+            SubtitleHelpButton("Revisar vozes sugeridas",
+                "Voz 1, Voz 2 etc. são rótulos anônimos, não nomes de pessoas. " +
+                "Confira as falas no vídeo; três ou mais locutores podem ser confundidos. " +
+                "Você pode criar um personagem, associar a um existente ou não atribuir. " +
+                "Nada é aplicado antes da confirmação final. " +
+                "As cores exportadas só mudam se você usar Aplicar cores em Personagens.")
+        }
         ids.forEach { id ->
             val selected=decisions[id] ?: GeminiDiarizationPolicy.CREATE
             var expanded by remember(id) { mutableStateOf(false) }
@@ -70,8 +75,5 @@ internal fun GeminiVoiceReviewUi(cues: List<SubtitleCue>, existing: List<Subtitl
                 }
             }
         }
-        Text("As cores e os nomes ficam no projeto, mas não mudam a cor das " +
-            "legendas exportadas automaticamente. Use Personagens para aplicar cores " +
-            "depois, se quiser.",style=MaterialTheme.typography.bodySmall)
     }
 }

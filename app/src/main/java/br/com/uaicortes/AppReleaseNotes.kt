@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.184"
-    const val VERSION_CODE = 185
+    const val VERSION_NAME = "0.1.185"
+    const val VERSION_CODE = 186
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.185", listOf(
+            ReleaseFeature("auto-subtitles-compact-185", "Legendas automáticas mais diretas",
+                "Modelo offline, duração e botões de transcrição em layout compacto. Explicações detalhadas ficam no botão de ajuda.", "captions"),
+            ReleaseFeature("gemini-consent-readable-185", "Confirmação Gemini sem texto excessivo",
+                "Envio só de áudio e aviso de cota/cobrança continuam visíveis; estimativas e cache são consultados em Detalhes.", "check"),
+            ReleaseFeature("speaker-chooser-185", "Escolha de personagem simplificada",
+                "Diálogo de tamanho ajustável com atribuição manual, cor e seleção. Ajuda separada para contexto da voz.", "check")
+        )),
         ReleaseSummary("0.1.184", listOf(
             ReleaseFeature("captions-compact-player-184", "Player e linha do tempo compactos",
                 "A barra do vídeo reúne Linha do tempo, navegação, acompanhar e ampliar. Zoom em menu ao lado do progresso; sem mensagens duplicadas.", "captions"),

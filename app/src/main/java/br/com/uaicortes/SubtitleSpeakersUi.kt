@@ -12,6 +12,7 @@ import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
+import androidx.compose.ui.window.Dialog
 import java.util.UUID
 
 /** Atribuição declarada pelo usuário; o app NÃO identifica pessoas pela voz ou imagem. */
@@ -19,31 +20,53 @@ import java.util.UUID
 internal fun SubtitleSpeakerPicker(project: VideoProject, cueId: String,
     update: (VideoProject) -> Boolean, dismiss: () -> Unit, manage: () -> Unit) {
     val cue = project.subtitles.firstOrNull { it.id == cueId }
-    AlertDialog(onDismissRequest = dismiss,
-        title = { Text("Quem está falando?") },
-        text = {
-            Column(Modifier.heightIn(max = 340.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text("Escolha manualmente. A voz não foi identificada automaticamente.",
-                    style = MaterialTheme.typography.bodySmall)
-                TextButton(onClick = {
-                    if (SubtitleSpeakerPolicy.assign(project, cueId, null)?.let(update) == true) dismiss()
-                }, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (cue?.speakerId == null) "✓ Não identificado" else "Não identificado")
+    Dialog(onDismissRequest = dismiss) {
+        Surface(shape = RoundedCornerShape(24.dp), tonalElevation = 6.dp,
+            modifier = Modifier.fillMaxWidth().widthIn(max = 420.dp)) {
+            Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Quem está falando?", style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.weight(1f))
+                    SubtitleHelpButton("Atribuir personagem",
+                        "Selecione quem falou nesta legenda. Essa associação é manual: " +
+                        "a voz ou a imagem não identificam uma pessoa automaticamente. " +
+                        "Para cadastrar outra pessoa, toque em Personagens.")
                 }
-                project.subtitleSpeakers.forEach { speaker ->
+                Column(Modifier.heightIn(max = 300.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     TextButton(onClick = {
-                        if (SubtitleSpeakerPolicy.assign(project, cueId, speaker.id)?.let(update) == true) dismiss()
-                    }, modifier = Modifier.fillMaxWidth()) {
-                        Box(Modifier.size(14.dp).background(Color(speaker.color), RoundedCornerShape(3.dp)))
+                        if (SubtitleSpeakerPolicy.assign(project, cueId, null)?.let(update) == true) dismiss()
+                    }, modifier = Modifier.fillMaxWidth().heightIn(min = 46.dp)) {
+                        if (cue?.speakerId == null) Icon(Icons.Default.Check, null,
+                            modifier=Modifier.size(18.dp))
+                        else Icon(Icons.Default.PersonOff, null, modifier=Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text((if (cue?.speakerId == speaker.id) "✓ " else "") + speaker.name)
+                        Text("Não identificado", modifier=Modifier.weight(1f))
+                    }
+                    project.subtitleSpeakers.forEach { candidate ->
+                        TextButton(onClick = {
+                            if (SubtitleSpeakerPolicy.assign(project, cueId, candidate.id)?.let(update) == true) dismiss()
+                        }, modifier = Modifier.fillMaxWidth().heightIn(min = 46.dp)) {
+                            Box(Modifier.size(16.dp).background(Color(candidate.color),
+                                RoundedCornerShape(4.dp)))
+                            Spacer(Modifier.width(9.dp))
+                            Text(candidate.name, modifier = Modifier.weight(1f), maxLines=1)
+                            if (cue?.speakerId == candidate.id)
+                                Icon(Icons.Default.Check, "Personagem selecionado",
+                                    modifier=Modifier.size(18.dp))
+                        }
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = dismiss) { Text("Cancelar") }
+                    TextButton(onClick = { dismiss(); manage() }) {
+                        Text("Personagens")
                     }
                 }
             }
-        },
-        confirmButton = { TextButton(onClick = { dismiss(); manage() }) { Text("Gerenciar personagens") } },
-        dismissButton = { TextButton(onClick = dismiss) { Text("Cancelar") } })
+        }
+    }
 }
 
 /** Cadastro limitado a 16 personagens. Excluir só remove vínculos de locutor; não apaga legendas. */

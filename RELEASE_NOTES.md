@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.185 — Menos texto, mais edição
+- **Legendas automáticas:** modelo, duração e transcrição offline/Gemini estão fáceis de encontrar. Toque em `?` para as explicações completas.
+- **Confirmação Gemini:** o resumo do envio de áudio e de possíveis custos fica visível. Toque em **Detalhes de consumo e privacidade** para estimativas técnicas e informações de cache.
+- **Quem está falando?:** a janela de escolha ocupa apenas o espaço necessário; mantém personagem não identificado, cores e acesso ao gerenciamento.
+- Os nomes não são reconhecidos automaticamente; qualquer rótulo sugerido pelo Gemini precisa de revisão. Nenhuma chamada de IA é feita sem confirmação.
+- Antes de publicar o APK, executar testes Gradle, Lint e interface no Android.
+
 # Uai Cortes · versão 0.1.184 — Legendas com mais espaço
 - A barra do player agora inclui Linha do tempo à esquerda e os botões de Acompanhar e Ampliar à direita.
 - Zoom passa para menu suspenso ao lado da barra de progresso. A prévia compacta fica mais baixa, liberando espaço para a lista.

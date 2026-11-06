@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.185 — Formulários compactos e ajuda contextual
+- **Legendas automáticas:** removidas descrições duplicadas e títulos de passos sem utilidade, substituídos por estado curto e ajuda `?`; duração e limite de 10 minutos preservados.
+- **Gemini:** confirmação curta com informação essencial de consentimento sobre envio de áudio ao Google e risco de uso de cota/cobrança. Detalhes de estimativa, cache e cotas continuam consultáveis sem segunda chamada.
+- **Personagens:** diálogo sob medida, botões de seleção compactos e ajuda contextual; associação só muda após toque explícito.
+- **Revisão de IA:** o texto explicativo de diarização passou para `?`, sem presumir nomes reais nem mudar as cores exportadas.
+- Projetos `schemaVersion=4`, backups, modelo Vosk, Gemini, cinco APKs e funções anteriores preservados. Build Android não testado localmente.
+
 # Uai Cortes · versão 0.1.184 — Interface de Legendas compacta
 - Barra superior do player combina Linha do tempo, ajuda, controles, Seguir e Ampliar; remove resumo de horário e mensagem de reprodução redundantes.
 - Zoom 1×/2×/4× agora fica em menu junto ao progresso, sem linha exclusiva.

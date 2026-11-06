@@ -34,6 +34,7 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
     val geminiStore = remember(context) { GeminiCredentialStore(context) }
     val geminiClient = remember(context) { GeminiSubtitleClient(context) }
     var geminiConfirm by remember { mutableStateOf(false) }
+    var usageExpanded by remember { mutableStateOf(false) }
     var detectSpeakers by remember(project.id) { mutableStateOf(true) }
     var voiceDecisions by remember(project.id) { mutableStateOf<Map<String,String>>(emptyMap()) }
     var voiceNames by remember(project.id) { mutableStateOf<Map<String,String>>(emptyMap()) }
@@ -82,23 +83,33 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
             Text("Legendas automáticas", style=MaterialTheme.typography.titleLarge)
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),
-            verticalArrangement=Arrangement.spacedBy(12.dp)) {
-            Text("Modelo de reconhecimento de voz", fontWeight=FontWeight.SemiBold)
-            Text(if (installed) "Português brasileiro instalado. Transcrição offline disponível."
-                else "Modelo ainda não instalado. Instale-o em Configurações para gerar legendas.",
-                style=MaterialTheme.typography.bodySmall)
-            if (!installed) OutlinedButton(onClick=onManageModel, modifier=Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.Settings, null)
+            verticalArrangement=Arrangement.spacedBy(9.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Icon(if (installed) Icons.Default.CheckCircle else Icons.Default.Info,
+                    contentDescription = null, modifier = Modifier.size(19.dp),
+                    tint = if (installed) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.error)
                 Spacer(Modifier.width(8.dp))
-                Text("Abrir configuração de voz")
+                Text(if (installed) "Modelo offline PT-BR pronto" else "Modelo offline não instalado",
+                    modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2)
+                SubtitleHelpButton("Reconhecimento offline",
+                    "O Vosk usa somente áudio local e respeita cortes da linha do tempo. " +
+                    "Não usa microfone nem envia áudio pela internet. " +
+                    "O modelo de português precisa ser instalado voluntariamente.")
             }
-            HorizontalDivider()
-            Text("Passo 2 · Gerar legendas", fontWeight=FontWeight.SemiBold)
-            Text("O modo offline extrai áudio dos vídeos, respeitando cortes e posições " +
-                "na linha do tempo. Não usa microfone nem envia áudio para a internet.",
-                style=MaterialTheme.typography.bodySmall)
-            Text("Duração do projeto: ${formatMs(project.durationMs)} · limite desta versão: 10 minutos",
-                style=MaterialTheme.typography.bodySmall)
+            if (!installed) OutlinedButton(onClick=onManageModel, modifier=Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Settings, null, modifier=Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Instalar modelo offline")
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Transcrever", fontWeight=FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f))
+                Text("${formatMs(project.durationMs)} / 10 min",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Button(onClick={
                 task=scope.launch {
                     startedAt=SystemClock.elapsedRealtime()
@@ -127,12 +138,20 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                 Text("Transcrever fala (offline)")
             }
             HorizontalDivider()
-            Text("Transcrição por IA · Gemini", fontWeight=FontWeight.SemiBold)
-            Text("Usa a chave da API em Configurações. Requer internet e pode consumir sua " +
-                "cota ou gerar cobrança. O áudio será enviado ao Google somente após confirmação. " +
-                "Se os clipes e cortes não mudaram, o áudio extraído pode ser reaproveitado " +
-                "do cache privado por até 3 horas.",
-                style=MaterialTheme.typography.bodySmall)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Gemini IA · online", fontWeight=FontWeight.SemiBold,
+                    modifier=Modifier.weight(1f))
+                SubtitleHelpButton("Gemini e privacidade",
+                    "Somente após sua confirmação, o aplicativo envia ao Google o áudio " +
+                    "extraído dos clipes; não envia o vídeo. A operação requer internet e " +
+                    "pode consumir a cota ou gerar cobrança. O WAV pode ficar em cache privado " +
+                    "por até 3 horas para evitar nova extração quando os cortes não mudaram. " +
+                    "A diarização sugere Voz 1, Voz 2 etc., mas não descobre nomes de pessoas. " +
+                    "Revise o texto e cada voz antes de aplicar.")
+            }
+            Text("Envia áudio ao Google · Pode consumir cota ou gerar cobrança",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
             if(!geminiConfigured) OutlinedButton(onClick=onManageGemini,
                 modifier=Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.Settings,null)
@@ -142,10 +161,10 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
             Row(verticalAlignment=Alignment.CenterVertically) {
                 Checkbox(checked=detectSpeakers,enabled=!busy,
                     onCheckedChange={detectSpeakers=it})
-                Text("Sugerir Voz 1, Voz 2… na mesma transcrição Gemini " +
-                    "(revisão obrigatória)",style=MaterialTheme.typography.bodySmall)
+                Text("Sugerir Voz 1, Voz 2… (revisão obrigatória)",
+                    style=MaterialTheme.typography.bodySmall,modifier=Modifier.weight(1f))
             }
-            Button(onClick={geminiConfirm=true},enabled=geminiConfigured && !busy &&
+            Button(onClick={usageExpanded=false;geminiConfirm=true},enabled=geminiConfigured && !busy &&
                 project.durationMs in 1..600000L,modifier=Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.AutoAwesome,null)
                 Spacer(Modifier.width(8.dp))
@@ -202,23 +221,33 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                             Text(progress?.let { "$it% do processamento" } ?: "Etapa sem porcentagem",
                                 style=MaterialTheme.typography.labelSmall)
                         }
-                        Text(if(runningCloud)
-                            "Extração e envio têm progresso por etapa; processamento no servidor " +
-                                "não informa porcentagem. O tempo pode superar a duração do vídeo."
-                            else "O tempo de reconhecimento pode superar a duração do vídeo. " +
-                                "O progresso acompanha o áudio realmente decodificado.",
-                            style=MaterialTheme.typography.bodySmall)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(if (runningCloud) "IA: progresso por etapa, sem % no servidor"
+                                else "Offline: progresso do áudio decodificado",
+                                style=MaterialTheme.typography.labelSmall,
+                                modifier=Modifier.weight(1f))
+                            SubtitleHelpButton("Progresso da transcrição",
+                                "O progresso exibido corresponde à etapa de extração ou leitura " +
+                                "do áudio. O servidor Gemini não fornece percentual contínuo; " +
+                                "o processamento pode demorar mais que a duração do vídeo.")
+                        }
                     }
                 }
                 OutlinedButton(onClick={geminiClient.cancel();task?.cancel()},modifier=Modifier.fillMaxWidth()) {
                     Text("Cancelar transcrição")
                 }
             } else if(message.isNotBlank()) Text(message,style=MaterialTheme.typography.bodySmall)
-            HorizontalDivider()
-            Text("Passo 3 · Revisar e aplicar", fontWeight=FontWeight.SemiBold)
-            Text("Reconhecimento automático pode errar palavras, pontuação e nomes. " +
-                "Toque num resultado para corrigir o texto antes de salvar.",
-                style=MaterialTheme.typography.bodySmall)
+            if (results.isNotEmpty()) {
+                HorizontalDivider()
+                Row(Modifier.fillMaxWidth(), verticalAlignment=Alignment.CenterVertically) {
+                    Text("Revisar ${results.size} legendas", fontWeight=FontWeight.SemiBold,
+                        modifier=Modifier.weight(1f))
+                    SubtitleHelpButton("Revisão de legendas",
+                        "Toque numa legenda para corrigir o texto. A transcrição pode errar " +
+                        "palavras, horários e nomes. Se a IA sugerir vozes, revise as associações. " +
+                        "Nada será aplicado ao projeto antes de confirmar no botão inferior.")
+                }
+            }
             GeminiVoiceReviewUi(results,project.subtitleSpeakers,voiceDecisions,voiceNames,
                 onDecision={id,decision -> voiceDecisions=voiceDecisions+(id to decision)},
                 onName={id,name -> voiceNames=voiceNames+(id to name)})
@@ -248,8 +277,6 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                         Slider(value=generatedSize.toFloat(),onValueChange={
                             generatedSize=it.toInt().coerceIn(12,30)
                         },valueRange=12f..30f)
-                        Text("Ajuste antes de aplicar. Também é possível alterar todas depois.",
-                            style=MaterialTheme.typography.bodySmall)
                     }
                 }
             }
@@ -259,12 +286,7 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                     Text("Substituir ${project.subtitles.size} legendas existentes (irreversível após salvar)",
                         style=MaterialTheme.typography.bodySmall)
                 }
-                if (!replace) Text("As novas legendas serão adicionadas às existentes.",
-                    style=MaterialTheme.typography.bodySmall)
             }
-            Text("Dica: faça primeiro um teste curto com voz nítida e sem música. " +
-                "Depois revise todas as falas no editor de legendas.",
-                style=MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(12.dp))
         }
         Button(onClick={
@@ -283,15 +305,30 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
     }
     if(geminiConfirm) AlertDialog(onDismissRequest={geminiConfirm=false},
         title={Text("Enviar áudio ao Google Gemini?")},
-        text={Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("O Uai Cortes enviará somente o áudio extraído (até 10 minutos) ao Gemini após confirmar. " +
-                "O vídeo não será enviado. O WAV poderá ficar em cache privado por até 3 horas. " +
-                "Confirmar não substitui legendas existentes. " +
-                (if(detectSpeakers) "O Gemini também tentará separar vozes; " +
-                    "os rótulos serão revisados antes de aplicar. " else "") +
-                "Diarização não identifica nomes reais e usa a mesma chamada de transcrição.")
-            GeminiUsageHint("legendas automáticas", durationMs = project.durationMs,
-                model = "gemini-3.5-transcribe")
+        text={Column(Modifier.heightIn(max=420.dp).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Somente o áudio extraído será enviado ao Google Gemini. " +
+                "O vídeo não será enviado. A operação pode consumir cota ou gerar cobrança.")
+            if (detectSpeakers) Text("O Gemini também tentará sugerir vozes. " +
+                "Você revisará os rótulos antes de aplicar.",
+                style=MaterialTheme.typography.bodySmall)
+            Text("Modelo: gemini-3.5-transcribe · ${formatMs(project.durationMs)}",
+                style=MaterialTheme.typography.labelSmall)
+            TextButton(onClick={usageExpanded=!usageExpanded},
+                modifier=Modifier.fillMaxWidth()) {
+                Icon(if (usageExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    null, modifier=Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(if (usageExpanded) "Ocultar detalhes de consumo" else "Detalhes de consumo e privacidade")
+            }
+            if (usageExpanded) {
+                Text("O WAV pode ficar em cache privado por até 3 horas. " +
+                    "O envio não substitui automaticamente legendas existentes; " +
+                    "a identificação de vozes não informa nomes reais.",
+                    style=MaterialTheme.typography.bodySmall)
+                GeminiUsageHint("legendas automáticas", durationMs = project.durationMs,
+                    model = "gemini-3.5-transcribe")
+            }
         }},
         confirmButton={TextButton(onClick={
             geminiConfirm=false
