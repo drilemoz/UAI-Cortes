@@ -1,4 +1,11 @@
-# Uai Cortes · versão 0.1.185 — Menos texto, mais edição
+# Uai Cortes · versão 0.1.186 — Atualização no aplicativo e saída simplificada
+
+- **Atualizações em Sobre:** acesso único visível por Verificar atualizações, sem configurar dono/nome nem abrir o navegador como etapa principal.
+- **Download interno seguro:** encontra a Release mais recente, consulta SHA-256, verifica APK e pede instalação pelo Android após sua confirmação. Não modifica os projetos automaticamente.
+- **Resposta do GitHub:** lote de 20 Releases, limite de resposta ampliado e erro específico quando excedido. Isso reduz, mas não garante eliminar, falhas de rede/API.
+- **Salvar este projeto?:** botões em coluna; Descartar não exclui as mídias originais. Salvar cópia permanece para projetos existentes.
+- **Pendente:** Gradle, Lint, teste do GitHub real e teste de atualização assinada no aparelho.
+
 - **Legendas automáticas:** modelo, duração e transcrição offline/Gemini estão fáceis de encontrar. Toque em `?` para as explicações completas.
 - **Confirmação Gemini:** o resumo do envio de áudio e de possíveis custos fica visível. Toque em **Detalhes de consumo e privacidade** para estimativas técnicas e informações de cache.
 - **Quem está falando?:** a janela de escolha ocupa apenas o espaço necessário; mantém personagem não identificado, cores e acesso ao gerenciamento.

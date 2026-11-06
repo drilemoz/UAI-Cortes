@@ -2,7 +2,7 @@ package br.com.uaicortes
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
-import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -12,7 +12,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Garante três ações reais e a prévia da Home em Sobre sem efeitos colaterais. */
+/** O Sobre oferece somente atualizações; atalhos da Home continuam no próprio painel. */
 @RunWith(AndroidJUnit4::class)
 class HomeAboutPreviewAndroidTest {
     @get:Rule val rule = createComposeRule()
@@ -21,6 +21,7 @@ class HomeAboutPreviewAndroidTest {
         var createCalls = 0
         var animateCalls = 0
         var flowCalls = 0
+        var updatesCalls = 0
         rule.setContent {
             var route by remember { mutableStateOf("home") }
             MaterialTheme {
@@ -30,7 +31,7 @@ class HomeAboutPreviewAndroidTest {
                         onSettings = { route = "about" }, onTab = {},
                         onFlow = { flowCalls++ })
                 } else {
-                    AboutScreen(back = { route = "home" }, onShowWhatsNew = {})
+                    AboutScreen(back = { route = "home" }, onUpdates = { updatesCalls++ })
                 }
             }
         }
@@ -41,14 +42,14 @@ class HomeAboutPreviewAndroidTest {
         rule.onNodeWithText("Estúdio de Cenas").assertExists()
         rule.onNodeWithContentDescription("Configurações").performClick()
         rule.onNodeWithText(version).assertExists()
-        rule.onNodeWithText("Testar visual da Home").performClick()
-        rule.onNodeWithText("Novo projeto").assertIsNotEnabled()
-        rule.onNodeWithText("Animar fotos").assertIsNotEnabled()
-        rule.onNodeWithText("Estúdio de Cenas").assertIsNotEnabled()
+        rule.onNodeWithText("Verificar atualizações").performClick()
+        rule.onNodeWithText("Ver novidades").assertDoesNotExist()
+        rule.onNodeWithText("Testar visual da Home").assertDoesNotExist()
         rule.runOnIdle {
             org.junit.Assert.assertEquals(0, createCalls)
             org.junit.Assert.assertEquals(0, animateCalls)
             org.junit.Assert.assertEquals(0, flowCalls)
+            org.junit.Assert.assertEquals(1, updatesCalls)
         }
     }
 

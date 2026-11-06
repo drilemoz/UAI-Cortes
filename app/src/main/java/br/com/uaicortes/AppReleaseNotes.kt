@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.185"
-    const val VERSION_CODE = 186
+    const val VERSION_NAME = "0.1.186"
+    const val VERSION_CODE = 187
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.186", listOf(
+            ReleaseFeature("update-about-186", "Atualizações dentro de Sobre",
+                "A tela Sobre mantém Verificar atualizações; não há mais repositório manual, navegador ou atalhos de teste na interface.", "check"),
+            ReleaseFeature("update-api-186", "Consulta GitHub mais robusta",
+                "Busca Releases mais recentes com limite ampliado de resposta e mensagens específicas; download SHA-256 e instalação consentida continuam integrados.", "check"),
+            ReleaseFeature("exit-dialog-186", "Salvar ou descartar com clareza",
+                "Diálogo compacto com Salvar projeto, Descartar e sair e Continuar editando; Salvar cópia continua para projetos existentes.", "captions")
+        )),
         ReleaseSummary("0.1.185", listOf(
             ReleaseFeature("auto-subtitles-compact-185", "Legendas automáticas mais diretas",
                 "Modelo offline, duração e botões de transcrição em layout compacto. Explicações detalhadas ficam no botão de ajuda.", "captions"),

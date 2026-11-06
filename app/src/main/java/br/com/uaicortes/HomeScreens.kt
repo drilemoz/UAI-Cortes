@@ -269,8 +269,6 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
             "Chave, vozes e narrações") { onClick("gemini_settings") }
         ItemCard(Icons.Default.BugReport,"Diagnóstico","Capturar erros e toques, exportar relatório") {onClick("diagnostics")}
         ItemCard(Icons.Default.AutoAwesome,"Novidades","Veja o que mudou nas últimas versões") { onClick("whats_new") }
-        ItemCard(Icons.Default.SystemUpdate,"Atualizações pelo GitHub",
-            "Verificar versões, baixar e instalar com confirmação") { onClick("updates") }
         ItemCard(Icons.Default.Info,"Sobre","Versão e informações do aplicativo") {onClick("about")}
         }
         MainNav("settings",onTab)
@@ -312,56 +310,26 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
     }
 }
 
-@Composable internal fun AboutScreen(back:()->Unit, onShowWhatsNew:()->Unit, onUpdates:()->Unit = {}) {
-    var showHomePreview by rememberSaveable { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal=20.dp)) {
-        Heading("Sobre",back)
+@Composable internal fun AboutScreen(back: () -> Unit, onUpdates: () -> Unit) {
+    Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp)) {
+        Heading("Sobre", back)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(Modifier.height(18.dp))
             Icon(Icons.Default.MovieCreation, null,
                 tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(65.dp))
             Spacer(Modifier.height(12.dp))
-            Text("Uai Cortes", fontSize=24.sp, fontWeight=FontWeight.Bold)
+            Text("Uai Cortes", fontSize = 24.sp, fontWeight = FontWeight.Bold)
             AppVersionLabel()
-            Spacer(Modifier.height(14.dp))
-            Text("Editor de vídeos local para Android.",
-                textAlign=TextAlign.Center, color=MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(18.dp))
-            OutlinedButton(onClick = onShowWhatsNew, shape = RoundedCornerShape(15.dp)) {
-                Icon(Icons.Default.AutoAwesome, contentDescription=null)
-                Spacer(Modifier.width(8.dp))
-                Text("Ver novidades")
-            }
             Spacer(Modifier.height(12.dp))
+            Text("Editor de vídeos local para Android.",
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(16.dp))
             OutlinedButton(onClick = onUpdates, shape = RoundedCornerShape(15.dp)) {
                 Icon(Icons.Default.SystemUpdate, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text("Verificar atualizações")
-            }
-            Spacer(Modifier.height(16.dp))
-            OutlinedButton(onClick = { showHomePreview = !showHomePreview },
-                shape = RoundedCornerShape(15.dp)) {
-                Icon(Icons.Default.Visibility, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(if (showHomePreview) "Ocultar teste da Home" else "Testar visual da Home")
-            }
-            if (showHomePreview) {
-                Spacer(Modifier.height(12.dp))
-                Text("Prévia visual da Home — mesmos componentes, em modo somente leitura.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(12.dp))
-                Box(Modifier.fillMaxWidth().padding(horizontal=2.dp)) {
-                    Column {
-                        HomePrimaryActions(onCreate = {}, onAnimate = {}, preview = true)
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-                Text("Os botões ficam desabilitados. Esta prévia não testa abertura, salvamento, " +
-                    "galeria ou desempenho; valide essas ações na Home real.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(Modifier.height(22.dp))
             ReleaseHighlights(AppReleaseNotes.forAbout())

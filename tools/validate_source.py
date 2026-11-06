@@ -1257,9 +1257,9 @@ assert check(root) == (current_version, current_code)
 home = (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
 assert 'internal fun HomePrimaryActions(' in home
 assert 'HomePrimaryActions(onCreate, onAnimate, onFlow = onFlow)' in home
-assert 'HomePrimaryActions(onCreate = {}, onAnimate = {}, preview = true)' in home
+assert 'OutlinedButton(onClick = onUpdates' in home
 assert 'AppVersionLabel()' in home and home.count('AppVersionLabel()') >= 3
-assert 'Testar visual da Home' in home
+assert 'Testar visual da Home' not in home
 assert 'enabled = !preview' in home
 assert (root/'app/src/androidTest/java/br/com/uaicortes/HomeAboutPreviewAndroidTest.kt').exists()
 assert (root/'app/src/test/java/br/com/uaicortes/HomeAboutVersionContractTest.kt').exists()
@@ -1272,7 +1272,7 @@ update_core=(root/'app/src/main/java/br/com/uaicortes/GitHubUpdateCore.kt').read
 update_manager=(root/'app/src/main/java/br/com/uaicortes/GitHubUpdateManager.kt').read_text()
 update_ui=(root/'app/src/main/java/br/com/uaicortes/GitHubUpdateUi.kt').read_text()
 manifest=(root/'app/src/main/AndroidManifest.xml').read_text()
-for needle in ('releases?per_page=50', 'BuildConfig.GITHUB_RELEASE_REPOSITORY', 'showPrompt: Boolean = false', 'SHA-256', 'FileProvider.getUriForFile', 'getPackageArchiveInfo', 'GitHubUpdateCore.parseReleases'):
+for needle in ('releases?per_page=20', 'BuildConfig.GITHUB_RELEASE_REPOSITORY', 'showPrompt: Boolean = false', 'SHA-256', 'FileProvider.getUriForFile', 'getPackageArchiveInfo', 'GitHubUpdateCore.parseReleases'):
     assert needle in update_manager, needle
 assert 'githubUpdates.checkOnForeground()' in (root/'app/src/main/java/br/com/uaicortes/MainActivity.kt').read_text()
 assert 'manager.download(release)' in update_ui and 'confirmDownload' in update_ui
@@ -1308,7 +1308,7 @@ assert 'UnknownHostException' in update_diag and 'SocketTimeoutException' in upd
 assert 'SSLException' in update_diag and 'rateLimitRemaining' in update_diag
 assert 'GitHubUpdateDiagnostics.exception(error)' in update_manager
 assert 'GitHubUpdateDiagnostics.http(' in update_manager
-assert 'openRepositoryReleases(input)' in update_ui and 'Abrir Releases no navegador' in update_ui
+assert 'openRepositoryReleases(input)' not in update_ui and 'Abrir Releases no navegador' not in update_ui
 assert 'https://github.com/$repo/releases' in update_manager
 assert (root/'app/src/test/java/br/com/uaicortes/GitHubUpdateDiagnosticsTest.kt').is_file()
 assert (root/'docs/VALIDATION_0.1.104.md').is_file()

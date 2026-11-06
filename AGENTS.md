@@ -1,4 +1,11 @@
-# v0.1.185 — Legendas automáticas com informação progressiva
+# v0.1.186 — Sobre, atualizações seguras e saída do editor
+- Atualizações são acessadas apenas em Sobre > Verificar atualizações; eliminar a entrada de Configurações e os botões Ver novidades / Testar visual da Home em Sobre, mantendo o histórico de notas visível.
+- Repositório GitHub de origem vem exclusivamente de `BuildConfig.GITHUB_RELEASE_REPOSITORY`, preenchido pelo GitHub Actions. Ignorar preferências manuais antigas para não consultar fonte incorreta. Se build não indicar origem, explicar indisponibilidade; nunca inventar um repositório ou chave de API.
+- Consultar Releases públicas mais recentes sem truncamento indevido: `per_page=20`, limite de leitura de 8 milhões de caracteres, erro específico para resposta excessiva. Nunca expor corpo HTTP, URL privada ou tokens em erro.
+- Nenhum download nem instalação automáticos. APK universal somente quando Release fornece SHA-256 válido, tamanho seguro, `packageName`, versão superior, e instalador com confirmação Android. Não desinstalar o app e não prometer instalação sobre APK com assinatura diferente.
+- Diálogo Salvar projeto compacto, com ações Salvar/Descartar/Continuar e opção Salvar cópia para projeto existente. Preservar `EditorProjectViewModel`, recuperação de rascunhos, arquivos de mídia e schemaVersion=4.
+- v0.1.186/versionCode 187, cinco APKs Release, metadados sincronizados. Testes físicos de UI, atualização por GitHub e Gradle ainda necessários.
+
 - Mostrar estado do modelo Vosk, limite/duração e ações de transcrição na tela principal. Detalhes sobre processamento, cache e diarização ficam em `SubtitleHelpButton` sob toque, sem remover instruções essenciais.
 - Confirmação de envio Gemini deve exibir SEMPRE que somente áudio é enviado ao Google e que a chamada pode consumir cota/cobrança. `GeminiUsageHint` permanece acessível por expansão sob demanda, sem segunda chamada nem prometer saldo oficial.
 - `SubtitleSpeakerPicker` usa diálogo proporcional ao conteúdo. Nunca atribuir personagem por imagem/nome presumido: somente ação manual. A revisão Gemini continua opcional e sem aplicar cores automaticamente.

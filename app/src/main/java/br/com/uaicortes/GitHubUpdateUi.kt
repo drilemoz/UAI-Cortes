@@ -11,23 +11,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
-/** A notification about the release, never an automatic APK download or install. */
+/** Only the update notice is automatic. The APK download and installation require user action. */
 @Composable internal fun GitHubUpdatePrompt(manager: GitHubUpdateManager, onOpenUpdates: () -> Unit) {
     val pending = manager.promptRelease ?: return
     AlertDialog(
         onDismissRequest = manager::dismissPrompt,
         icon = { Icon(Icons.Default.SystemUpdate, null) },
         title = { Text("Atualização disponível: v${pending.version}") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Versão instalada: v${BuildConfig.VERSION_NAME}")
-                Text("Uma nova Release do Uai Cortes está disponível no GitHub.")
-                if (pending.notes.isNotBlank()) Text(pending.notes.take(500),
-                    style = MaterialTheme.typography.bodySmall)
-                Text("Nada será baixado nem instalado sem sua confirmação.",
-                    style = MaterialTheme.typography.bodySmall)
-            }
-        },
+        text = { Text("O Uai Cortes encontrou uma versão mais recente. Nada será baixado ou instalado sem sua autorização.") },
         confirmButton = { TextButton(onClick = {
             manager.dismissPrompt()
             onOpenUpdates()
@@ -38,94 +29,73 @@ import kotlinx.coroutines.launch
 
 @Composable internal fun GitHubUpdatesScreen(manager: GitHubUpdateManager, back: () -> Unit) {
     val scope = rememberCoroutineScope()
-    var input by remember { mutableStateOf(manager.repository()) }
-    var editError by remember { mutableStateOf<String?>(null) }
     var confirmDownload by remember { mutableStateOf<GitHubUpdateRelease?>(null) }
     var installMessage by remember { mutableStateOf<String?>(null) }
     val check = manager.result
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
-        .padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Heading("Atualizações pelo GitHub", back)
-        Text("O Uai Cortes consulta as Releases publicadas sempre que é aberto, se o repositório estiver configurado. " +
-            "Nenhuma atualização é baixada ou instalada automaticamente.",
-            style = MaterialTheme.typography.bodyMedium)
-        OutlinedTextField(value = input, onValueChange = { input = it; editError = null },
-            label = { Text("Repositório (dono/nome)") },
-            placeholder = { Text("usuario/Uai-Cortes") },
-            supportingText = { Text("Para APKs criados no GitHub Actions, o repositório é detectado no build. " +
-                "Em builds locais, informe um repositório público com Releases.") },
-            singleLine = true, modifier = Modifier.fillMaxWidth())
-        OutlinedButton(onClick = {
-            if (manager.saveRepository(input)) {
-                input = manager.repository()
-                editError = null
-                scope.launch { manager.check() }
-            } else editError = "Informe um repositório válido: dono/nome."
-        }) { Text("Salvar repositório") }
-        editError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        HorizontalDivider()
+        .padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Heading("Atualizações", back)
+        Text("Versão instalada: ${BuildConfig.VERSION_NAME}",
+            style = MaterialTheme.typography.titleMedium)
         Button(onClick = { scope.launch { manager.check() } },
             enabled = check !is GitHubUpdateResult.Checking && !manager.downloading,
-            modifier = Modifier.fillMaxWidth()) { Text("Verificar atualizações agora") }
-        OutlinedButton(onClick = {
-            installMessage = manager.openRepositoryReleases(input)
-        }, enabled = GitHubUpdateCore.normalizedRepository(input) != null,
             modifier = Modifier.fillMaxWidth()) {
-            Text("Abrir Releases no navegador")
+            Icon(Icons.Default.SystemUpdate, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Verificar atualizações")
         }
-        Text("Se a consulta falhar, abra as Releases no navegador para verificar se o " +
-            "repositório está público e acessível. A verificação automática não usa token privado.",
-            style = MaterialTheme.typography.bodySmall)
         when (check) {
-            GitHubUpdateResult.Idle -> Text("Consulta ainda não realizada.")
+            GitHubUpdateResult.Idle -> Text("Toque em Verificar para consultar as versões publicadas.")
             GitHubUpdateResult.Checking -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 CircularProgressIndicator(Modifier.size(22.dp))
-                Text("Consultando GitHub…")
+                Text("Consultando o GitHub…")
             }
-            GitHubUpdateResult.NotConfigured -> Text("Configure o repositório acima para ativar a verificação na abertura.")
-            GitHubUpdateResult.UpToDate -> Text("Nenhuma versão mais recente com APK universal foi encontrada nas Releases consultadas.")
+            GitHubUpdateResult.NotConfigured -> Text(
+                "Este APK não informa o repositório de origem. A atualização integrada precisa de uma compilação publicada pelo GitHub Actions.",
+                color = MaterialTheme.colorScheme.error)
+            GitHubUpdateResult.UpToDate -> Text("Nenhuma atualização mais recente encontrada.")
             is GitHubUpdateResult.Error -> Text(check.message, color = MaterialTheme.colorScheme.error)
             is GitHubUpdateResult.Available -> {
                 val release = check.release
-                Text("Disponível: v${release.version} (instalada: v${BuildConfig.VERSION_NAME})",
-                    style = MaterialTheme.typography.titleMedium)
-                if (release.notes.isNotBlank()) Text(release.notes.take(1200),
-                    style = MaterialTheme.typography.bodySmall)
-                Text("APK universal · ${release.size / (1024 * 1024)} MiB · " +
-                    if (release.sha256 == null) "sem SHA-256 publicado" else "SHA-256 disponível")
-                OutlinedButton(onClick = { manager.openRelease(release) }) {
-                    Text("Abrir Release no GitHub")
+                Text("Nova versão: ${release.version}", style = MaterialTheme.typography.titleLarge)
+                Text("APK universal · ${"%.1f".format(java.util.Locale.US, release.size / 1048576.0)} MB")
+                if (release.sha256 != null) {
+                    Button(onClick = { confirmDownload = release }, enabled = !manager.downloading,
+                        modifier = Modifier.fillMaxWidth()) { Text("Baixar atualização") }
+                } else {
+                    Text("Esta versão não possui a verificação SHA-256 exigida pelo aplicativo. " +
+                        "O download interno foi bloqueado por segurança.",
+                        color = MaterialTheme.colorScheme.error)
                 }
-                if (release.sha256 != null) Button(onClick = { confirmDownload = release },
-                    enabled = !manager.downloading, modifier = Modifier.fillMaxWidth()) {
-                    Text("Baixar APK verificado")
-                } else Text("Sem SHA-256, o download interno fica indisponível por segurança. " +
-                    "Use a página oficial da Release.", style = MaterialTheme.typography.bodySmall)
             }
         }
         if (manager.downloading) {
-            Text("Baixando o APK: ${manager.downloadPercent}%")
+            Text("Baixando APK: ${manager.downloadPercent}%")
             LinearProgressIndicator(progress = { manager.downloadPercent / 100f },
                 modifier = Modifier.fillMaxWidth())
         }
         manager.downloadError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         if (manager.readyFile != null) {
-            Text("APK baixado e conferido. A instalação precisa ser autorizada pelo Android.")
-            Button(onClick = { installMessage = manager.installDownloaded() ?: "Instalador aberto. Confirme a instalação no Android." },
-                modifier = Modifier.fillMaxWidth()) { Text("Instalar atualização") }
+            Text("Download verificado. O Android pedirá sua autorização para instalar.")
+            Button(onClick = {
+                installMessage = manager.installDownloaded()
+                    ?: "Instalador aberto. Confirme a atualização no Android."
+            }, modifier = Modifier.fillMaxWidth()) { Text("Instalar atualização") }
         }
         installMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
-        Text("Importante: para atualizar sem desinstalar, o novo APK deve ter o mesmo identificador " +
-            "e certificado de assinatura do aplicativo instalado. Não desinstale: seus projetos podem ser perdidos.",
-            style = MaterialTheme.typography.bodySmall)
+        if (manager.readyFile != null || check is GitHubUpdateResult.Available) {
+            Text("Não desinstale a versão atual. Para preservar os projetos, a atualização deve usar " +
+                "a mesma assinatura do aplicativo instalado.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         Spacer(Modifier.height(22.dp))
     }
     confirmDownload?.let { release ->
         AlertDialog(onDismissRequest = { confirmDownload = null },
-            title = { Text("Baixar v${release.version}?") },
-            text = { Text("O download do APK universal será feito da Release oficial no GitHub. " +
-                "O arquivo será conferido por SHA-256 e versão antes de oferecer a instalação. " +
-                "Nenhum projeto será alterado nesta etapa.") },
+            title = { Text("Baixar versão ${release.version}?") },
+            text = { Text("O aplicativo baixará o APK da Release oficial do GitHub, verificará o SHA-256 " +
+                "e pedirá sua autorização antes de instalar. Seus projetos não serão modificados pelo download.") },
             confirmButton = { TextButton(onClick = {
                 confirmDownload = null
                 scope.launch { manager.download(release) }

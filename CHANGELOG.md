@@ -1,4 +1,13 @@
-# Uai Cortes · versão 0.1.185 — Formulários compactos e ajuda contextual
+# Uai Cortes · versão 0.1.186 — Salvamento e atualizações mais diretos
+
+## v0.1.186 · versionCode 187
+- **Sobre:** somente Verificar atualizações como ação principal; removidos os botões Ver novidades e Testar visual da Home do Sobre.
+- **Configurações:** removido o cartão independente de Atualizações pelo GitHub. A tela fica vinculada ao Sobre.
+- **Atualizador:** não oferece campo para repositório manual; usa a origem pública definida no APK pelo CI. Histórico de Releases limitado a 20 por consulta, com capacidade de leitura de até 8 milhões de caracteres.
+- **Atualização no aplicativo:** mantém confirmação, download interno com SHA-256, validação do pacote e abertura do instalador do Android; não há download/instalação silenciosos.
+- **Salvar projeto:** diálogo curto e vertical com alternativas claras para não persistir projetos indesejados. Mantido Salvar cópia, restauração e rascunhos temporários.
+- **Testes:** contratos de navegação/segurança e casos de resposta excessiva; build completo Android e instalação física ainda pendentes.
+
 - **Legendas automáticas:** removidas descrições duplicadas e títulos de passos sem utilidade, substituídos por estado curto e ajuda `?`; duração e limite de 10 minutos preservados.
 - **Gemini:** confirmação curta com informação essencial de consentimento sobre envio de áudio ao Google e risco de uso de cota/cobrança. Detalhes de estimativa, cache e cotas continuam consultáveis sem segunda chamada.
 - **Personagens:** diálogo sob medida, botões de seleção compactos e ajuda contextual; associação só muda após toque explícito.

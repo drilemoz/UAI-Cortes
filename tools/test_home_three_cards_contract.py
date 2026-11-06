@@ -17,13 +17,12 @@ for label, icon, callback in [
 ]:
     assert f'HomeActionTile("{label}", {icon}, {callback}' in actions
     assert f'onNodeWithText("{label}").performClick()' in test
-    assert f'onNodeWithText("{label}").assertIsNotEnabled()' in test
 assert actions.count('enabled = !preview') == 3
 assert 'modifier = Modifier.weight(1f)' in actions
 assert 'color = Blue' in ui and 'modifier.heightIn(min = 110.dp)' in ui
 assert 'HomePrimaryActions(onCreate, onAnimate, onFlow = onFlow)' in ui
-assert 'HomePrimaryActions(onCreate = {}, onAnimate = {}, preview = true)' in ui
+assert 'Testar visual da Home' not in ui
 assert 'onTab("projects")' in ui
 assert 'Nenhuma edição ainda. Comece em Novo projeto.' in ui
 assert 'Nova edição' not in actions
-print('OK: três cards azuis e iguais, navegação preservada e prévia Sobre desabilitada')
+print('OK: três cards azuis e iguais, navegação preservada e Sobre sem prévia redundante')

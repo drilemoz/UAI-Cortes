@@ -9,6 +9,11 @@ import javax.net.ssl.SSLHandshakeException
 import org.json.JSONException
 
 class GitHubUpdateDiagnosticsTest {
+    @Test fun excessiveReleaseResponseHasSpecificSafeMessage() {
+        val message = GitHubUpdateDiagnostics.exception(GitHubResponseTooLargeException())
+        assertTrue(message.contains("limite da consulta"))
+    }
+
     @Test fun dnsAndTimeoutAreDistinguishable() {
         assertTrue(GitHubUpdateDiagnostics.exception(UnknownHostException("secret" )).contains("DNS"))
         assertTrue(GitHubUpdateDiagnostics.exception(SocketTimeoutException("token" )).contains("Tempo limite"))

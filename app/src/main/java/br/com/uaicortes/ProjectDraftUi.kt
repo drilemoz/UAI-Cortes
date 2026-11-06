@@ -2,6 +2,12 @@ package br.com.uaicortes
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -24,23 +30,32 @@ import kotlinx.coroutines.withContext
 @Composable
 internal fun ConfirmEditorExit(hasSavedOriginal: Boolean, onDecision: (String) -> Unit,
     onContinue: () -> Unit) {
-    AlertDialog(onDismissRequest = onContinue,
-        icon = { Icon(Icons.Default.Save, null) },
-        title = { Text("Salvar este projeto?") },
+    AlertDialog(
+        onDismissRequest = onContinue,
+        icon = { Icon(Icons.Default.Save, contentDescription = null) },
+        title = { Text(if (hasSavedOriginal) "Salvar alterações?" else "Salvar este projeto?") },
         text = { Text(if (hasSavedOriginal)
-            "Você alterou um projeto existente. Salve, guarde uma cópia independente ou descarte as mudanças desta sessão."
-            else "Este vídeo ainda não está em Projetos. Salvar mantém o projeto; descartar sai sem criar uma cópia permanente. Os arquivos originais não serão apagados.") },
-        confirmButton = { Column {
-            TextButton(onClick = { onDecision("save") }) { Text("Salvar projeto") }
-            if (hasSavedOriginal)
-                TextButton(onClick = { onDecision("copy") }) { Text("Salvar cópia") }
-        } },
-        dismissButton = { Column {
-            TextButton(onClick = { onDecision("discard") }) {
-                Text("Descartar e sair", color = MaterialTheme.colorScheme.error)
+            "Você fez alterações neste projeto."
+        else "Se sair sem salvar, esta edição será descartada. Os arquivos originais continuam no celular.") },
+        confirmButton = {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Button(onClick = { onDecision("save") }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Salvar projeto")
+                }
+                if (hasSavedOriginal) {
+                    OutlinedButton(onClick = { onDecision("copy") }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Salvar cópia")
+                    }
+                }
+                TextButton(onClick = { onDecision("discard") }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Descartar e sair", color = MaterialTheme.colorScheme.error)
+                }
+                TextButton(onClick = onContinue, modifier = Modifier.fillMaxWidth()) {
+                    Text("Continuar editando")
+                }
             }
-            TextButton(onClick = onContinue) { Text("Continuar editando") }
-        } })
+        }
+    )
 }
 
 @Composable

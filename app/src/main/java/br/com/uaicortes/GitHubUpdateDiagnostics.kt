@@ -8,6 +8,9 @@ import java.net.UnknownHostException
 import javax.net.ssl.SSLException
 import org.json.JSONException
 
+/** Sem corpo, URI ou token em mensagens públicas. */
+internal class GitHubResponseTooLargeException : IllegalStateException()
+
 /** Mensagens sem expor URL privada, cabeçalhos, tokens ou corpo da resposta. */
 internal object GitHubUpdateDiagnostics {
     fun http(status: Int, rateLimitRemaining: String? = null): String = when (status) {
@@ -29,7 +32,8 @@ internal object GitHubUpdateDiagnostics {
             "Conexão com api.github.com recusada ou sem rota. Verifique a rede, VPN ou firewall."
         is SocketException -> "Conexão interrompida durante a consulta ao GitHub. Tente novamente."
         is SecurityException -> "O Android bloqueou o acesso à rede para o aplicativo. Confira as permissões e restrições."
-        is JSONException -> "O GitHub retornou dados que o aplicativo não conseguiu interpretar."
+        is JSONException -> "A resposta do GitHub veio em formato inesperado. Tente novamente mais tarde."
+        is GitHubResponseTooLargeException -> "O histórico de Releases excedeu o limite da consulta. Tente novamente mais tarde."
         is IllegalStateException -> "A resposta do GitHub não pôde ser processada. Tente novamente."
         else -> "Falha inesperada na consulta ao GitHub (${error.javaClass.simpleName.take(48)})."
     }

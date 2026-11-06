@@ -39,6 +39,14 @@ class GitHubUpdateCoreTest {
         assertNull(GitHubUpdateCore.parseReleases(json, "owner/repo", "0.1.100"))
     }
 
+    @Test fun parsesLargeReleaseBodyBeyondPreviousReaderLimit() {
+        val raw = release("v0.1.186", true)
+            .replace("\"body\":\"Nova versão\"", "\"body\":\"${"x".repeat(1_300_000)}\"")
+        val found = GitHubUpdateCore.parseReleases("[$raw]", "owner/repo", "0.1.185")
+        assertEquals("0.1.186", found?.version)
+        assertEquals(1800, found?.notes?.length)
+    }
+
     @Test fun keepsMissingDigestNullToForbidInternalDownload() {
         val withoutDigest = release("v0.1.102", false)
             .replace("\"digest\":\"sha256:${"a".repeat(64)}\",", "")

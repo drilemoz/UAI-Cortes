@@ -28,7 +28,6 @@ internal sealed interface GitHubUpdateResult {
 
 /** One check on every cold app launch. Never downloads or installs without a user action. */
 internal class GitHubUpdateManager(private val context: Context) {
-    private val preferences = context.getSharedPreferences("github_updates", Context.MODE_PRIVATE)
     private var lastForegroundCheckMs: Long = Long.MIN_VALUE
     private var dismissedVersion: String? = null
     var result: GitHubUpdateResult by mutableStateOf(GitHubUpdateResult.Idle)
@@ -44,18 +43,9 @@ internal class GitHubUpdateManager(private val context: Context) {
     var downloadError: String? by mutableStateOf(null)
         private set
 
-    fun repository(): String = preferences.getString("repository", null)
-        ?: GitHubUpdateCore.normalizedRepository(BuildConfig.GITHUB_RELEASE_REPOSITORY).orEmpty()
-
-    fun saveRepository(input: String): Boolean {
-        val repo = GitHubUpdateCore.normalizedRepository(input) ?: return false
-        preferences.edit().putString("repository", repo).apply()
-        result = GitHubUpdateResult.Idle
-        dismissedVersion = null
-        promptRelease = null
-        readyFile = null
-        return true
-    }
+    /** The published app owns its update source; stale user-entered paths are ignored. */
+    fun repository(): String = GitHubUpdateCore.normalizedRepository(
+        BuildConfig.GITHUB_RELEASE_REPOSITORY).orEmpty()
 
     /** Checks whenever the app returns to foreground, with a one-minute anti-flood window. */
     suspend fun checkOnForeground() {
@@ -76,7 +66,7 @@ internal class GitHubUpdateManager(private val context: Context) {
         result = GitHubUpdateResult.Checking
         val updated = withContext(Dispatchers.IO) {
             try {
-                val url = "https://api.github.com/repos/$repo/releases?per_page=50"
+                val url = "https://api.github.com/repos/$repo/releases?per_page=20"
                 val connection = openConnection(url)
                 try {
                     val status = connection.responseCode
@@ -85,7 +75,7 @@ internal class GitHubUpdateManager(private val context: Context) {
                             status, connection.getHeaderField("X-RateLimit-Remaining")
                         ))
                     } else {
-                        val body = connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readTextLimited(1_200_000) }
+                        val body = connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readTextLimited(8_000_000) }
                         val release = GitHubUpdateCore.parseReleases(body, repo, BuildConfig.VERSION_NAME)
                         if (release == null) GitHubUpdateResult.UpToDate
                         else GitHubUpdateResult.Available(release)
@@ -250,7 +240,7 @@ private fun java.io.BufferedReader.readTextLimited(maxCharacters: Int): String {
     while (true) {
         val read = read(chars)
         if (read < 0) return builder.toString()
-        if (builder.length + read > maxCharacters) error("Resposta grande demais")
+        if (builder.length + read > maxCharacters) throw GitHubResponseTooLargeException()
         builder.append(chars, 0, read)
     }
 }

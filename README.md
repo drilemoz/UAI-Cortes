@@ -1,4 +1,10 @@
-# Uai Cortes · versão 0.1.185 — Legendas automáticas mais claras
+# Uai Cortes · versão 0.1.186 — Sobre e atualizações simplificados
+
+- Atualizações disponíveis em **Sobre → Verificar atualizações**, sem editar o repositório. A origem é incorporada à compilação do GitHub Actions; builds locais sem origem apresentam aviso.
+- Quando houver versão mais recente com APK universal e SHA-256, o próprio Uai Cortes baixa e verifica o arquivo, mediante confirmação. A instalação depende da aprovação do Android e do mesmo certificado de assinatura.
+- Consulta de Releases usa um lote menor e limite maior de resposta, com erros de resposta excessiva diferenciados.
+- Diálogo de saída do editor mais conciso, com Salvar, Descartar, Continuar e Salvar cópia para projetos já existentes. Projetos, rascunhos e backups foram preservados.
+
 - A tela de Legendas automáticas prioriza o modelo disponível e os botões Offline/Gemini, sem parágrafos repetidos.
 - Informações de privacidade, limites e revisão ficam na ajuda `?`, com avisos essenciais visíveis antes do envio.
 - A confirmação Gemini exibe apenas envio de áudio, custo/cota e modelo; detalhes locais de uso podem ser expandidos.

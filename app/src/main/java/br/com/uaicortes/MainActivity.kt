@@ -479,7 +479,6 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 "gemini_settings" -> GeminiSettingsScreen(::back)
                 "appearance" -> AppearanceScreen(theme, { theme = it; store.setTheme(it) }, ::back)
                 "about" -> AboutScreen(::back,
-                    onShowWhatsNew = { previous = "about"; screen = "whats_new" },
                     onUpdates = { previous = "about"; screen = "updates" })
                 "media_repair" -> project?.let { p -> ProjectMediaRepairScreen(p, ::back) { changed ->
                     if (projectSession.project != p) false else write(changed)
