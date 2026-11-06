@@ -1,3 +1,15 @@
+# v0.1.183 — Diarização Gemini com revisão explícita
+- A transcrição Gemini online pode solicitar `diarization_mode: speaker` junto com `timestamp_granularities: [word]`, dentro de `transcription_config.mode`, na MESMA chamada confirmada pelo usuário. O modo offline Vosk não inventa locutores. A API pode cobrar e errar a atribuição, sobretudo com 3+ vozes.
+- Anotações `word_info.speaker` são opcionais; apenas `spk_1` a `spk_8` geram rótulos provisórios, com namespace aleatório POR TRANSCRIÇÃO. Nunca usar `Voz 1` de sessões diferentes como identidade comum. Se faltar marcação, não inventar nomes ou horários; separar cue na troca de voz.
+- Antes de aplicar, usuário deve poder criar novo personagem com nome revisável, vincular a existente ou ignorar a sugestão. Confirmar aplicação de legendas e vínculos em uma única alteração de rascunho. Sem segunda chamada Gemini para os nomes, sem aplicar cores automaticamente, sem enviar vídeo ou áudio no offline.
+- Preservar checkpoint Gemini, `schemaVersion=4`, versionCode 184, 5 APKs Release e projetos legados. CI/Android físico ainda pendentes.
+
+# v0.1.182 — Personagens manuais e legendas legíveis
+- `SubtitleSpeaker` usa ID estável, nome e cor por projeto; `SubtitleCue.speakerId` opcional. Campos opcionais em JSON com `schemaVersion=4`. Arquivos antigos continuam sem personagens; nenhum nome/voz é inferido automaticamente.
+- Na tela Legendas, há prévia compacta (ampliável), zoom 1×/2×/4× sobre janelas virtuais, identidade visual por personagem, filtro incluindo Sem personagem, seleção manual independente da legenda em reprodução e acompanhamento opcional da lista.
+- Atribuir personagem não altera automaticamente a cor do texto exportado. Aplicar cores dos personagens requer confirmação e modifica somente a cor das legendas atribuídas, sem mudar texto, ID, intervalo, posição ou arquivo original.
+- Remover personagem preserva legendas e limpa seus vínculos. A edição continua em rascunho até Salvar conforme v0.1.179. Preservar Vosk, Gemini, 5 APKs e `versionCode 183`. Testar Compose, Media3 e exportação no aparelho antes de afirmar fidelidade.
+
 # v0.1.181 — Vídeo sempre disponível nas Legendas
 - `SubtitlePositionPreview` não pode depender de `selected != null`: mostrar vídeo e fotos desde a primeira entrada, com Play/Pause e cursor visível mesmo em projeto sem legendas.
 - `SubtitleCompactTimeline` mantém as janelas virtuais de 10 s, com faixa de vídeo/foto acima da faixa de legendas; thumbnails em IO, sem ler todo o vídeo de uma vez.

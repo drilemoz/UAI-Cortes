@@ -28,12 +28,15 @@ import kotlinx.coroutines.withContext
 @Composable
 fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
     onManageModel: () -> Unit, onManageGemini: () -> Unit,
-    onApply: (List<SubtitleCue>, Boolean) -> Unit) {
+    onApply: (VideoProject) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val geminiStore = remember(context) { GeminiCredentialStore(context) }
     val geminiClient = remember(context) { GeminiSubtitleClient(context) }
     var geminiConfirm by remember { mutableStateOf(false) }
+    var detectSpeakers by remember(project.id) { mutableStateOf(true) }
+    var voiceDecisions by remember(project.id) { mutableStateOf<Map<String,String>>(emptyMap()) }
+    var voiceNames by remember(project.id) { mutableStateOf<Map<String,String>>(emptyMap()) }
     val geminiConfigured = geminiStore.hasKey()
     DisposableEffect(geminiClient) { onDispose {geminiClient.cancel()} }
     val installed = AutoSubtitleEngine.installed(context)
@@ -136,6 +139,12 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                 Spacer(Modifier.width(8.dp))
                 Text("Configurar chave Gemini")
             }
+            Row(verticalAlignment=Alignment.CenterVertically) {
+                Checkbox(checked=detectSpeakers,enabled=!busy,
+                    onCheckedChange={detectSpeakers=it})
+                Text("Sugerir Voz 1, Voz 2… na mesma transcrição Gemini " +
+                    "(revisão obrigatória)",style=MaterialTheme.typography.bodySmall)
+            }
             Button(onClick={geminiConfirm=true},enabled=geminiConfigured && !busy &&
                 project.durationMs in 1..600000L,modifier=Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.AutoAwesome,null)
@@ -210,6 +219,9 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
             Text("Reconhecimento automático pode errar palavras, pontuação e nomes. " +
                 "Toque num resultado para corrigir o texto antes de salvar.",
                 style=MaterialTheme.typography.bodySmall)
+            GeminiVoiceReviewUi(results,project.subtitleSpeakers,voiceDecisions,voiceNames,
+                onDecision={id,decision -> voiceDecisions=voiceDecisions+(id to decision)},
+                onName={id,name -> voiceNames=voiceNames+(id to name)})
             results.forEachIndexed { index, cue ->
                 Surface(onClick={editIndex=index;editText=cue.text},
                     shape=MaterialTheme.shapes.small,
@@ -217,7 +229,8 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                     Row(Modifier.fillMaxWidth().padding(10.dp),verticalAlignment=Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(cue.text, maxLines=2,overflow=TextOverflow.Ellipsis)
-                            Text("${formatMs(cue.startMs)}–${formatMs(cue.endMs)}",
+                            Text("${formatMs(cue.startMs)}–${formatMs(cue.endMs)}" +
+                                (cue.speakerId?.let(GeminiDiarizationPolicy::label)?.let { " · $it" } ?: ""),
                                 style=MaterialTheme.typography.labelSmall)
                         }
                         Icon(Icons.Default.Edit, "Corrigir texto")
@@ -254,8 +267,14 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                 style=MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(12.dp))
         }
-        Button(onClick={onApply(results.map {it.copy(sizeSp=generatedSize)},replace)},
-            enabled=!busy && results.isNotEmpty(),
+        Button(onClick={
+            val proposal=GeminiDiarizationPolicy.prepare(project,
+                results.map { it.copy(sizeSp=generatedSize) },replace,voiceDecisions,voiceNames)
+            if (proposal==null) message="Revise os nomes: não podem repetir outros " +
+                "personagens nem superar 16 no projeto. Você pode vincular a um " +
+                "personagem existente ou marcar Não atribuir."
+            else onApply(proposal)
+        }, enabled=!busy && results.isNotEmpty(),
             modifier=Modifier.fillMaxWidth().navigationBarsPadding()) {
             Icon(Icons.Default.Check, null)
             Spacer(Modifier.width(8.dp))
@@ -267,7 +286,10 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
         text={Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("O Uai Cortes enviará somente o áudio extraído (até 10 minutos) ao Gemini após confirmar. " +
                 "O vídeo não será enviado. O WAV poderá ficar em cache privado por até 3 horas. " +
-                "Confirmar não substitui legendas existentes.")
+                "Confirmar não substitui legendas existentes. " +
+                (if(detectSpeakers) "O Gemini também tentará separar vozes; " +
+                    "os rótulos serão revisados antes de aplicar. " else "") +
+                "Diarização não identifica nomes reais e usa a mesma chamada de transcrição.")
             GeminiUsageHint("legendas automáticas", durationMs = project.durationMs,
                 model = "gemini-3.5-transcribe")
         }},
@@ -288,7 +310,7 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                     }
                     savedGeminiTask = null
                     geminiStarted = true
-                    val generated=geminiClient.transcribe(context,project,apiKey) { pct,step ->
+                    val generated=geminiClient.transcribe(context,project,apiKey,detectSpeakers) { pct,step ->
                         withContext(Dispatchers.Main) { progress=pct; message=step }
                     }
                     withContext(Dispatchers.IO) {
@@ -297,8 +319,12 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                     savedGeminiTask = GeminiTaskCheckpoint(mediaFingerprint, "gemini-3.5-transcribe",
                         GeminiTaskStage.READY, System.currentTimeMillis()) // resultado está no arquivo privado
                     results=generated
+                    voiceDecisions=emptyMap();voiceNames=emptyMap()
                     message=if(generated.isEmpty()) "Nenhuma palavra reconhecida."
-                        else "${generated.size} legendas geradas por Gemini. Revise antes de aplicar. " +
+                        else "${generated.size} legendas geradas por Gemini. " +
+                            (if (detectSpeakers && GeminiDiarizationPolicy.suggestions(generated).isEmpty())
+                                "A API não retornou rótulos de locutor; as falas ficarão sem personagem. "
+                            else "Confira os rótulos de voz antes de aplicar. ") +
                             GeminiUsageLedger(context).lastMessage("legendas")
                     progress=100
                 } catch(_: CancellationException) {

@@ -19,12 +19,12 @@ assert 'onSeekRequest = ::requestSeek' in s
 assert 'Slider(value =' in s and 'onValueChangeFinished' in s
 assert 'SubtitleListNavigation.newInterval(p.durationMs, cursorMs)' in s
 assert 'requestSeek(cue.startMs)' in s
-assert 'SubtitleCompactTimeline(sorted, p.clips, p.durationMs, selectedId, cursorMs,' in s
-assert 'val visibleClips = remember(clips, segment, totalMs)' in t
+assert 'SubtitleCompactTimeline(filtered, p.clips, p.durationMs, selectedId, cursorMs,' in s
+assert 'val visibleClips = remember(clips, segment, totalMs, segmentMs)' in t
 assert 'SubtitleCompactLayout.clipsInWindow(' in t
 assert 'TrimSegmentFrame(clip)' in t and 'SubtitleImageThumbnail(clip)' in t
 assert 'detectTapGestures' in t and 'latestSeek(' in t
-assert 'val currentWindow = SubtitleCompactLayout.windowFor(cursorMs, totalMs)' in t
+assert 'val currentWindow = SubtitleCompactLayout.windowFor(cursorMs, totalMs, segmentMs)' in t
 assert 'fun clipsInWindow(' in layout
 for name in ('SubtitleCompactLayoutTest.kt','SubtitleListNavigationTest.kt'):
     assert (r/'app/src/test/java/br/com/uaicortes'/name).exists()

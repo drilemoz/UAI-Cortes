@@ -16,11 +16,27 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.181"
-    const val VERSION_CODE = 182
+    const val VERSION_NAME = "0.1.183"
+    const val VERSION_CODE = 184
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.183", listOf(
+            ReleaseFeature("gemini-voice-183", "Vozes sugeridas por Gemini",
+                "Ao transcrever com Gemini, escolha a detecção de Voz 1, Voz 2 etc. na mesma chamada, sem identificar nomes automaticamente.", "captions"),
+            ReleaseFeature("voice-review-183", "Revisar e vincular personagens",
+                "Antes de aplicar, crie personagens, vincule a personagens existentes ou deixe falas sem identificação; nenhum vínculo é salvo automaticamente.", "check"),
+            ReleaseFeature("voice-safety-183", "Cortes e projetos preservados",
+                "Rótulos distintos por transcrição, horários por palavra e recuperação local permanecem; texto e cor não são alterados pela atribuição.", "check")
+        )),
+        ReleaseSummary("0.1.182", listOf(
+            ReleaseFeature("subtitle-speakers-182", "Personagens nas legendas",
+                "Cadastre e atribua personagens manualmente, com cor e filtros por falante sem identificação automática.", "captions"),
+            ReleaseFeature("subtitle-preview-182", "Prévia compacta e zoom",
+                "Amplie a prévia quando quiser e use zoom 1× a 4× na linha do tempo para revisar falas curtas.", "check"),
+            ReleaseFeature("subtitle-active-182", "Fala em reprodução destacada",
+                "A legenda ativa é indicada separadamente da selecionada, com acompanhamento opcional da lista.", "check")
+        )),
         ReleaseSummary("0.1.181", listOf(
             ReleaseFeature("subtitle-video-always-181", "Vídeo visível mesmo sem legendas",
                 "A tela de legendas carrega os vídeos e fotos do projeto antes da primeira legenda, com reprodução e cursor de tempo.", "captions"),

@@ -1,3 +1,15 @@
+# Uai Cortes · versão 0.1.183 — Identificação sugerida de vozes
+- Ao usar **Gemini IA** em Legendas automáticas, ative ou desative a sugestão de locutores antes de confirmar o envio do áudio.
+- Na revisão, cada Voz 1/Voz 2 pode criar um personagem, vincular a um já existente ou continuar sem identificação. Nomes e cores exportadas não são inferidos nem aplicados automaticamente.
+- Uma única chamada pode gerar legenda e rótulos; resultados sem identificação permanecem sem personagem. Vosk offline permanece local e não possui diarização nesta versão.
+- Compatibilidade com projetos antigos preservada. Código-fonte validado localmente; compilar Android e testar API real em aparelho antes de afirmar funcionamento final.
+
+# Uai Cortes · versão 0.1.182 — Revisão de legendas e personagens
+- Cadastre personagens manualmente, marque quem está falando em cada legenda e filtre as falas por personagem.
+- Prévia compacta com botão de ampliar, zoom na linha do tempo e destaque separado da legenda em reprodução.
+- Atribuir personagens não altera as cores do vídeo automaticamente: existe confirmação específica para aplicar as cores às legendas.
+- Projetos antigos preservados; identificação automática de vozes e compilação/testes Android reais ainda pendentes.
+
 # Uai Cortes · versão 0.1.181 — Vídeo disponível na edição de legendas
 
 **Correção principal:** a tela Legendas mostra e reproduz os clipes do projeto mesmo com zero legendas. Use a faixa visual dos vídeos ou a barra de progresso para escolher o tempo e toque em Nova. As legendas aparecem em faixa separada, sincronizadas com a prévia.

@@ -246,7 +246,7 @@ print('OK: corte visual v0.1.171, persistência, retorno ao editor, divisão e r
 
 # v0.1.34: uma timeline geral, lista virtualizada e vídeo fixo no topo.
 assert 'internal fun SubtitleCompactTimeline(' in ui
-assert 'SubtitleCompactTimeline(sorted, p.clips, p.durationMs, selectedId, cursorMs,' in ui
+assert 'SubtitleCompactTimeline(filtered, p.clips, p.durationMs, selectedId, cursorMs,' in ui
 assert 'internal fun SubtitlePositionPreview(' in ui and 'player = remember(p.id)' in ui
 assert 'LazyColumn(state=captionsState' in ui and 'itemsIndexed(filtered,key=' in ui
 assert 'SubtitleEditDialog(cue=selected,totalMs=p.durationMs' in ui
@@ -273,7 +273,7 @@ print('OK: versão atual 0.1.64 / versionCode 74, busca e navegação, exclusão
 # v0.1.35: prévia se adapta ao aspecto/rotação em todas as telas de vídeo.
 layout=(root/'app/src/main/java/br/com/uaicortes/AdaptiveVideoLayout.kt').read_text()
 assert 'fun inline(' in layout and 'fun fit(' in layout and 'fun activeClipIndex(' in layout
-assert 'InlineVideoPreview(aspect)' in ui
+assert 'InlineVideoPreview(aspect, maxHeightDp' in ui
 assert 'AndroidView(factory = { ctx -> previewPlayer(ctx)' in trim_screen # nova prévia de cortes preenche espaço útil
 assert 'InlineVideoPreview(canvasAspect)' in ui
 assert 'InlineVideoPreview(previewAspect)' in ui

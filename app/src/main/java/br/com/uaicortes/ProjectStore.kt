@@ -102,7 +102,8 @@ data class SubtitleCue(
     val wordTimings: List<SubtitleWordTiming> = emptyList(),
     val wordColors: List<SubtitleWordColor> = emptyList(),
     val highlightColor: Int = SubtitleWordEffects.DEFAULT_HIGHLIGHT,
-    val italic: Boolean = false
+    val italic: Boolean = false,
+    val speakerId: String? = null
 ) {
     fun json() = JSONObject().put("id", id).put("text", text)
         .put("startMs", startMs).put("endMs", endMs).put("color", color)
@@ -116,6 +117,7 @@ data class SubtitleCue(
         .put("wordTimings", JSONArray().also { array -> wordTimings.forEach { array.put(it.json()) } })
         .put("wordColors", JSONArray().also { array -> wordColors.forEach { array.put(it.json()) } })
         .put("highlightColor", highlightColor).put("italic", italic)
+        .put("speakerId", speakerId)
     companion object {
         fun read(j: JSONObject) = SubtitleCue(j.optString("id").ifBlank { UUID.randomUUID().toString() },
             j.optString("text"), j.optLong("startMs"), j.optLong("endMs"),
@@ -138,7 +140,21 @@ data class SubtitleCue(
             SubtitleWordEffects.safeColors(j.optJSONArray("wordColors"),
                 SubtitleWordEffects.wordRanges(j.optString("text")).size),
             j.optInt("highlightColor", SubtitleWordEffects.DEFAULT_HIGHLIGHT),
-            j.optBoolean("italic", false))
+            j.optBoolean("italic", false),
+            j.optString("speakerId").takeIf { it.isNotBlank() && it != "null" }?.take(80))
+    }
+}
+
+/** Personagens são rótulos MANUAIS da sessão: nunca são inferidos da voz ou do rosto. */
+data class SubtitleSpeaker(val id: String, val name: String, val color: Int) {
+    fun json(): JSONObject = JSONObject().put("id", id).put("name", name).put("color", color)
+    companion object {
+        fun read(j: JSONObject): SubtitleSpeaker? {
+            val id = j.optString("id").trim().take(80)
+            val name = j.optString("name").trim().take(40)
+            if (id.isBlank() || name.isBlank()) return null
+            return SubtitleSpeaker(id, name, j.optInt("color", 0xFF3280A5.toInt()))
+        }
     }
 }
 
@@ -222,7 +238,8 @@ data class VideoProject(
     val lastTrimCutClipId: String? = null, val lastTrimCutSourceMs: Long? = null,
     val textWatermark: TextWatermark? = null,
     val publicationDraft: VideoPublicationDraft? = null,
-    val flowPromptDraft: FlowPromptDraft? = null
+    val flowPromptDraft: FlowPromptDraft? = null,
+    val subtitleSpeakers: List<SubtitleSpeaker> = emptyList()
 ) {
     val durationMs get() = clips.sumOf { it.durationMs }
     val pip: Overlay? get() = overlays.firstOrNull() // acesso legado somente leitura
@@ -238,6 +255,7 @@ data class VideoProject(
         .put("textWatermark", textWatermark?.json())
         .put("publicationDraft", publicationDraft?.json())
         .put("flowPromptDraft", flowPromptDraft?.json())
+        .put("subtitleSpeakers", JSONArray().also { a -> subtitleSpeakers.take(16).forEach { a.put(it.json()) } })
     companion object {
         fun read(j: JSONObject): VideoProject {
             val a = j.optJSONArray("clips") ?: JSONArray()
@@ -263,7 +281,12 @@ data class VideoProject(
                 if (j.isNull("lastTrimCutSourceMs")) null else j.optLong("lastTrimCutSourceMs"),
                 j.optJSONObject("textWatermark")?.let(TextWatermark::read),
                 VideoPublicationDraft.read(j.optJSONObject("publicationDraft")),
-                FlowPromptDraft.read(j.optJSONObject("flowPromptDraft")))
+                FlowPromptDraft.read(j.optJSONObject("flowPromptDraft")),
+                j.optJSONArray("subtitleSpeakers")?.let { arr ->
+                    (0 until minOf(arr.length(), 16)).mapNotNull { index ->
+                        runCatching { SubtitleSpeaker.read(arr.getJSONObject(index)) }.getOrNull()
+                    }.distinctBy { it.id }
+                } ?: emptyList())
         }
     }
 }

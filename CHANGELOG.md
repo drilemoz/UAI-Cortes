@@ -1,3 +1,16 @@
+# Uai Cortes · versão 0.1.183 — Diarização Gemini revisável
+- Gemini 3.5 Transcribe pode solicitar diarização (`mode.diarization_mode=speaker`) junto com marcações por palavra, opt-in e na mesma solicitação de transcrição.
+- Parser associa `word_info.speaker` a IDs provisórios únicos por execução, separa legendas na mudança de voz e deixa sem identidade quando a API não identifica; não adivinha nomes.
+- Nova revisão permite criar personagens locais por voz, renomear, vincular a personagem existente ou deixar sem atribuição; a confirmação aplica todos os vínculos atomicamente ao rascunho.
+- Checkpoint de transcrição preserva os rótulos provisórios para revisão após interrupção; compatibilidade legado `schemaVersion=4` e versionCode 184.
+- Identificação infalível e reconhecimento facial NÃO implementados; CI Android e validação com resposta real Gemini pendentes.
+
+# Uai Cortes · versão 0.1.182 — Legendas por personagem e revisão compacta
+- Adicionado cadastro local de até 16 personagens com nome/cor, associação manual por legenda, filtros, indicação na lista/timeline e aplicação opcional de cor com confirmação.
+- Prévia da tela Legendas inicia compacta e pode ser ampliada; zoom 1×/2×/4×, faixa de legendas com cor por personagem, distinção entre legenda ativa e selecionada e lista com acompanhamento opcional.
+- Controles secundários recolhidos em Mais ferramentas para reservar altura para a revisão. Projetos antigos e `schemaVersion=4` preservados; versionCode 183.
+- Reconhecimento automático de locutores NÃO incluído; compilação Android e testes de MP4 no aparelho pendentes.
+
 # Uai Cortes · versão 0.1.181 — Legendas com prévia e faixa de vídeo
 
 - Corrigida prévia preta quando não existe legenda selecionada; player Media3 sempre disponível com clipes do projeto.

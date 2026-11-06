@@ -154,7 +154,7 @@ internal class GeminiSubtitleClient(context: Context? = null) {
         throw IOException("O áudio ainda não ficou disponível no Gemini. Tente novamente depois.")
     }
 
-    private fun interaction(uri: String, key: String): JSONObject {
+    private fun interaction(uri: String, key: String, withSpeakerLabels: Boolean): JSONObject {
         val body=JSONObject()
             .put("model","gemini-3.5-transcribe")
             .put("input",JSONArray().put(JSONObject().put("type","audio")
@@ -162,7 +162,8 @@ internal class GeminiSubtitleClient(context: Context? = null) {
             .put("generation_config", JSONObject().put("transcription_config",
                 JSONObject().put("language_codes",JSONArray().put("pt-BR"))
                     .put("mode",JSONObject().put("type","verbatim")
-                        .put("timestamp_granularities",JSONArray().put("word")))))
+                        .put("timestamp_granularities",JSONArray().put("word"))
+                        .apply { if (withSpeakerLabels) put("diarization_mode", "speaker") })))
         val conn = connection("https://generativelanguage.googleapis.com/v1beta/interactions",key,"POST")
         active.set(conn)
         try {
@@ -176,13 +177,15 @@ internal class GeminiSubtitleClient(context: Context? = null) {
     }
 
     suspend fun transcribe(context: Context, project: VideoProject, key: String,
+        withSpeakerLabels: Boolean,
         onProgress: suspend (Int?,String) -> Unit): List<SubtitleCue> =
-        if (failover == null) transcribeOnce(context, project, key, onProgress)
+        if (failover == null) transcribeOnce(context, project, key, withSpeakerLabels, onProgress)
         else failover.run(key, "gemini-3.5-transcribe") { credential ->
-            transcribeOnce(context, project, credential, onProgress)
+            transcribeOnce(context, project, credential, withSpeakerLabels, onProgress)
         }
 
     private suspend fun transcribeOnce(context: Context, project: VideoProject, key: String,
+        withSpeakerLabels: Boolean,
         onProgress: suspend (Int?,String) -> Unit): List<SubtitleCue> = withContext(Dispatchers.IO) {
         val valid=GeminiKeyParser.validate(key)
         val wav=SubtitleAudioCache.getOrPrepare(context,project,onProgress)
@@ -202,10 +205,10 @@ internal class GeminiSubtitleClient(context: Context? = null) {
             currentCoroutineContext().ensureActive()
             onProgress(null,"Transcrevendo fala e identificando horários…")
             interactionStartedNs = System.nanoTime()
-            val response=interaction(uri,valid)
+            val response=interaction(uri,valid,withSpeakerLabels)
             usage?.safeRecord(valid, "gemini-3.5-transcribe", "legendas", response, latencyMs = elapsedMs())
             currentCoroutineContext().ensureActive()
-            val cues=GeminiSubtitleParser.parse(response,project.durationMs)
+            val cues=GeminiSubtitleParser.parse(response,project.durationMs,withSpeakerLabels)
             onProgress(100,"Transcrição concluída")
             cues
         } catch(e: GeminiHttpException) {

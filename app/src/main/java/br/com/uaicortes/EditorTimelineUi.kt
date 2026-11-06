@@ -320,13 +320,15 @@ internal fun SubtitleOverviewTimeline(cues:List<SubtitleCue>,totalMs:Long,
 @Composable
 internal fun SubtitleCompactTimeline(cues: List<SubtitleCue>, clips: List<Clip>,
     totalMs: Long, selectedId: String, cursorMs: Long,
-    onSelect: (String) -> Unit, onSeek: (Long) -> Unit) {
-    val segmentMs = SubtitleCompactLayout.WINDOW_MS
+    onSelect: (String) -> Unit, onSeek: (Long) -> Unit,
+    windowMs: Long = SubtitleCompactLayout.WINDOW_MS,
+    speakers: List<SubtitleSpeaker> = emptyList(), activeId: String? = null) {
+    val segmentMs = windowMs
     val duration = totalMs.coerceAtLeast(1L)
-    val count = SubtitleCompactLayout.windowCount(totalMs)
+    val count = SubtitleCompactLayout.windowCount(totalMs, segmentMs)
     val listState = rememberLazyListState()
     val latestSeek by rememberUpdatedState(onSeek)
-    val currentWindow = SubtitleCompactLayout.windowFor(cursorMs, totalMs)
+    val currentWindow = SubtitleCompactLayout.windowFor(cursorMs, totalMs, segmentMs)
     LaunchedEffect(currentWindow) {
         if (listState.firstVisibleItemIndex != currentWindow) {
             listState.animateScrollToItem(currentWindow)
@@ -337,11 +339,11 @@ internal fun SubtitleCompactTimeline(cues: List<SubtitleCue>, clips: List<Clip>,
         items(count = count, key = { it }) { segment ->
             val begin = segment.toLong() * segmentMs
             val end = minOf(begin + segmentMs, duration)
-            val visibleClips = remember(clips, segment, totalMs) {
-                SubtitleCompactLayout.clipsInWindow(clips.map { it.durationMs }, segment, totalMs)
+            val visibleClips = remember(clips, segment, totalMs, segmentMs) {
+                SubtitleCompactLayout.clipsInWindow(clips.map { it.durationMs }, segment, totalMs, segmentMs)
             }
             val visibleCues = cues.filter {
-                SubtitleCompactLayout.visibleRange(segment, it.startMs, it.endMs, totalMs) != null
+                SubtitleCompactLayout.visibleRange(segment, it.startMs, it.endMs, totalMs, segmentMs) != null
             }
             Column(Modifier.width(260.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -400,20 +402,23 @@ internal fun SubtitleCompactTimeline(cues: List<SubtitleCue>, clips: List<Clip>,
                     visibleCues.forEach { cue ->
                         key(cue.id) {
                             val range = SubtitleCompactLayout.visibleRange(
-                                segment, cue.startMs, cue.endMs, totalMs)!!
+                                segment, cue.startMs, cue.endMs, totalMs, segmentMs)!!
                             val fraction = (range.first - begin).toFloat() / segmentMs
                             val span = (range.second - range.first).toFloat() / segmentMs
-                            val width = (260.dp * span).coerceAtLeast(6.dp).coerceAtMost(260.dp)
+                            val width = (260.dp * span).coerceAtLeast(10.dp).coerceAtMost(260.dp)
                             val x = (260.dp * fraction).coerceIn(0.dp, 260.dp - width)
                             val lane = (cues.indexOf(cue) % 2) * 18
                             Box(Modifier.offset(x = x, y = lane.dp).width(width).height(18.dp)
                                 .background(if (cue.id == selectedId) Blue
-                                    else Color(0xFFC38A38), RoundedCornerShape(3.dp))
+                                    else speakers.firstOrNull { it.id == cue.speakerId }?.let { Color(it.color) }
+                                        ?: Color(0xFFC38A38), RoundedCornerShape(3.dp))
+                                .then(if (cue.id == activeId) Modifier.border(2.dp, Color(0xFFFFD34F),
+                                    RoundedCornerShape(3.dp)) else Modifier)
                                 .clickable { onSelect(cue.id) }
                                 .semantics {
                                     contentDescription = "Selecionar legenda: ${cue.text.take(45)}"
                                 }, contentAlignment = Alignment.Center) {
-                                Text(cue.text, color = Color.White, fontSize = 9.sp,
+                                Text(cue.text, color = Color.White, fontSize = 10.sp,
                                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.padding(horizontal = 2.dp))
                             }

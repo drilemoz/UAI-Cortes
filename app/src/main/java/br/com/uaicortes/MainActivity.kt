@@ -619,10 +619,10 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 "autosubtitle" -> project?.let { current -> AutoSubtitleScreen(current, ::back,
                     onManageModel = { previous = "autosubtitle"; screen = "speech_model" },
                     onManageGemini = { previous = "autosubtitle"; screen = "gemini_settings" },
-                    onApply = { cues, replace ->
-                    val existing = if (replace) emptyList() else current.subtitles
-                    if (write(current.copy(subtitles = existing + cues))) {
-                        selectedSubtitleId = cues.firstOrNull()?.id
+                    onApply = { reviewed ->
+                    // Uma única alteração de rascunho para legendas e personagens revisados.
+                    if (reviewed.id == current.id && write(reviewed)) {
+                        selectedSubtitleId = reviewed.subtitles.firstOrNull()?.id
                         screen = "subtitles"
                     }
                 }) }

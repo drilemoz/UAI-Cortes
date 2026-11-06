@@ -63,4 +63,15 @@ class SubtitleCompactLayoutTest {
         assertEquals(listOf(SubtitleCompactLayout.VisibleClip(0, 10_000L, 15_000L)), windows)
     }
 
+    @Test fun zoomWindowsKeepAbsoluteCueTimeAndClipBoundaries() {
+        assertEquals(4, SubtitleCompactLayout.windowCount(10_000L, 2_500L))
+        assertEquals(3, SubtitleCompactLayout.windowFor(9_900L, 10_000L, 2_500L))
+        assertEquals(2_000L to 2_500L,
+            SubtitleCompactLayout.visibleRange(0, 2_000L, 3_000L, 10_000L, 2_500L))
+        assertEquals(2_500L to 3_000L,
+            SubtitleCompactLayout.visibleRange(1, 2_000L, 3_000L, 10_000L, 2_500L))
+        assertEquals(listOf(SubtitleCompactLayout.VisibleClip(1, 2_500L, 3_000L)),
+            SubtitleCompactLayout.clipsInWindow(listOf(2_500L, 500L), 1, 3_000L, 2_500L))
+    }
+
 }

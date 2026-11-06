@@ -64,10 +64,11 @@ internal fun subtitleFont(family: String): FontFamily = when (SubtitleStyles.nor
  * geométrico da imagem, inclusive em vídeos verticais e quadrados. */
 @Composable
 internal fun InlineVideoPreview(aspect: Float, modifier: Modifier = Modifier,
-    content: @Composable BoxScope.() -> Unit) {
+    maxHeightDp: Float? = null, content: @Composable BoxScope.() -> Unit) {
     val screenHeight = LocalConfiguration.current.screenHeightDp.toFloat()
     BoxWithConstraints(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        val fit = AdaptiveVideoLayout.inline(maxWidth.value, screenHeight, aspect)
+        val fit = if (maxHeightDp == null) AdaptiveVideoLayout.inline(maxWidth.value, screenHeight, aspect)
+            else AdaptiveVideoLayout.fit(maxWidth.value, maxHeightDp, aspect)
         Box(Modifier.width(fit.width.dp).height(fit.height.dp)
             .clip(RoundedCornerShape(12.dp)).background(Color(0xFF101014)),
             content = content)
@@ -208,7 +209,7 @@ internal fun SubtitlePositionPreview(p: VideoProject, cue: SubtitleCue?,
     onCursorChange: (Long) -> Unit,
     onSeekRequest: (Long) -> Unit, onPositionCommit: (Float, Float) -> Unit,
     onPrevious: () -> Unit, onNext: () -> Unit,
-    hasPrevious: Boolean, hasNext: Boolean) {
+    hasPrevious: Boolean, hasNext: Boolean, compactPreview: Boolean = true) {
     val context = LocalContext.current
     val player = remember(p.id) { diagnosticPlayer(context) }
     var playing by remember(p.id) { mutableStateOf(false) }
@@ -264,7 +265,7 @@ internal fun SubtitlePositionPreview(p: VideoProject, cue: SubtitleCue?,
     }
     val total = p.durationMs.coerceAtLeast(1L)
     Column {
-        InlineVideoPreview(aspect) {
+        InlineVideoPreview(aspect, maxHeightDp = if (compactPreview) 225f else null) {
             if (p.clips.isNotEmpty()) {
                 AndroidView(factory = { ctx -> previewPlayer(ctx).apply {
                     this.player = player
@@ -447,14 +448,28 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
             }
         }
     }
-    val selected=p.subtitles.firstOrNull{it.id==selectedId}
-    val selectedIndex=sorted.indexOfFirst { it.id==selectedId }
     var editorOpen by remember(p.id) { mutableStateOf(false) }
+    val selected=p.subtitles.firstOrNull{it.id==selectedId}
+    // A legenda em reprodução é diferente da escolhida para editar.
+    val activeCue=SubtitlePreviewPolicy.firstAt(p.subtitles, cursorMs)
+    var compactPreview by remember(p.id) { mutableStateOf(true) }
+    var zoomFactor by remember(p.id) { mutableIntStateOf(1) }
+    val zoomWindowMs = SubtitleCompactLayout.WINDOW_MS / zoomFactor
+    var speakerFilter by remember(p.id) { mutableStateOf<String?>(null) }
+    var speakerManagerOpen by remember(p.id) { mutableStateOf(false) }
+    var speakerPickerCueId by remember(p.id) { mutableStateOf<String?>(null) }
+    var moreSubtitleTools by remember(p.id) { mutableStateOf(false) }
+    LaunchedEffect(p.subtitleSpeakers.map { it.id }) {
+        if (speakerFilter != null && speakerFilter != "__unassigned__" &&
+            p.subtitleSpeakers.none { it.id == speakerFilter }) speakerFilter = null
+    }
+    val selectedIndex=sorted.indexOfFirst { it.id==selectedId }
     var showAdvanced by remember(p.id) { mutableStateOf(false) }
     var searchOpen by remember(p.id) { mutableStateOf(false) }
     var pendingDeleteId by remember(p.id) { mutableStateOf<String?>(null) }
-    val filtered=remember(sorted,searchQuery) {
-        sorted.filter { SubtitleListNavigation.matches(it.text,searchQuery) }
+    val filtered=remember(sorted,searchQuery,speakerFilter,p.subtitleSpeakers) {
+        SubtitleSpeakerPolicy.filter(sorted, speakerFilter, p.subtitleSpeakers)
+            .filter { SubtitleListNavigation.matches(it.text,searchQuery) }
     }
     val originalNumbers=remember(sorted) { sorted.mapIndexed { index,cue -> cue.id to index+1 }.toMap() }
     val captionsState=rememberLazyListState()
@@ -462,6 +477,14 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
         val index=filtered.indexOfFirst { it.id==selectedId }
         if(index>=0) captionsState.animateScrollToItem(index)
         else if(searchQuery.isNotBlank() && filtered.isNotEmpty()) captionsState.scrollToItem(0)
+    }
+    // A lista acompanha a fala, sem sobrescrever a seleção manual nem abrir o editor.
+    var followPlayback by remember(p.id) { mutableStateOf(true) }
+    LaunchedEffect(activeCue?.id, followPlayback, editorOpen, speakerFilter, searchQuery) {
+        if (followPlayback && !editorOpen && searchQuery.isBlank()) {
+            val index = filtered.indexOfFirst { it.id == activeCue?.id }
+            if (index >= 0) captionsState.animateScrollToItem(index)
+        }
     }
     LaunchedEffect(p.subtitles.size) {
         if(selectedId.isNotEmpty() && p.subtitles.none { it.id==selectedId }) {
@@ -497,7 +520,8 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                 }
             },
             hasPrevious = SubtitleListNavigation.adjacentIndex(selectedIndex, sorted.size, -1) != null,
-            hasNext = SubtitleListNavigation.adjacentIndex(selectedIndex, sorted.size, 1) != null)
+            hasNext = SubtitleListNavigation.adjacentIndex(selectedIndex, sorted.size, 1) != null,
+            compactPreview = compactPreview)
         Row(Modifier.fillMaxWidth().padding(top=2.dp),horizontalArrangement=Arrangement.SpaceBetween,
             verticalAlignment=Alignment.CenterVertically) {
             Row(verticalAlignment=Alignment.CenterVertically) {
@@ -511,13 +535,38 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                 "Legenda: ${formatPipMs(selected.startMs)} – ${formatPipMs(selected.endMs)}",
                 fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines=1,overflow=TextOverflow.Ellipsis)
+            IconButton(onClick={compactPreview = !compactPreview}, modifier=Modifier.size(35.dp)) {
+                Icon(if (compactPreview) Icons.Default.Fullscreen else Icons.Default.FullscreenExit,
+                    if (compactPreview) "Ampliar prévia" else "Compactar prévia")
+            }
         }
-        SubtitleCompactTimeline(sorted, p.clips, p.durationMs, selectedId, cursorMs,
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Em reprodução: " + (activeCue?.let { cue ->
+                val speaker = p.subtitleSpeakers.firstOrNull { it.id == cue.speakerId }
+                (speaker?.name?.let { "$it · " } ?: "") + cue.text.take(30)
+            } ?: "sem fala"), fontSize = 11.sp, maxLines = 1,
+                overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            TextButton(onClick = { followPlayback = !followPlayback }) {
+                Text(if (followPlayback) "Seguindo" else "Acompanhar", fontSize = 11.sp)
+            }
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.End) {
+            Text("Zoom", fontSize = 11.sp)
+            listOf(1, 2, 4).forEach { factor ->
+                FilterChip(selected = zoomFactor == factor, onClick = { zoomFactor = factor },
+                    label = { Text("${factor}×", fontSize = 11.sp) },
+                    modifier = Modifier.padding(start = 5.dp))
+            }
+        }
+        SubtitleCompactTimeline(filtered, p.clips, p.durationMs, selectedId, cursorMs,
             onSelect = { id ->
                 selectedId = id
                 editorOpen = false
                 p.subtitles.firstOrNull { it.id == id }?.let { requestSeek(it.startMs) }
-            }, onSeek = ::requestSeek)
+            }, onSeek = ::requestSeek, windowMs = zoomWindowMs,
+            speakers = p.subtitleSpeakers, activeId = activeCue?.id)
         Row(Modifier.fillMaxWidth().padding(vertical=2.dp),
             verticalAlignment=Alignment.CenterVertically) {
             Text("Legendas (${p.subtitles.size})",fontSize=14.sp,maxLines=1,
@@ -547,6 +596,26 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                     if(searchOpen) "Fechar busca" else "Buscar legendas",modifier=Modifier.size(21.dp))
             }
         }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = { speakerManagerOpen = true }) {
+                Icon(Icons.Default.Groups, null, modifier = Modifier.size(17.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Personagens", fontSize = 12.sp)
+            }
+            Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                FilterChip(selected = speakerFilter == null, onClick = { speakerFilter = null },
+                    label = { Text("Todas", fontSize = 11.sp) })
+                FilterChip(selected = speakerFilter == "__unassigned__",
+                    onClick = { speakerFilter = "__unassigned__" },
+                    label = { Text("Sem personagem", fontSize = 11.sp) })
+                p.subtitleSpeakers.forEach { speaker ->
+                    FilterChip(selected = speakerFilter == speaker.id,
+                        onClick = { speakerFilter = speaker.id },
+                        label = { Text(speaker.name, fontSize = 11.sp) })
+                }
+            }
+        }
         Column(Modifier.fillMaxWidth().padding(vertical=2.dp),
             verticalArrangement=Arrangement.spacedBy(6.dp)) {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
@@ -566,7 +635,14 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                 SubtitleToolButton(Icons.Default.AutoAwesome,"Gemini IA",true,
                     Modifier.weight(1f),onAutoSubtitles)
             }
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            TextButton(onClick = { moreSubtitleTools = !moreSubtitleTools },
+                modifier = Modifier.align(Alignment.End)) {
+                Icon(if (moreSubtitleTools) Icons.Default.ExpandLess else Icons.Default.MoreHoriz,
+                    null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(if (moreSubtitleTools) "Ocultar ferramentas" else "Mais ferramentas", fontSize = 12.sp)
+            }
+            if (moreSubtitleTools) Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                 SubtitleToolButton(Icons.Default.FileOpen,"Importar",true,
                     Modifier.weight(1f)) {
                     importer.launch(arrayOf("text/*","application/x-subrip","*/*"))
@@ -609,17 +685,32 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                         showAdvanced=false
                     },shape=RoundedCornerShape(8.dp),
                         color=if(selectedId==cue.id)MaterialTheme.colorScheme.primaryContainer
+                            else if(activeCue?.id == cue.id) MaterialTheme.colorScheme.tertiaryContainer
                             else MaterialTheme.colorScheme.surfaceVariant) {
                         Row(Modifier.fillMaxWidth().heightIn(min=44.dp).padding(horizontal=10.dp),
                             verticalAlignment=Alignment.CenterVertically) {
                             Text("$number",fontSize=12.sp,
                                 color=MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier=Modifier.width(26.dp))
-                            Text(cue.text,modifier=Modifier.weight(1f),fontSize=13.sp,
-                                maxLines=1,overflow=TextOverflow.Ellipsis)
+                            val speaker = p.subtitleSpeakers.firstOrNull { it.id == cue.speakerId }
+                            Box(Modifier.size(10.dp).background(
+                                Color(speaker?.color ?: 0xFF85858C.toInt()), RoundedCornerShape(3.dp)))
+                            Spacer(Modifier.width(5.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(cue.text, fontSize=13.sp,
+                                    maxLines=1, overflow=TextOverflow.Ellipsis)
+                                if (speaker != null) Text(speaker.name, fontSize=10.sp,
+                                    color=MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines=1, overflow=TextOverflow.Ellipsis)
+                            }
                             Spacer(Modifier.width(6.dp))
                             Text(formatPipMs(cue.startMs),fontSize=11.sp,
                                 color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            IconButton(onClick = { speakerPickerCueId = cue.id },
+                                modifier = Modifier.size(36.dp)) {
+                                Icon(Icons.Default.PersonAdd, "Atribuir personagem à legenda",
+                                    modifier = Modifier.size(18.dp))
+                            }
                             Icon(if(selectedId==cue.id && editorOpen)Icons.Default.ExpandLess
                                 else Icons.Default.Edit,contentDescription="Editar legenda",
                                 modifier=Modifier.padding(start=8.dp).size(18.dp))
@@ -629,6 +720,13 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
             }
         }
     }
+    speakerPickerCueId?.let { cueId ->
+        SubtitleSpeakerPicker(p, cueId, update,
+            dismiss = { speakerPickerCueId = null },
+            manage = { speakerManagerOpen = true })
+    }
+    if(speakerManagerOpen) SubtitleSpeakerManager(p, update,
+        dismiss = { speakerManagerOpen = false })
     if(editorOpen && selected!=null) {
         SubtitleEditDialog(cue=selected,totalMs=p.durationMs,
             number=originalNumbers[selected.id] ?: 1,onDismiss={editorOpen=false},

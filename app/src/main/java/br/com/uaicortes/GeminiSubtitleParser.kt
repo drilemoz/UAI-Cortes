@@ -3,20 +3,23 @@ package br.com.uaicortes
 import org.json.JSONObject
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.util.UUID
 
 /** Parsing verificável das anotações `word_info` da Interactions API.
  * Não inventa horários quando a resposta não contém marcações por palavra.
  */
 internal object GeminiSubtitleParser {
-    private data class Word(val text: String,val startMs: Long,val endMs: Long)
+    private data class Word(val text: String,val startMs: Long,val endMs: Long,val speakerId: String?)
     private fun ms(value: String): Long? {
         if(!value.matches(Regex("[0-9]+(?:\\.[0-9]+)?s"))) return null
         return runCatching { BigDecimal(value.removeSuffix("s"))
             .multiply(BigDecimal(1000)).setScale(0,RoundingMode.HALF_UP).longValueExact() }.getOrNull()
     }
 
-    fun parse(response: JSONObject, totalMs: Long): List<SubtitleCue> {
+    fun parse(response: JSONObject, totalMs: Long, withSpeakerLabels: Boolean = true): List<SubtitleCue> {
         require(totalMs > 0)
+        // Prefixo único por transcrição: Voz 1 de outro projeto não é a mesma pessoa.
+        val sessionId = UUID.randomUUID().toString().replace("-", "")
         val words= mutableListOf<Word>()
         val steps=response.optJSONArray("steps")
         if(steps!=null) for(i in 0 until steps.length()) {
@@ -32,7 +35,11 @@ internal object GeminiSubtitleParser {
                     if(word.isNotBlank() && SubtitleWordEffects.wordRanges(word).size==1 &&
                         start!=null && end!=null && end>start && start < totalMs && start>=0) {
                         val clipped=end.coerceAtMost(totalMs)
-                        if(clipped > start) words+=Word(word.take(70),start,clipped)
+                        if(clipped > start) {
+                            val raw = if (withSpeakerLabels) item.optString("speaker") else ""
+                            val speakerId = GeminiDiarizationPolicy.provisionalId(sessionId, raw)
+                            words += Word(word.take(70),start,clipped,speakerId)
+                        }
                     }
                 }
             }
@@ -53,12 +60,14 @@ internal object GeminiSubtitleParser {
                 result+=SubtitleCue(text=visible,startMs=start,endMs=end,sizeSp=20,
                     backgroundColor=SubtitleStyles.NO_BACKGROUND,outlineWidth=3,
                     shadowOffsetDp=2,animation=SubtitleAnimations.KARAOKE,
-                    wordTimings=buffer.map { SubtitleWordTiming(it.startMs,it.endMs) })
+                    wordTimings=buffer.map { SubtitleWordTiming(it.startMs,it.endMs) },
+                    speakerId=buffer.first().speakerId)
             }
             buffer=mutableListOf()
         }
         for(word in sorted) {
-            if(buffer.isNotEmpty() && (buffer.size>=7 ||
+            // Nunca misturar palavras de dois locutores em uma única legenda.
+            if(buffer.isNotEmpty() && (word.speakerId != buffer.last().speakerId || buffer.size>=7 ||
                 word.startMs-buffer.last().endMs>750 ||
                 word.endMs-buffer.first().startMs>3600 ||
                 buffer.sumOf { it.text.length+1 } + word.text.length >170)) flush()

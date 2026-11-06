@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.183 — Vozes sugeridas e revisão de personagens
+
+A transcrição Gemini 3.5 Transcribe ganhou opção para pedir diarização e horários de palavras na mesma chamada após consentimento. Voz 1 e Voz 2 são apenas rótulos de voz, não nomes; no painel de revisão, o usuário pode criar personagens, vincular a personagens existentes ou deixar falas sem personagem. Texto, cortes, horários, cores e arquivos originais permanecem preservados; a aplicação só ocorre quando confirmada. Modelos Vosk locais não sugerem locutores. O API pode errar, cobrar ou não retornar rótulos. `schemaVersion=4`, cinco APKs Release no CI, testes Android em aparelho pendentes.
+
+# Uai Cortes · versão 0.1.182 — Legendas por personagem
+
+Nesta versão o editor de Legendas ganhou modo de prévia compacta/ampliada, zoom 1×–4×, indicação da legenda em reprodução distinta da selecionada e personagens manuais por projeto. É possível cadastrar, renomear, atribuir, filtrar e remover personagens sem apagar legendas; a aplicação da cor do personagem ao texto exportado exige confirmação. O reconhecimento automático de quem fala não foi implementado. Compatibilidade `schemaVersion=4`, cinco APKs previstos no CI; sem build Android físico local.
+
 # Uai Cortes · versão 0.1.181 — Prévia de vídeo na tela de legendas
 
 - A tela de Legendas reproduz o vídeo mesmo quando o projeto ainda tem zero legendas.
