@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.198 — Galeria integrada para vídeos
+
+## v0.1.198 · versionCode 199
+- Corrigida seleção inicial de vídeos em **Dividir vídeo** e **Extrair áudio**: agora abre a galeria integrada com miniaturas, pastas, busca e atualização, usando o mesmo navegador de Criar projeto/Inserir imagem.
+- O seletor Android Files fica como alternativa no ícone de pasta e quando a permissão da galeria não estiver disponível. Fonte e projetos não são alterados até ação explícita.
+- Voltar fecha o navegador e preserva a ferramenta; mantém importação de vídeo por URI, modos de áudio e processamento de 9,5/10 segundos. Novo teste de contrato de galeria e rotas.
+- VersionName 0.1.198 / versionCode 199; schemaVersion 4, cinco APKs Release, assinatura e demais módulos preservados. Build Android/Lint precisam ser validados no CI.
+
 # Uai Cortes · versão 0.1.197 — Correção CI163 Media3 Lint
 
 ## v0.1.197 · versionCode 198

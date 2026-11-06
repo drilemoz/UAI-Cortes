@@ -1,3 +1,9 @@
+# v0.1.198 — Galeria de vídeos integrada nas ferramentas rápidas
+- `QuickVideoToolsScreen` deve abrir `DeviceMediaBrowser` com `GalleryScope.VIDEOS` e seleção única em Dividir vídeo/Extrair áudio, igual aos caminhos existentes Criar projeto e Inserir imagem. Não abrir `OpenDocument` como primeira opção.
+- O fallback por ícone de pasta permanece via SAF `OpenDocument(video/*)`, mantendo concessão persistível somente para URIs devolvidas por SAF. As URIs MediaStore da galeria não devem usar `takePersistableUriPermission`.
+- Botão Voltar do sistema fecha a galeria antes de voltar à Home; navegação e processamento não podem iniciar geração, excluir origem ou criar projeto involuntariamente.
+- Regras de divisão 9,5/10 s, cancelamento, Media3, dados schemaVersion 4, cinco APKs Release e assinatura preservados. Validar CI/Android real; testes estruturais não substituem build.
+
 # v0.1.197 — CI163: Media3 UnstableApi no extrator rápido
 - O workflow 163 compilou Kotlin/Release, mas `:app:lintDebug` reprovou 5 usos de `AudioExtractionEngine` a partir de `QuickVideoToolsScreen`, começando na linha 31. A classe usava `@UnstableApi`, propagando a exigência aos chamadores.
 - Substituído marcador de API instável por `@androidx.annotation.OptIn(UnstableApi::class)` na implementação `AudioExtractionEngine`, conforme padrão existente em `QuickVideoSplitEngine`. O Media3 continua habilitado; o Lint permanece bloqueante, sem baseline ou supressão.

@@ -32,6 +32,9 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
     DisposableEffect(splitEngine, audioEngine) {
         onDispose { splitEngine.cancel(); audioEngine.cancel() }
     }
+    // A galeria integrada é o seletor principal, assim como na importação de imagens.
+    // O OpenDocument continua disponível como alternativa pelo botão de arquivos.
+    var galleryOpen by rememberSaveable(mode) { mutableStateOf(false) }
     var sourceText by rememberSaveable(mode) { mutableStateOf("") }
     var sourceName by rememberSaveable(mode) { mutableStateOf("") }
     var sourceDurationMs by rememberSaveable(mode) { mutableLongStateOf(0L) }
@@ -50,32 +53,36 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
         runCatching { QuickVideoSplitPolicy.parts(sourceDurationMs, partDuration) }
     }
     val parts = partsResult.getOrNull().orEmpty()
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) {
-            val duration = verifiedMediaDuration(context, uri)
-            val name = runCatching { mediaName(context, uri) }.getOrDefault("Vídeo")
-            val containsAudio = runCatching {
-                val retriever = MediaMetadataRetriever()
-                try {
-                    retriever.setDataSource(context, uri)
-                    retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO) == "yes"
-                } finally { retriever.release() }
-            }.getOrDefault(false)
-            if (duration <= 0L) {
-                error = "Não foi possível ler a duração do vídeo selecionado."
-            } else {
-                runCatching {
-                    context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                sourceText = uri.toString()
-                sourceName = name
-                sourceDurationMs = duration
-                hasAudio = containsAudio
-                finished = false; error = ""; completed = 0
-                if (!containsAudio && mode == QuickToolMode.SPLIT_VIDEO && audioMode == "separate")
-                    audioMode = "keep"
-            }
+    fun useVideo(uri: Uri, persistDocumentAccess: Boolean) {
+        if (processing) return
+        // A galeria entrega URIs MediaStore; apenas OpenDocument concede permissão persistível.
+        if (persistDocumentAccess) runCatching {
+            context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
+        val duration = verifiedMediaDuration(context, uri)
+        val name = runCatching { mediaName(context, uri) }.getOrDefault("Vídeo")
+        val containsAudio = runCatching {
+            val retriever = MediaMetadataRetriever()
+            try {
+                retriever.setDataSource(context, uri)
+                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_HAS_AUDIO) == "yes"
+            } finally { retriever.release() }
+        }.getOrDefault(false)
+        if (duration <= 0L) {
+            error = "Não foi possível ler a duração do vídeo selecionado. Escolha outro arquivo."
+        } else {
+            sourceText = uri.toString()
+            sourceName = name
+            sourceDurationMs = duration
+            hasAudio = containsAudio
+            finished = false; error = ""; completed = 0
+            if (!containsAudio && mode == QuickToolMode.SPLIT_VIDEO && audioMode == "separate")
+                audioMode = "keep"
+        }
+        galleryOpen = false
+    }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) useVideo(uri, persistDocumentAccess = true)
     }
     val audioDocument = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("audio/mp4")) { uri ->
         if (uri != null && sourceText.isNotBlank() && !processing) {
@@ -91,7 +98,9 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
     fun leave() {
         if (processing) confirmCancel = true else onBack()
     }
-    BackHandler(processing) { confirmCancel = true }
+    BackHandler(galleryOpen || processing) {
+        if (galleryOpen) galleryOpen = false else confirmCancel = true
+    }
     if (confirmCancel) AlertDialog(
         onDismissRequest = { confirmCancel = false },
         title = { Text("Cancelar processamento?") },
@@ -103,7 +112,19 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
         }) { Text("Cancelar tarefa") } },
         dismissButton = { TextButton(onClick = { confirmCancel = false }) { Text("Continuar") } }
     )
-    Column(Modifier.fillMaxSize().statusBarsPadding()) {
+    if (galleryOpen) {
+        DeviceMediaBrowser(
+            onBack = { galleryOpen = false },
+            onSelect = { chosen ->
+                chosen.firstOrNull()?.takeUnless { it.isImage }?.let { media ->
+                    useVideo(media.uri, persistDocumentAccess = false)
+                }
+            },
+            openDocuments = { picker.launch(arrayOf("video/*")) },
+            scope = GalleryScope.VIDEOS,
+            allowMultiple = false
+        )
+    } else Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Heading(if (mode == QuickToolMode.SPLIT_VIDEO) "Dividir vídeo" else "Extrair áudio", ::leave)
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
             .padding(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -111,7 +132,7 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
                 "Crie partes MP4 independentes, sem abrir um projeto."
                 else "Salve o áudio de um vídeo em M4A, sem abrir o editor.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedButton(onClick = { picker.launch(arrayOf("video/*")) },
+            OutlinedButton(onClick = { galleryOpen = true },
                 enabled = !processing, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
                 Icon(Icons.Default.VideoFile, null)
                 Spacer(Modifier.width(10.dp))

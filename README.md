@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.198 — Galeria de vídeos integrada
+
+**Ferramentas rápidas:** os atalhos Dividir vídeo e Extrair áudio agora abrem a mesma galeria interna de Criar projeto e Inserir imagem, com miniaturas, busca e pastas. Toque em um vídeo para escolhê-lo. A opção **Procurar nos arquivos** permanece disponível na própria galeria como alternativa Android SAF.
+
+**Preservação:** seleção única para ferramenta rápida, nenhuma alteração nos projetos existentes, mídias originais ou áudios anteriores. Divisão em 9,5/10 s e extração M4A continuam disponíveis. v0.1.198/versionCode 199, cinco APKs Release previstos. A compilação e o funcionamento em aparelho ainda exigem testes.
+
 # Uai Cortes · versão 0.1.197 — Correção CI163 para Media3 Lint
 
 **Correção:** A extração de áudio via Media3 agora utiliza `@androidx.annotation.OptIn(UnstableApi::class)` no próprio `AudioExtractionEngine`. O workflow 163 compilou Release, mas `:app:lintDebug` bloqueou a publicação; a alteração remove o requisito indevido sobre a tela de ferramentas rápidas, sem desabilitar as verificações.

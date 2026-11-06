@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.198 — Galeria integrada
+
+- A seleção de vídeo nas ferramentas **Dividir vídeo** e **Extrair áudio** agora usa a galeria interna do Uai Cortes, com miniaturas, pastas, filtro e busca, em vez de abrir primeiro o gerenciador de arquivos do Android.
+- O botão de pasta na galeria ainda permite escolher pelo gerenciador de arquivos (SAF). O botão Voltar retorna à ferramenta sem iniciar processamento.
+- Criar projeto e Inserir imagem continuam usando o mesmo navegador compartilhado; preservados os vídeos originais, o cache e as ferramentas da versão anterior.
+- v0.1.198, versionCode 199. Build e Android Lint completos aguardam execução no GitHub Actions.
+
 # Uai Cortes · versão 0.1.197 — Correção do Lint da extração rápida
 
 - Corrigido uso de anotação experimental Media3 em `AudioExtractionEngine`: a implementação assume sua própria instabilidade e não obriga a tela rápida a opt-in.
