@@ -17,10 +17,11 @@ assert 'VoiceIaStylePolicy.cueStyle(latestProject' in ui
 assert 'VoiceIaStylePolicy.all(latestProject' in ui
 assert 'pendingSpeakerStyle?.let' in ui
 assert 'pendingPreviewSpeakerId?.let' in ui
-assert 'File.createTempFile(' in ui and 'context.cacheDir' in ui and 'previewFile?.delete()' in ui
-assert 'GeminiNarrationStyling.instruction(chosenStyle), sample' in ui
+assert 'GeminiVoicePreviewCache(context)' in ui and 'cache.find(identity)' in ui
+assert 'cache.save(identity, sample.bytes, voice)' in ui
+assert 'GeminiPreviewIdentity.TEXT' in ui and 'previewFile?.delete()' not in ui
 assert 'previewSpeaker(speakerId)' in ui
-assert 'Pode ter consumido cota Gemini' in ui
+assert 'pode ter consumido cota' in ui
 assert 'Gerar somente pendentes do filtro' in ui
 assert 'requestSpeakerBatch(speaker.id)' in ui
 assert 'VoiceIaBatchReviewPolicy.review' in ui and 'installedOutdated' in ui

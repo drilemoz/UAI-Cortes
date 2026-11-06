@@ -120,7 +120,8 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
 
 @Composable internal fun MainHome(projects: List<VideoProject>, onCreate: () -> Unit, onAnimate: () -> Unit,
     onOpen: (VideoProject)->Unit, onDelete: (VideoProject)->Unit, onDeleteAll: ()->Unit,
-    onSettings: ()->Unit, onTab:(String)->Unit, onFlow: () -> Unit = {}) {
+    onSettings: ()->Unit, onTab:(String)->Unit, onFlow: () -> Unit = {},
+    onVoiceCenter: () -> Unit = {}) {
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically) {
@@ -135,6 +136,10 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal=20.dp)) {
             Spacer(Modifier.height(8.dp))
             HomePrimaryActions(onCreate, onAnimate, onFlow = onFlow)
+            Spacer(Modifier.height(10.dp))
+            ItemCard(Icons.Default.RecordVoiceOver, "Vozes Google",
+                "Central de Vozes · catálogo salvo e prévias reutilizáveis",
+                onClick = onVoiceCenter)
             Spacer(Modifier.height(20.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("Edições recentes",fontSize=19.sp, fontWeight=FontWeight.SemiBold,

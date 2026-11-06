@@ -75,6 +75,10 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
     var status by remember(project.id) { mutableStateOf("") }
     var catalog by remember(project.id) { mutableStateOf<List<GeminiVoice>>(emptyList()) }
     var catalogBusy by remember { mutableStateOf(false) }
+    val voiceLibrary = remember(context) { GeminiVoiceLibrary(context) }
+    LaunchedEffect(project.id) {
+        catalog = withContext(Dispatchers.IO) { voiceLibrary.load().voices }
+    }
     var busy by remember { mutableStateOf(false) }
     var completed by remember { mutableIntStateOf(0) }
     var total by remember { mutableIntStateOf(0) }
@@ -139,7 +143,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
             api.cancel()
             wavePlayer.removeListener(listener)
             wavePlayer.release()
-            previewFile?.delete() // Teste temporário, nunca entra no rascunho nem na timeline.
+            // Prévia durável pertence à Central; não excluir ao sair.
         }
     }
     LaunchedEffect(store, queueStore) {
@@ -473,35 +477,28 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
         scope.launch {
             busy = true
             try {
-                val key = withContext(Dispatchers.IO) { credentials.read() }
-                    ?: error("Configure sua chave Gemini em Serviços e APIs.")
-                val previous = previewFile
                 wavePlayer.stop(); playingFile = null
-                previous?.delete(); previewFile = null
-                withContext(Dispatchers.IO) {
-                    pacing.beforeRequest(model) { waitMs ->
-                        withContext(Dispatchers.Main) {
-                            status = "Aguardando ${((waitMs + 999) / 1000)} s para o teste Gemini."
-                        }
-                    }
-                }
-                val sample = "Olá, esta é uma demonstração da voz e da interpretação escolhidas."
-                val audio = api.synthesize(key, model, voice,
-                    GeminiNarrationStyling.instruction(chosenStyle), sample)
-                val file = withContext(Dispatchers.IO) {
-                    File.createTempFile("uai_voz_teste_", ".wav", context.cacheDir).also { temp ->
-                        try { temp.writeBytes(audio.bytes) } catch (e: Exception) { temp.delete(); throw e }
-                    }
+                val direction = GeminiNarrationStyling.instruction(chosenStyle)
+                val identity = GeminiPreviewIdentity.id("", model, voice, direction)
+                val cache = GeminiVoicePreviewCache(context)
+                val previous = withContext(Dispatchers.IO) { cache.find(identity) }
+                val file = if (previous != null) previous else {
+                    val key = withContext(Dispatchers.IO) { credentials.read() }
+                        ?: error("Configure a chave Gemini em Serviços e APIs.")
+                    withContext(Dispatchers.IO) { pacing.beforeRequest(model) { } }
+                    val sample = api.synthesize(key, model, voice, direction, GeminiPreviewIdentity.TEXT)
+                    withContext(Dispatchers.IO) { cache.save(identity, sample.bytes, voice) }
                 }
                 previewFile = file
                 wavePlayer.setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
                 wavePlayer.prepare(); wavePlayer.play()
                 playingFile = file.absolutePath
-                status = "Teste de ${speaker.name} reproduzindo. Arquivo temporário; nenhuma faixa foi inserida."
+                status = if (previous == null) "Teste salvo na Central de Vozes e reproduzido."
+                    else "Teste de ${speaker.name} reproduzido do armazenamento local, sem API."
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) {
-                status = "Teste de voz não concluído: ${e.message?.take(130) ?: "falha local"}. " +
-                    "Pode ter consumido cota Gemini."
+                status = "Teste de voz não concluído: ${GeminiVoiceCatalog.safeMessage(e)}. " +
+                    "Se houve chamada Gemini, ela pode ter consumido cota."
             } finally { busy = false }
         }
     }
@@ -584,8 +581,8 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                 selectedCueId = id
             }
         }
-        // Uma única barra compacta: mantém as seis ações visíveis sem rolagem horizontal.
-        // Surface evita as larguras mínimas dos botões Material3 em telas estreitas.
+        // A Central guarda catálogo, modelo, voz e prévias; a barra de Vozes IA
+        // concentra somente seleção de tom da fala, geração e inserção.
         val batchPlan = VoiceIaBatchPlanner.plan(cues.map { cue ->
             VoiceIaBatchItem(cue.id, readyFor(cue)?.let { File(it.filePath).isFile } == true)
         })
@@ -593,63 +590,23 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
         val preparedCount = batchPlan.reusable
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            VoiceIaToolbarAction(label = "", accessibilityLabel = if (catalogBusy)
-                    "Consultando catálogo Gemini" else "Buscar vozes Gemini",
-                icon = Icons.Default.AutoAwesome, modifier = Modifier.weight(.64f),
-                enabled = !busy && !catalogBusy, onClick = {
-                    scope.launch {
-                        catalogBusy = true
-                        try {
-                            val key = withContext(Dispatchers.IO) { credentials.read() }
-                                ?: error("Configure uma chave Gemini primeiro.")
-                            val result = api.voicesWithDiagnosis(key)
-                            catalog = result.voices
-                            val names = catalog.associate { it.id to VoiceIaShortLabels.voice(it, it.id) }
-                            if (names.isNotEmpty()) {
-                                val updatedNames = cachedVoiceNames + names
-                                withContext(Dispatchers.IO) { favoritesStore.saveNames(updatedNames) }
-                                cachedVoiceNames = updatedNames
-                            }
-                            status = if (catalog.isEmpty()) "Catálogo sem vozes disponíveis." else
-                                "Catálogo Gemini: ${catalog.size} voz(es). Escolha uma para gerar."
-                        } catch (e: CancellationException) { throw e }
-                        catch (e: Exception) { status = "Consulta de vozes: ${GeminiVoiceCatalog.safeMessage(e)}" }
-                        finally { catalogBusy = false }
-                    }
+            horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            VoiceIaToolbarAction(label = "Central", accessibilityLabel = "Central de Vozes Google",
+                icon = Icons.Default.RecordVoiceOver, modifier = Modifier.weight(1.12f),
+                enabled = !busy, onClick = { voicePickerForAll = true })
+            VoiceIaToolbarAction(label = "Tom", accessibilityLabel = "Interpretação desta fala",
+                icon = Icons.Default.Mood, modifier = Modifier.weight(.8f), enabled = !busy,
+                onClick = {
+                    if (selectedCue != null) stylePickerCueId = selectedCue.id
+                    else stylePickerForAll = true
                 })
-            Box(Modifier.weight(.75f)) {
-                VoiceIaToolbarAction(label = if (model == GeminiModels.LITE) "Lite" else "Flash",
-                    accessibilityLabel = "Modelo de geração: ${if (model == GeminiModels.LITE) "Lite" else "Flash"}",
-                    arrow = true, modifier = Modifier.fillMaxWidth(), enabled = !busy,
-                    onClick = { modelOpen = true })
-                DropdownMenu(expanded = modelOpen, onDismissRequest = { modelOpen = false }) {
-                    GeminiModels.supported.forEach { candidate ->
-                        DropdownMenuItem(text = { Text(candidate) }, onClick = {
-                            model = candidate; modelOpen = false
-                        })
-                    }
-                }
-            }
-            val allSameVoice = defaultVoice != null && cues.isNotEmpty() &&
-                cues.all { voiceFor(it) == defaultVoice }
-            val globalVoiceLabel = displayVoiceName(defaultVoice)
-            VoiceIaToolbarAction(label = if (allSameVoice) globalVoiceLabel else "Voz", accessibilityLabel =
-                    if (allSameVoice) "Voz geral selecionada. Alterar voz para todas as falas"
-                    else "Escolher voz geral para todas as falas",
-                selected = allSameVoice, modifier = Modifier.weight(1.50f),
-                enabled = !busy && !catalogBusy, onClick = { voicePickerForAll = true })
-            VoiceIaToolbarAction(label = VoiceIaShortLabels.style(defaultStyle),
-                accessibilityLabel = "Interpretação geral: $defaultStyle",
-                arrow = true, modifier = Modifier.weight(.85f), enabled = !busy,
-                onClick = { stylePickerForAll = true })
             VoiceIaToolbarAction(label = "Gerar $pending", accessibilityLabel =
                     "Gerar vozes pendentes: $pending",
-                accent = true, modifier = Modifier.weight(1.02f),
+                accent = true, modifier = Modifier.weight(1.16f),
                 enabled = !busy && loaded && pending > 0, onClick = {
                     val missingVoice = cues.firstOrNull { voiceFor(it).isNullOrBlank() }
                     if (missingVoice != null) {
-                        status = "Escolha Voz geral ou selecione uma voz em cada fala antes de gerar."
+                        status = "Configure a voz dos personagens ou uma voz geral na Central antes de gerar."
                         voicePickerForAll = true
                     } else {
                         forceCueId = null
@@ -660,7 +617,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                 })
             VoiceIaToolbarAction(label = "Inserir $preparedCount", accessibilityLabel =
                     "Inserir todas as vozes prontas: $preparedCount",
-                modifier = Modifier.weight(.95f), enabled = !busy && loaded && preparedCount > 0,
+                modifier = Modifier.weight(1.05f), enabled = !busy && loaded && preparedCount > 0,
                 onClick = { pendingBatchInsert = true })
         }
         savedQueue?.takeIf { it.unfinished }?.let { queue ->
@@ -752,7 +709,23 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                                     Icon(Icons.Default.Tune, "Interpretação de ${speaker.name}: $chosenStyle",
                                         Modifier.size(19.dp))
                                 }
-                                IconButton(onClick = { pendingPreviewSpeakerId = speaker.id },
+                                IconButton(onClick = {
+                                    scope.launch {
+                                        val voiceId = speakerVoiceOverrides[speaker.id]
+                                            ?: project.voiceIaVoices.defaultVoiceId ?: defaultVoice
+                                        val style = speakerStyleOverrides[speaker.id] ?: defaultStyle
+                                        if (voiceId == null) {
+                                            status = "Escolha uma voz para ${speaker.name}."
+                                        } else {
+                                            val cache = GeminiVoicePreviewCache(context)
+                                            val id = GeminiPreviewIdentity.id("", model, voiceId,
+                                                GeminiNarrationStyling.instruction(style))
+                                            if (withContext(Dispatchers.IO) { cache.find(id) } != null)
+                                                previewSpeaker(speaker.id)
+                                            else pendingPreviewSpeakerId = speaker.id
+                                        }
+                                    }
+                                },
                                     enabled = !busy && count > 0 && !(
                                         speakerVoiceOverrides[speaker.id]
                                             ?: project.voiceIaVoices.defaultVoiceId ?: defaultVoice).isNullOrBlank(),
@@ -1039,231 +1012,36 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
     if (voicePickerCueId != null || voicePickerForAll || voicePickerSpeakerId != null) {
         val targetId = voicePickerCueId
         val speakerId = voicePickerSpeakerId
-        val speaker = project.subtitleSpeakers.firstOrNull { it.id == speakerId }
         val forAll = voicePickerForAll
-        val comparator = Collator.getInstance(Locale.forLanguageTag("pt-BR"))
-        // Ordem natural: Atendente 2 vem antes de Atendente 10, sem alterar IDs da API.
-        val suffix = Regex("""^(.*?)(\d+)$""")
-        val sortedVoices = catalog.sortedWith { a, b ->
-            val first = GeminiVoicePresentation.label(a)
-            val second = GeminiVoicePresentation.label(b)
-            val firstParts = suffix.matchEntire(first)
-            val secondParts = suffix.matchEntire(second)
-            if (firstParts != null && secondParts != null &&
-                comparator.compare(firstParts.groupValues[1], secondParts.groupValues[1]) == 0) {
-                (firstParts.groupValues[2].toIntOrNull() ?: 0).compareTo(
-                    secondParts.groupValues[2].toIntOrNull() ?: 0)
-            } else comparator.compare(first, second)
-        }
-        var voiceQuery by remember(targetId, forAll) { mutableStateOf("") }
-        var genderFilter by remember(targetId, forAll) { mutableStateOf("Todas") }
-        var pitchFilter by remember(targetId, forAll) { mutableStateOf("Todos") }
-        var favoritesOnly by remember(targetId, forAll) { mutableStateOf(false) }
-        val filteredVoices = GeminiVoiceSearch.byPitch(
-            GeminiVoiceSearch.byGender(GeminiVoiceSearch.filter(sortedVoices, voiceQuery), genderFilter),
-            pitchFilter).filter { !favoritesOnly || it.id in favoriteVoiceIds }
-            .sortedWith(compareByDescending<GeminiVoice> { it.id in favoriteVoiceIds })
-        val currentId = if (forAll) defaultVoice else if (speakerId != null)
-            speakerVoiceOverrides[speakerId] else
-            cues.firstOrNull { it.id == targetId }?.let { voiceFor(it) }
-        val closePicker = {
+        fun closePicker() {
             voicePickerCueId = null; voicePickerForAll = false; voicePickerSpeakerId = null
         }
-        Dialog(onDismissRequest = closePicker,
+        val currentId = if (forAll) defaultVoice else if (speakerId != null)
+            speakerVoiceOverrides[speakerId] else cues.firstOrNull { it.id == targetId }?.let { voiceFor(it) }
+        Dialog(onDismissRequest = { closePicker() },
             properties = DialogProperties(usePlatformDefaultWidth = false)) {
-            // A largura usa quase toda a tela: nenhuma pílula pode sair pela lateral.
-            Surface(modifier = Modifier.fillMaxWidth(0.96f).widthIn(max = 600.dp)
-                    .fillMaxHeight(0.83f),
-                shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 6.dp) {
-                Column(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.RecordVoiceOver, contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text("Escolher voz Gemini", fontWeight = FontWeight.SemiBold,
-                                style = MaterialTheme.typography.titleMedium)
-                            Text(if (forAll) "Aplicar a todas as legendas" else if (speaker != null)
-                                "Personagem: ${speaker.name} · ${cues.count { it.speakerId == speaker.id }} falas"
-                                else "Voz desta legenda",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 12.sp)
-                        }
-                        IconButton(onClick = closePicker, modifier = Modifier.size(40.dp)) {
-                            Icon(Icons.Default.Close, contentDescription = "Fechar seleção de voz")
-                        }
-                    }
-                    OutlinedTextField(value = voiceQuery, onValueChange = { voiceQuery = it },
-                        placeholder = { Text("Buscar voz ou característica", fontSize = 13.sp) },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null,
-                            modifier = Modifier.size(19.dp)) },
-                        trailingIcon = {
-                            if (voiceQuery.isNotBlank()) IconButton(onClick = { voiceQuery = "" }) {
-                                Icon(Icons.Default.Close, "Limpar pesquisa", Modifier.size(18.dp))
-                            }
-                        },
-                        singleLine = true, modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp),
-                        textStyle = MaterialTheme.typography.bodyMedium)
-                    Text("GÊNERO", style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        listOf("Todas", "Femininas", "Masculinas").forEach { option ->
-                            VoiceIaPickerFilter(option, genderFilter == option,
-                                Modifier.weight(1f), onClick = { genderFilter = option })
-                        }
-                    }
-                    Text("ALTURA DA VOZ", style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        listOf("Todos" to "Todas", "Graves" to "Grave",
-                            "Médias" to "Média", "Agudas" to "Aguda",
-                            "Não informado" to "N/D").forEach { (value, label) ->
-                            VoiceIaPickerFilter(label, pitchFilter == value,
-                                Modifier.weight(1f), accessibilityLabel = value,
-                                onClick = { pitchFilter = value })
-                        }
-                    }
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text("${filteredVoices.size} de ${sortedVoices.size} vozes",
-                            style = MaterialTheme.typography.labelMedium,
-                            modifier = Modifier.weight(1f),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        TextButton(onClick = { favoritesOnly = !favoritesOnly },
-                            contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp)) {
-                            Icon(Icons.Default.Star, contentDescription = null, Modifier.size(15.dp),
-                                tint = if (favoritesOnly) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("Favoritas (${favoriteVoiceIds.size})", fontSize = 11.sp)
-                        }
-                        if (voiceQuery.isNotBlank() || genderFilter != "Todas" || pitchFilter != "Todos" || favoritesOnly) {
-                            TextButton(onClick = {
-                                voiceQuery = ""; genderFilter = "Todas"; pitchFilter = "Todos"; favoritesOnly = false
-                            }, contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)) {
-                                Text("Limpar filtros", fontSize = 12.sp)
-                            }
-                        }
-                    }
-                    HorizontalDivider()
-                    if ((speakerId != null && speakerVoiceOverrides.containsKey(speakerId)) ||
-                        (targetId != null && voiceOverrides.containsKey(targetId))) {
-                        TextButton(onClick = {
-                            val changed = if (speakerId != null)
-                                VoiceIaSpeakerVoicePolicy.speakerVoice(latestProject, speakerId, null)
-                            else VoiceIaSpeakerVoicePolicy.cueVoice(latestProject, targetId!!, null)
+            Surface(Modifier.fillMaxWidth(.97f).fillMaxHeight(.91f),
+                shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface) {
+                GeminiVoiceCenterScreen(onBack = { closePicker() }, selectedVoiceId = currentId,
+                    initialModel = model, onModelChange = { model = it },
+                    styleInstruction = GeminiNarrationStyling.instruction(
+                        if (speakerId != null) speakerStyleOverrides[speakerId] ?: defaultStyle
+                        else if (targetId != null) cues.firstOrNull { it.id == targetId }
+                            ?.let { styleFor(it) } ?: defaultStyle else defaultStyle),
+                    onChoose = { voice ->
+                        catalog = (catalog + voice).distinctBy { it.id }
+                        if (forAll) pendingVoiceForAll = voice.id
+                        else if (speakerId != null) pendingSpeakerVoice = speakerId to voice.id
+                        else if (targetId != null) {
+                            val changed = VoiceIaSpeakerVoicePolicy.cueVoice(latestProject,
+                                targetId, voice.id)
                             if (changed != null && onSave(changed)) {
-                                if (speakerId != null) speakerVoiceOverrides.remove(speakerId)
-                                else if (targetId != null) voiceOverrides.remove(targetId)
-                                status = "Preferência removida do rascunho. Salve o projeto ao sair."
-                            } else status = "Não foi possível salvar a remoção da preferência."
-                            closePicker()
-                        }) {
-                            Icon(Icons.Default.Restore, null, Modifier.size(17.dp))
-                            Spacer(Modifier.width(5.dp))
-                            Text(if (speakerId != null) "Remover voz do personagem"
-                                else "Herdar voz do personagem")
+                                voiceOverrides[targetId] = voice.id
+                                status = "Voz desta fala aplicada ao rascunho. Salve o projeto ao sair."
+                            } else status = "Não foi possível salvar a voz desta fala."
                         }
-                    }
-                    if (sortedVoices.isEmpty()) {
-                        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            Text("Carregue o catálogo no botão ✨ da tela Vozes IA.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    } else if (filteredVoices.isEmpty()) {
-                        Column(Modifier.weight(1f).fillMaxWidth(),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.SearchOff, contentDescription = null,
-                                modifier = Modifier.size(32.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(Modifier.height(8.dp))
-                            Text("Nenhuma voz encontrada", fontWeight = FontWeight.Medium)
-                            Text("Experimente remover um filtro.", fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    } else {
-                        LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth(),
-                            contentPadding = PaddingValues(vertical = 3.dp),
-                            verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            itemsIndexed(filteredVoices, key = { _, voice -> voice.id }) { _, voice ->
-                                val selected = currentId == voice.id
-                                Surface(onClick = {
-                                    if (forAll) pendingVoiceForAll = voice.id
-                                    else if (speakerId != null) pendingSpeakerVoice = speakerId to voice.id
-                                    else if (targetId != null) {
-                                        val changed = VoiceIaSpeakerVoicePolicy.cueVoice(latestProject,
-                                            targetId, voice.id)
-                                        if (changed != null && onSave(changed)) {
-                                            voiceOverrides[targetId] = voice.id
-                                            status = "Voz desta fala aplicada ao rascunho. Salve o projeto ao sair do editor."
-                                        } else status = "Não foi possível salvar a voz desta fala."
-                                    }
-                                    closePicker()
-                                }, modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = if (selected) MaterialTheme.colorScheme.primaryContainer
-                                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)) {
-                                    Row(Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = 8.dp),
-                                        verticalAlignment = Alignment.CenterVertically) {
-                                        Box(Modifier.size(34.dp).clip(RoundedCornerShape(9.dp))
-                                                .background(MaterialTheme.colorScheme.surface),
-                                            contentAlignment = Alignment.Center) {
-                                            Icon(Icons.Default.GraphicEq, contentDescription = null,
-                                                modifier = Modifier.size(20.dp),
-                                                tint = MaterialTheme.colorScheme.primary)
-                                        }
-                                        Spacer(Modifier.width(9.dp))
-                                        Column(Modifier.weight(1f)) {
-                                            Text(VoiceIaShortLabels.voice(voice, voice.id),
-                                                fontSize = 14.sp, fontWeight = FontWeight.Medium,
-                                                maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                            Text(GeminiVoicePresentation.shortDetails(voice),
-                                                fontSize = 11.sp, lineHeight = 14.sp, maxLines = 2,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                overflow = TextOverflow.Ellipsis)
-                                        }
-                                        IconButton(onClick = {
-                                            val next = GeminiVoiceFavorites.toggle(favoriteVoiceIds, voice.id)
-                                            if (next == favoriteVoiceIds) {
-                                                status = "Máximo de ${GeminiVoiceFavorites.MAX_FAVORITES} vozes favoritas."
-                                            } else if (favoritesStore.save(next)) {
-                                                favoriteVoiceIds = next
-                                            } else status = "Não foi possível salvar favoritos neste aparelho."
-                                        }, modifier = Modifier.size(40.dp)) {
-                                            Icon(if (voice.id in favoriteVoiceIds) Icons.Default.Star
-                                                else Icons.Default.StarBorder,
-                                                contentDescription = if (voice.id in favoriteVoiceIds)
-                                                    "Remover ${voice.name} das favoritas"
-                                                    else "Adicionar ${voice.name} às favoritas",
-                                                tint = if (voice.id in favoriteVoiceIds)
-                                                    MaterialTheme.colorScheme.primary
-                                                    else MaterialTheme.colorScheme.onSurfaceVariant)
-                                        }
-                                        if (selected) {
-                                            Spacer(Modifier.width(4.dp))
-                                            Icon(Icons.Default.CheckCircle, "Voz selecionada",
-                                                modifier = Modifier.size(19.dp),
-                                                tint = MaterialTheme.colorScheme.primary)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    HorizontalDivider()
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(if (forAll) "A alteração geral pede confirmação."
-                             else "Toque em uma voz para escolher.",
-                            fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f))
-                        TextButton(onClick = closePicker) { Text("Fechar") }
-                    }
-                }
+                        closePicker()
+                    })
             }
         }
     }
@@ -1362,7 +1140,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
             text = { Text("O Gemini produzirá uma amostra curta com a voz " +
                 "${displayVoiceName(chosenVoice)} e interpretação $chosenStyle. " +
                 "Isso faz UMA chamada de API e pode consumir cota ou gerar cobrança. " +
-                "O WAV será temporário e não será inserido no projeto.") },
+                "A amostra ficará armazenada na Central de Vozes e não será inserida no projeto.") },
             confirmButton = { TextButton(onClick = {
                 pendingPreviewSpeakerId = null
                 previewSpeaker(speakerId)

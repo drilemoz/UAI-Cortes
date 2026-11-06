@@ -33,14 +33,14 @@ class GeminiVoicePreviewCacheAndroidTest {
             assertNull(cache.find(id))
         } finally { file.delete() }
     }
-    @Test fun expiredSampleRemoved() {
+    @Test fun oldSampleRemainsAvailableWithoutExpiration() {
         val ctx = ApplicationProvider.getApplicationContext<Context>()
         val cache = GeminiVoicePreviewCache(ctx)
         val id = GeminiPreviewIdentity.id("test_key_456", "lite", "voice_2", "neutral")
         val file = cache.save(id, wave())
         try {
             assertTrue(file.setLastModified(System.currentTimeMillis() - 31L * 24 * 60 * 60 * 1000))
-            assertNull(cache.find(id))
+            assertNotNull(cache.find(id))
         } finally { file.delete() }
     }
 }

@@ -39,7 +39,8 @@ assert 'Adicionar à mixagem' in voice
 assert 'if (!api.checkModel(' not in voice
 assert 'previewCache.find(' in voice
 # A escolha da voz é separada de síntese; o retorno é para a janela Gemini.
-confirm_voice = voice.split('Text("Confirmar voz")')[0].rsplit('Button(onClick = {', 1)[-1]
+confirm_voice = voice[voice.index('    // Catálogo e prévias centralizados:'):voice.index('    if (reuseDialogOpen && expanded) {')]
+assert 'GeminiVoiceCenterScreen(' in confirm_voice
 assert 'selectedVoice = chosen' in confirm_voice
 assert 'voicePicker = false' in confirm_voice
 for bad in ['onReturnToVideo()', 'api.synthesize', 'onSaveToAudio(']:

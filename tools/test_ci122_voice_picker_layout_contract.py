@@ -1,24 +1,23 @@
 #!/usr/bin/env python3
-"""Seletor v0.1.145; contratos estáticos, não substitui testes de layout Android."""
+"""Layout da Central compartilhada; testes visuais Android seguem necessários."""
 from pathlib import Path
-ui=(Path(__file__).resolve().parents[1]/'app/src/main/java/br/com/uaicortes/VoiceIaScreen.kt').read_text()
+src=Path(__file__).resolve().parents[1]/'app/src/main/java/br/com/uaicortes'
+ui=(src/'VoiceIaScreen.kt').read_text()
+center=(src/'GeminiVoiceCenterScreen.kt').read_text()
 start=ui.index('    if (voicePickerCueId != null || voicePickerForAll || voicePickerSpeakerId != null) {')
 end=ui.index('    if (stylePickerCueId != null || stylePickerForAll || stylePickerSpeakerId != null) {',start)
 popup=ui[start:end]
 assert 'DialogProperties(usePlatformDefaultWidth = false)' in popup
-assert 'fillMaxWidth(0.96f).widthIn(max = 600.dp)' in popup
-assert 'fillMaxHeight(0.83f)' in popup
-assert 'horizontalScroll(' not in popup
-assert 'VoiceIaPickerFilter(' in popup
-assert 'Modifier.weight(1f)' in popup
-assert '"Não informado" to "N/D"' in popup
-assert '"Femininas", "Masculinas"' in popup
-assert '"Graves" to "Grave"' in popup and '"Agudas" to "Aguda"' in popup
-assert 'LazyColumn(modifier = Modifier.weight(1f)' in popup
-assert 'Limpar filtros' in popup and 'Limpar pesquisa' in popup
-assert 'currentId == voice.id' in popup and 'Voz selecionada' in popup
+assert 'fillMaxWidth(.97f).fillMaxHeight(.91f)' in popup
+assert 'GeminiVoiceCenterScreen(' in popup
 assert 'pendingVoiceForAll = voice.id' in popup
+assert 'pendingSpeakerVoice = speakerId to voice.id' in popup
 assert 'voiceOverrides[targetId] = voice.id' in popup
-assert 'comparator.compare(firstParts.groupValues[1], secondParts.groupValues[1])' in popup
-assert 'api.synthesize(' in ui # o seletor não muda a geração
-print('OK: janela ampla, filtros sem overflow, vozes ordenadas e seleção preservada')
+assert 'onChoose = { voice ->' in popup
+assert 'Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())' in center
+assert 'LazyColumn(Modifier.weight(1f)' in center
+assert 'FilterChip(selected = gender == option' in center
+assert 'FilterChip(selected = pitch == option' in center
+assert 'onlyFavorites = !onlyFavorites' in center
+assert 'selectedVoiceId' in center
+print('OK: Central ampla com filtros roláveis, lista virtualizada e seleção preservada')

@@ -15,11 +15,12 @@ assert 'sourceFilePath = source.absolutePath' in ui and 'sourceDurationMs' in dr
 assert 'VoiceIaSync.guidance(direction, available, quickId == cue.id)' in ui
 assert 'api.synthesize(key, usedModel, voiceId, requestStyle, cue.text)' in ui
 assert 'promptGenerate = listOf(cue.id)' in ui and 'GeminiUsageHint("narração"' in ui
-assert 'GeminiVoiceSearch.byGender(' in ui and 'GeminiVoiceSearch.byPitch(' in ui
-assert 'GeminiVoiceSearch.filter(' in ui
-assert 'val filteredVoices = ' in ui
+center = (base/'GeminiVoiceCenterScreen.kt').read_text()
+assert 'GeminiVoiceSearch.byGender(' in center and 'GeminiVoiceSearch.byPitch(' in center
+assert 'GeminiVoiceSearch.filter(' in center
+assert 'val displayed = ' in center
 for label in ('Femininas', 'Masculinas', 'Graves', 'Médias', 'Agudas'):
-    assert label in ui and label in search, label
+    assert label in center and label in search, label
 assert 'voice?.let(GeminiVoicePresentation::label)' in ui
 assert 'schemaVersion", 4' in (base/'ProjectStore.kt').read_text()
 assert 'MAX_LOCAL_SPEED = 1.25' in policy

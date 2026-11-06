@@ -1,3 +1,13 @@
+# Uai Cortes · versão 0.1.190 — Central de Vozes
+
+Use **Vozes Google** na Home para acessar o catálogo sem abrir um projeto. O mesmo componente central aparece nos seletores de **Vozes IA** e **Narração**. A lista é persistida dentro do armazenamento interno do app; por padrão, não há consulta à API ao abrir. Toque em Atualizar para renovar a lista, ou habilite atualização automática. Falhas mantêm o último catálogo válido.
+
+**Prévias:** "Olá! Este é o Uai Cortes. Aqui você corta vídeos, edita cenas e cria novas histórias. Fácil, não é? Agora... vamos ouvir esta voz!". Os WAVs de teste são gerados somente após confirmação de cota e ficam salvos por voz, modelo e estilo; ouvir novamente usa o arquivo local. Capacidade selecionável 50/100/250 MB, 100 MB padrão, limpeza manual sem alterar narrações inseridas. A biblioteca armazenada pode ficar antiga; um erro de geração pode exigir atualização manual. A desinstalação ou limpeza de dados apaga a biblioteca.
+
+Em Vozes IA, escolha a voz principal nos cartões dos personagens e personalize o **Tom** de cada legenda. A barra compacta expõe Central/Tom/Gerar/Inserir. Ainda é necessário salvar o projeto pelo editor para guardar as preferências das falas. Arquivos e backups existentes, formato do projeto 4, compilação CI dos cinco APKs e assinatura foram preservados.
+
+**Validação:** análise sintática, contratos estáticos, parser de identidade e integridade ZIP. Android completo e Gemini real pendentes.
+
 # Uai Cortes · versão 0.1.189 — Voz e interpretação por personagem
 
 Em **Vozes IA**, agora é possível configurar interpretação por personagem (por exemplo Assustada ou Sarcástica), além da voz Gemini. Cada fala herda os valores do seu personagem, exceto se houver configuração individual. O rascunho do projeto guarda as preferências; finalize com **Salvar projeto** no editor.

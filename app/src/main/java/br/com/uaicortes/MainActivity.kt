@@ -111,7 +111,6 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     val project = projectSession.project
     val narrationDraft = remember(project?.id) { GeminiNarrationDraft() }
     var resumeVideoPreview by remember { mutableStateOf(false) }
-    // Nunca criar backups históricos a partir de alterações ainda não confirmadas.
     ProjectBackupLifecycle(backupStore, if (projectSession.isEditingDraft) "" else activeProjectId, screen)
     var interruptedDraft by remember { mutableStateOf(draftRecoveryStore.load(projects)) }
     var invalidRecovery by remember { mutableStateOf(interruptedDraft == null && draftRecoveryStore.hasStoredDraft()) }
@@ -430,7 +429,8 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     onDeleteAll = { pendingDeleteAll = true },
                     onSettings = { previous = "home"; screen = "settings" },
                     onTab = { if (it == "settings") previous = "home"; screen = it },
-                    onFlow = { navTo("flow_workspace") })
+                    onFlow = { navTo("flow_workspace") },
+                    onVoiceCenter = { navTo("voice_center") })
                 "flow_workspace" -> FlowWorkspaceScreen(::back)
                 "animate" -> AnimateImagesScreen(animationImages.toList(),
                     onChoose = { openGallery("animate","animate_images") },
@@ -477,6 +477,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                         .getOrElse { DiagnosticRecorder.exception("project_restore_failure", it); false } }, back = ::back)
                 "speech_model" -> SpeechModelSettingsScreen(::back)
                 "gemini_settings" -> GeminiSettingsScreen(::back)
+                "voice_center" -> GeminiVoiceCenterScreen(onBack = ::back)
                 "appearance" -> AppearanceScreen(theme, { theme = it; store.setTheme(it) }, ::back)
                 "about" -> AboutScreen(::back,
                     onUpdates = { previous = "about"; screen = "updates" })
@@ -619,7 +620,6 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     onManageModel = { previous = "autosubtitle"; screen = "speech_model" },
                     onManageGemini = { previous = "autosubtitle"; screen = "gemini_settings" },
                     onApply = { reviewed ->
-                    // Uma única alteração de rascunho para legendas e personagens revisados.
                     if (reviewed.id == current.id && write(reviewed)) {
                         selectedSubtitleId = reviewed.subtitles.firstOrNull()?.id
                         screen = "subtitles"

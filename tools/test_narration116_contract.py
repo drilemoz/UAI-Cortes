@@ -10,7 +10,7 @@ assert 'timedLines.forEach { line ->' not in ui
 assert ui.index('HorizontalDivider()\n                Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp') > ui.index('Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(narrationScrollState)')
 assert 'enabled = generationIssues.isEmpty()' in ui
 assert 'generationIssues.forEach { reason ->' in ui
-assert 'Text("Consultar vozes"' in ui or '"Consultar vozes" else "Escolher voz"' in ui
+assert 'Text("Central de Vozes")' in ui and 'GeminiVoiceCenterScreen(' in ui
 assert 'items(visibleReuseLines, key = { it.id })' in ui
 assert 'Text("Selecionar esta página")' in ui and 'Text("Próximas 12")' in ui
 assert 'segments.forEach { segment ->' not in ref

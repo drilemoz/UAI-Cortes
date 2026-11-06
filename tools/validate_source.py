@@ -924,6 +924,7 @@ print('OK: v0.1.76: infraestrutura Gemini, Keystore, UI, WAV, metadados e testes
 settings=(app_files/'GeminiSettingsUi.kt').read_text()
 voice_ui=(app_files/'GeminiNarrationUi.kt').read_text()
 voice_filter=(app_files/'GeminiVoiceSearch.kt').read_text()
+voice_center=(app_files/'GeminiVoiceCenterScreen.kt').read_text()
 nav=(app_files/'EditorNavigation.kt').read_text()
 main=(app_files/'MainActivity.kt').read_text()
 home=(app_files/'HomeScreens.kt').read_text()
@@ -933,7 +934,7 @@ assert '"gemini_settings" -> GeminiSettingsScreen(::back)' in main
 assert '"gemini_settings" -> if (previous == "audio" || previous == "voices" || previous == "api_center") previous else "settings"' in nav
 assert 'GeminiKeyAction(' in settings and settings.count('GeminiKeyAction(') >= 7
 assert 'Dialog(' in voice_ui and 'LazyColumn(' in voice_ui
-assert 'GeminiVoiceSearch.filter(voices, voiceSearch)' in voice_ui
+assert 'GeminiVoiceSearch.filter(voices, query)' in voice_center and 'GeminiVoiceCenterScreen(' in voice_ui
 assert 'Gerar por IA' in voice_ui and 'Selecionar voz' not in voice_ui
 assert 'voice.id' in voice_ui and 'voice.name' in voice_ui
 assert 'GeminiVoicePresentation.fold' in voice_filter and 'GeminiVoicePresentation.searchableText(it)' in voice_filter
@@ -1195,10 +1196,10 @@ voice_catalog=(app_files/'GeminiVoiceCatalog.kt').read_text()
 assert 'row.optString("language_code")' in (voice_core + voice_catalog) and 'row.optString("gender")' in (voice_core + voice_catalog)
 assert 'GeminiVoicePresentation.label(voice)' in narration
 assert 'GeminiVoicePresentation.searchableText(it)' in voice_search
-assert 'previewCache.find(sampleId)' in narration and 'previewCache.save(sampleId, wave.bytes)' in narration
+assert 'previewCache.find(sampleId)' in narration and 'previewCache.save(sampleId, wave.bytes, voice.id)' in narration
 assert 'GeminiPreviewIdentity.TEXT' in narration and 'GeminiPreviewIdentity.id(' in narration
 assert 'lastPreview?.delete()' not in narration and 'preview?.delete()' not in narration
-assert '30L * 24 * 60 * 60 * 1000' in preview and '12L * 1024 * 1024' in preview
+assert 'gemini-voice-previews' in preview and '.limitMb()' in preview and 'fun prune(' in preview
 assert 'MessageDigest.getInstance("SHA-256")' in identity
 assert (root/'app/src/test/java/br/com/uaicortes/GeminiVoicePresentationTest.kt').exists()
 assert (root/'docs/VALIDATION_0.1.95.md').exists()
@@ -1227,7 +1228,7 @@ assert 'reuseSnapshot = availableSubtitleLines.toList()' in narration
 assert 'selectedText.length > SubtitleNarrationReuse.MAX_CHARACTERS' in narration
 assert 'availableSubtitleLines != reuseSnapshot' in narration
 assert 'text = selectedText' in narration and 'generated = null' in narration
-assert 'Consultar' in narration and 'Confirmar voz' in narration
+assert 'Central de Vozes' in narration and 'onChoose = { chosen ->' in narration
 assert 'addTimelineConfirm = true' in narration and 'Adicionar narração à mixagem?' in narration
 assert 'if (creds.hasKey() && voices.isEmpty()) loadVoices()' not in narration
 assert '?: available.firstOrNull()' not in narration
@@ -1335,10 +1336,10 @@ voice_search = (app_files/'GeminiVoiceSearch.kt').read_text()
 voice_presentation = (app_files/'GeminiVoicePresentation.kt').read_text()
 assert 'if (expanded && !voicePicker && !referenceDialog && compareCueId == null) Dialog(' in voice_ui
 assert 'if (voicePicker && expanded) Dialog(' in voice_ui
-assert 'GeminiVoiceSearch.byGender(searched, voiceGenderFilter)' in voice_ui
-assert 'GeminiVoicePresentation.shortDetails(voice)' in voice_ui
-assert 'expandedVoiceId = if (detailsOpen) null else voice.id' in voice_ui
-assert 'Descrição original da API' in voice_ui
+assert 'GeminiVoiceSearch.byGender(GeminiVoiceSearch.filter(voices, query), gender)' in voice_center
+assert 'GeminiVoicePresentation.shortDetails(voice)' in voice_center
+assert 'FilterChip(selected = pitch == option' in voice_center
+assert 'GeminiVoiceCenterScreen(onBack' in voice_ui
 assert '"Femininas" -> voices.filter { it.gender.equals("female", true) }' in voice_search
 assert '"Masculinas" -> voices.filter { it.gender.equals("male", true) }' in voice_search
 assert 'Características não informadas' in voice_presentation

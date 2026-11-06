@@ -16,11 +16,21 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.189"
-    const val VERSION_CODE = 190
+    const val VERSION_NAME = "0.1.190"
+    const val VERSION_CODE = 191
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.190", listOf(
+            ReleaseFeature("voice-center-190", "Central de Vozes do Uai Cortes",
+                "Acesse Vozes Google na Home ou nos seletores de Vozes IA e Narração. Catálogo e favoritos compartilhados, com acesso offline à lista salva.", "check"),
+            ReleaseFeature("voice-catalog-190", "Catálogo local sem recarga obrigatória",
+                "Vozes ficam armazenadas no aparelho, com atualização automática desativada por padrão, botão Atualizar e recuperação da lista anterior quando a rede falha.", "check"),
+            ReleaseFeature("voice-samples-190", "Amostras reutilizáveis em todo o aplicativo",
+                "Ouça a mesma frase de demonstração, com pontuação e pausas, em vozes diferentes; WAVs ficam salvos por modelo/voz/estilo e não exigem nova API para reproduzir.", "check"),
+            ReleaseFeature("voice-actions-190", "Vozes IA mais compacta",
+                "A barra destaca Central, tom da fala, gerar pendentes e inserir prontos; personagens continuam herdando sua voz principal com exceções individuais.", "captions")
+        )),
         ReleaseSummary("0.1.189", listOf(
             ReleaseFeature("speaker-style-189", "Interpretação por personagem",
                 "Defina interpretação Gemini para cada personagem e mantenha ajustes individuais por fala. As escolhas ficam no rascunho do projeto, sem chamadas à API até solicitar geração.", "captions"),

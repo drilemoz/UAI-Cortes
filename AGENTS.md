@@ -1,3 +1,11 @@
+# v0.1.190 — Central de Vozes, catálogo local e prévias duráveis
+- A Central de Vozes é acessível pela Home, Vozes IA e Narração; catálogo local é carregado sem rede por padrão. Atualização manual ou opt-in explícito e erros nunca apagam a última lista válida. Lista é pública e não armazena chave, URIs nem texto de projetos.
+- `GeminiVoiceLibrary` persiste JSON schema próprio 1 em `filesDir`, sem alterar `VideoProject` schemaVersion 4. Escrita via arquivo temporário, limits 500 vozes e 1 MiB. Uma lista vazia ou falha de atualização não sobrescreve o catálogo.
+- `GeminiVoicePreviewCache` usa `filesDir` com limite 50/100/250 MiB (100 padrão), LRU, tentativa de preservar favoritas primeiro, WAV validado e limpeza voluntária. Arquivos não expiram por idade; desinstalar/limpar dados ainda remove tudo. A prévia é específica ao modelo, voz, interpretação e frase fixa, não à chave.
+- `GeminiPreviewIdentity.TEXT` é uma frase única com pontuação e pausa; TTS só é chamado se cache válido ausente, após confirmação de cota. Não gerar catálogo inteiro, não inserir prévias no vídeo. A leitura do catálogo nunca executa síntese.
+- Tela Vozes IA mantém voz fixa no personagem e tom variável por fala; barra concentra Central/Tom/Gerar/Inserir. A recuperação de fila continua comparando ID, modelo, voz e estilo; não regenerar WAVs antigos silenciosamente.
+- v0.1.190/versionCode 191; preservar cinco APKs CI, assinatura, arquivos de projeto e versionamento. Build Gradle, emulador e testes Gemini reais ainda são necessários.
+
 # v0.1.189 — Interpretação Gemini por personagem, teste e revisão do lote
 - Em Vozes IA, persistir `defaultStyle`, `speakerStyles` e `cueStyles` opcionais dentro de `VideoProject.voiceIaVoices` (JSON schemaVersion 4). Precedência da interpretação: fala > personagem válido > geral > legado. Somente rascunhos confirmados com Salvar projeto são duráveis.
 - Seleção por personagem não chama IA; o teste curto explícito usa frase fixa e **confirmação de consumo de cota Gemini**. Armazenar WAV temporário em cache, não adicionar à timeline e excluir ao abandonar a tela.

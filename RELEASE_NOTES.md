@@ -1,3 +1,12 @@
+# Uai Cortes · versão 0.1.190 — Central de Vozes
+
+- Abra **Vozes Google** pela Home ou selecione pela própria tela Vozes IA/Narração. Não é mais necessário consultar o catálogo a cada acesso.
+- Vozes do Google ficam salvas no aparelho e continuam pesquisáveis sem conexão; recarga é manual por padrão. Em caso de erro de atualização, o catálogo anterior é preservado.
+- Ouça a frase-padrão com pausas e pontuação. Prévia já salva reproduz offline; uma nova geração exige consentimento e pode consumir cota Gemini.
+- Controle espaço de prévias e apague apenas as amostras, preservando projetos, favoritos e catálogo.
+- Voice IA conserva a voz principal por personagem e facilita mudar só a interpretação por fala.
+- Código-fonte v0.1.190/versionCode 191. Build Gradle, teste com chave Gemini e validação no aparelho continuam pendentes.
+
 # Uai Cortes · versão 0.1.189 — Interpretação por personagem
 
 - Configure voz e interpretação Gemini em cada personagem de Legendas, com exceções por fala e herança de estilo geral. Preferências são salvas no rascunho do projeto.

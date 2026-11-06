@@ -1,3 +1,13 @@
+# Uai Cortes · versão 0.1.190 — Central de Vozes Google
+
+## v0.1.190 · versionCode 191
+- Central acessível na Home, no editor Vozes IA e na Narração. Seleção de voz para personagem/fala continua sem solicitar síntese.
+- Catálogo JSON local é reutilizado em todas as telas e mantido em falhas, com atualizar manualmente e opção de atualização automática (desativada inicialmente).
+- Prévia unificada com a frase fixa: "Olá! Este é o Uai Cortes. Aqui você corta vídeos, edita cenas e cria novas histórias. Fácil, não é? Agora... vamos ouvir esta voz!". Armazenada em `filesDir` por ID de modelo, voz, estilo e frase. Prévia existente reproduz sem API; primeira geração exige confirmação de cota.
+- Limites 50/100/250 MB configuráveis, LRU com prioridade para não favoritas, apagar prévias somente por ação explícita; catálogo e favoritos permanecem.
+- Vozes IA simplificada: barra Central/Tom/Gerar/Inserir, vozes dos personagens persistem e herança por legenda preservada. Narração reaproveita mesmo catálogo e amostras; sem alterações automáticas em projetos.
+- Testes estruturais, Kotlin PSI e testes de identidade de prévia; sem alegar build Android completo sem GitHub Actions.
+
 # Uai Cortes · versão 0.1.189 — Interpretação por personagem e revisão de vozes
 
 ## v0.1.189 · versionCode 190

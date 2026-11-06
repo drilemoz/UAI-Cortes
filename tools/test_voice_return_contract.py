@@ -8,15 +8,15 @@ audio=(BASE/'AudioScreen.kt').read_text()
 main=(BASE/'MainActivity.kt').read_text()
 editor=(BASE/'EditorScreen.kt').read_text()
 choice=(BASE/'GeminiVoiceChoice.kt').read_text()
-section=voice.split('Text("Confirmar voz")')[0].rsplit('Button(onClick = {',1)[-1]
-assert 'GeminiVoiceChoice.visibleChoice(filtered, draftVoiceId)' in section
-assert 'if (chosen != null)' in section
-for token in ['selectedVoice = chosen','voicePicker = false','status = "Voz escolhida:']:
-    assert token in section,token
-for forbidden in ['api.synthesize','api.generate','AudioTrack(','update(project','loadVoices()']:
-    assert forbidden not in section,forbidden
-assert 'Modifier.fillMaxWidth().clickable {' in voice and 'draftVoiceId = voice.id' in voice
-assert 'RadioButton(selected = draftVoiceId == voice.id,' in voice and 'onClick = {' in voice
+section=voice[voice.index('    // Catálogo e prévias centralizados:'):voice.index('    if (reuseDialogOpen && expanded) {')]
+assert 'GeminiVoiceCenterScreen(' in section
+assert 'onChoose = { chosen ->' in section
+for token in ['selectedVoice = chosen', 'voicePicker = false', 'status = "Voz escolhida:']:
+    assert token in section, token
+for forbidden in ['api.synthesize', 'api.generate', 'AudioTrack(', 'update(project', 'loadVoices()']:
+    assert forbidden not in section, forbidden
+assert 'GeminiVoiceSearch.byGender(' in (BASE/'GeminiVoiceCenterScreen.kt').read_text()
+assert 'selectedVoiceId = selectedVoice?.id' in section
 assert 'val narrationDraft = remember(project?.id) { GeminiNarrationDraft() }' in main
 assert 'narrationDraft = narrationDraft' in main and 'onSaveGeminiToAudio = { changed ->' in main
 assert 'draft=narrationDraft ?: remember(p.id)' in audio

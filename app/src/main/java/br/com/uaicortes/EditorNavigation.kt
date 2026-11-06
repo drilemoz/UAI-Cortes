@@ -3,7 +3,7 @@ package br.com.uaicortes
 /** Rotas e regras de recuperação em um único lugar para todas as ferramentas. */
 internal object EditorNavigation {
     private val routes = setOf(
-        "home", "projects", "social", "social_publish", "api_center", "settings", "gemini_settings", "general", "backup_settings", "appearance", "about", "whats_new", "diagnostics", "speech_model",
+        "home", "projects", "social", "social_publish", "api_center", "settings", "gemini_settings", "voice_center", "general", "backup_settings", "appearance", "about", "whats_new", "diagnostics", "speech_model",
         "editor", "media_repair", "media", "animate", "flow_workspace", "pip", "audio", "voices", "clip_audio", "trim", "transition", "subtitles",
         "watermark", "publication", "flow_prompt", "export", "autosubtitle"
     )
@@ -29,6 +29,7 @@ internal object EditorNavigation {
         "settings" -> if (previous == "audio" || previous == "voices") previous else "home"
         "media" -> knownRoute(mediaOrigin)
         "flow_workspace" -> "home"
+        "voice_center" -> if (previous == "settings") "settings" else "home"
         "animate" -> "home" // Voltar sempre leva à tela inicial; adicionar ao editor é outra ação.
         "gemini_settings" -> if (previous == "audio" || previous == "voices" || previous == "api_center") previous else "settings"
         "general", "backup_settings", "appearance", "about", "diagnostics" -> "settings"
