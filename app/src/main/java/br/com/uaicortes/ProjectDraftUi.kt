@@ -15,6 +15,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.AlertDialog
@@ -42,11 +43,12 @@ private fun androidx.compose.foundation.layout.RowScope.EditorExitAction(
     danger: Boolean = false, action: () -> Unit
 ) {
     OutlinedButton(onClick = action,
-        modifier = Modifier.weight(1f).height(76.dp),
+        modifier = Modifier.weight(1f).height(64.dp),
+        shape = UaiShapes.button,
         contentPadding = androidx.compose.foundation.layout.PaddingValues(2.dp)) {
         Column(horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center) {
-            Icon(icon, contentDescription = null, modifier = Modifier.height(22.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically)) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(19.dp),
                 tint = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
             Text(label, fontSize = 11.sp, maxLines = 1, textAlign = TextAlign.Center,
                 color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
@@ -60,7 +62,8 @@ internal fun ConfirmEditorExit(hasSavedOriginal: Boolean, onDecision: (String) -
     onContinue: () -> Unit) {
     AlertDialog(
         onDismissRequest = onContinue,
-        icon = { Icon(Icons.Default.Save, contentDescription = null) },
+        shape = UaiShapes.dialog,
+        icon = { Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(20.dp)) },
         title = { Text("Salvar edição?") },
         text = { Text(if (hasSavedOriginal)
             "Deseja guardar as alterações antes de sair?"
@@ -89,7 +92,7 @@ internal fun ConfirmEditorExit(hasSavedOriginal: Boolean, onDecision: (String) -
 
 @Composable
 internal fun ConfirmRecoverDraft(onRecover: () -> Unit, onDiscard: () -> Unit) {
-    AlertDialog(onDismissRequest = {},
+    AlertDialog(onDismissRequest = {}, shape = UaiShapes.dialog,
         title = { Text("Recuperar edição interrompida?") },
         text = { Text("Há uma sessão temporária que não foi salva como projeto. Deseja continuar de onde parou? Os arquivos originais não foram copiados.") },
         confirmButton = { TextButton(onClick = onRecover) { Text("Recuperar edição") } },
@@ -98,7 +101,7 @@ internal fun ConfirmRecoverDraft(onRecover: () -> Unit, onDiscard: () -> Unit) {
 
 @Composable
 internal fun InvalidEditorDraft(onClear: () -> Unit) {
-    AlertDialog(onDismissRequest = {},
+    AlertDialog(onDismissRequest = {}, shape = UaiShapes.dialog,
         title = { Text("Rascunho não recuperável") },
         text = { Text("A sessão temporária está incompleta ou o projeto original foi modificado. Nenhum projeto salvo será substituído.") },
         confirmButton = { TextButton(onClick = onClear) { Text("Limpar rascunho inválido") } })

@@ -928,7 +928,7 @@ internal fun SubtitleEditDialog(cue: SubtitleCue,totalMs: Long,number: Int,
     Dialog(onDismissRequest=onDismiss,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Surface(Modifier.fillMaxWidth(.96f)
             .heightIn(max=LocalConfiguration.current.screenHeightDp.dp*.86f),
-            shape=RoundedCornerShape(18.dp),tonalElevation=5.dp) {
+            shape=UaiShapes.card,tonalElevation=5.dp) {
             Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment=Alignment.CenterVertically) {
                     Text("Editar legenda $number",fontWeight=FontWeight.Bold,

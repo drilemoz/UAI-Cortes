@@ -1,4 +1,10 @@
-# Uai Cortes · versão 0.1.198 — Galeria integrada
+## 0.1.199 (versionCode 200)
+- Visual mais consistente: cartões e botões retangulares de cantos leves, incluindo a janela Salvar edição.
+- PiP: prévia compacta com opção de ampliar, ferramentas menores e mais espaço para editar.
+- Áudio: ouça faixas importadas e música diretamente, sem tocar a mixagem toda; extração avançada continua disponível.
+- Mantidas as cinco variantes APK, os projetos anteriores e o funcionamento offline. Compilação completa e teste físico pendentes.
+
+# Uai Cortes · versão 0.1.199 — Galeria integrada
 
 - A seleção de vídeo nas ferramentas **Dividir vídeo** e **Extrair áudio** agora usa a galeria interna do Uai Cortes, com miniaturas, pastas, filtro e busca, em vez de abrir primeiro o gerenciador de arquivos do Android.
 - O botão de pasta na galeria ainda permite escolher pelo gerenciador de arquivos (SAF). O botão Voltar retorna à ferramenta sem iniciar processamento.

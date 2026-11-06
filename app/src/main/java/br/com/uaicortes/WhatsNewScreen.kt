@@ -48,7 +48,7 @@ internal fun ReleaseHighlights(entries: List<ReleaseSummary>, modifier: Modifier
                     }
                 }
                 entry.features.forEach { feature ->
-                    Surface(shape = RoundedCornerShape(20.dp),
+                    Surface(shape = UaiShapes.card,
                         color = MaterialTheme.colorScheme.surface,
                         tonalElevation = 2.dp) {
                         Row(Modifier.fillMaxWidth().padding(15.dp),
@@ -81,7 +81,7 @@ internal fun WhatsNewScreen(onContinue: () -> Unit) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)) {
             Spacer(Modifier.height(20.dp))
-            Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp))
+            Box(Modifier.fillMaxWidth().clip(UaiShapes.card)
                 .background(Brush.linearGradient(listOf(Color(0xFF0866FF), Color(0xFF5841AE))))) {
                 Column(Modifier.fillMaxWidth().padding(25.dp),
                     horizontalAlignment = Alignment.Start) {
@@ -113,7 +113,7 @@ internal fun WhatsNewScreen(onContinue: () -> Unit) {
         Button(onClick = onContinue,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)
                 .height(54.dp),
-            shape = RoundedCornerShape(18.dp)) {
+            shape = UaiShapes.card) {
             Icon(Icons.Default.CheckCircle, contentDescription = null)
             Spacer(Modifier.width(9.dp))
             Text("Continuar", fontWeight = FontWeight.SemiBold)

@@ -1,4 +1,10 @@
-# Uai Cortes · versão 0.1.198 — Galeria de vídeos integrada
+## Novidades v0.1.199
+- Padrão visual unificado (`UaiShapes`) com cantos discretos e botões compactos; diálogo de saída preserva Salvar, Descartar e Continuar.
+- PiP reduz o uso vertical da tela e permite expandir a prévia; Áudio permite Play/Pausa de cada faixa importada e música em separado.
+- Extração avançada mantém fontes do projeto e vídeo externo, recolhida por padrão. O leitor de mídias e as ferramentas rápidas continuam disponíveis.
+- Validação estrutural/local não substitui compilação no GitHub Actions nem teste Android do player e da exportação.
+
+# Uai Cortes · versão 0.1.199 — Galeria de vídeos integrada
 
 **Ferramentas rápidas:** os atalhos Dividir vídeo e Extrair áudio agora abrem a mesma galeria interna de Criar projeto e Inserir imagem, com miniaturas, busca e pastas. Toque em um vídeo para escolhê-lo. A opção **Procurar nos arquivos** permanece disponível na própria galeria como alternativa Android SAF.
 

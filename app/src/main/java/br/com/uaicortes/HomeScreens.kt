@@ -46,13 +46,13 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
 }
 
 @Composable internal fun BlueButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
-    Button(onClick, modifier.height(56.dp), enabled = enabled, shape = RoundedCornerShape(18.dp),
+    Button(onClick, modifier.height(56.dp), enabled = enabled, shape = UaiShapes.card,
         colors = ButtonDefaults.buttonColors(containerColor = Blue)) { Text(label, fontWeight = FontWeight.SemiBold) }
 }
 
 @Composable internal fun ItemCard(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, subtitle: String,
                                 enabled: Boolean = true, onClick: () -> Unit) {
-    Surface(onClick = onClick, enabled = enabled, shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface,
+    Surface(onClick = onClick, enabled = enabled, shape = UaiShapes.card, color = MaterialTheme.colorScheme.surface,
         tonalElevation = 1.dp) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = Blue, modifier = Modifier.size(28.dp))
@@ -83,7 +83,7 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.heightIn(min = 110.dp),
-        shape = RoundedCornerShape(18.dp),
+        shape = UaiShapes.card,
         color = Blue,
         contentColor = Color.White,
         tonalElevation = 0.dp
@@ -121,12 +121,14 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
 /** Acesso rápido às ferramentas sem abrir o editor e sem tocar em projetos. */
 @Composable internal fun HomeQuickMediaActions(onSplit: () -> Unit, onExtract: () -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(onClick = onSplit, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) {
+        OutlinedButton(onClick = onSplit, modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+            shape = UaiShapes.button) {
             Icon(Icons.Default.ContentCut, null)
             Spacer(Modifier.width(6.dp))
             Text("Dividir vídeo", maxLines = 2)
         }
-        OutlinedButton(onClick = onExtract, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) {
+        OutlinedButton(onClick = onExtract, modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+            shape = UaiShapes.button) {
             Icon(Icons.Default.AudioFile, null)
             Spacer(Modifier.width(6.dp))
             Text("Extrair áudio", maxLines = 2)

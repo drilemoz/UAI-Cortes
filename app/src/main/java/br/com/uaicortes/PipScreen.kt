@@ -46,6 +46,8 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
         canvasClip?.let { mediaAspect(context,it.uri,it.isImage) } ?: 16f/9f
     }
     var expanded by remember(p.id) { mutableStateOf<String?>(null) }
+    var previewExpanded by remember(p.id) { mutableStateOf(false) }
+    var showPipHelp by remember(p.id) { mutableStateOf(false) }
     var showTimePresets by remember { mutableStateOf(false) }
     val overlaySourceDuration by produceState<Long?>(null, pip?.uri, pip?.isImage) {
         value = if (pip == null || pip.isImage) null else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -101,7 +103,7 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
         Heading("Editar sobreposições", back)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
-            .padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            .padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("PiPs · ${p.overlays.size} de 4", fontWeight = FontWeight.SemiBold)
@@ -122,8 +124,8 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                         OutlinedButton(onClick = { onSelect(item.id) },
                             border = BorderStroke(if (selected) 2.dp else 1.dp,
                                 if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
-                            shape = RoundedCornerShape(12.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) {
+                            shape = UaiShapes.chip,
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)) {
                             Icon(if (item.isImage) Icons.Default.Image else Icons.Default.Videocam,
                                 null, Modifier.size(18.dp))
                             Text(" PiP ${index + 1}")
@@ -131,8 +133,18 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                         }
                     }
                 }
-                Text("Prévia no vídeo", fontWeight = FontWeight.SemiBold)
-                InlineVideoPreview(canvasAspect) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Prévia", fontWeight = FontWeight.SemiBold)
+                    TextButton(onClick = { previewExpanded = !previewExpanded },
+                        contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp)) {
+                        Icon(if (previewExpanded) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
+                            if (previewExpanded) "Reduzir prévia" else "Ampliar prévia",
+                            modifier = Modifier.size(19.dp))
+                        Text(if (previewExpanded) "Reduzir" else "Ampliar", fontSize = 12.sp)
+                    }
+                }
+                InlineVideoPreview(canvasAspect, maxHeightDp = if (previewExpanded) null else 250f) {
                     AndroidView(factory = { previewPlayer(it).apply {
                         this.player = player
                         useController = false
@@ -182,7 +194,7 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                     }, contentPadding = PaddingValues(horizontal = 2.dp)) {
                         Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                             "Reproduzir ou pausar vídeo")
-                        Text(if (playing) "Pausar" else "Ver prévia")
+                        Text(if (playing) "Pausar" else "Play", fontSize = 12.sp)
                     }
                 }
                 Slider(value = previewTime.toFloat().coerceIn(0f, total.toFloat()),
@@ -190,12 +202,19 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                         previewTime = next.toLong()
                         seekProjectPosition(player, p.clips, previewTime)
                     }, valueRange = 0f..total.toFloat(),
-                    modifier = Modifier.fillMaxWidth().height(40.dp))
-                Text("Toque nos horários para digitar. Arraste ou pince o PiP na prévia.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    modifier = Modifier.fillMaxWidth().height(36.dp))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Arraste ou pince o PiP na prévia",
+                        modifier = Modifier.weight(1f), fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    IconButton(onClick = { showPipHelp = !showPipHelp }, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.Default.HelpOutline, "Ajuda dos controles", Modifier.size(18.dp))
+                    }
+                }
+                if (showPipHelp) Text("Toque no horário para digitar. Use Posição, Tamanho, Duração ou Mídia para ajustes detalhados.",
+                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 // Quatro ferramentas compactas na MESMA linha; os ajustes ficam em um sheet inferior.
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     listOf(
                         Triple("position", "Posição", Icons.Default.OpenWith),
                         Triple("size", "Tamanho", Icons.Default.AspectRatio),
@@ -203,17 +222,17 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                         Triple("media", "Mídia", Icons.Default.PermMedia)
                     ).forEach { (key, label, icon) ->
                         Surface(onClick = { if (pip != null) expanded = key },
-                            modifier = Modifier.weight(1f).aspectRatio(1f),
+                            modifier = Modifier.weight(1f).height(58.dp),
                             enabled = pip != null,
-                            shape = RoundedCornerShape(14.dp),
+                            shape = UaiShapes.item,
                             color = MaterialTheme.colorScheme.surfaceVariant) {
                             Column(Modifier.fillMaxSize().padding(4.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center) {
                                 Icon(icon, contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(24.dp))
-                                Spacer(Modifier.height(5.dp))
+                                    modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.height(2.dp))
                                 Text(label, fontWeight = FontWeight.SemiBold,
                                     fontSize = 12.sp, maxLines = 1,
                                     overflow = TextOverflow.Ellipsis)
@@ -224,7 +243,7 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                 // Opacidade é independente do volume e persiste na prévia e no compositor MP4.
                 if (pip != null) {
                     Surface(color=MaterialTheme.colorScheme.surfaceVariant,
-                        shape=RoundedCornerShape(14.dp)) {
+                        shape=UaiShapes.item) {
                         Column(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),
                             verticalArrangement=Arrangement.spacedBy(2.dp)) {
                             Row(verticalAlignment=Alignment.CenterVertically) {
@@ -239,15 +258,13 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                             Slider(value=pip.opacity.coerceIn(0f,1f),
                                 onValueChange={ value -> onChange(pip.copy(opacity=value)) },
                                 valueRange=0f..1f,
-                                modifier=Modifier.fillMaxWidth().padding(horizontal=8.dp))
-                            Text("0% invisível · 100% totalmente visível (inclusive no MP4)",
-                                fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                modifier=Modifier.fillMaxWidth().height(40.dp).padding(horizontal=8.dp))
                         }
                     }
                 }
                 // Som é independente dos demais controles e das demais sobreposições.
                 if (pip != null && !pip.isImage) {
-                    Surface(color = MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(16.dp)) {
+                    Surface(color = MaterialTheme.colorScheme.surface, shape = UaiShapes.card) {
                         Column(Modifier.fillMaxWidth().padding(12.dp)) {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(if (pip.muted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
@@ -262,21 +279,19 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                         }
                     }
                 }
-                Text("Até quatro PiPs independentes. Sobreposições serão confirmadas antes de aplicar.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                
             }
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp),
+        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedButton(onClick = { pip?.let { onRemove(it.id) } }, enabled = pip != null,
-                modifier = Modifier.weight(1f).height(52.dp),
-                shape = RoundedCornerShape(16.dp)) {
+                modifier = Modifier.weight(1f).height(48.dp),
+                shape = UaiShapes.button) {
                 Icon(Icons.Default.Delete, null)
                 Text(" Remover")
             }
-            Button(onClick = back, modifier = Modifier.weight(1f).height(52.dp),
-                shape = RoundedCornerShape(16.dp)) {
+            Button(onClick = back, modifier = Modifier.weight(1f).height(48.dp),
+                shape = UaiShapes.button) {
                 Icon(Icons.Default.Check, null)
                 Text(" Aplicar")
             }
@@ -290,7 +305,7 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
         ModalBottomSheet(
             onDismissRequest = { expanded = null },
             sheetState = sheetState,
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            shape = UaiShapes.sheet,
             containerColor = MaterialTheme.colorScheme.surface,
             scrimColor = Color.Black.copy(alpha = 0.12f),
             dragHandle = null
@@ -462,7 +477,7 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                                 }
                 Button(onClick = { expanded = null },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp)) {
+                    shape = UaiShapes.item) {
                     Icon(Icons.Default.Check, null)
                     Text(" Concluído")
                 }

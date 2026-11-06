@@ -11,9 +11,9 @@ source = (Path(__file__).resolve().parents[1]
 assert source.count("import androidx.compose.foundation.layout.height") == 1, (
     "ProjectDraftUi.kt: importar androidx.compose.foundation.layout.height"
 )
-assert "Modifier.weight(1f).height(76.dp)" in source
-assert "Modifier.height(22.dp)" in source
-assert len(re.findall(r"\bModifier\.[^\n]*\bheight\(", source)) >= 2
+assert "Modifier.weight(1f).height(64.dp)" in source
+assert "Modifier.size(19.dp)" in source
+assert len(re.findall(r"\bModifier\.[^\n]*\bheight\(", source)) >= 1
 assert 'EditorExitAction("Salvar"' in source
 assert 'EditorExitAction("Descartar"' in source
 assert 'EditorExitAction("Continuar"' in source

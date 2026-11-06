@@ -1,3 +1,9 @@
+# v0.1.199 — Padronização visual e pré-escuta isolada de áudio
+- `UaiShapes` define tokens de cantos discretos e configura `MaterialTheme.shapes` para claro, escuro e AMOLED; manter áreas de toque adequadas e não substituir geometrias de máscaras, PiP ou controles circulares indiscriminadamente.
+- PiP: prévia com altura máxima inicial 250 dp, expansão sob demanda; quatro ações 58 dp, opacidade compacta e rodapé fixo. Não modificar matriz/posição, origem, som, exportação ou limite de sobreposições.
+- Áudio: player isolado único para ouvir faixa importada e música, respeitando recorte (`sourceStartMs`, `durationMs`) e volume local; pausar mixagem e demais players antes de iniciar, liberar player ao sair. Os áudios e projetos não são modificados pela prévia.
+- Extração avançada no editor continua recolhida por padrão; extração sem projeto na Home permanece. Salvar/Descartar/Continuar mantém decisões originais com botões menos arredondados. VersionName 0.1.199, versionCode 200, schemaVersion 4, cinco APKs e assinatura preservados. Validar Gradle/Lint e aparelho antes de afirmar funcionamento certificado.
+
 # v0.1.198 — Galeria de vídeos integrada nas ferramentas rápidas
 - `QuickVideoToolsScreen` deve abrir `DeviceMediaBrowser` com `GalleryScope.VIDEOS` e seleção única em Dividir vídeo/Extrair áudio, igual aos caminhos existentes Criar projeto e Inserir imagem. Não abrir `OpenDocument` como primeira opção.
 - O fallback por ícone de pasta permanece via SAF `OpenDocument(video/*)`, mantendo concessão persistível somente para URIs devolvidas por SAF. As URIs MediaStore da galeria não devem usar `takePersistableUriPermission`.

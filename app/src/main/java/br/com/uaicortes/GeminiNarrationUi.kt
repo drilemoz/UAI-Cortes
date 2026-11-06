@@ -298,7 +298,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
     ) {
         Surface(
             modifier = Modifier.fillMaxWidth(0.94f).fillMaxHeight(0.88f),
-            shape = RoundedCornerShape(24.dp),
+            shape = UaiShapes.card,
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp
         ) {
@@ -774,7 +774,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
         if (!working) { player.pause(); voicePicker = false }
     }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(modifier = Modifier.fillMaxWidth(.97f).fillMaxHeight(.91f),
-            shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface) {
+            shape = UaiShapes.card, color = MaterialTheme.colorScheme.surface) {
             GeminiVoiceCenterScreen(onBack = { player.pause(); voicePicker = false },
                 selectedVoiceId = selectedVoice?.id, initialModel = model,
                 onModelChange = { model = it },
@@ -803,7 +803,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
         Dialog(onDismissRequest = { reuseDialogOpen = false },
             properties = DialogProperties(usePlatformDefaultWidth = false)) {
             Surface(modifier = Modifier.fillMaxWidth(0.94f).fillMaxHeight(0.82f),
-                shape = RoundedCornerShape(22.dp), color = MaterialTheme.colorScheme.surface) {
+                shape = UaiShapes.card, color = MaterialTheme.colorScheme.surface) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Reutilizar legendas do projeto", style = MaterialTheme.typography.titleMedium)
                     Text("Revise os trechos. A importação apenas copia o texto para um rascunho de narração: " +

@@ -976,7 +976,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
         Dialog(onDismissRequest = { closePicker() },
             properties = DialogProperties(usePlatformDefaultWidth = false)) {
             Surface(Modifier.fillMaxWidth(.97f).fillMaxHeight(.91f),
-                shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface) {
+                shape = UaiShapes.card, color = MaterialTheme.colorScheme.surface) {
                 GeminiVoiceCenterScreen(onBack = { closePicker() }, selectedVoiceId = currentId,
                     initialModel = model, onModelChange = { model = it },
                     styleInstruction = GeminiNarrationStyling.instruction(

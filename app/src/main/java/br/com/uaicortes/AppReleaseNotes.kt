@@ -16,11 +16,21 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.198"
-    const val VERSION_CODE = 199
+    const val VERSION_NAME = "0.1.199"
+    const val VERSION_CODE = 200
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.199", listOf(
+            ReleaseFeature("visual-shapes-199", "Interface com cantos padronizados",
+                "Botões, cartões e diálogos usam formas discretas compartilhadas nos temas do aplicativo; a janela Salvar edição ficou mais compacta.", "check"),
+            ReleaseFeature("pip-compact-199", "PiP compacto com opção de ampliar",
+                "A prévia inicia reduzida, há botão Ampliar e controles menores de posição, tamanho, duração e mídia; a edição e exportação permanecem inalteradas.", "check"),
+            ReleaseFeature("audio-preview-199", "Ouvir faixa importada isoladamente",
+                "A tela Áudio ganhou play/pause direto para faixas adicionais e música. As pré-escutas param ao alternar e não alteram volume nem arquivos do projeto.", "check"),
+            ReleaseFeature("audio-sections-199", "Tela Áudio com menos informações redundantes",
+                "Mixagem e adição de áudios ficaram mais compactas, volumes e extração começam recolhidos. O extrator avançado do projeto permanece acessível.", "check")
+        )),
         ReleaseSummary("0.1.198", listOf(
             ReleaseFeature("quick-gallery-198", "Galeria integrada nas ferramentas rápidas",
                 "Dividir vídeo e Extrair áudio agora abrem primeiro a galeria interna, com miniaturas, pesquisa e filtros por pasta, como Criar projeto e Inserir imagem.", "check"),

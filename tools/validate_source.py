@@ -48,7 +48,7 @@ assert 'OverlayTimeline(' in ui and 'p.overlays.forEach' in ui
 assert 'ModalBottomSheet(' in ui and 'rememberModalBottomSheetState(skipPartiallyExpanded = true)' in ui
 assert 'dragHandle = null' in ui and 'onDismissRequest = { expanded = null }' in ui
 assert 'scrimColor = Color.Black.copy(alpha = 0.12f)' in ui
-assert 'Modifier.weight(1f).aspectRatio(1f)' in ui
+assert 'Modifier.weight(1f).height(58.dp)' in ui  # v0.1.199: controles PiP compactos
 assert 'options.chunked(2)' not in (root/'app/src/main/java/br/com/uaicortes/PipScreen.kt').read_text() and 'AnimatedVisibility(' not in ui
 assert 'PipPopup(' not in ui and 'AlertDialog(' in ui
 assert 'onChange(pip.copy(scale = ' in ui and 'onChange(pip.copy(muted = ' in ui
@@ -275,7 +275,7 @@ layout=(root/'app/src/main/java/br/com/uaicortes/AdaptiveVideoLayout.kt').read_t
 assert 'fun inline(' in layout and 'fun fit(' in layout and 'fun activeClipIndex(' in layout
 assert 'InlineVideoPreview(aspect, maxHeightDp' in ui
 assert 'AndroidView(factory = { ctx -> previewPlayer(ctx)' in trim_screen # nova prévia de cortes preenche espaço útil
-assert 'InlineVideoPreview(canvasAspect)' in ui
+assert 'InlineVideoPreview(canvasAspect, maxHeightDp = if (previewExpanded) null else 250f)' in ui
 assert 'InlineVideoPreview(previewAspect)' in ui
 assert 'val previewAspect = if (destination.isVertical) 9f / 16f else exportPreviewAspect' in ui
 assert 'val fit=AdaptiveVideoLayout.fit(' in ui
@@ -870,7 +870,7 @@ audio_ui=(root/'app/src/main/java/br/com/uaicortes/AudioScreen.kt').read_text()
 audio_parts=(root/'app/src/main/java/br/com/uaicortes/AudioSectionUi.kt').read_text()
 audio_labels=(root/'app/src/main/java/br/com/uaicortes/AudioScreenLabels.kt').read_text()
 assert all(label in audio_ui for label in [
-    'Mixagem do projeto', 'Adicionar áudio', 'Extrair áudio de vídeo',
+    'Mixagem', 'Adicionar áudio', 'Extrair do projeto',
     'Projeto inteiro', 'Clipe atual', 'Vídeo externo', 'Salvar e usar',
     'Editar corte da faixa', 'Remover faixa', 'onChooseExternalVideo'
 ])
@@ -1180,7 +1180,7 @@ assert 'seekProjectPosition(player, p.clips, 0L)' in subtitle
 assert 'AudioQuickAction("Extrair"' not in audio
 assert 'GeminiNarrationSection(p, timelinePositionMs, update, onOpenGeminiSettings,' in audio
 assert 'AudioQuickAction("Gerar por IA",Icons.Default.AutoAwesome' in narration
-assert 'Text("Extrair áudio de vídeo"' in audio
+assert 'Text("Extrair do projeto"' in audio
 assert 'projectMs < it.endMs' in policy
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitlePreviewPolicyTest.kt').exists()
 assert (root/'docs/VALIDATION_0.1.94.md').exists()

@@ -88,7 +88,7 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
     var saveReturnError by remember(p.id) { mutableStateOf("") }
     // A extração é uma ferramenta opcional: não ocupa a tela inteira ao abrir Áudio.
     var extractionExpanded by remember(p.id) { mutableStateOf(false) }
-    var volumesExpanded by remember(p.id) { mutableStateOf(p.clips.size <= 2) }
+    var volumesExpanded by remember(p.id) { mutableStateOf(false) }
     var trackVolumeExpandedId by remember(p.id) { mutableStateOf<String?>(null) }
     var pendingAudioDeleteId by remember(p.id) { mutableStateOf<String?>(null) }
     var externalClip by remember { mutableStateOf<Clip?>(null) }
@@ -200,6 +200,60 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
         }
     }
     DisposableEffect(trackPlayer) { onDispose { trackPlayer.release() } }
+    // Uma única pré-escuta isolada para as faixas importadas; não altera a mixagem.
+    val isolatedPlayer = remember(p.id) { diagnosticPlayer(context) }
+    var isolatedId by remember(p.id) { mutableStateOf<String?>(null) }
+    var isolatedPlaying by remember(p.id) { mutableStateOf(false) }
+    var isolatedEndMs by remember(p.id) { mutableLongStateOf(0L) }
+    fun previewIsolated(id: String, uri: String, sourceStartMs: Long, durationMs: Long, volume: Float) {
+        if (isolatedId == id && isolatedPlaying) {
+            isolatedPlayer.pause()
+            isolatedPlaying = false
+            return
+        }
+        runCatching {
+            mixPlayer.pause(); mixPlaying = false
+            previewPlayer.pause(); previewPlaying = false
+            trackPlayer.pause(); trackPlaying = false
+            isolatedPlayer.pause()
+            isolatedPlayer.setMediaItem(MediaItem.fromUri(Uri.parse(uri)))
+            isolatedPlayer.volume = volume.coerceIn(0f, 1f)
+            isolatedPlayer.prepare()
+            isolatedPlayer.seekTo(sourceStartMs.coerceAtLeast(0L))
+            isolatedEndMs = if (durationMs > 0L) sourceStartMs.coerceAtLeast(0L) + durationMs else 0L
+            isolatedId = id
+            isolatedPlayer.play()
+            isolatedPlaying = true
+        }.onFailure {
+            isolatedPlaying = false
+            message = "Não foi possível ouvir o áudio selecionado."
+            DiagnosticRecorder.exception("audio_isolated_preview", it)
+        }
+    }
+    LaunchedEffect(isolatedPlaying, isolatedEndMs, isolatedId) {
+        while (isolatedPlaying) {
+            if (isolatedPlayer.playerError != null) {
+                message = "Falha na pré-escuta. Confira o arquivo e tente novamente."
+                isolatedPlayer.pause()
+                isolatedPlaying = false
+            } else if (isolatedPlayer.playbackState == Player.STATE_ENDED ||
+                (isolatedEndMs > 0 && isolatedPlayer.currentPosition >= isolatedEndMs)) {
+                isolatedPlayer.pause()
+                isolatedPlaying = false
+            }
+            delay(100)
+        }
+    }
+    DisposableEffect(isolatedPlayer) {
+        onDispose { isolatedPlayer.pause(); isolatedPlayer.release() }
+    }
+    LaunchedEffect(p.audioTracks.map { it.id }, p.music?.uri) {
+        if ((isolatedId != null && isolatedId != "music" && p.audioTracks.none { it.id == isolatedId }) ||
+            (isolatedId == "music" && p.music == null)) {
+            isolatedPlayer.pause(); isolatedPlaying = false; isolatedId = null
+        }
+    }
+
     var outputExtension by remember { mutableStateOf("m4a") }
     var addAfterExtract by remember { mutableStateOf(false) }
     var exporting by remember { mutableStateOf(false) }
@@ -230,18 +284,16 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
     val pageScroll = rememberScrollState()
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
     Column(Modifier.weight(1f).verticalScroll(pageScroll)
-        .padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+        .padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Heading("Áudio",back)
-        Text("Músicas, efeitos e áudios importados ficam aqui. As narrações das legendas " +
-            "ficam em Vozes IA, no menu do editor.",
-            modifier=Modifier.padding(horizontal=16.dp), style=MaterialTheme.typography.bodySmall,
-            color=MaterialTheme.colorScheme.onSurfaceVariant)
+        // Narração por legenda permanece em Vozes IA; ajuda contextual substitui texto extenso.
+
         AudioPanelCard {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
                 Icon(Icons.Default.Tune,"Mixagem",tint=MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.width(9.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Mixagem do projeto",fontWeight=FontWeight.Bold,fontSize=18.sp)
+                    Text("Mixagem",fontWeight=FontWeight.Bold,fontSize=16.sp)
                     Text("${AudioScreenLabels.activeTrackCount(p.clips.size, p.audioTracks.size, p.music != null)} faixas ativas",
                         style=MaterialTheme.typography.bodySmall,
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -249,12 +301,13 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                 TextButton(onClick={volumesExpanded=!volumesExpanded}) {
                     Icon(Icons.Default.Tune,null,modifier=Modifier.size(17.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text(if(volumesExpanded) "Recolher" else "Gerenciar faixas",fontSize=12.sp)
+                    Text(if(volumesExpanded) "Recolher" else "Volumes",fontSize=12.sp)
                 }
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = {
+                    isolatedPlayer.pause(); isolatedPlaying = false
                     if (mixPlaying) {
                         mixPlayer.pause()
                         mixPlaying = false
@@ -280,9 +333,7 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text("Pré-escuta da mixagem; não altera volume nem arquivos do vídeo.",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+
             if(volumesExpanded) {
                 p.clips.forEachIndexed { index,clip ->
                     AudioTrackCard {
@@ -303,8 +354,12 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                 p.music?.let { music ->
                     AudioTrackCard {
                         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                            Icon(Icons.Default.MusicNote,null,tint=MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.width(8.dp))
+                            IconButton(onClick = { previewIsolated("music", music.uri, 0L, 0L, music.volume) },
+                                modifier = Modifier.size(40.dp)) {
+                                Icon(if (isolatedId == "music" && isolatedPlaying) Icons.Default.Pause
+                                    else Icons.Default.PlayArrow, "Ouvir música", tint=MaterialTheme.colorScheme.primary)
+                            }
+                            Spacer(Modifier.width(3.dp))
                             Text(music.title,modifier=Modifier.weight(1f),maxLines=1,fontSize=13.sp)
                             Text("${(music.volume*100).toInt()}%",fontSize=12.sp)
                             IconButton(onClick={update(p.copy(music=null))},modifier=Modifier.size(40.dp)) {
@@ -328,8 +383,15 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
             p.audioTracks.filter { it.kind != VoiceIaPolicy.KIND }.forEach { track ->
                 AudioTrackCard {
                     Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                        Icon(Icons.Default.GraphicEq,null,tint=MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.width(8.dp))
+                        IconButton(onClick = { previewIsolated(track.id, track.uri,
+                            track.sourceStartMs, track.durationMs, track.volume) },
+                            modifier = Modifier.size(40.dp)) {
+                            Icon(if (isolatedId == track.id && isolatedPlaying) Icons.Default.Pause
+                                else Icons.Default.PlayArrow,
+                                if (isolatedId == track.id && isolatedPlaying) "Pausar áudio importado"
+                                else "Ouvir áudio importado", tint=MaterialTheme.colorScheme.primary)
+                        }
+                        Spacer(Modifier.width(3.dp))
                         Text(AudioScreenLabels.readableFileName(track.title),modifier=Modifier.weight(1f),
                             maxLines=1,overflow=TextOverflow.Ellipsis,fontSize=13.sp)
                         TextButton(onClick={trackVolumeExpandedId=if(trackVolumeExpandedId==track.id) null else track.id},
@@ -350,6 +412,7 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                                 editSourceEnd = range.last
                                 previewPlayer.pause()
                                 previewPlaying = false
+                                isolatedPlayer.pause(); isolatedPlaying = false
                             }
                         },modifier=Modifier.size(40.dp)) { Icon(Icons.Default.ContentCut,"Editar corte da faixa") }
                         IconButton(onClick={pendingAudioDeleteId=track.id},modifier=Modifier.size(40.dp)) {
@@ -425,6 +488,9 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                     style=MaterialTheme.typography.bodySmall)
                 Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick={
+                        isolatedPlayer.pause(); isolatedPlaying = false
+                        previewPlayer.pause(); previewPlaying = false
+                        mixPlayer.pause(); mixPlaying = false
                         if (trackPlaying) {
                             trackPlayer.pause()
                             trackPlaying=false
@@ -472,9 +538,7 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                 Icon(Icons.Default.LibraryMusic,null,tint=MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.width(9.dp))
                 Column {
-                    Text("Adicionar áudio",fontWeight=FontWeight.Bold,fontSize=18.sp)
-                    Text("Música, narração ou efeitos",style=MaterialTheme.typography.bodySmall,
-                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Adicionar áudio",fontWeight=FontWeight.Bold,fontSize=16.sp)
                 }
             }
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -495,8 +559,7 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                         saved
                     })
             }
-            Text("Os áudios selecionados são adicionados diretamente ao projeto pelo seletor de arquivos do Android.",
-                style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+
         }
         AudioPanelCard {
                 Row(Modifier.fillMaxWidth().clickable(enabled = !exporting) {
@@ -506,9 +569,8 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                     Icon(Icons.Default.VideoLibrary,null,tint=MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(9.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("Extrair áudio de vídeo",fontWeight=FontWeight.Bold,fontSize=18.sp)
-                        Text(if (extractionExpanded) "Extraia o áudio sem alterar o vídeo original."
-                             else "Toque para abrir as opções de extração.",
+                        Text("Extrair do projeto",fontWeight=FontWeight.Bold,fontSize=16.sp)
+                        if (extractionExpanded) Text("Projeto, clipe ou vídeo externo",
                             style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -560,6 +622,9 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                 style=MaterialTheme.typography.bodySmall)
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp),verticalAlignment=Alignment.CenterVertically) {
                 OutlinedButton(onClick={
+                    isolatedPlayer.pause(); isolatedPlaying = false
+                    mixPlayer.pause(); mixPlaying = false
+                    trackPlayer.pause(); trackPlaying = false
                     if (previewPlaying) {
                         previewPlayer.pause()
                         previewPlaying=false
@@ -621,7 +686,7 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
         }
         if(message.isNotBlank()) {
             Surface(color=MaterialTheme.colorScheme.surfaceVariant,
-                shape=androidx.compose.foundation.shape.RoundedCornerShape(12.dp)) {
+                shape=UaiShapes.item) {
                 Row(Modifier.fillMaxWidth().padding(start=12.dp,top=4.dp,bottom=4.dp),
                     verticalAlignment=Alignment.CenterVertically) {
                     Icon(Icons.Default.Info,contentDescription=null,
@@ -653,7 +718,8 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                 !onSaveAndReturn(p) -> "Falha ao salvar o projeto. Continue nesta tela e tente novamente."
                 else -> ""
             }
-        },enabled=!exporting,modifier=Modifier.fillMaxWidth().heightIn(min=52.dp)) {
+        },enabled=!exporting,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
+            shape=UaiShapes.button) {
             Icon(Icons.Default.Save,contentDescription=null,modifier=Modifier.size(19.dp))
             Spacer(Modifier.width(8.dp))
             Text("Salvar e voltar ao vídeo",fontWeight=FontWeight.SemiBold)

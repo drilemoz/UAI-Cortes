@@ -11,7 +11,7 @@ main = (base/'MainActivity.kt').read_text()
 
 # O menu de extração inicia fechado e as ferramentas só existem dentro do painel.
 assert 'var extractionExpanded by remember(p.id) { mutableStateOf(false) }' in audio
-start = audio.index('Text("Extrair áudio de vídeo"')
+start = audio.index('Text("Extrair do projeto"')
 head = audio[:start]
 assert 'clickable(enabled = !exporting)' in head
 assert 'extractionExpanded = !extractionExpanded' in head

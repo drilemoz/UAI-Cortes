@@ -397,7 +397,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     }
     BackHandler(screen != "home") { back() }
     LaunchedEffect(screen, diagnosticsEnabled) { DiagnosticRecorder.screen(screen) }
-    MaterialTheme(colorScheme = palette) {
+    MaterialTheme(colorScheme = palette, shapes = UaiShapes.theme) {
     val mainImagePick = MainImageInsertionUi(project, screen, mediaAction, selectedClip,
         mediaTaskCoordinator, incomingMainImage, { incomingMainImage = null },
         { openGallery("editor", "image_insert") }) { changed, clip, index ->

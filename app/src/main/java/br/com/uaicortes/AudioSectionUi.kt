@@ -13,20 +13,20 @@ import androidx.compose.ui.unit.sp
 /** Componentes visuais da tela Áudio. Não criam trilhas ou alteram o modelo. */
 @Composable
 internal fun AudioPanelCard(content: @Composable ColumnScope.() -> Unit) {
-    Surface(shape=RoundedCornerShape(20.dp),color=MaterialTheme.colorScheme.surface,
+    Surface(shape=UaiShapes.card,color=MaterialTheme.colorScheme.surface,
         tonalElevation=2.dp,border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),
         modifier=Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(9.dp),content=content)
+        Column(Modifier.padding(10.dp),verticalArrangement=Arrangement.spacedBy(7.dp),content=content)
     }
 }
 
 @Composable
 internal fun AudioTrackCard(content: @Composable ColumnScope.() -> Unit) {
-    Surface(shape=RoundedCornerShape(14.dp),
+    Surface(shape=UaiShapes.item,
         color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.35f),
         border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant),
         modifier=Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(horizontal=10.dp,vertical=4.dp),content=content)
+        Column(Modifier.padding(horizontal=9.dp,vertical=3.dp),content=content)
     }
 }
 
@@ -34,7 +34,8 @@ internal fun AudioTrackCard(content: @Composable ColumnScope.() -> Unit) {
 internal fun AudioQuickAction(label:String,icon:ImageVector,onClick:()->Unit,
                               modifier:Modifier=Modifier,enabled:Boolean=true) {
     OutlinedButton(onClick=onClick,modifier=modifier,enabled=enabled,
-        contentPadding=PaddingValues(horizontal=8.dp,vertical=4.dp)) {
+        contentPadding=PaddingValues(horizontal=8.dp,vertical=4.dp),
+        shape=UaiShapes.button) {
         Icon(icon,null,modifier=Modifier.size(17.dp))
         Spacer(Modifier.width(5.dp))
         Text(label,fontSize=12.sp,maxLines=1)

@@ -1,4 +1,10 @@
-# Uai Cortes · versão 0.1.198 — Galeria integrada para vídeos
+## 0.1.199 (versionCode 200) — Padronização visual, PiP e áudio
+- Escala `UaiShapes` aplicada ao tema Compose e telas principais para botões, cartões, diálogos e painéis com cantos discretos. Janela Salvar edição compactada sem alterar operações.
+- PiP com prévia vertical compacta inicial (250 dp) e botão Ampliar/Reduzir, ações compactas e ajuda recolhível. Geometria e composição preservadas.
+- Áudio com reprodução Play/Pausa por faixa adicional e música, player isolado compartilhado e parada ao ouvir mixagem, corte ou outra faixa. Controles e textos redundantes recolhidos; extração avançada preservada.
+- Regressão de contratos e versionamento atualizados; build Android e testes em aparelho ainda precisam ser executados.
+
+# Uai Cortes · versão 0.1.199 — Galeria integrada para vídeos
 
 ## v0.1.198 · versionCode 199
 - Corrigida seleção inicial de vídeos em **Dividir vídeo** e **Extrair áudio**: agora abre a galeria integrada com miniaturas, pastas, busca e atualização, usando o mesmo navegador de Criar projeto/Inserir imagem.
