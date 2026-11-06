@@ -3,7 +3,7 @@
 from pathlib import Path
 ui=(Path(__file__).resolve().parents[1]/'app/src/main/java/br/com/uaicortes/VoiceIaScreen.kt').read_text()
 start=ui.index('    if (voicePickerCueId != null || voicePickerForAll || voicePickerSpeakerId != null) {')
-end=ui.index('    if (stylePickerCueId != null || stylePickerForAll) {',start)
+end=ui.index('    if (stylePickerCueId != null || stylePickerForAll || stylePickerSpeakerId != null) {',start)
 popup=ui[start:end]
 assert 'DialogProperties(usePlatformDefaultWidth = false)' in popup
 assert 'fillMaxWidth(0.96f).widthIn(max = 600.dp)' in popup

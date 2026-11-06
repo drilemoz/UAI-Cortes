@@ -1,3 +1,11 @@
+# v0.1.189 — Interpretação Gemini por personagem, teste e revisão do lote
+- Em Vozes IA, persistir `defaultStyle`, `speakerStyles` e `cueStyles` opcionais dentro de `VideoProject.voiceIaVoices` (JSON schemaVersion 4). Precedência da interpretação: fala > personagem válido > geral > legado. Somente rascunhos confirmados com Salvar projeto são duráveis.
+- Seleção por personagem não chama IA; o teste curto explícito usa frase fixa e **confirmação de consumo de cota Gemini**. Armazenar WAV temporário em cache, não adicionar à timeline e excluir ao abandonar a tela.
+- Revisão local apresenta estados WAV pronto, pendente, sem voz, desatualizado, sincronização e chamada incerta. Geração filtrada não altera legendas, personagens nem outros áudios; mantém botão de confirmação antes da chamada.
+- Uma fila retomada é reconciliada com voz, modelo e interpretação efetivos antes de enviar qualquer requisição. Incompatibilidade marca STALE, não tenta novamente nem remove WAV. Reutilização de WAV usa `VoiceIaPolicy.matches` (fingerprint, voz, modelo e estilo).
+- Ao excluir um personagem, remover sua interpretação e voz; exceções de legenda permanecem até edição do usuário. Aplicar voz geral não apaga estilos e vice-versa.
+- v0.1.189/versionCode 190: manter cinco APKs Release, CI, assinatura, segredos, histórico e backups; sem alterar schemaVersion 4. Build Gradle e testes Android físicos ainda requeridos.
+
 # v0.1.188 — Voz Gemini por personagem, lista e estilos de legendas
 - Aproveitar `SubtitleCue.speakerId`/`subtitleSpeakers` do projeto para associar voz Gemini a cada personagem, sem identificação automática. `VideoProject.voiceIaVoices` é campo JSON opcional do schemaVersion 4: voz geral, por personagem e por legenda, com ID estável e precedência fala > personagem > geral > legado. Persistência ocorre no rascunho, que só é confirmado pelo fluxo Salvar do editor.
 - Aplicar uma voz por personagem a todas as falas já associadas, sem chamar API na escolha e sem sobrescrever exceções individuais. Permitir remover escolha e voltar à herança. Filtro/busca só afetam lista; timeline, fila e geração continuam completas.

@@ -83,6 +83,10 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
     var voicePickerCueId by remember { mutableStateOf<String?>(null) }
     var voicePickerSpeakerId by remember { mutableStateOf<String?>(null) }
     var pendingSpeakerVoice by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var pendingSpeakerStyle by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var pendingPreviewSpeakerId by remember { mutableStateOf<String?>(null) }
+    var previewFile by remember { mutableStateOf<File?>(null) }
+    var batchReviewExpanded by remember { mutableStateOf(false) }
     var speakerFilter by remember(project.id) { mutableStateOf<String?>(null) }
     var speakerFilterOpen by remember { mutableStateOf(false) }
     var cueSearch by remember(project.id) { mutableStateOf("") }
@@ -106,9 +110,20 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
     } }
     var model by remember(project.id) { mutableStateOf(GeminiModels.LITE) }
     var modelOpen by remember { mutableStateOf(false) }
-    var defaultStyle by remember(project.id) { mutableStateOf("Neutra") }
-    val styleOverrides = remember(project.id) { mutableStateMapOf<String, String>() }
+    var defaultStyle by remember(project.id) {
+        mutableStateOf(project.voiceIaVoices.defaultStyle ?: VoiceIaStylePolicy.DEFAULT)
+    }
+    var hasExplicitDefaultStyle by remember(project.id) {
+        mutableStateOf(project.voiceIaVoices.defaultStyle != null)
+    }
+    val styleOverrides = remember(project.id) { mutableStateMapOf<String, String>().apply {
+        putAll(project.voiceIaVoices.cueStyles)
+    } }
+    val speakerStyleOverrides = remember(project.id) { mutableStateMapOf<String, String>().apply {
+        putAll(project.voiceIaVoices.speakerStyles)
+    } }
     var stylePickerCueId by remember { mutableStateOf<String?>(null) }
+    var stylePickerSpeakerId by remember { mutableStateOf<String?>(null) }
     var stylePickerForAll by remember { mutableStateOf(false) }
     val wavePlayer = remember(context) { diagnosticPlayer(context) }
     var playingFile by remember { mutableStateOf<String?>(null) }
@@ -124,6 +139,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
             api.cancel()
             wavePlayer.removeListener(listener)
             wavePlayer.release()
+            previewFile?.delete() // Teste temporário, nunca entra no rascunho nem na timeline.
         }
     }
     LaunchedEffect(store, queueStore) {
@@ -148,7 +164,17 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                                     it.kind == VoiceIaPolicy.KIND && it.subtitleId == cue.id
                                 }?.voiceId)
                         }
-                        val safe = VoiceIaQueuePolicy.reconcileSelections(repaired, currentVoices)
+                        val currentStyles = cues.associate { cue ->
+                            val chosenStyle = VoiceIaStylePolicy.preferred(cue,
+                                project.subtitleSpeakers, project.voiceIaVoices)
+                                ?: recoveredTakes.firstOrNull { it.cueId == cue.id }?.style?.let {
+                                    direction -> GeminiNarrationStyling.presets
+                                        .firstOrNull { it.direction == direction }?.label
+                                } ?: VoiceIaStylePolicy.DEFAULT
+                            cue.id to GeminiNarrationStyling.instruction(chosenStyle)
+                        }
+                        val safe = VoiceIaQueuePolicy.reconcileSelections(repaired,
+                            currentVoices, currentStyles)
                         if (safe != old) queueStore.save(safe)
                         if (safe.unfinished) safe else {
                             queueStore.clear(); null
@@ -192,6 +218,9 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
         ?: project.audioTracks.firstOrNull { it.kind == VoiceIaPolicy.KIND && it.subtitleId == cue.id }?.voiceId
         ?: defaultVoice
     fun styleFor(cue: SubtitleCue): String = styleOverrides[cue.id]
+        ?: cue.speakerId?.takeIf { id -> project.subtitleSpeakers.any { it.id == id } }
+            ?.let(speakerStyleOverrides::get)
+        ?: defaultStyle.takeIf { hasExplicitDefaultStyle }
         ?: takes.firstOrNull { it.cueId == cue.id }?.style
             ?.let { instruction -> GeminiNarrationStyling.presets.firstOrNull { it.direction == instruction }?.label }
         ?: project.audioTracks.firstOrNull { it.kind == VoiceIaPolicy.KIND && it.subtitleId == cue.id }?.ttsStyle
@@ -215,15 +244,18 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
             selectedCueId = filteredCues.first().id
     }
     // Voz e personagem selecionados são condições de validade da fila, não apenas seu texto.
-    LaunchedEffect(project.voiceIaVoices, loaded) {
+    LaunchedEffect(project.voiceIaVoices, loaded, defaultStyle, model,
+        styleOverrides.toMap(), speakerStyleOverrides.toMap()) {
         val previous = savedQueue
         if (loaded && previous != null && !busy) {
             val updated = VoiceIaQueuePolicy.reconcileSelections(previous,
-                cues.associate { it.id to voiceFor(it) })
+                cues.associate { it.id to voiceFor(it) },
+                cues.associate { it.id to GeminiNarrationStyling.instruction(styleFor(it)) }, model)
             if (updated != previous) {
                 withContext(Dispatchers.IO) { queueStore.save(updated) }
                 savedQueue = updated
-                status = "Voz de personagem alterada: itens antigos foram marcados para revisão; sem cobrança."
+                status = "Voz, interpretação ou modelo alterado: itens antigos foram marcados " +
+                    "como desatualizados. Nenhuma API foi chamada."
             }
         }
     }
@@ -264,6 +296,11 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
         }.map { it.cueId } else ids
         val chosen = cues.filter { it.id in selectedIds }
         if (chosen.isEmpty()) return
+        if (!resumeQueued && chosen.any { voiceFor(it).isNullOrBlank() }) {
+            status = "Faltam vozes em ${chosen.count { voiceFor(it).isNullOrBlank() }} fala(s) deste lote. " +
+                "Configure uma voz geral ou por personagem antes de gerar."
+            return
+        }
         generationJob = scope.launch {
             busy = true; completed = 0; total = chosen.size
             var journal: VoiceIaQueueSnapshot? = null
@@ -279,7 +316,8 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                         }
                     }
                     val safe = VoiceIaQueuePolicy.reconcileSelections(reconciled,
-                        cues.associate { it.id to voiceFor(it) })
+                        cues.associate { it.id to voiceFor(it) },
+                        cues.associate { it.id to GeminiNarrationStyling.instruction(styleFor(it)) }, model)
                     saveQueue(safe)
                 } else if (chosen.size > 1) {
                     val planned = chosen.map { cue ->
@@ -306,6 +344,12 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                         val task = journal?.items?.firstOrNull { it.cueId == cue.id }
                         if (resumeQueued && task?.stage != VoiceIaQueueStage.PENDING) continue
                         if (task != null && task.voiceId != voiceFor(cue)) {
+                            journal = saveQueue(VoiceIaQueuePolicy.transition(journal!!,
+                                cue.id, VoiceIaQueueStage.STALE))
+                            continue
+                        }
+                        if (task != null && (task.style != GeminiNarrationStyling.instruction(styleFor(cue)) ||
+                            task.model != model)) {
                             journal = saveQueue(VoiceIaQueuePolicy.transition(journal!!,
                                 cue.id, VoiceIaQueueStage.STALE))
                             continue
@@ -401,6 +445,64 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                 status = "Parou em ${completed + 1}/${chosen.size}: " +
                     "${e.message?.take(130) ?: "falha local"}. Sem novas tentativas automáticas."
             } finally { busy = false; generationJob = null; generatingCueId = null }
+        }
+    }
+    fun requestSpeakerBatch(speakerId: String) {
+        val chosen = cues.filter { it.speakerId == speakerId &&
+            readyFor(it)?.let { take -> File(take.filePath).isFile } != true }
+        if (chosen.isEmpty()) {
+            status = "Todas as falas deste personagem já têm WAV compatível."
+        } else if (chosen.any { voiceFor(it).isNullOrBlank() }) {
+            status = "Configure a voz deste personagem antes de gerar ${chosen.size} fala(s)."
+            voicePickerSpeakerId = speakerId
+        } else {
+            promptGenerate = chosen.map { it.id }
+        }
+    }
+    fun previewSpeaker(speakerId: String) {
+        val speaker = project.subtitleSpeakers.firstOrNull { it.id == speakerId } ?: return
+        if (cues.none { it.speakerId == speakerId }) return
+        // A amostra representa a preferência do personagem, não uma exceção de fala.
+        val voice = speakerVoiceOverrides[speakerId]
+            ?: project.voiceIaVoices.defaultVoiceId ?: defaultVoice
+        val chosenStyle = speakerStyleOverrides[speakerId] ?: defaultStyle
+        if (voice.isNullOrBlank()) {
+            status = "Escolha uma voz para ${speaker.name} antes de ouvir o teste."
+            return
+        }
+        scope.launch {
+            busy = true
+            try {
+                val key = withContext(Dispatchers.IO) { credentials.read() }
+                    ?: error("Configure sua chave Gemini em Serviços e APIs.")
+                val previous = previewFile
+                wavePlayer.stop(); playingFile = null
+                previous?.delete(); previewFile = null
+                withContext(Dispatchers.IO) {
+                    pacing.beforeRequest(model) { waitMs ->
+                        withContext(Dispatchers.Main) {
+                            status = "Aguardando ${((waitMs + 999) / 1000)} s para o teste Gemini."
+                        }
+                    }
+                }
+                val sample = "Olá, esta é uma demonstração da voz e da interpretação escolhidas."
+                val audio = api.synthesize(key, model, voice,
+                    GeminiNarrationStyling.instruction(chosenStyle), sample)
+                val file = withContext(Dispatchers.IO) {
+                    File.createTempFile("uai_voz_teste_", ".wav", context.cacheDir).also { temp ->
+                        try { temp.writeBytes(audio.bytes) } catch (e: Exception) { temp.delete(); throw e }
+                    }
+                }
+                previewFile = file
+                wavePlayer.setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
+                wavePlayer.prepare(); wavePlayer.play()
+                playingFile = file.absolutePath
+                status = "Teste de ${speaker.name} reproduzindo. Arquivo temporário; nenhuma faixa foi inserida."
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                status = "Teste de voz não concluído: ${e.message?.take(130) ?: "falha local"}. " +
+                    "Pode ter consumido cota Gemini."
+            } finally { busy = false }
         }
     }
     fun adjustWav(cue: SubtitleCue, take: VoiceIaTake, targetMs: Long) {
@@ -605,35 +707,127 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
         if (project.subtitleSpeakers.isNotEmpty()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically) {
-                Text("Vozes por personagem", fontWeight = FontWeight.SemiBold,
+                Text("Voz e interpretação por personagem", fontWeight = FontWeight.SemiBold,
                     fontSize = 12.sp, modifier = Modifier.weight(1f))
-                Text("${project.subtitleSpeakers.size} personagens · toque no microfone",
-                    fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("${project.subtitleSpeakers.size} personagens", fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             LazyRow(Modifier.fillMaxWidth().padding(horizontal = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 contentPadding = PaddingValues(vertical = 3.dp)) {
                 itemsIndexed(project.subtitleSpeakers, key = { _, speaker -> speaker.id }) { _, speaker ->
                     val count = cues.count { it.speakerId == speaker.id }
-                    val assigned = speakerVoiceOverrides[speaker.id]
-                    Surface(onClick = { voicePickerSpeakerId = speaker.id }, enabled = !busy,
-                        shape = RoundedCornerShape(10.dp),
+                    val chosenVoice = speakerVoiceOverrides[speaker.id]
+                        ?: project.voiceIaVoices.defaultVoiceId ?: defaultVoice
+                    val chosenStyle = speakerStyleOverrides[speaker.id] ?: defaultStyle
+                    Surface(shape = RoundedCornerShape(10.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant) {
-                        Row(Modifier.heightIn(min = 48.dp).padding(horizontal = 9.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Box(Modifier.size(11.dp).background(Color(speaker.color), RoundedCornerShape(3.dp)))
-                            Column(Modifier.widthIn(max = 145.dp)) {
-                                Text(speaker.name, fontSize = 12.sp, fontWeight = FontWeight.Medium,
-                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text("$count falas · ${assigned?.let(::displayVoiceName) ?: "Sem voz"}",
-                                    fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        Column(Modifier.widthIn(min = 215.dp, max = 260.dp).padding(7.dp),
+                            verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                Box(Modifier.size(11.dp).background(Color(speaker.color), RoundedCornerShape(3.dp)))
+                                Text(speaker.name, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f))
+                                Text("$count falas", fontSize = 10.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Icon(Icons.Default.RecordVoiceOver,
-                                contentDescription = "Definir voz do personagem ${speaker.name}",
-                                modifier = Modifier.size(21.dp), tint = MaterialTheme.colorScheme.primary)
+                            Row(verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(chosenVoice?.let(::displayVoiceName) ?: "Sem voz configurada",
+                                        fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text("${VoiceIaShortLabels.style(chosenStyle)} · interpretação",
+                                        fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                IconButton(onClick = { voicePickerSpeakerId = speaker.id },
+                                    enabled = !busy, modifier = Modifier.size(34.dp)) {
+                                    Icon(Icons.Default.RecordVoiceOver, "Escolher voz de ${speaker.name}",
+                                        Modifier.size(19.dp))
+                                }
+                                IconButton(onClick = { stylePickerSpeakerId = speaker.id },
+                                    enabled = !busy, modifier = Modifier.size(34.dp)) {
+                                    Icon(Icons.Default.Tune, "Interpretação de ${speaker.name}: $chosenStyle",
+                                        Modifier.size(19.dp))
+                                }
+                                IconButton(onClick = { pendingPreviewSpeakerId = speaker.id },
+                                    enabled = !busy && count > 0 && !(
+                                        speakerVoiceOverrides[speaker.id]
+                                            ?: project.voiceIaVoices.defaultVoiceId ?: defaultVoice).isNullOrBlank(),
+                                    modifier = Modifier.size(34.dp)) {
+                                    Icon(Icons.Default.PlayCircleOutline, "Testar voz e interpretação de ${speaker.name}",
+                                        Modifier.size(19.dp))
+                                }
+                                IconButton(onClick = { requestSpeakerBatch(speaker.id) },
+                                    enabled = !busy && loaded && count > 0,
+                                    modifier = Modifier.size(34.dp)) {
+                                    Icon(Icons.Default.AutoAwesome, "Gerar pendentes de ${speaker.name}",
+                                        Modifier.size(19.dp))
+                                }
+                            }
                         }
+                    }
+                }
+            }
+        }
+        val reviewItems = cues.map { cue ->
+            val wav = readyFor(cue)?.takeIf { File(it.filePath).isFile }
+            val inserted = project.audioTracks.firstOrNull {
+                it.kind == VoiceIaPolicy.KIND && it.subtitleId == cue.id
+            }
+            val installedOutdated = inserted != null && (
+                (voiceFor(cue) != null && inserted.voiceId != voiceFor(cue)) ||
+                inserted.ttsStyle != GeminiNarrationStyling.instruction(styleFor(cue)) ||
+                inserted.ttsModel != model)
+            val prior = takes.any { it.cueId == cue.id } || inserted != null
+            val queueUncertain = savedQueue?.items?.any { it.cueId == cue.id &&
+                it.stage == VoiceIaQueueStage.REVIEW } == true
+            VoiceIaReviewItem(cue.id, cue.speakerId, !voiceFor(cue).isNullOrBlank(), wav != null,
+                (prior && wav == null) || installedOutdated,
+                wav?.let { it.durationMs > cue.endMs - cue.startMs } == true,
+                queueUncertain)
+        }
+        val review = VoiceIaBatchReviewPolicy.review(reviewItems)
+        Surface(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 3.dp),
+            shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+            Column(Modifier.padding(horizontal = 10.dp, vertical = 5.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Lote: ${review.total} falas · ${review.ready} WAVs prontos · " +
+                        "${review.pending} pendentes", modifier = Modifier.weight(1f), fontSize = 11.sp)
+                    TextButton(onClick = { batchReviewExpanded = !batchReviewExpanded }) {
+                        Icon(Icons.Default.FactCheck, null, Modifier.size(16.dp))
+                        Spacer(Modifier.width(3.dp))
+                        Text(if (batchReviewExpanded) "Ocultar" else "Revisar lote", fontSize = 11.sp)
+                    }
+                }
+                if (batchReviewExpanded) {
+                    Text("Sem voz: ${review.missingVoice} · Áudio desatualizado: ${review.outdated} · " +
+                        "Sincronização a revisar: ${review.syncReview} · Fila incerta: ${review.uncertain}",
+                        fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("A contagem pode incluir a mesma fala em mais de uma categoria. " +
+                        "Nenhuma geração é iniciada ao revisar.", fontSize = 10.sp)
+                    project.subtitleSpeakers.forEach { speaker ->
+                        val row = VoiceIaBatchReviewPolicy.review(reviewItems.filter { it.speakerId == speaker.id })
+                        Text("${speaker.name}: ${row.ready}/${row.total} prontas · ${row.pending} pendentes" +
+                            if (row.missingVoice > 0) " · ${row.missingVoice} sem voz" else "",
+                            fontSize = 11.sp)
+                    }
+                    val unassigned = VoiceIaBatchReviewPolicy.review(reviewItems.filter { item ->
+                        project.subtitleSpeakers.none { it.id == item.speakerId }
+                    })
+                    if (unassigned.total > 0) Text("Sem personagem: ${unassigned.ready}/${unassigned.total} prontas",
+                        fontSize = 11.sp)
+                    val subset = filteredCues.filter { cue ->
+                        reviewItems.any { it.cueId == cue.id && it.hasVoice && !it.wavReady }
+                    }
+                    OutlinedButton(onClick = { promptGenerate = subset.map { it.id } },
+                        enabled = !busy && loaded && subset.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.AutoAwesome, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Gerar somente pendentes do filtro (${subset.size})")
                     }
                 }
             }
@@ -1073,27 +1267,59 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
             }
         }
     }
-    if (stylePickerCueId != null || stylePickerForAll) {
+    if (stylePickerCueId != null || stylePickerForAll || stylePickerSpeakerId != null) {
         val targetId = stylePickerCueId
+        val speakerId = stylePickerSpeakerId
         val forAll = stylePickerForAll
-        val currentStyle = if (forAll) defaultStyle else
-            cues.firstOrNull { it.id == targetId }?.let { styleFor(it) } ?: defaultStyle
+        val currentStyle = when {
+            forAll -> defaultStyle
+            speakerId != null -> speakerStyleOverrides[speakerId] ?: defaultStyle
+            else -> cues.firstOrNull { it.id == targetId }?.let { styleFor(it) } ?: defaultStyle
+        }
+        fun closeStylePicker() {
+            stylePickerCueId = null; stylePickerForAll = false; stylePickerSpeakerId = null
+        }
         val comparator = Collator.getInstance(Locale.forLanguageTag("pt-BR"))
         val sortedStyles = GeminiNarrationStyling.presets.sortedWith { a, b ->
             comparator.compare(a.label, b.label)
         }
-        AlertDialog(onDismissRequest = { stylePickerCueId = null; stylePickerForAll = false },
+        AlertDialog(onDismissRequest = { closeStylePicker() },
             modifier = Modifier.padding(horizontal = 10.dp), shape = RoundedCornerShape(14.dp),
-            title = { Text(if (forAll) "Estilo geral" else "Interpretação da fala", fontSize = 18.sp) },
+            title = { Text(when {
+                forAll -> "Interpretação geral"
+                speakerId != null -> "Interpretação do personagem"
+                else -> "Interpretação da fala"
+            }, fontSize = 18.sp) },
             text = { Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Atual: $currentStyle", style = MaterialTheme.typography.labelSmall)
+                if (!forAll && (speakerId != null || targetId != null)) {
+                    TextButton(onClick = {
+                        val changed = if (speakerId != null)
+                            VoiceIaStylePolicy.speakerStyle(latestProject, speakerId, null)
+                        else VoiceIaStylePolicy.cueStyle(latestProject, targetId!!, null)
+                        if (changed != null && onSave(changed)) {
+                            if (speakerId != null) speakerStyleOverrides.remove(speakerId)
+                            else if (targetId != null) styleOverrides.remove(targetId)
+                            status = "Interpretação individual removida; configuração herdada restaurada."
+                        } else status = "Falha ao remover configuração de interpretação."
+                        closeStylePicker()
+                    }) { Text(if (speakerId != null) "Herdar interpretação geral"
+                        else "Herdar interpretação do personagem") }
+                }
                 LazyColumn(Modifier.fillMaxWidth().heightIn(max = 310.dp)) {
                     itemsIndexed(sortedStyles, key = { _, preset -> preset.label }) { _, preset ->
                         Row(Modifier.fillMaxWidth().clickable {
                             if (forAll) pendingStyleForAll = preset.label
-                            else if (targetId != null) styleOverrides[targetId] = preset.label
-                            stylePickerCueId = null
-                            stylePickerForAll = false
+                            else if (speakerId != null) pendingSpeakerStyle = speakerId to preset.label
+                            else if (targetId != null) {
+                                val changed = VoiceIaStylePolicy.cueStyle(latestProject,
+                                    targetId, preset.label)
+                                if (changed != null && onSave(changed)) {
+                                    styleOverrides[targetId] = preset.label
+                                    status = "Interpretação desta fala salva no rascunho."
+                                } else status = "Falha ao salvar interpretação desta fala."
+                            }
+                            closeStylePicker()
                         }.heightIn(min = 42.dp).padding(horizontal = 6.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically) {
                             Text(preset.label, modifier = Modifier.weight(1f), fontSize = 14.sp)
@@ -1105,8 +1331,45 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                     }
                 }
             } }, confirmButton = { TextButton(onClick = {
-                stylePickerCueId = null; stylePickerForAll = false
+                closeStylePicker()
             }) { Text("Fechar") } })
+    }
+    pendingSpeakerStyle?.let { (speakerId, style) ->
+        val speaker = project.subtitleSpeakers.firstOrNull { it.id == speakerId }
+        val affected = cues.count { it.speakerId == speakerId && it.id !in styleOverrides }
+        AlertDialog(onDismissRequest = { pendingSpeakerStyle = null },
+            title = { Text("Interpretação para ${speaker?.name ?: "personagem"}?") },
+            text = { Text("$affected fala(s) passarão a herdar $style. Exceções individuais são " +
+                "preservadas e WAVs anteriores não são apagados. Uma nova geração pode consumir cota Gemini. " +
+                "Nenhuma chamada será feita ao aplicar.") },
+            confirmButton = { TextButton(onClick = {
+                val changed = VoiceIaStylePolicy.speakerStyle(latestProject, speakerId, style)
+                if (changed != null && onSave(changed)) {
+                    speakerStyleOverrides[speakerId] = style
+                    status = "Interpretação $style configurada para ${speaker?.name ?: "personagem"}."
+                } else status = "Falha ao salvar interpretação do personagem."
+                pendingSpeakerStyle = null
+            }) { Text("Aplicar") } },
+            dismissButton = { TextButton(onClick = { pendingSpeakerStyle = null }) { Text("Cancelar") } })
+    }
+    pendingPreviewSpeakerId?.let { speakerId ->
+        val speaker = project.subtitleSpeakers.firstOrNull { it.id == speakerId }
+        val chosenVoice = speakerVoiceOverrides[speakerId]
+            ?: project.voiceIaVoices.defaultVoiceId ?: defaultVoice
+        val chosenStyle = speakerStyleOverrides[speakerId] ?: defaultStyle
+        AlertDialog(onDismissRequest = { pendingPreviewSpeakerId = null },
+            title = { Text("Testar voz de ${speaker?.name ?: "personagem"}?") },
+            text = { Text("O Gemini produzirá uma amostra curta com a voz " +
+                "${displayVoiceName(chosenVoice)} e interpretação $chosenStyle. " +
+                "Isso faz UMA chamada de API e pode consumir cota ou gerar cobrança. " +
+                "O WAV será temporário e não será inserido no projeto.") },
+            confirmButton = { TextButton(onClick = {
+                pendingPreviewSpeakerId = null
+                previewSpeaker(speakerId)
+            }, enabled = chosenVoice != null && !busy) { Text("Gerar e ouvir") } },
+            dismissButton = { TextButton(onClick = { pendingPreviewSpeakerId = null }) {
+                Text("Cancelar")
+            } })
     }
     pendingSpeakerVoice?.let { (speakerId, chosenVoice) ->
         val speaker = project.subtitleSpeakers.firstOrNull { it.id == speakerId }
@@ -1158,11 +1421,15 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                 "Vozes já geradas permanecem salvas, mas podem precisar de nova geração para usar o estilo escolhido. " +
                 "Nenhuma chamada Gemini acontece agora.") },
             confirmButton = { TextButton(onClick = {
-                defaultStyle = selected
-                styleOverrides.clear()
-                cues.forEach { styleOverrides[it.id] = selected }
+                val changed = VoiceIaStylePolicy.all(latestProject, selected)
+                if (changed != null && onSave(changed)) {
+                    defaultStyle = selected
+                    hasExplicitDefaultStyle = true
+                    styleOverrides.clear()
+                    speakerStyleOverrides.clear()
+                    status = "Interpretação $selected aplicada e persistida no rascunho de ${cues.size} falas."
+                } else status = "Falha ao salvar interpretação geral."
                 pendingStyleForAll = null
-                status = "Estilo ${selected} aplicado às ${cues.size} falas. Gere para ouvir o resultado."
             }) { Text("Aplicar a todas") } },
             dismissButton = { TextButton(onClick = { pendingStyleForAll = null }) { Text("Cancelar") } })
     }
@@ -1225,7 +1492,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                     val reusable = cues.count { cue ->
                         cue.id !in ids && readyFor(cue)?.let { File(it.filePath).isFile } == true
                     }
-                    Text("Planejamento: $count chamada(s) pendente(s), $reusable WAV(s) já reutilizáveis " +
+                    Text("Planejamento: até $count chamada(s) Gemini, $reusable WAV(s) já reutilizáveis " +
                         "com as configurações atuais. Cada WAV concluído fica salvo para retomar depois.",
                         style = MaterialTheme.typography.bodySmall)
                 }

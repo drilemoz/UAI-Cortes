@@ -24,7 +24,7 @@ assert 'VoiceIaCueTimeline(cues,' in ui
 assert 'val pending = batchPlan.toGenerate' in ui
 assert 'pendingSpeakerVoice?.let' in ui
 assert 'VoiceIaQueuePolicy.reconcileSelections' in ui
-assert 'current != item.voiceId' in queue
+assert 'currentVoices[item.cueId] != item.voiceId' in queue
 assert 'FilterChip(selected = appearanceMode == SubtitleAppearanceMode.CLASSIC_SRT' in auto
 assert 'SubtitleAppearancePolicy.generated(it, appearanceMode, generatedSize)' in auto
 assert 'wordTimings' not in style  # copy preserva marcações sem reconstruir

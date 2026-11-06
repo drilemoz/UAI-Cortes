@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.189 — Interpretação por personagem
+
+- Configure voz e interpretação Gemini em cada personagem de Legendas, com exceções por fala e herança de estilo geral. Preferências são salvas no rascunho do projeto.
+- Teste a combinação de voz e interpretação com uma amostra curta após confirmação de que uma chamada Gemini pode consumir cota. Esse áudio de teste não entra na timeline.
+- Revise o lote por estado das falas e por personagem antes de gerar. Gere somente as falas pendentes de um personagem ou do filtro atual.
+- Reutilização e retomada da fila verificam voz, modelo e interpretação. WAVs preparados e legendas permanecem preservados.
+- Código-fonte v0.1.189/versionCode 190; cinco variantes de APK no CI. Build Android e validação em aparelho ainda pendentes.
+
 # Uai Cortes · versão 0.1.188 — Vozes por personagem
 
 - Vozes IA: toque no personagem para escolher uma voz Gemini e aplicá-la a todas as falas dele, sem precisar configurar legenda por legenda. Exceções individuais continuam possíveis e são mantidas no rascunho do projeto.

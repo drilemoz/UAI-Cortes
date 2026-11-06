@@ -6,7 +6,10 @@ import org.json.JSONObject
 data class VoiceIaVoiceAssignments(
     val defaultVoiceId: String? = null,
     val speakerVoices: Map<String, String> = emptyMap(),
-    val cueVoices: Map<String, String> = emptyMap()
+    val cueVoices: Map<String, String> = emptyMap(),
+    val defaultStyle: String? = null,
+    val speakerStyles: Map<String, String> = emptyMap(),
+    val cueStyles: Map<String, String> = emptyMap()
 ) {
     fun json(): JSONObject = JSONObject()
         .put("defaultVoiceId", defaultVoiceId)
@@ -20,6 +23,19 @@ data class VoiceIaVoiceAssignments(
             cueVoices.entries.take(VoiceIaSpeakerVoicePolicy.MAX_CUE_OVERRIDES).forEach { (id, voice) ->
                 if (VoiceIaSpeakerVoicePolicy.validCueId(id) && VoiceIaSpeakerVoicePolicy.validVoice(voice))
                     out.put(id, voice)
+            }
+        })
+        .put("defaultStyle", defaultStyle?.takeIf(VoiceIaStylePolicy::valid))
+        .put("speakerStyles", JSONObject().also { out ->
+            speakerStyles.entries.take(SubtitleSpeakerPolicy.MAX_SPEAKERS).forEach { (id, style) ->
+                if (VoiceIaSpeakerVoicePolicy.validSpeakerId(id) && VoiceIaStylePolicy.valid(style))
+                    out.put(id, style)
+            }
+        })
+        .put("cueStyles", JSONObject().also { out ->
+            cueStyles.entries.take(VoiceIaSpeakerVoicePolicy.MAX_CUE_OVERRIDES).forEach { (id, style) ->
+                if (VoiceIaSpeakerVoicePolicy.validCueId(id) && VoiceIaStylePolicy.valid(style))
+                    out.put(id, style)
             }
         })
 
@@ -37,11 +53,27 @@ data class VoiceIaVoiceAssignments(
                 }
                 return result
             }
+            fun readStyles(key: String, limit: Int, validId: (String) -> Boolean): Map<String, String> {
+                val obj = json.optJSONObject(key) ?: return emptyMap()
+                val styles = linkedMapOf<String, String>()
+                val keys = obj.keys()
+                while (keys.hasNext() && styles.size < limit) {
+                    val id = keys.next()
+                    val style = obj.optString(id)
+                    if (validId(id) && VoiceIaStylePolicy.valid(style)) styles[id] = style
+                }
+                return styles
+            }
             return VoiceIaVoiceAssignments(
                 json.optString("defaultVoiceId").takeIf(VoiceIaSpeakerVoicePolicy::validVoice),
                 readMap("speakerVoices", SubtitleSpeakerPolicy.MAX_SPEAKERS,
                     VoiceIaSpeakerVoicePolicy::validSpeakerId),
                 readMap("cueVoices", VoiceIaSpeakerVoicePolicy.MAX_CUE_OVERRIDES,
+                    VoiceIaSpeakerVoicePolicy::validCueId),
+                json.optString("defaultStyle").takeIf(VoiceIaStylePolicy::valid),
+                readStyles("speakerStyles", SubtitleSpeakerPolicy.MAX_SPEAKERS,
+                    VoiceIaSpeakerVoicePolicy::validSpeakerId),
+                readStyles("cueStyles", VoiceIaSpeakerVoicePolicy.MAX_CUE_OVERRIDES,
                     VoiceIaSpeakerVoicePolicy::validCueId)
             )
         }
@@ -86,5 +118,6 @@ internal object VoiceIaSpeakerVoicePolicy {
 
     /** Aplicação geral explícita substitui configurações anteriores, sem alterar WAVs/legendas. */
     fun all(project: VideoProject, voice: String): VideoProject? =
-        voice.takeIf(::validVoice)?.let { project.copy(voiceIaVoices = VoiceIaVoiceAssignments(it)) }
+        voice.takeIf(::validVoice)?.let { project.copy(voiceIaVoices = project.voiceIaVoices.copy(
+            defaultVoiceId = it, speakerVoices = emptyMap(), cueVoices = emptyMap())) }
 }

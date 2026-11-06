@@ -78,10 +78,14 @@ internal object VoiceIaQueuePolicy {
 
     /** Uma alteração de voz do personagem torna a fila anterior obsoleta, sem reenviar chamadas. */
     fun reconcileSelections(queue: VoiceIaQueueSnapshot,
-        currentVoices: Map<String, String?>): VoiceIaQueueSnapshot = queue.copy(
+        currentVoices: Map<String, String?>,
+        currentStyles: Map<String, String> = emptyMap(),
+        currentModel: String? = null): VoiceIaQueueSnapshot = queue.copy(
         items = queue.items.map { item ->
-            val current = currentVoices[item.cueId]
-            if (item.cueId in currentVoices && current != item.voiceId)
+            val changedVoice = item.cueId in currentVoices && currentVoices[item.cueId] != item.voiceId
+            val changedStyle = item.cueId in currentStyles && currentStyles[item.cueId] != item.style
+            val changedModel = currentModel != null && item.model != currentModel
+            if (changedVoice || changedStyle || changedModel)
                 item.copy(stage = VoiceIaQueueStage.STALE)
             else item
         }

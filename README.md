@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.189 — Voz e interpretação por personagem
+
+Em **Vozes IA**, agora é possível configurar interpretação por personagem (por exemplo Assustada ou Sarcástica), além da voz Gemini. Cada fala herda os valores do seu personagem, exceto se houver configuração individual. O rascunho do projeto guarda as preferências; finalize com **Salvar projeto** no editor.
+
+Na faixa dos personagens, os ícones permitem escolher voz, interpretação, ouvir um teste curto (uma chamada Gemini confirmada e que pode consumir cota) e solicitar somente falas pendentes. O painel **Revisar lote** mostra estados, áudios desatualizados, sincronização e pendências por personagem e permite gerar somente o filtro ativo. A seleção não gera WAV automaticamente nem insere faixas sem confirmação.
+
+O aplicativo preserva a importação SRT e o estilo Karaokê IA, timeline, assinaturas, backups e JSON schemaVersion 4. v0.1.189/versionCode 190. Build Android e testes físicos pendentes após verificação de código e testes locais.
+
 # Uai Cortes · versão 0.1.188 — Vozes por personagem e legendas unificadas
 
 Em **Vozes IA**, use os personagens cadastrados em **Legendas** para atribuir uma voz Gemini a todas as suas falas. O projeto conserva a preferência por personagem e permite uma voz diferente numa legenda isolada. Filtro por personagem e pesquisa atuam apenas na lista; a timeline e a geração em lote continuam completas. A prévia agora inicia compacta e pode ser ampliada.

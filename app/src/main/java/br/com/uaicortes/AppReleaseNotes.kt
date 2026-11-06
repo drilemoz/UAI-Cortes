@@ -16,11 +16,21 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.188"
-    const val VERSION_CODE = 189
+    const val VERSION_NAME = "0.1.189"
+    const val VERSION_CODE = 190
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.189", listOf(
+            ReleaseFeature("speaker-style-189", "Interpretação por personagem",
+                "Defina interpretação Gemini para cada personagem e mantenha ajustes individuais por fala. As escolhas ficam no rascunho do projeto, sem chamadas à API até solicitar geração.", "captions"),
+            ReleaseFeature("voice-test-189", "Teste de voz consentido",
+                "Ouça uma amostra curta da voz e interpretação escolhidas, após confirmação de uma chamada Gemini que pode consumir cota, sem inserir áudio na timeline.", "check"),
+            ReleaseFeature("voice-batch-review-189", "Revisão e geração seletiva",
+                "Veja falas pendentes, WAVs preparados, vozes ausentes, áudios desatualizados e ajustes de sincronização, com geração das falas pendentes por personagem ou filtro.", "check"),
+            ReleaseFeature("voice-style-queue-189", "Fila de vozes mais segura",
+                "A retomada verifica interpretação, modelo e voz antes de reutilizar solicitações; configurações incompatíveis exigem nova confirmação e não disparam chamadas automaticamente.", "check")
+        )),
         ReleaseSummary("0.1.188", listOf(
             ReleaseFeature("speaker-voice-188", "Voz Gemini por personagem",
                 "Configure uma voz para cada personagem em Vozes IA. Todas as falas identificadas herdam essa escolha, com exceção por legenda e preferência no rascunho do projeto.", "captions"),

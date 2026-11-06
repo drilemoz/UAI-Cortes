@@ -35,7 +35,8 @@ internal object SubtitleSpeakerPolicy {
         return project.copy(
             subtitleSpeakers = project.subtitleSpeakers.filterNot { it.id == speakerId },
             voiceIaVoices = project.voiceIaVoices.copy(
-                speakerVoices = project.voiceIaVoices.speakerVoices - speakerId),
+                speakerVoices = project.voiceIaVoices.speakerVoices - speakerId,
+                speakerStyles = project.voiceIaVoices.speakerStyles - speakerId),
             subtitles = project.subtitles.map { cue ->
                 if (cue.speakerId == speakerId) cue.copy(speakerId = null) else cue
             })

@@ -1,3 +1,14 @@
+# Uai Cortes · versão 0.1.189 — Interpretação por personagem e revisão de vozes
+
+## v0.1.189 · versionCode 190
+- **Interpretação por personagem:** salva preferências de estilo para cada personagem, herdadas por suas falas. Permite exceções por fala, herança/restauração e interpretação geral persistida, sem apagar vozes já selecionadas.
+- **Teste de combinação:** novo botão para gerar uma amostra curta após consentimento explícito sobre consumo de cota Gemini. O WAV de teste vai para cache temporário e não é inserido na timeline nem nos rascunhos.
+- **Revisão do lote:** mostra prontas, pendentes, sem voz, áudio incompatível com escolhas atuais, sinais de sincronização e fila incerta; detalhamento por personagem e sem personagem.
+- **Geração seletiva:** solicitar falas pendentes de um personagem pelo cartão, ou apenas pendentes do filtro ativo no painel de revisão. Diálogo de confirmação de chamadas permanece obrigatório.
+- **Segurança de retomada:** compara voz, modelo e interpretação antes de retomar ou reutilizar WAVs, marcando itens divergentes como STALE sem tentar automaticamente; arquivos existentes intactos.
+- **Compatibilidade:** `voiceIaVoices` adiciona campos opcionais `defaultStyle`/`speakerStyles`/`cueStyles`, preservando JSON schemaVersion=4, Gradle e demais fluxos.
+- **Validação:** testes estruturais e Kotlin isolado, não substituem build Gradle nem testes físicos Android.
+
 # Uai Cortes · versão 0.1.188 — Voz Gemini por personagem
 
 ## v0.1.188 · versionCode 189
