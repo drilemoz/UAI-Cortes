@@ -1,3 +1,9 @@
+# v0.1.195 — CI161: import Compose height no diálogo de saída
+- O workflow Gerar APK 161 falhou em `:app:compileDebugKotlin` e `:app:compileReleaseKotlin` com `Unresolved reference 'height'` em `ProjectDraftUi.kt` nas linhas 44 e 48 da v0.1.194.
+- Acrescentado `import androidx.compose.foundation.layout.height`. Sem mudanças na disposição das ações Salvar/Descartar/Continuar, no fluxo de Concluir, na inserção de vídeos/imagens ou na serialização de projetos.
+- Novo teste de contrato `tools/test_ci161_project_draft_height_import.py` para impedir ausência desse import com usos de `Modifier.height`; Gradle completo deve ser reexecutado no GitHub Actions.
+- v0.1.195/versionCode 196; cinco APKs Release, assinatura, projeto schemaVersion 4, Central de Vozes e cache preservados. Narrador global e por projeto continuam planejados para versão posterior.
+
 # v0.1.194 — Exportação concluída, diálogo de saída e inserção de mídias
 - A tela "Vídeo salvo!" do ExportScreen usa Concluir para confirmar commit do projeto ativo e voltar à Home; exportação de MP4 e gravação de projeto são operações distintas. Não dispensar rascunho nem navegar se o commit falhar. AnimateImages mantém comportamento próprio de fechar o diálogo.
 - Editor: modal de saída com Salvar/Descartar/Continuar horizontal, cada ação com ícone e toque mínimo apropriado; Salvar como cópia quando já existe original.

@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.195 — Correção de compilação CI161
+
+A versão 0.1.195 corrige o build Debug/Release bloqueado no workflow **Gerar APK 161**: faltava importar `androidx.compose.foundation.layout.height` em `ProjectDraftUi.kt`. O diálogo de saída preserva as três ações horizontais **Salvar**, **Descartar** e **Continuar** com ícones, sem alterar sua lógica.
+
+**v0.1.195/versionCode 196**: mantidos os cinco APKs previstos, assinatura, projetos schemaVersion 4, backups, Central de Vozes e recursos da 0.1.194. O novo teste de regressão é estático; build Gradle, JUnit, lint e testes Android precisam passar no GitHub Actions.
+
 # Uai Cortes · versão 0.1.194 — Exportação e inserção de mídias
 
 Após exportar um MP4, **Concluir** confirma o salvamento do projeto no catálogo e retorna à página inicial; caso a gravação do projeto falhe, o editor não é descartado e o vídeo exportado permanece disponível. **Voltar ao editor** continua independente. Projetos continuam em formato schemaVersion 4, com snapshots gerados somente após o commit confirmado.

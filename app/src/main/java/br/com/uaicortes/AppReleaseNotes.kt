@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.194"
-    const val VERSION_CODE = 195
+    const val VERSION_NAME = "0.1.195"
+    const val VERSION_CODE = 196
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.195", listOf(
+            ReleaseFeature("ci161-compose-height-195", "Correção de compilação do editor",
+                "Corrigida a referência height ausente no modal de saída, que bloqueou Debug e Release no workflow 161. O layout com três ações horizontais foi preservado.", "check"),
+            ReleaseFeature("ci161-regression-195", "Validação de importação Compose",
+                "Adicionado teste para verificar a importação de height e impedir a regressão na próxima compilação; nenhuma configuração de projeto ou voz foi alterada.", "check")
+        )),
         ReleaseSummary("0.1.194", listOf(
             ReleaseFeature("export-complete-194", "Concluir a exportação salva o projeto",
                 "Depois de exportar, toque em Concluir para gravar o projeto no catálogo e voltar à página inicial. Se falhar, o editor permanece aberto; o MP4 já exportado é preservado.", "check"),

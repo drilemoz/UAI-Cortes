@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.195 — Correção CI161
+
+## v0.1.195 · versionCode 196
+- Corrigidos os erros Kotlin `Unresolved reference 'height'` em `ProjectDraftUi.kt`, nas duas referências usadas pelo diálogo de saída com três botões horizontais.
+- Incluído import `androidx.compose.foundation.layout.height` e novo teste de regressão verificando o contrato do layout Compose.
+- Fluxos de exportação/retorno, inserir vídeo/imagem, estilos, vozes Gemini, cache e dados do projeto permanecem inalterados. O Android completo deve ser recompilado no CI.
+
 # Uai Cortes · versão 0.1.194 — Exportação, retorno e inserção de mídias
 
 ## v0.1.194 · versionCode 195

@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.195 — Correção CI161
+
+- Corrigido erro de compilação Kotlin `Unresolved reference 'height'` em `ProjectDraftUi.kt`, detectado pelo workflow 161, sem alterar o diálogo de saída do editor.
+- Adicionada verificação de regressão para o import Compose obrigatório.
+- Mantidas exportação, inserção de mídias, legendas, Central de Vozes, integração Gemini e formatos de projeto.
+- v0.1.195/versionCode 196: cinco APKs Release previstos. A compilação Android completa permanece pendente até nova execução do CI.
+
 # Uai Cortes · versão 0.1.194 — Exportação e Inserção
 
 - O botão **Concluir** depois do vídeo salvo grava o projeto e retorna à página inicial; não fecha o projeto se o salvamento falhar.
