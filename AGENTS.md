@@ -1,3 +1,8 @@
+# CI147 / v0.1.177 — Teste compatível com a escala PiP atual
+- `OverlayEditorLogic.MIN_SCALE=0.05f` e `MAX_SCALE=1.50f`: `parsePercentage` deve aceitar de 5% a 150%, inclusive 91%, 100% e 150%. Testes legados não podem exigir `91` como inválido; `151`, `0` e strings inválidas continuam rejeitados.
+- Workflow 147 compilou Debug e Release, mas parou em `:app:testDebugUnitTest` após 553 testes aprovados e 1 falha de expectativa desatualizada. Manter regressão JUnit atualizada; não modificar o algoritmo do PiP para satisfazer o teste obsoleto.
+- Preservar `schemaVersion=4`, cinco APKs Release, Lint, metadados, histórico, imagens/recortes e integrações. Validar novo CI antes de declarar APK funcional.
+
 # Regras de manutenção do Uai Cortes
 - Atualizar sequencialmente `versionName`, `versionCode`, README, RELEASE_NOTES e nomes do APK em workflow.
 - Entregar cinco APKs Release diretamente em Release Assets no formato `UaiCortes-vX.Y.Z-{arm32,arm64,x86,x86_64,universal}.apk`; nunca publicar APK duplicado como Actions Artifact.

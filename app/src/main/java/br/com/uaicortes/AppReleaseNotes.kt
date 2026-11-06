@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.176"
-    const val VERSION_CODE = 177
+    const val VERSION_NAME = "0.1.177"
+    const val VERSION_CODE = 178
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.177", listOf(
+            ReleaseFeature("ci147-pip-test-177", "Teste de escala PiP corrigido",
+                "O teste agora aceita valores válidos de 91% até 150%, sem liberar valores fora do intervalo de 5% a 150%.", "check"),
+            ReleaseFeature("ci147-preserve-editor-177", "Editor e projetos preservados",
+                "Correção restrita à regressão do teste JUnit; o posicionamento e enquadramento PiP continuam como antes.", "captions")
+        )),
         ReleaseSummary("0.1.176", listOf(
             ReleaseFeature("image-frame-176", "Enquadrar imagens no editor",
                 "Selecione uma foto da faixa principal, abra Enquadrar e escolha Ajustar ou Preencher; arraste e amplie com pinça.", "check"),

@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.177 — Correção de testes da escala PiP
+
+- Corrigido o teste que impedia o workflow 147 de avançar após a ampliação do PiP de 90% para 150%.
+- Escalas de 91%, 100% e 150% permanecem permitidas; 151% continua inválido. Nenhuma mudança na interface, nos vídeos ou nos projetos.
+- Build Kotlin anterior aprovado, mas a suíte JUnit/Android precisa ser executada de novo no GitHub Actions antes de declarar release validada.
+
 # Uai Cortes · versão 0.1.176 — Enquadre suas fotos na linha do tempo
 
 - Toque na foto na linha do tempo e escolha **Enquadrar imagem**.

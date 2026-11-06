@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.177 — Correção JUnit do PiP (workflow 147)
+
+- Corrigida a expectativa desatualizada em `OverlayEditorLogicTest.acceptsSmallAndManualPercentages`: após a ampliação do PiP para 150%, **91% é válido**.
+- Adicionadas verificações explícitas de 90%, 91%, 100%, 150% e rejeição de 151%, mantendo também a rejeição de 0%.
+- Nenhuma alteração no algoritmo de PiP, no exportador Media3, no formato de projetos (`schemaVersion=4`) ou nos arquivos de mídia.
+- Workflow 147: compilação Kotlin Debug/Release aprovou; 554 testes unitários foram executados, 1 falhou por contrato antigo; esta correção aguarda nova execução do Gradle em CI.
+- Versões do Gradle/CI, workflow, README, RELEASE_NOTES, Sobre/Novidades, metadados e empacotador atualizados para 0.1.177 / versionCode 178.
+
 # Uai Cortes · versão 0.1.176 — Enquadramento livre de fotos no editor
 
 - Adicionado editor visual de foto na faixa principal, com Ajustar/Preencher, zoom, arrasto, centralizar, confirmar/cancelar e seleção preservada.

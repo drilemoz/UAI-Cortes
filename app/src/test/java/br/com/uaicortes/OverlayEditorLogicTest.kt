@@ -25,7 +25,13 @@ class OverlayEditorLogicTest {
         assertEquals(.10f, OverlayEditorLogic.parsePercentage("10%"))
         assertEquals(.15f, OverlayEditorLogic.parsePercentage(" 15 "))
         assertEquals(null, OverlayEditorLogic.parsePercentage("0"))
-        assertEquals(null, OverlayEditorLogic.parsePercentage("91"))
+        // CI147: desde a 0.1.175, PiP pode ocupar de 5% a 150%.
+        // A expectativa antiga (91% inválido) bloqueava o build embora o app compilasse.
+        assertEquals(.90f, OverlayEditorLogic.parsePercentage("90"))
+        assertEquals(.91f, OverlayEditorLogic.parsePercentage("91"))
+        assertEquals(1f, OverlayEditorLogic.parsePercentage("100%"))
+        assertEquals(1.5f, OverlayEditorLogic.parsePercentage("150"))
+        assertEquals(null, OverlayEditorLogic.parsePercentage("151"))
         assertEquals(null, OverlayEditorLogic.parsePercentage("qualquer"))
         val (w, h) = OverlayEditorLogic.dimensions(.05f, 16f / 9f, 16f / 9f)
         assertTrue(w <= .051f && w >= .049f && h > 0f)

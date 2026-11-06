@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.177 — Teste de limite do PiP corrigido
+
+- O workflow 147 falhou em `:app:testDebugUnitTest`: a implementação já aceitava tamanho de PiP até 150%, mas um teste antigo ainda rejeitava 91%.
+- Atualizada a verificação JUnit para aceitar 91%, 100% e 150%; rejeitar valores fora de 5%–150%. A funcionalidade do PiP e o formato dos projetos foram preservados.
+- **Pendente:** executar novamente testes completos, Android Lint e publicação de APKs no GitHub Actions. Não confundir validação de fonte com build Android aprovado.
+
 # Uai Cortes · versão 0.1.176 — Novo enquadramento de imagens da faixa principal
 
 - O editor oferece **Enquadrar imagem** no cartão da foto principal: dois modos, **Ajustar** (mostra tudo) e **Preencher** (amplia para cobrir o quadro), zoom de 100–300% e arrasto com um ou dois dedos. O arquivo original permanece intacto; Salvar aplica apenas à foto selecionada e Cancelar descarta o rascunho.
