@@ -1,3 +1,17 @@
+# Uai Cortes · versão 0.1.188 — Vozes por personagem e legendas unificadas
+
+Em **Vozes IA**, use os personagens cadastrados em **Legendas** para atribuir uma voz Gemini a todas as suas falas. O projeto conserva a preferência por personagem e permite uma voz diferente numa legenda isolada. Filtro por personagem e pesquisa atuam apenas na lista; a timeline e a geração em lote continuam completas. A prévia agora inicia compacta e pode ser ampliada.
+
+Ao gerar legendas automáticas, escolha **Clássica (SRT)** ou **Karaokê IA** e ajuste o tamanho. O modo clássico usa a aparência da importação SRT, sem perder horários por palavra disponíveis. Trocar configurações de voz não consome API; gerar WAV pode consumir cota. Configurações aplicadas no editor devem ser confirmadas com **Salvar projeto**.
+
+**Validação:** testes de regressão e integridade local não substituem compilação Gradle, CI ou teste em aparelho. Versão de código-fonte 0.1.188, versionCode 189, mantendo schemaVersion 4 e cinco APKs Release previstos.
+
+# Uai Cortes · versão 0.1.187 — Correção de compilação dos testes
+
+A versão 0.1.187 corrige o erro de compilação do teste instrumentado `HomeAboutPreviewAndroidTest.kt` observado no workflow 154, removendo o import inválido de `assertDoesNotExist`. As funções de edição e atualização da 0.1.186 permanecem inalteradas.
+
+O GitHub Actions continua configurado para testar, executar Lint e compilar cinco APKs Release. É necessário validar esta versão no CI antes de declarar os APKs compilados.
+
 # Uai Cortes · versão 0.1.186 — Sobre e atualizações simplificados
 
 - Atualizações disponíveis em **Sobre → Verificar atualizações**, sem editar o repositório. A origem é incorporada à compilação do GitHub Actions; builds locais sem origem apresentam aviso.

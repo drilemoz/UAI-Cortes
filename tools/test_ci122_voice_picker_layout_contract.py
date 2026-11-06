@@ -2,7 +2,7 @@
 """Seletor v0.1.145; contratos estáticos, não substitui testes de layout Android."""
 from pathlib import Path
 ui=(Path(__file__).resolve().parents[1]/'app/src/main/java/br/com/uaicortes/VoiceIaScreen.kt').read_text()
-start=ui.index('    if (voicePickerCueId != null || voicePickerForAll) {')
+start=ui.index('    if (voicePickerCueId != null || voicePickerForAll || voicePickerSpeakerId != null) {')
 end=ui.index('    if (stylePickerCueId != null || stylePickerForAll) {',start)
 popup=ui[start:end]
 assert 'DialogProperties(usePlatformDefaultWidth = false)' in popup

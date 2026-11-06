@@ -34,6 +34,8 @@ internal object SubtitleSpeakerPolicy {
     fun remove(project: VideoProject, speakerId: String): VideoProject {
         return project.copy(
             subtitleSpeakers = project.subtitleSpeakers.filterNot { it.id == speakerId },
+            voiceIaVoices = project.voiceIaVoices.copy(
+                speakerVoices = project.voiceIaVoices.speakerVoices - speakerId),
             subtitles = project.subtitles.map { cue ->
                 if (cue.speakerId == speakerId) cue.copy(speakerId = null) else cue
             })

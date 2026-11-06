@@ -1,3 +1,18 @@
+# Uai Cortes · versão 0.1.188 — Vozes por personagem
+
+- Vozes IA: toque no personagem para escolher uma voz Gemini e aplicá-la a todas as falas dele, sem precisar configurar legenda por legenda. Exceções individuais continuam possíveis e são mantidas no rascunho do projeto.
+- Lista compacta com cores de personagens, pesquisa por texto, filtro de personagens, ícones acessíveis e prévia menor que pode ser ampliada.
+- Legendas automáticas: opção **Clássica (SRT)** ou **Karaokê IA**, com tamanho ajustável; texto e horários por palavra permanecem preservados.
+- Fila recuperada de síntese verifica a voz esperada antes de retomar; alterações não enviam chamadas Gemini nem descartam áudios antigos.
+- Código-fonte versão 0.1.188/versionCode 189; cinco APKs no CI e schemaVersion 4 mantidos. Compilação Android e teste em aparelho ainda pendentes.
+
+# Uai Cortes · versão 0.1.187 — Correção do build Android
+
+- Corrigida a referência não resolvida `assertDoesNotExist` na compilação dos testes instrumentados da tela Home/Sobre (`CI154`).
+- Mantidas as verificações da interface e as funcionalidades da 0.1.186, incluindo salvar projeto e atualização pelo GitHub.
+- Versão e `versionCode` atualizados para `0.1.187` e `188`, com cinco APKs Release previstos no workflow.
+- **Pendente:** executar novamente o GitHub Actions, a compilação AndroidTest, os testes, o Lint e a geração dos APKs.
+
 # Uai Cortes · versão 0.1.186 — Atualização no aplicativo e saída simplificada
 
 - **Atualizações em Sobre:** acesso único visível por Verificar atualizações, sem configurar dono/nome nem abrir o navegador como etapa principal.

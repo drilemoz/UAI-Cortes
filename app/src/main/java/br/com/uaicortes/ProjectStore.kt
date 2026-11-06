@@ -239,7 +239,8 @@ data class VideoProject(
     val textWatermark: TextWatermark? = null,
     val publicationDraft: VideoPublicationDraft? = null,
     val flowPromptDraft: FlowPromptDraft? = null,
-    val subtitleSpeakers: List<SubtitleSpeaker> = emptyList()
+    val subtitleSpeakers: List<SubtitleSpeaker> = emptyList(),
+    val voiceIaVoices: VoiceIaVoiceAssignments = VoiceIaVoiceAssignments()
 ) {
     val durationMs get() = clips.sumOf { it.durationMs }
     val pip: Overlay? get() = overlays.firstOrNull() // acesso legado somente leitura
@@ -256,6 +257,7 @@ data class VideoProject(
         .put("publicationDraft", publicationDraft?.json())
         .put("flowPromptDraft", flowPromptDraft?.json())
         .put("subtitleSpeakers", JSONArray().also { a -> subtitleSpeakers.take(16).forEach { a.put(it.json()) } })
+        .put("voiceIaVoices", voiceIaVoices.json())
     companion object {
         fun read(j: JSONObject): VideoProject {
             val a = j.optJSONArray("clips") ?: JSONArray()
@@ -286,7 +288,8 @@ data class VideoProject(
                     (0 until minOf(arr.length(), 16)).mapNotNull { index ->
                         runCatching { SubtitleSpeaker.read(arr.getJSONObject(index)) }.getOrNull()
                     }.distinctBy { it.id }
-                } ?: emptyList())
+                } ?: emptyList(),
+                VoiceIaVoiceAssignments.read(j.optJSONObject("voiceIaVoices")))
         }
     }
 }

@@ -76,6 +76,17 @@ internal object VoiceIaQueuePolicy {
         item.copy(stage = stage)
     })
 
+    /** Uma alteração de voz do personagem torna a fila anterior obsoleta, sem reenviar chamadas. */
+    fun reconcileSelections(queue: VoiceIaQueueSnapshot,
+        currentVoices: Map<String, String?>): VoiceIaQueueSnapshot = queue.copy(
+        items = queue.items.map { item ->
+            val current = currentVoices[item.cueId]
+            if (item.cueId in currentVoices && current != item.voiceId)
+                item.copy(stage = VoiceIaQueueStage.STALE)
+            else item
+        }
+    )
+
     fun retryReviewed(queue: VoiceIaQueueSnapshot): VoiceIaQueueSnapshot = queue.copy(
         items = queue.items.map { if (it.stage == VoiceIaQueueStage.REVIEW)
             it.copy(stage = VoiceIaQueueStage.PENDING) else it }

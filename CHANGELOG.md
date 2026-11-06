@@ -1,3 +1,21 @@
+# Uai Cortes · versão 0.1.188 — Voz Gemini por personagem
+
+## v0.1.188 · versionCode 189
+- **Personagens:** atribuição local de uma voz Gemini por personagem reutilizando o ID já cadastrado em Legendas, persistida no projeto, com exceção por legenda e opção de herdar/remover. Preferência por voz geral continua consentida.
+- **Interface:** faixa horizontal de personagens, filtro e busca compactos, cartões com ícones e cor do personagem, prévia reduzida com botão de ampliar. Lista filtrada não altera a fila total.
+- **Fila segura:** itens de voz incompatível passam a STALE; WAVs ficam preservados e não são feitas chamadas automáticas por alteração de personagem.
+- **Legendas:** geração automática permite visual clássico (mesmo estilo inicial SRT) ou Karaokê IA; mantém dados temporais, IDs e marcações por palavra. Sem alterar arquivos importados.
+- **Compatibilidade:** `voiceIaVoices` opcional em `VideoProject`, `schemaVersion=4`, versionamento, cinco APKs, rascunhos e backups preservados.
+- **Pendente:** confirmar compilação e instrumentação Android no CI e testar UI/performance em dispositivos físicos.
+
+# Uai Cortes · versão 0.1.187 — Correção de compilação do CI154
+
+## v0.1.187 · versionCode 188
+- **Build AndroidTest:** removido o import incorreto de `assertDoesNotExist` em `HomeAboutPreviewAndroidTest.kt`, que impedia `:app:compileDebugAndroidTestKotlin`. As asserções de ausência continuam ativas.
+- **Prevenção de regressão:** verificação de código-fonte para imports incorretos das asserções Compose em testes instrumentados.
+- **Versionamento:** sincronizados Gradle, CI, empacotador dos cinco APKs, Sobre/Novidades, manifesto GitHub Manager e documentação. Sem alterações em recursos do editor ou formato dos projetos.
+- **Pendente:** confirmar `:app:testDebugUnitTest :app:compileDebugAndroidTestKotlin :app:lintDebug :app:assembleRelease` no GitHub Actions e testes Android físicos.
+
 # Uai Cortes · versão 0.1.186 — Salvamento e atualizações mais diretos
 
 ## v0.1.186 · versionCode 187

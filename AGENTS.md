@@ -1,3 +1,16 @@
+# v0.1.188 — Voz Gemini por personagem, lista e estilos de legendas
+- Aproveitar `SubtitleCue.speakerId`/`subtitleSpeakers` do projeto para associar voz Gemini a cada personagem, sem identificação automática. `VideoProject.voiceIaVoices` é campo JSON opcional do schemaVersion 4: voz geral, por personagem e por legenda, com ID estável e precedência fala > personagem > geral > legado. Persistência ocorre no rascunho, que só é confirmado pelo fluxo Salvar do editor.
+- Aplicar uma voz por personagem a todas as falas já associadas, sem chamar API na escolha e sem sobrescrever exceções individuais. Permitir remover escolha e voltar à herança. Filtro/busca só afetam lista; timeline, fila e geração continuam completas.
+- A tela Vozes IA usa cartões menores, ícones com acessibilidade e prévia compacta expansível. Não ocultar função de geração/consentimento nem estado da fila.
+- `VoiceIaQueuePolicy.reconcileSelections` torna itens antigos STALE após troca de voz; nunca retomar automaticamente com voz antiga. WAVs anteriores ficam intactos e `VoiceIaPolicy.matches` precisa bater voz/modelo/estilo/fingerprint.
+- Legendas automáticas permitem Clássica SRT ou Karaokê IA antes de aplicar. Estilo clássico imita padrão do SRT e preserva texto, horários e `wordTimings`, sem inventar tempos inexistentes.
+- v0.1.188/versionCode 189; cinco APKs Release, CI, assinatura, backups, schemaVersion 4 e todas as funções anteriores preservadas. Gradle e Android físico pendentes.
+
+# v0.1.187 — Correção CI154: compilação AndroidTest
+- O workflow 154 falhou em `:app:compileDebugAndroidTestKotlin`, referência não resolvida a `androidx.compose.ui.test.assertDoesNotExist` no `HomeAboutPreviewAndroidTest.kt`. Remover o import inválido; `onNodeWithText(...).assertDoesNotExist()` é método do objeto de interação. Manter os dois testes e as verificações de interface, sem desativar AndroidTest.
+- Contrato de regressão estático para imports de asserção não importáveis em AndroidTest; não substituir compilação Gradle por validação estrutural.
+- Versão 0.1.187/versionCode 188; preservar cinco APKs Release, assinatura, projeto schemaVersion=4, salvamento, Sobre e atualizador GitHub. Compilação Android e teste físico continuam pendentes até o CI.
+
 # v0.1.186 — Sobre, atualizações seguras e saída do editor
 - Atualizações são acessadas apenas em Sobre > Verificar atualizações; eliminar a entrada de Configurações e os botões Ver novidades / Testar visual da Home em Sobre, mantendo o histórico de notas visível.
 - Repositório GitHub de origem vem exclusivamente de `BuildConfig.GITHUB_RELEASE_REPOSITORY`, preenchido pelo GitHub Actions. Ignorar preferências manuais antigas para não consultar fonte incorreta. Se build não indicar origem, explicar indisponibilidade; nunca inventar um repositório ou chave de API.

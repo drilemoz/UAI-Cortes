@@ -7,7 +7,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 ui = (root/'app/src/main/java/br/com/uaicortes/VoiceIaScreen.kt').read_text()
 preview = ui[ui.index('private fun VoiceIaVideoPreview('):ui.index('private fun VoiceIaCueTimeline(')]
-assert 'InlineVideoPreview(aspect)' in preview
+assert 'InlineVideoPreview(aspect, maxHeightDp = if (previewExpanded) null else 210f)' in preview
 assert 'height(264.dp)' not in preview
 assert 'SubtitleOverlayOnFrame(selected, editable = false' in preview
 assert 'formatPipMs(cue.startMs)' in ui and 'formatPipMs(cue.endMs)' in ui

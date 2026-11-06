@@ -56,7 +56,8 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
     }
     var results by remember(project.id) { mutableStateOf<List<SubtitleCue>>(emptyList()) }
     var replace by remember(project.id) { mutableStateOf(false) }
-    var generatedSize by remember(project.id) { mutableIntStateOf(20) }
+    var appearanceMode by remember(project.id) { mutableStateOf(SubtitleAppearanceMode.CLASSIC_SRT) }
+    var generatedSize by remember(project.id) { mutableIntStateOf(12) }
     var editIndex by remember { mutableStateOf<Int?>(null) }
     var editText by remember { mutableStateOf("") }
     val geminiCheckpoint = remember(context, project.id) {
@@ -270,6 +271,22 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                 Surface(shape=RoundedCornerShape(12.dp),
                     color=MaterialTheme.colorScheme.surfaceVariant) {
                     Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                        Text("Aparência inicial", fontWeight = FontWeight.Medium)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(selected = appearanceMode == SubtitleAppearanceMode.CLASSIC_SRT,
+                                onClick = {
+                                    appearanceMode = SubtitleAppearanceMode.CLASSIC_SRT
+                                    generatedSize = SubtitleAppearancePolicy.defaultSize(appearanceMode)
+                                }, label = { Text("Clássica (SRT)") })
+                            FilterChip(selected = appearanceMode == SubtitleAppearanceMode.KARAOKE_IA,
+                                onClick = {
+                                    appearanceMode = SubtitleAppearanceMode.KARAOKE_IA
+                                    generatedSize = SubtitleAppearancePolicy.defaultSize(appearanceMode)
+                                }, label = { Text("Karaokê IA") })
+                        }
+                        Text("Clássica usa o visual padrão de um SRT importado. " +
+                            "Karaokê usa contorno, sombra e animação. Ambas preservam os tempos reais por palavra " +
+                            "quando disponíveis.", style = MaterialTheme.typography.labelSmall)
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
                             Text("Tamanho das legendas geradas",fontWeight=FontWeight.Medium)
                             Text("$generatedSize sp")
@@ -291,7 +308,8 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
         }
         Button(onClick={
             val proposal=GeminiDiarizationPolicy.prepare(project,
-                results.map { it.copy(sizeSp=generatedSize) },replace,voiceDecisions,voiceNames)
+                results.map { SubtitleAppearancePolicy.generated(it, appearanceMode, generatedSize) },
+                replace,voiceDecisions,voiceNames)
             if (proposal==null) message="Revise os nomes: não podem repetir outros " +
                 "personagens nem superar 16 no projeto. Você pode vincular a um " +
                 "personagem existente ou marcar Não atribuir."

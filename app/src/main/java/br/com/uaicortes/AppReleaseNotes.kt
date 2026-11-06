@@ -16,11 +16,25 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.186"
-    const val VERSION_CODE = 187
+    const val VERSION_NAME = "0.1.188"
+    const val VERSION_CODE = 189
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.188", listOf(
+            ReleaseFeature("speaker-voice-188", "Voz Gemini por personagem",
+                "Configure uma voz para cada personagem em Vozes IA. Todas as falas identificadas herdam essa escolha, com exceção por legenda e preferência no rascunho do projeto.", "captions"),
+            ReleaseFeature("voice-filter-layout-188", "Falas e player mais compactos",
+                "Filtro por personagem, busca de legenda, cartões com ícones, prévia recolhida e opção de ampliar mantêm mais espaço útil na tela.", "check"),
+            ReleaseFeature("subtitle-style-188", "Legendas IA no estilo SRT ou Karaokê",
+                "Escolha a aparência padrão antes de aplicar a transcrição, preservando horários e marcações por palavra quando existirem.", "captions"),
+            ReleaseFeature("voice-queue-188", "Fila de voz validada",
+                "Ao mudar a voz, uma fila incompatível torna-se obsoleta sem disparar chamadas Gemini ou descartar arquivos WAV anteriores.", "check")
+        )),
+        ReleaseSummary("0.1.187", listOf(
+            ReleaseFeature("androidtest-compile-187", "Compilação dos testes corrigida",
+                "Corrigido o import do teste de navegação Home e Sobre que bloqueava a geração dos APKs no GitHub Actions, sem alterar o comportamento do editor.", "check")
+        )),
         ReleaseSummary("0.1.186", listOf(
             ReleaseFeature("update-about-186", "Atualizações dentro de Sobre",
                 "A tela Sobre mantém Verificar atualizações; não há mais repositório manual, navegador ou atalhos de teste na interface.", "check"),
