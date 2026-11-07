@@ -157,7 +157,7 @@ internal fun GeminiModelSettingsDialog(project: String, initialModel: String,
                             prices.save(project, model, nextPrice)
                             onSaved()
                         } catch (e: Exception) { problem = e.message ?: "Falha ao salvar." }
-                    }, modifier = Modifier.weight(1f)) { Text("Salvar") }
+                    }, modifier = Modifier.weight(1f), shape = UaiShapes.button) { Text("Salvar") }
                 }
             }
         }

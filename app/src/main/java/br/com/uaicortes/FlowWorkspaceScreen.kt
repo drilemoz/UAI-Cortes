@@ -75,7 +75,7 @@ internal fun FlowWorkspaceScreen(back: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Button(onClick = { title = ""; creating = true }, modifier = Modifier.fillMaxWidth(),
-                enabled = entries != null && entries.orEmpty().size < 30) {
+                enabled = entries != null && entries.orEmpty().size < 30, shape = UaiShapes.button) {
                 Icon(Icons.Default.Add, null); Text(" Novo projeto de cenas")
             }
             if (entries == null) Text("O catálogo salvo não pôde ser lido. Os dados foram preservados; recupere o armazenamento antes de criar novos projetos.",

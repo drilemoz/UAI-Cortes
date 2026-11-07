@@ -1,3 +1,9 @@
+## 0.1.200 (versionCode 201) — Padronização visual ampliada
+- Estúdio de Cenas Flow e assistentes: botões principais com `UaiShapes.button`, preservando funções e diálogos.
+- Central de Vozes, Vozes IA, personagens, sincronização de palavras e configurações Gemini: cartões e janelas com cantos padronizados.
+- Corte, Exportação, Vídeo salvo, Home, Animação de imagens e painéis inferiores: geometrias mais uniformes e discretas, sem alteração de lógica ou formato dos vídeos.
+- Incluído teste de contrato visual para barrar regressões nos componentes compartilhados. Compilação e teste em aparelho pendentes.
+
 ## 0.1.199 (versionCode 200) — Padronização visual, PiP e áudio
 - Escala `UaiShapes` aplicada ao tema Compose e telas principais para botões, cartões, diálogos e painéis com cantos discretos. Janela Salvar edição compactada sem alterar operações.
 - PiP com prévia vertical compacta inicial (250 dp) e botão Ampliar/Reduzir, ações compactas e ajuda recolhível. Geometria e composição preservadas.

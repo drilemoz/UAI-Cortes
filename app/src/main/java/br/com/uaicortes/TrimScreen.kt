@@ -150,7 +150,7 @@ internal fun TrimScreen(
                     if (amended == null) notifyUser("Ajuste o trecho antes de concluir.")
                     else onDone(amended)
                 } else onDone(p)
-            }, shape = RoundedCornerShape(14.dp),
+            }, shape = UaiShapes.card,
                 contentPadding = PaddingValues(horizontal = 17.dp, vertical = 12.dp)) {
                 Icon(Icons.Default.Check, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(4.dp))
@@ -231,7 +231,7 @@ internal fun TrimScreen(
             } }, modifier = Modifier.fillMaxSize(), update = { it.player = player })
         }
         Surface(tonalElevation = 2.dp,
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            shape = UaiShapes.sheet,
             color = MaterialTheme.colorScheme.surface) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -260,7 +260,7 @@ internal fun TrimScreen(
                     p.clips.forEachIndexed { index, item ->
                         val active = item.id == clip.id
                         Surface(onClick = { player.pause(); selected(item.id) },
-                            shape = RoundedCornerShape(12.dp),
+                            shape = UaiShapes.item,
                             color = if (active) MaterialTheme.colorScheme.primaryContainer
                                 else MaterialTheme.colorScheme.surfaceVariant,
                             modifier = Modifier.height(35.dp)) {
@@ -318,7 +318,7 @@ internal fun TrimScreen(
                             if (next == null) notifyUser("Deixe pelo menos 0,25 s de vídeo.")
                             else if (commit(next, clip.id)) { mode = TrimMode.SEEK }
                         }, enabled = start != clip.startMs || end != clip.endMs,
-                            modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
+                            modifier = Modifier.fillMaxWidth(), shape = UaiShapes.card) {
                             Icon(Icons.Default.Check, null)
                             Spacer(Modifier.width(6.dp))
                             Text("Guardar corte")
@@ -331,7 +331,7 @@ internal fun TrimScreen(
                             TextButton(onClick = { selectMode(TrimMode.SEEK) }) { Text("Cancelar") }
                         }
                         Button(onClick = { askRemove = true }, modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(
+                            shape = UaiShapes.card, colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.error)) {
                             Icon(Icons.Default.DeleteSweep, null)
                             Spacer(Modifier.width(6.dp))
@@ -369,7 +369,7 @@ internal fun TrimScreen(
                     val next = TrimRemoveRange.apply(p, clip.id, start, end)
                     if (next == null) notifyUser("Ajuste as alças. Não é possível apagar todo o único clipe.")
                     else if (commit(next.project, next.selectedClipId)) mode = TrimMode.SEEK
-                }) { Text("Remover") }
+                }, shape = UaiShapes.button) { Text("Remover") }
             }, dismissButton = { TextButton(onClick = { askRemove = false }) { Text("Cancelar") } })
     }
     if (clip != null && askDeleteClip) {
@@ -416,7 +416,7 @@ private fun TrimMainAction(icon: androidx.compose.ui.graphics.vector.ImageVector
     val container = if (active) MaterialTheme.colorScheme.primaryContainer
         else MaterialTheme.colorScheme.surfaceVariant
     Surface(onClick = onClick, enabled = enabled, modifier = modifier.height(62.dp),
-        shape = RoundedCornerShape(17.dp), color = container) {
+        shape = UaiShapes.card, color = container) {
         Column(horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center) {
             Icon(icon, title, modifier = Modifier.size(23.dp))
@@ -463,6 +463,6 @@ private fun ColumnScope.TrimImageDuration(p: VideoProject, clip: Clip,
             val changed = ImageClipPolicy.resizeInProject(p, clip.id, seconds)
             if (update(changed)) onDone(changed)
             else Toast.makeText(context, "Não foi possível salvar a foto.", Toast.LENGTH_SHORT).show()
-        }, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Guardar duração") }
+        }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = UaiShapes.button) { Text("Guardar duração") }
     }
 }

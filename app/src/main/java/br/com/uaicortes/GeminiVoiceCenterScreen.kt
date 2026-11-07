@@ -247,7 +247,7 @@ internal fun GeminiVoiceCenterScreen(
                     val saved = voice.id in previewIds
                     Surface(onClick = { onChoose?.invoke(voice) },
                         enabled = onChoose != null, modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = UaiShapes.card,
                         color = if (voice.id == selectedVoiceId) MaterialTheme.colorScheme.primaryContainer
                             else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .55f)) {
                         Row(Modifier.padding(horizontal = 10.dp, vertical = 7.dp),

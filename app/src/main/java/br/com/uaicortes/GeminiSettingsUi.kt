@@ -92,12 +92,12 @@ internal fun GeminiSettingsSection() {
     DisposableEffect(api) { onDispose { api.cancel() } }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // Cabeçalho de status, separado do campo e das operações sensíveis.
-        Surface(shape = RoundedCornerShape(16.dp),
+        Surface(shape = UaiShapes.card,
             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f)) {
             Row(Modifier.fillMaxWidth().padding(14.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = RoundedCornerShape(12.dp),
+                Surface(shape = UaiShapes.card,
                     color = MaterialTheme.colorScheme.primary) {
                     Icon(Icons.Default.AutoAwesome, null,
                         modifier = Modifier.padding(11.dp).size(23.dp),
@@ -121,7 +121,7 @@ internal fun GeminiSettingsSection() {
                 }
             }
         }
-        Surface(shape = RoundedCornerShape(14.dp),
+        Surface(shape = UaiShapes.card,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             color = MaterialTheme.colorScheme.surface) {
             Column(Modifier.fillMaxWidth().padding(12.dp),

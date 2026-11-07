@@ -261,7 +261,7 @@ internal fun SubtitleBatchEditDialog(source:SubtitleCue,count:Int,onDismiss:()->
     Dialog(onDismissRequest=onDismiss,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Surface(Modifier.fillMaxWidth(.96f)
             .heightIn(max=LocalConfiguration.current.screenHeightDp.dp*.86f),
-            shape=RoundedCornerShape(18.dp),tonalElevation=5.dp) {
+            shape=UaiShapes.dialog,tonalElevation=5.dp) {
             Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment=Alignment.CenterVertically) {
                     Text("$title ($count)",fontWeight=FontWeight.Bold,
@@ -310,9 +310,9 @@ internal fun SubtitleBatchEditDialog(source:SubtitleCue,count:Int,onDismiss:()->
                         color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick=onDismiss,modifier=Modifier.weight(1f)) {Text("Cancelar")}
+                    OutlinedButton(onClick=onDismiss,modifier=Modifier.weight(1f), shape = UaiShapes.button) {Text("Cancelar")}
                     Button(onClick={confirm=true},enabled=applyStyle||applyAnimation||applyPosition,
-                        modifier=Modifier.weight(1f)) {Text("Aplicar estilo")}
+                        modifier=Modifier.weight(1f), shape = UaiShapes.button) {Text("Aplicar estilo")}
                 }
             }
         }

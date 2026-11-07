@@ -677,7 +677,7 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
             }
             Box(Modifier.weight(1f)) {
                 OutlinedButton(onClick={autoSubtitlesMenu=true},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
-                    contentPadding=PaddingValues(horizontal=4.dp,vertical=6.dp)) {
+                    contentPadding=PaddingValues(horizontal=4.dp,vertical=6.dp), shape = UaiShapes.button) {
                     Icon(Icons.Default.AutoAwesome,"Legendas automáticas",modifier=Modifier.size(17.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("Automáticas",fontSize=12.sp,maxLines=1)
@@ -967,7 +967,7 @@ internal fun SubtitleEditDialog(cue: SubtitleCue,totalMs: Long,number: Int,
                         }
                         OutlinedButton(onClick={wordTimingOpen=true},
                             enabled=SubtitleWordTimingEditorPolicy.editable(draft),
-                            contentPadding=PaddingValues(horizontal=9.dp)) {
+                            contentPadding=PaddingValues(horizontal=9.dp), shape = UaiShapes.button) {
                             Text("Sincronizar",fontSize=12.sp)
                         }
                     }
@@ -982,9 +982,9 @@ internal fun SubtitleEditDialog(cue: SubtitleCue,totalMs: Long,number: Int,
                 if(!valid) Text("Informe texto e horários válidos.",fontSize=11.sp,
                     color=MaterialTheme.colorScheme.error)
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick=onDismiss,modifier=Modifier.weight(1f)) {Text("Cancelar")}
+                    OutlinedButton(onClick=onDismiss,modifier=Modifier.weight(1f), shape = UaiShapes.button) {Text("Cancelar")}
                     Button(onClick={onSave(draft,null)},enabled=valid,
-                        modifier=Modifier.weight(1f)) {Text("Salvar legenda")}
+                        modifier=Modifier.weight(1f), shape = UaiShapes.button) {Text("Salvar legenda")}
                 }
             }
         }

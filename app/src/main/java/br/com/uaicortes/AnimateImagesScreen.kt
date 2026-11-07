@@ -182,7 +182,7 @@ internal fun AnimateImagesScreen(
         Dialog(onDismissRequest = { expandedPreview = false },
             properties = DialogProperties(usePlatformDefaultWidth = false)) {
             Column(Modifier.fillMaxWidth(.96f)
-                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(14.dp))
+                .background(MaterialTheme.colorScheme.surface, UaiShapes.card)
                 .padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("Prévia ampliada", style = MaterialTheme.typography.titleMedium,
@@ -438,7 +438,7 @@ internal fun AnimateImagesScreen(
         }
     }
     if (advanced) {
-        ModalBottomSheet(onDismissRequest={advanced=false}) {
+        ModalBottomSheet(onDismissRequest={advanced=false}, shape=UaiShapes.sheet) {
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
                 .padding(horizontal=16.dp,vertical=8.dp),
                 verticalArrangement=Arrangement.spacedBy(10.dp)) {

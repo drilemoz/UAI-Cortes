@@ -174,7 +174,7 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
             }
             Spacer(Modifier.height(4.dp))
             if (projects.isEmpty()) {
-                Surface(shape = RoundedCornerShape(16.dp),
+                Surface(shape = UaiShapes.card,
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)) {
                     Row(Modifier.fillMaxWidth().padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -309,7 +309,7 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
             listOf(720,1080).forEach { q ->
-                OutlinedButton(onClick={quality=q;store.setQuality(q)},border=BorderStroke(2.dp,if(quality==q) Blue else MaterialTheme.colorScheme.outlineVariant)) {
+                OutlinedButton(onClick={quality=q;store.setQuality(q)},border=BorderStroke(2.dp,if(quality==q) Blue else MaterialTheme.colorScheme.outlineVariant), shape = UaiShapes.button) {
                     Text("${q}p",color=if(quality==q) Blue else MaterialTheme.colorScheme.onSurface)
                 }
             }
@@ -352,7 +352,7 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(16.dp))
-            OutlinedButton(onClick = onUpdates, shape = RoundedCornerShape(15.dp)) {
+            OutlinedButton(onClick = onUpdates, shape = UaiShapes.button) {
                 Icon(Icons.Default.SystemUpdate, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
                 Text("Verificar atualizações")

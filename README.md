@@ -1,3 +1,8 @@
+## Novidades v0.1.200
+- **Visual mais uniforme:** diálogos e cartões de Flow, Vozes IA, Legendas, Corte, Exportação e configurações Gemini passaram a reutilizar a escala `UaiShapes`.
+- **Botões discretos:** ações principais usam cantos de 8 dp, sem mudar o processamento, áudio, vídeo ou projetos.
+- **Compatibilidade preservada:** timeline, geração Gemini, galerias, backups e as cinco variantes de APK continuam presentes; Gradle/Lint e teste visual no aparelho ainda precisam de confirmação.
+
 ## Novidades v0.1.199
 - Padrão visual unificado (`UaiShapes`) com cantos discretos e botões compactos; diálogo de saída preserva Salvar, Descartar e Continuar.
 - PiP reduz o uso vertical da tela e permite expandir a prévia; Áudio permite Play/Pausa de cada faixa importada e música em separado.

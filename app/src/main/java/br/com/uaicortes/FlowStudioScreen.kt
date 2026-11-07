@@ -59,8 +59,8 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
             Text("Estúdio de Cenas", style = MaterialTheme.typography.titleLarge)
             Text("O rascunho anterior não pôde ser lido. Nenhum arquivo foi sobrescrito. " +
                 "Recupere o armazenamento antes de usar este projeto.", color = MaterialTheme.colorScheme.error)
-            Button(onClick = back) { Text("Voltar sem modificar") }
-            OutlinedButton(onClick = onManual) { Text("Abrir editor manual existente") }
+            Button(onClick = back, shape = UaiShapes.button) { Text("Voltar sem modificar") }
+            OutlinedButton(onClick = onManual, shape = UaiShapes.button) { Text("Abrir editor manual existente") }
         }
         return
     }
@@ -444,7 +444,7 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
                             status = failure.message?.take(160) ?: "A consulta de modelos falhou."
                         } finally { modelBusy = false }
                     }
-                }, enabled = !modelBusy && !busy) { Text(if (modelBusy) "Consultando..." else "Consultar modelos disponíveis") }
+                }, enabled = !modelBusy && !busy, shape = UaiShapes.button) { Text(if (modelBusy) "Consultando..." else "Consultar modelos disponíveis") }
                 models.forEach { m ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(selected = modelName == m.id, onClick = { modelName = m.id })
@@ -562,14 +562,14 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
                             draft = draft.copy(story = draft.story.copy(idea = idea))
                         }
                         OutlinedButton(onClick = { pending = StudioJob("story") },
-                            enabled = !busy && draft.story.idea.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
+                            enabled = !busy && draft.story.idea.isNotBlank(), modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
                             Text("Sugerir história e personagens")
                         }
                     }
                     if (planningOpen) {
                         OutlinedButton(onClick = { pending = StudioJob("scenes") },
                             enabled = !busy && FlowStudioClipPolicy.canDivide(draft.story),
-                            modifier = Modifier.fillMaxWidth()) {
+                            modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
                             Icon(Icons.Default.AutoAwesome, null); Text(" Sugerir clipes com Gemini (opcional)")
                         }
                     }
@@ -614,7 +614,7 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
                             draft = draft.copy(scenes = draft.scenes + next)
                             editingScene = next
                         }
-                    }, enabled = !busy && draft.scenes.size < 60, modifier = Modifier.fillMaxWidth()) {
+                    }, enabled = !busy && draft.scenes.size < 60, modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
                         Icon(Icons.Default.Add, null); Text(" Nova cena (um clipe no Flow)")
                     }
                 }
@@ -649,17 +649,17 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
                     }
                     OutlinedButton(onClick = { copyText(draft.story.fullText() + "\n" +
                         draft.scenes.mapIndexed { i, s -> "Cena ${i + 1} (${s.durationSeconds}s estimados): ${s.title}\n${s.actions}\n${s.effectiveDialogue()}" }.joinToString("\n\n"),
-                        "Roteiro completo") }, modifier = Modifier.fillMaxWidth()) {
+                        "Roteiro completo") }, modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
                         Icon(Icons.Default.ContentCopy, null); Text(" Copiar roteiro inteiro")
                     }
                     Button(onClick = { if (saveNow()) exportZip.launch("UaiCortes-Flow-${project.id.take(8)}.zip") },
-                        enabled = !busy && draft.scenes.isNotEmpty(), modifier = Modifier.fillMaxWidth()) {
+                        enabled = !busy && draft.scenes.isNotEmpty(), modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
                         Icon(Icons.Default.Inventory2, null); Text(" Exportar projeto (ZIP)")
                     }
                 }
             }
             HorizontalDivider()
-            OutlinedButton(onClick = { advanced = !advanced }, modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(onClick = { advanced = !advanced }, modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
                 Icon(Icons.Default.Tune, null); Text(" Avançado e modo manual", Modifier.weight(1f))
                 Icon(if (advanced) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
             }
@@ -673,7 +673,7 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
                 Text("O modo manual mantém Texto → vídeo, Vídeo de referência, estilo-base, " +
                     "constantes, edição de cenas, aprimoramento e refinamento em lote Gemini.",
                     style = MaterialTheme.typography.bodySmall)
-                OutlinedButton(onClick = { if (saveNow()) onManual() }, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = { if (saveNow()) onManual() }, modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
                     Icon(Icons.Default.Edit, null); Text(" Abrir editor manual de prompts")
                 }
             }
@@ -685,9 +685,9 @@ private fun FlowStudioScreen(project: VideoProject, back: () -> Unit, onManual: 
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedButton(onClick = { draft = draft.copy(step = (draft.step - 1).coerceAtLeast(0)) },
-                enabled = draft.step > 0 && !busy) { Icon(Icons.Default.ArrowBack, null); Text(" Voltar") }
+                enabled = draft.step > 0 && !busy, shape = UaiShapes.button) { Icon(Icons.Default.ArrowBack, null); Text(" Voltar") }
             Button(onClick = { if (draft.step < 4) draft = draft.copy(step = draft.step + 1) },
-                enabled = draft.step < 4 && !busy, modifier = Modifier.weight(1f)) {
+                enabled = draft.step < 4 && !busy, modifier = Modifier.weight(1f), shape = UaiShapes.button) {
                 Text(if (draft.step == 3) "Preparar para Flow" else "Continuar")
                 Icon(Icons.Default.ArrowForward, null)
             }
@@ -725,12 +725,12 @@ private fun StudioStoryStep(story: StudioStory, onUpdate: (StudioStory) -> Unit,
     StudioField("O que você imagina? Ex.: abacate e banana discutindo", story.idea, 5000, 2) {
         change(story.copy(idea = it))
     }
-    Button(onClick = onStartScenes, enabled = !disabled, modifier = Modifier.fillMaxWidth()) {
+    Button(onClick = onStartScenes, enabled = !disabled, modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
         Icon(Icons.Default.MovieCreation, null); Text(" Criar minhas cenas")
     }
     OutlinedButton(onClick = onGenerate,
         enabled = !disabled && (story.idea.isNotBlank() || story.originalScript.isNotBlank()),
-        modifier = Modifier.fillMaxWidth()) {
+        modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
         Icon(Icons.Default.AutoAwesome, null)
         Text(if (story.ready()) " Pedir outra história ao Gemini" else " Pedir ajuda ao Gemini com a história")
     }
@@ -748,7 +748,7 @@ private fun StudioStoryStep(story: StudioStory, onUpdate: (StudioStory) -> Unit,
         val idea = ideas.filterNot { it == story.idea }.randomOrNull() ?: ideas.first()
         change(story.copy(idea = idea))
         onSuggested("Ideia sugerida localmente, sem Gemini e sem consumo de API. Toque em Gerar história com Gemini para desenvolver.")
-    }, modifier = Modifier.fillMaxWidth(), enabled = !disabled) {
+    }, modifier = Modifier.fillMaxWidth(), enabled = !disabled, shape = UaiShapes.button) {
         Icon(Icons.Default.Casino, null); Text(" Surpreenda-me · sugestão grátis")
     }
     Text("Tipo de animação", style = MaterialTheme.typography.titleSmall)
@@ -758,14 +758,14 @@ private fun StudioStoryStep(story: StudioStory, onUpdate: (StudioStory) -> Unit,
                 label = { Text(item) })
         }
     }
-    OutlinedButton(onClick = { scriptOpen = !scriptOpen }, modifier = Modifier.fillMaxWidth()) {
+    OutlinedButton(onClick = { scriptOpen = !scriptOpen }, modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
         Icon(Icons.Default.Description, null); Text(" Colar roteiro existente", Modifier.weight(1f))
         Icon(if (scriptOpen) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
     }
     if (scriptOpen) StudioField("Roteiro existente (não enviado automaticamente)", story.originalScript, 25000, 4) {
         change(story.copy(originalScript = it))
     }
-    OutlinedButton(onClick = { preferencesOpen = !preferencesOpen }, modifier = Modifier.fillMaxWidth()) {
+    OutlinedButton(onClick = { preferencesOpen = !preferencesOpen }, modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
         Icon(Icons.Default.Tune, null)
         Text(" ${story.durationSeconds}s · ${story.style} · ${story.genre}", Modifier.weight(1f),
             maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -828,7 +828,7 @@ private fun StudioStoryStep(story: StudioStory, onUpdate: (StudioStory) -> Unit,
         Text("A história completa e os personagens aparecerão aqui após a geração. Você não precisa preencher os campos manualmente.",
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    OutlinedButton(onClick = { editing = !editing }, modifier = Modifier.fillMaxWidth()) {
+    OutlinedButton(onClick = { editing = !editing }, modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
         Icon(Icons.Default.Edit, null)
         Text(if (editing) " Ocultar edição detalhada" else " Editar título e detalhes manualmente", Modifier.weight(1f))
         Icon(if (editing) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
@@ -842,7 +842,7 @@ private fun StudioStoryStep(story: StudioStory, onUpdate: (StudioStory) -> Unit,
         StudioField("Final", story.ending, 6000, 2) { change(story.copy(ending = it)) }
     }
     if (story.ready()) OutlinedButton(onClick = onContinue, enabled = !disabled,
-        modifier = Modifier.fillMaxWidth()) {
+        modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
         Icon(Icons.Default.Check, null); Text(" Usar esta história e criar cenas")
     }
 }
@@ -934,7 +934,7 @@ private fun StudioSceneCard(scene: StudioScene, index: Int, count: Int, storage:
                 Text("Início · ${scene.initialState.ifBlank { "Não definido" }}", style = MaterialTheme.typography.bodySmall)
                 Text("Final · ${scene.finalState.ifBlank { "Não definido" }}", style = MaterialTheme.typography.bodySmall)
             }
-            OutlinedButton(onClick = onImageImport, modifier = Modifier.fillMaxWidth(), enabled = !busy) {
+            OutlinedButton(onClick = onImageImport, modifier = Modifier.fillMaxWidth(), enabled = !busy, shape = UaiShapes.button) {
                 Icon(Icons.Default.PhotoLibrary, null)
                 Text(if (scene.imageAsset.isBlank()) " Usar imagem da galeria (opcional)" else " Trocar imagem da galeria")
             }
@@ -946,7 +946,7 @@ private fun StudioSceneCard(scene: StudioScene, index: Int, count: Int, storage:
                         scene.prompt.isBlank() -> onPrepare()
                         else -> onCopy()
                     }
-                }, enabled = !busy, modifier = Modifier.weight(1f)) {
+                }, enabled = !busy, modifier = Modifier.weight(1f), shape = UaiShapes.button) {
                     Icon(when {
                         !FlowStudioClipPolicy.canPrepare(scene) -> Icons.Default.Edit
                         scene.prompt.isBlank() -> Icons.Default.Description
@@ -1026,11 +1026,11 @@ private fun StudioSceneEditor(original: StudioScene, people: List<String>,
                 value = value.copy(actions = it)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                OutlinedButton(onClick = { dialogueOpen = !dialogueOpen }, modifier = Modifier.weight(1f)) {
+                OutlinedButton(onClick = { dialogueOpen = !dialogueOpen }, modifier = Modifier.weight(1f), shape = UaiShapes.button) {
                     Icon(Icons.Default.RecordVoiceOver, null)
                     Text(" Falas por personagem", maxLines = 2)
                 }
-                OutlinedButton(onClick = { directionOpen = !directionOpen }, modifier = Modifier.weight(1f)) {
+                OutlinedButton(onClick = { directionOpen = !directionOpen }, modifier = Modifier.weight(1f), shape = UaiShapes.button) {
                     Icon(Icons.Default.Videocam, null)
                     Text(" Câmera e sons", maxLines = 2)
                 }
@@ -1105,7 +1105,7 @@ private fun StudioSceneEditor(original: StudioScene, people: List<String>,
                     value = value.copy(effects = it)
                 }
             }
-            OutlinedButton(onClick = { advancedOpen = !advancedOpen }, modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(onClick = { advancedOpen = !advancedOpen }, modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
                 Icon(Icons.Default.Tune, null)
                 Text(" Mais detalhes, visual e continuidade", Modifier.weight(1f))
                 Icon(if (advancedOpen) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
@@ -1140,7 +1140,7 @@ private fun StudioReferenceEditor(draft: FlowStudioDraft, onUpdate: (FlowStudioD
     var editPlace by remember { mutableStateOf<Pair<Int, StudioPlace>?>(null) }
     var deletePerson by remember { mutableIntStateOf(-1) }
     var deletePlace by remember { mutableIntStateOf(-1) }
-    OutlinedButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth()) {
+    OutlinedButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
         Icon(Icons.Default.Groups, null)
         Text(" Referências (${draft.people.size} personagens · ${draft.places.size} cenários)",
             modifier = Modifier.weight(1f))
@@ -1156,7 +1156,7 @@ private fun StudioReferenceEditor(draft: FlowStudioDraft, onUpdate: (FlowStudioD
                 IconButton(onClick = { deletePerson = i }) { Icon(Icons.Default.DeleteOutline, "Excluir personagem") }
             }
         }
-        OutlinedButton(onClick = { editPerson = -1 to StudioPerson() }, enabled = draft.people.size < 30) {
+        OutlinedButton(onClick = { editPerson = -1 to StudioPerson() }, enabled = draft.people.size < 30, shape = UaiShapes.button) {
             Text("Adicionar personagem")
         }
         draft.places.forEachIndexed { i, place ->
@@ -1166,7 +1166,7 @@ private fun StudioReferenceEditor(draft: FlowStudioDraft, onUpdate: (FlowStudioD
                 IconButton(onClick = { deletePlace = i }) { Icon(Icons.Default.DeleteOutline, "Excluir cenário") }
             }
         }
-        OutlinedButton(onClick = { editPlace = -1 to StudioPlace() }, enabled = draft.places.size < 30) {
+        OutlinedButton(onClick = { editPlace = -1 to StudioPlace() }, enabled = draft.places.size < 30, shape = UaiShapes.button) {
             Text("Adicionar cenário")
         }
     }

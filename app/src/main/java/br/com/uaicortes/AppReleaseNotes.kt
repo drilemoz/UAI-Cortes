@@ -16,11 +16,21 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.199"
-    const val VERSION_CODE = 200
+    const val VERSION_NAME = "0.1.200"
+    const val VERSION_CODE = 201
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.200", listOf(
+            ReleaseFeature("visual-flow-200", "Estúdio Flow e assistentes mais consistentes",
+                "Botões principais do Flow, geração em lote e assistentes agora seguem cantos discretos e os formatos compartilhados do Uai Cortes.", "check"),
+            ReleaseFeature("visual-voices-200", "Vozes e Gemini padronizados",
+                "Seletores, cartões e formulários da Central de Vozes, Vozes IA e chaves Gemini adotam a escala de formatos do aplicativo.", "check"),
+            ReleaseFeature("visual-subtitles-trim-200", "Legendas e corte com painéis compactos",
+                "Janelas de personagens e sincronização, controles de cortes e painéis usam raios uniformes; miniaturas e indicadores mantêm seus próprios formatos.", "captions"),
+            ReleaseFeature("visual-export-home-200", "Exportação e Home com visual alinhado",
+                "Ações e diálogos de exportação e vídeo salvo, ferramentas rápidas e painéis inferiores seguem os novos padrões visuais sem mudar os fluxos de edição.", "check")
+        )),
         ReleaseSummary("0.1.199", listOf(
             ReleaseFeature("visual-shapes-199", "Interface com cantos padronizados",
                 "Botões, cartões e diálogos usam formas discretas compartilhadas nos temas do aplicativo; a janela Salvar edição ficou mais compacta.", "check"),

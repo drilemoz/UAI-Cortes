@@ -24,7 +24,7 @@ internal fun GeminiQuotaBudgetDialog(project: String, initialModel: String,
     fun positive(s: String): Long? = s.trim().takeIf { it.isNotEmpty() }?.toLongOrNull()
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(modifier = Modifier.fillMaxWidth(0.94f).heightIn(max = 590.dp),
-            shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface) {
+            shape = UaiShapes.card, color = MaterialTheme.colorScheme.surface) {
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Limites locais por modelo", style = MaterialTheme.typography.titleMedium)
@@ -70,7 +70,7 @@ internal fun GeminiQuotaBudgetDialog(project: String, initialModel: String,
                             quotaStore.save(project, model, GeminiManualLimits(rpmN?.toInt(), tpmN, rpdN?.toInt()))
                             onSaved()
                         } catch (e: Exception) { error = e.message ?: "Não foi possível salvar os limites." }
-                    }, modifier = Modifier.weight(1f)) { Text("Salvar") }
+                    }, modifier = Modifier.weight(1f), shape = UaiShapes.button) { Text("Salvar") }
                 }
             }
         }

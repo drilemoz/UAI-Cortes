@@ -21,7 +21,7 @@ internal fun SubtitleSpeakerPicker(project: VideoProject, cueId: String,
     update: (VideoProject) -> Boolean, dismiss: () -> Unit, manage: () -> Unit) {
     val cue = project.subtitles.firstOrNull { it.id == cueId }
     Dialog(onDismissRequest = dismiss) {
-        Surface(shape = RoundedCornerShape(24.dp), tonalElevation = 6.dp,
+        Surface(shape = UaiShapes.dialog, tonalElevation = 6.dp,
             modifier = Modifier.fillMaxWidth().widthIn(max = 420.dp)) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -122,7 +122,7 @@ internal fun SubtitleSpeakerManager(project: VideoProject,
                             changed.subtitleSpeakers.size % SubtitleSpeakerPolicy.COLORS.size]
                         error = ""
                     } else error = "Informe um nome diferente e válido (até 16 personagens)."
-                }, enabled = name.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
+                }, enabled = name.isNotBlank(), modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
                     Text(if (editId == null) "Adicionar personagem" else "Salvar personagem")
                 }
                 if (editId != null) TextButton(onClick = { editId = null; name = ""; error = "" }) {

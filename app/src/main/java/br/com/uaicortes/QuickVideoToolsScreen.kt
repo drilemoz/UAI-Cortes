@@ -133,7 +133,7 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
                 else "Salve o áudio de um vídeo em M4A, sem abrir o editor.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             OutlinedButton(onClick = { galleryOpen = true },
-                enabled = !processing, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
+                enabled = !processing, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp), shape = UaiShapes.button) {
                 Icon(Icons.Default.VideoFile, null)
                 Spacer(Modifier.width(10.dp))
                 Text(if (sourceText.isBlank()) "Selecionar vídeo" else "Trocar vídeo")
@@ -207,7 +207,7 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
                 }, enabled = !processing && sourceText.isNotBlank() && parts.isNotEmpty() &&
                     Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
                     (audioMode != "separate" || hasAudio),
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp)) {
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp), shape = UaiShapes.button) {
                     Icon(Icons.Default.ContentCut, null)
                     Spacer(Modifier.width(8.dp))
                     Text("Dividir em ${parts.size} partes")
@@ -221,7 +221,7 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
                         audioDocument.launch(QuickVideoSplitPolicy.fileBase(sourceName) + ".m4a")
                     }
                 }, enabled = !processing && sourceText.isNotBlank() && hasAudio,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp)) {
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp), shape = UaiShapes.button) {
                     Icon(Icons.Default.AudioFile, null)
                     Spacer(Modifier.width(8.dp))
                     Text("Extrair e salvar M4A")
@@ -233,7 +233,7 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
             if (processing) {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 Text(if (mode == QuickToolMode.SPLIT_VIDEO) "$phase · Parte $progressIndex/$progressTotal" else phase)
-                OutlinedButton(onClick = { confirmCancel = true }) {
+                OutlinedButton(onClick = { confirmCancel = true }, shape = UaiShapes.button) {
                     Icon(Icons.Default.Close, null)
                     Spacer(Modifier.width(8.dp))
                     Text("Cancelar")

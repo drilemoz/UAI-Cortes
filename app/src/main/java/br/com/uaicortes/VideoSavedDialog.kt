@@ -228,7 +228,7 @@ internal fun VideoSavedDialog(
                     OutlinedCard(onClick = {
                         showAiOptions = false
                         showCaptionDialog = true
-                    }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(10.dp)) {
+                    }, modifier = Modifier.weight(1f), shape = UaiShapes.card) {
                         Column(Modifier.fillMaxWidth().height(78.dp),
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally) {
@@ -242,7 +242,7 @@ internal fun VideoSavedDialog(
                     OutlinedCard(onClick = {
                         showAiOptions = true
                         showCaptionDialog = true
-                    }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(10.dp)) {
+                    }, modifier = Modifier.weight(1f), shape = UaiShapes.card) {
                         Column(Modifier.fillMaxWidth().height(78.dp),
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally) {
@@ -266,7 +266,7 @@ internal fun VideoSavedDialog(
                     }.onFailure { failure = "Não foi possível compartilhar este vídeo." }
 
                     }, modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(10.dp)) {
+                        shape = UaiShapes.card) {
                         Column(Modifier.fillMaxWidth().height(78.dp),
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally) {
@@ -312,7 +312,7 @@ internal fun VideoSavedDialog(
         Dialog(onDismissRequest = { if (persistDraft()) showCaptionDialog = false },
             properties = DialogProperties(usePlatformDefaultWidth = false)) {
             Surface(Modifier.fillMaxWidth(.95f).fillMaxHeight(.86f),
-                shape = RoundedCornerShape(16.dp),
+                shape = UaiShapes.dialog,
                 color = MaterialTheme.colorScheme.surface) {
                 Column(Modifier.fillMaxSize().navigationBarsPadding().padding(14.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -498,7 +498,7 @@ internal fun VideoSavedDialog(
 
 
                         savedDescriptionTask?.let { checkpoint ->
-                            Surface(shape = RoundedCornerShape(9.dp),
+                            Surface(shape = UaiShapes.item,
                                 color = MaterialTheme.colorScheme.surfaceVariant) {
                                 Column(Modifier.fillMaxWidth().padding(9.dp),
                                     verticalArrangement = Arrangement.spacedBy(4.dp)) {

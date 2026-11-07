@@ -46,7 +46,7 @@ internal fun FlowBatchSection(
         return credentials.profiles().firstOrNull { it.id == id }
     }
     val own = records.filter { it.flowProjectId == projectId }.asReversed().take(12)
-    Card(shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
+    Card(shape = UaiShapes.card, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             TextButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth()) {
                 Text(if (expanded) "▾ Refinar várias cenas · Gemini Batch" else
@@ -92,7 +92,7 @@ internal fun FlowBatchSection(
                     confirmSubmission = plan to GeminiBatchPolicy.model(model)
                     ""
                 } catch (e: Exception) { e.message ?: "Não foi possível preparar o lote." }
-            }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text("Revisar e enviar cenas") }
+            }, enabled = !busy, modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) { Text("Revisar e enviar cenas") }
             if (busy) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             if (message.isNotBlank()) Text(message, style = MaterialTheme.typography.bodySmall)
             HorizontalDivider()
@@ -128,7 +128,7 @@ internal fun FlowBatchSection(
                                         finally { busy = false }
                                     }
                                 }
-                            }, enabled = !busy) { Text("Consultar resultado") }
+                            }, enabled = !busy, shape = UaiShapes.button) { Text("Consultar resultado") }
                         } else {
                             Text("Envio incerto: localize o job na API. Não reenvie automaticamente.",
                                 style = MaterialTheme.typography.bodySmall)
@@ -154,7 +154,7 @@ internal fun FlowBatchSection(
                     finally { busy = false }
                 }
             }, enabled = !busy && own.any { it.remoteName.isBlank() },
-                modifier = Modifier.fillMaxWidth()) { Text("Buscar jobs para envios incertos") }
+                modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) { Text("Buscar jobs para envios incertos") }
             inspected?.let { (record, result) ->
                 if (record.flowProjectId == projectId) {
                     HorizontalDivider()
@@ -167,7 +167,7 @@ internal fun FlowBatchSection(
                         Text("Cena ${ref.index + 1}" + if (!compatible) " · indisponível ou modificada" else " · pronta para revisão",
                             style = MaterialTheme.typography.bodySmall)
                         if (compatible && answer != null) {
-                            OutlinedButton(onClick = { pendingApply = ref.index to answer }) {
+                            OutlinedButton(onClick = { pendingApply = ref.index to answer }, shape = UaiShapes.button) {
                                 Text("Revisar cena ${ref.index + 1}")
                             }
                         }
@@ -205,7 +205,7 @@ internal fun FlowBatchSection(
                             " Se a chamada começou, consulte os jobs antes de enviar outro lote."
                     } finally { busy = false }
                 } else message = "Salve o rascunho antes de enviar."
-            }) { Text("Enviar uma vez") } },
+            }, shape = UaiShapes.button) { Text("Enviar uma vez") } },
             dismissButton = { TextButton(onClick = { confirmSubmission = null }) { Text("Cancelar") } })
     }
     pendingLink?.let { (record, remote) ->
@@ -223,7 +223,7 @@ internal fun FlowBatchSection(
                     storage.accept(record, remote); reload()
                     "ID associado. Consulte o resultado antes de aplicar."
                 } catch (e: Exception) { e.message ?: "Não foi possível associar." }
-            }) { Text("Confirmar vínculo") } },
+            }, shape = UaiShapes.button) { Text("Confirmar vínculo") } },
             dismissButton = { TextButton(onClick = { pendingLink = null }) { Text("Cancelar") } })
     }
     pendingApply?.let { (index, answer) ->
@@ -243,7 +243,7 @@ internal fun FlowBatchSection(
                     message = "Sugestão aplicada à cena ${index + 1}. Salve o projeto para preservar."
                 } else message = "Cena modificada ou resultado inválido: sugestão não aplicada."
                 pendingApply = null
-            }) { Text("Aplicar nesta cena") } },
+            }, shape = UaiShapes.button) { Text("Aplicar nesta cena") } },
             dismissButton = { TextButton(onClick = { pendingApply = null }) { Text("Manter original") } })
     }
 }

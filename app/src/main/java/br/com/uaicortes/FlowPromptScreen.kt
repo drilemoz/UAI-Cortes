@@ -78,7 +78,7 @@ internal fun FlowLegacyPromptScreen(project: VideoProject,
                     catch (_: Exception) { countedInput = "Contagem indisponível; a geração continua disponível." }
                     finally { countingInput = false }
                 }
-            }, enabled = !countingInput) { Text("Conferir tokens de entrada") }
+            }, enabled = !countingInput, shape = UaiShapes.button) { Text("Conferir tokens de entrada") }
             countedInput?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
         } },
         confirmButton = { TextButton(onClick = {
@@ -135,7 +135,7 @@ internal fun FlowLegacyPromptScreen(project: VideoProject,
             Text("Defina 9:16 no Google Flow. Um prompt por cena, sem especificar duração ou proporção no texto.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedButton(onClick = { expandStyle = !expandStyle }, modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(onClick = { expandStyle = !expandStyle }, modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
                 Icon(Icons.Default.Palette, null)
                 Text(" Estilo-base único (editável)", Modifier.weight(1f))
                 Icon(if (expandStyle) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
@@ -146,11 +146,11 @@ internal fun FlowLegacyPromptScreen(project: VideoProject,
                     modifier = Modifier.fillMaxWidth())
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { style = FlowPromptPolicy.DEFAULT_STYLE },
-                        modifier = Modifier.weight(1f)) { Text("Restaurar 3D") }
+                        modifier = Modifier.weight(1f), shape = UaiShapes.button) { Text("Restaurar 3D") }
                     Button(onClick = {
                         message = if (styleStore.save(style)) "Estilo salvo no aparelho."
                             else "Falha ao salvar o estilo."
-                    }, modifier = Modifier.weight(1f)) { Text("Salvar estilo") }
+                    }, modifier = Modifier.weight(1f), shape = UaiShapes.button) { Text("Salvar estilo") }
                 }
             }
             Text("Modo", style = MaterialTheme.typography.titleSmall)
@@ -187,7 +187,7 @@ internal fun FlowLegacyPromptScreen(project: VideoProject,
                         draft = draft.copy(scenes = draft.scenes + "")
                         selected = draft.scenes.lastIndex
                     }
-                }, enabled = draft.scenes.size < 12, modifier = Modifier.weight(1f)) {
+                }, enabled = draft.scenes.size < 12, modifier = Modifier.weight(1f), shape = UaiShapes.button) {
                     Icon(Icons.Default.Add, null); Text(" Cena")
                 }
                 OutlinedButton(onClick = {
@@ -195,12 +195,12 @@ internal fun FlowLegacyPromptScreen(project: VideoProject,
                         draft = draft.copy(scenes = draft.scenes.filterIndexed { i, _ -> i != selected })
                         selected = selected.coerceAtMost(draft.scenes.lastIndex)
                     }
-                }, enabled = draft.scenes.size > 1, modifier = Modifier.weight(1f)) {
+                }, enabled = draft.scenes.size > 1, modifier = Modifier.weight(1f), shape = UaiShapes.button) {
                     Icon(Icons.Default.DeleteOutline, null); Text(" Excluir")
                 }
             }
             OutlinedButton(onClick = { countedInput = null; consent = true },
-                enabled = !busy && draft.scenes[selected].isNotBlank(), modifier = Modifier.fillMaxWidth()) {
+                enabled = !busy && draft.scenes[selected].isNotBlank(), modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
                 Icon(Icons.Default.AutoAwesome, null)
                 Text(if (busy) " Aguarde Gemini..." else " Aprimorar cena com Gemini")
             }
@@ -224,7 +224,7 @@ internal fun FlowLegacyPromptScreen(project: VideoProject,
         Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { if (persist()) message = "Cenas salvas." },
-                modifier = Modifier.weight(1f)) { Icon(Icons.Default.Save, null); Text(" Salvar") }
+                modifier = Modifier.weight(1f), shape = UaiShapes.button) { Icon(Icons.Default.Save, null); Text(" Salvar") }
             Button(onClick = {
                 val prompt = runCatching { FlowPromptPolicy.compose(style, draft, selected) }.getOrNull()
                 if (prompt != null && persist()) {
@@ -232,7 +232,7 @@ internal fun FlowLegacyPromptScreen(project: VideoProject,
                         ?.setPrimaryClip(ClipData.newPlainText("Prompt Flow ${selected + 1}", prompt))
                     message = "Prompt da cena ${selected + 1} copiado."
                 }
-            }, enabled = draft.scenes[selected].isNotBlank(), modifier = Modifier.weight(1f)) {
+            }, enabled = draft.scenes[selected].isNotBlank(), modifier = Modifier.weight(1f), shape = UaiShapes.button) {
                 Icon(Icons.Default.ContentCopy, null); Text(" Copiar")
             }
         }

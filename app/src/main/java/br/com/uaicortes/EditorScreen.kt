@@ -477,7 +477,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     val active = p.clips.firstOrNull { it.id == clipMenuId }
     if (active != null) {
         ModalBottomSheet(onDismissRequest={clipMenuId=null}, dragHandle=null,
-            sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true)) {
+            sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true), shape=UaiShapes.sheet) {
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp),
                 verticalArrangement=Arrangement.spacedBy(9.dp)) {
                 Row(verticalAlignment=Alignment.CenterVertically) {

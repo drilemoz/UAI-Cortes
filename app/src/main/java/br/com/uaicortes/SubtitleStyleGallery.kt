@@ -54,7 +54,7 @@ internal fun SubtitleStyleGallery(current: SubtitleCue, onChange: (SubtitleCue) 
                 val frame=SubtitleAnimations.frame(example,sampleMs)
                 Surface(onClick={onChange(SubtitleStyles.applyToCue(current,preset))},
                     modifier=Modifier.width(142.dp),
-                    shape=RoundedCornerShape(12.dp),
+                    shape=UaiShapes.card,
                     color=if(selected)MaterialTheme.colorScheme.primaryContainer
                         else MaterialTheme.colorScheme.surfaceVariant,
                     border=BorderStroke(if(selected)2.dp else 1.dp,

@@ -25,7 +25,7 @@ internal fun GeminiPricingDialog(project: String, model: String, store: GeminiPr
     fun price(raw: String): Double? = raw.trim().replace(',', '.').toDoubleOrNull()
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxWidth(.94f).heightIn(max = 550.dp),
-            shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surface) {
+            shape = UaiShapes.card, color = MaterialTheme.colorScheme.surface) {
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Tarifas para estimativa", style = MaterialTheme.typography.titleMedium)
@@ -61,7 +61,7 @@ internal fun GeminiPricingDialog(project: String, model: String, store: GeminiPr
                                 .onSuccess { onSaved() }
                                 .onFailure { warning = it.message ?: "Não foi possível salvar." }
                         }
-                    }, modifier = Modifier.weight(1f)) { Text("Salvar") }
+                    }, modifier = Modifier.weight(1f), shape = UaiShapes.button) { Text("Salvar") }
                 }
             }
         }

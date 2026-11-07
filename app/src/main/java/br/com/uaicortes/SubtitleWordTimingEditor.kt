@@ -39,7 +39,7 @@ internal fun SubtitleWordTimingEditor(cue: SubtitleCue,
     Dialog(onDismissRequest=onDismiss,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Surface(Modifier.fillMaxWidth(.96f)
             .heightIn(max=LocalConfiguration.current.screenHeightDp.dp * .88f),
-            shape=RoundedCornerShape(18.dp),tonalElevation=5.dp) {
+            shape=UaiShapes.dialog,tonalElevation=5.dp) {
             Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 Text("Sincronizar palavras",style=MaterialTheme.typography.titleMedium,
                     fontWeight=FontWeight.Bold)

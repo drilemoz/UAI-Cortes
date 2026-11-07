@@ -104,12 +104,12 @@ internal fun SubtitleUserPresetPanel(cue: SubtitleCue, onChange: (SubtitleCue) -
                         dialogMode = "rename"
                         failure = null
                     }, enabled = selected != null && !busy,
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) {
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp), shape = UaiShapes.button) {
                         Text("Renomear", fontSize = 12.sp)
                     }
                     OutlinedButton(onClick = { pendingDelete = selected?.id },
                         enabled = selected != null && !busy,
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)) {
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp), shape = UaiShapes.button) {
                         Text("Excluir", fontSize = 12.sp)
                     }
                 }

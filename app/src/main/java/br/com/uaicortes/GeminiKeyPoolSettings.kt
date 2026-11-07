@@ -54,7 +54,7 @@ internal fun GeminiKeyPoolSettings(store: GeminiCredentialStore, onChanged: () -
         auto = store.autoFallbackEnabled()
         onChanged()
     }
-    Surface(shape = RoundedCornerShape(14.dp),
+    Surface(shape = UaiShapes.card,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
         Column(Modifier.fillMaxWidth()) {
@@ -92,7 +92,7 @@ internal fun GeminiKeyPoolSettings(store: GeminiCredentialStore, onChanged: () -
                     }
                     entries.forEach { profile ->
                         val active = profile.id == activeId
-                        Surface(shape = RoundedCornerShape(12.dp),
+                        Surface(shape = UaiShapes.card,
                             color = if (active) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.34f)
                                 else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.33f),
                             border = BorderStroke(if (active) 1.5.dp else 1.dp,
@@ -174,7 +174,7 @@ internal fun GeminiKeyPoolSettings(store: GeminiCredentialStore, onChanged: () -
                         Spacer(Modifier.width(6.dp)); Text("Adicionar chave")
                     }
                     Surface(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
-                        shape = RoundedCornerShape(11.dp)) {
+                        shape = UaiShapes.card) {
                         Column(Modifier.fillMaxWidth().padding(11.dp),
                             verticalArrangement = Arrangement.spacedBy(5.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -237,7 +237,7 @@ internal fun GeminiKeyPoolSettings(store: GeminiCredentialStore, onChanged: () -
     if (formOpen) Dialog(onDismissRequest = { formOpen = false; editing = null; secret = "" },
         properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(modifier = Modifier.fillMaxWidth(0.94f).imePadding().heightIn(max = 570.dp),
-            shape = RoundedCornerShape(20.dp),
+            shape = UaiShapes.dialog,
             color = MaterialTheme.colorScheme.surface) {
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {

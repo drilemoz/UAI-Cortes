@@ -1,3 +1,8 @@
+# Uai Cortes · versão 0.1.200 — Padronização visual ampliada (versionCode 201)
+- Botões, cartões e diálogos do Estúdio Flow, Vozes IA, Legendas e configurações Gemini seguem a mesma geometria discreta.
+- Cortes, inserção/edição, exportação e Home receberam ajustes de formato sem alterar ações, importações, projetos ou arquivos.
+- Mantidos PiP, pré-escuta de áudio, Central de Vozes, divisão em 9,5/10 segundos, cinco variantes de APK e compatibilidade de projetos. Testes Android completos ainda pendentes.
+
 ## 0.1.199 (versionCode 200)
 - Visual mais consistente: cartões e botões retangulares de cantos leves, incluindo a janela Salvar edição.
 - PiP: prévia compacta com opção de ampliar, ferramentas menores e mais espaço para editar.

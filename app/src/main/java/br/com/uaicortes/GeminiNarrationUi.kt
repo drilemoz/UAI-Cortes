@@ -446,7 +446,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                                     val defaultGoal = NarrationDurationAssist.defaultTarget(start,
                                         result.segment.subtitleEndMs, project.durationMs)
                                     val goal = durationGoals[result.segment.cueId] ?: defaultGoal
-                                    Surface(shape = RoundedCornerShape(12.dp),
+                                    Surface(shape = UaiShapes.card,
                                         color = MaterialTheme.colorScheme.surfaceVariant,
                                         modifier = Modifier.fillMaxWidth()) {
                                         Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -566,7 +566,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                             }
                             if (showVoiceDiagnostic) {
                                 Surface(color = MaterialTheme.colorScheme.surfaceVariant,
-                                    shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+                                    shape = UaiShapes.card, modifier = Modifier.fillMaxWidth()) {
                                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                                         Text("Teste do catálogo Gemini", style = MaterialTheme.typography.labelMedium)
                                         Text("Consulta sem síntese de áudio, sem enviar legendas e sem seleção automática. " +
@@ -724,7 +724,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         if (status.isNotBlank()) Surface(color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+                            shape = UaiShapes.card, modifier = Modifier.fillMaxWidth()) {
                             Text(status, Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
                         }
                         Text("Amostras podem consumir cota na primeira geração; repetidas usam o cache local.",

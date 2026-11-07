@@ -44,7 +44,7 @@ internal fun GeminiVoiceReviewUi(cues: List<SubtitleCue>, existing: List<Subtitl
                         Text("$defaultName · $quantity legenda(s)",fontWeight=FontWeight.Medium)
                     }
                     Box {
-                        OutlinedButton(onClick={expanded=true},modifier=Modifier.fillMaxWidth()) {
+                        OutlinedButton(onClick={expanded=true},modifier=Modifier.fillMaxWidth(), shape = UaiShapes.button) {
                             val label=when (selected) {
                                 GeminiDiarizationPolicy.CREATE -> "Criar personagem para $defaultName"
                                 GeminiDiarizationPolicy.IGNORE -> "Deixar sem personagem"

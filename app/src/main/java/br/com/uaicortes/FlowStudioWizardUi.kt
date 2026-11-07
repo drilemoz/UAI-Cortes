@@ -226,22 +226,22 @@ internal fun StudioWizardPeople(people: List<StudioPerson>, libraryData: StudioL
                     WizardInput("Objetos importantes", person.objects, 800) { candidate = person.copy(objects = it) }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { candidate = null }, modifier = Modifier.weight(1f)) { Text("Cancelar") }
+                    OutlinedButton(onClick = { candidate = null }, modifier = Modifier.weight(1f), shape = UaiShapes.button) { Text("Cancelar") }
                     Button(onClick = { onUpsert(person.copy(name = person.name.trim())); candidate = null },
                         enabled = person.name.isNotBlank() && people.size < 30 ||
-                            (person.name.isNotBlank() && people.any { it.id == person.id }), modifier = Modifier.weight(1f)) {
+                            (person.name.isNotBlank() && people.any { it.id == person.id }), modifier = Modifier.weight(1f), shape = UaiShapes.button) {
                         Text("Salvar personagem")
                     }
                 }
             }
         }
     } else if (people.size < 30) {
-        Button(onClick = { candidate = StudioPerson() }, modifier = Modifier.fillMaxWidth(), enabled = !busy) {
+        Button(onClick = { candidate = StudioPerson() }, modifier = Modifier.fillMaxWidth(), enabled = !busy, shape = UaiShapes.button) {
             Icon(Icons.Default.PersonAdd, null); Text(" Criar personagem")
         }
     }
     if (libraryData != null) {
-        OutlinedButton(onClick = { libraryOpen = !libraryOpen }, modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(onClick = { libraryOpen = !libraryOpen }, modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
             Icon(Icons.Default.CollectionsBookmark, null)
             Text(" Minha biblioteca (${libraryData.people.size})", Modifier.weight(1f))
             Icon(if (libraryOpen) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
@@ -335,20 +335,20 @@ internal fun StudioWizardPlaces(places: List<StudioPlace>, libraryData: StudioLi
                     candidate = place.copy(objects = it)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { candidate = null }, modifier = Modifier.weight(1f)) { Text("Cancelar") }
+                    OutlinedButton(onClick = { candidate = null }, modifier = Modifier.weight(1f), shape = UaiShapes.button) { Text("Cancelar") }
                     Button(onClick = { onUpsert(place.copy(name = place.name.trim())); candidate = null },
                         enabled = place.name.isNotBlank() && (places.size < 30 || places.any { it.id == place.id }),
-                        modifier = Modifier.weight(1f)) { Text("Salvar cenário") }
+                        modifier = Modifier.weight(1f), shape = UaiShapes.button) { Text("Salvar cenário") }
                 }
             }
         }
     } else if (places.size < 30) {
-        Button(onClick = { candidate = StudioPlace() }, modifier = Modifier.fillMaxWidth(), enabled = !busy) {
+        Button(onClick = { candidate = StudioPlace() }, modifier = Modifier.fillMaxWidth(), enabled = !busy, shape = UaiShapes.button) {
             Icon(Icons.Default.AddLocationAlt, null); Text(" Criar cenário")
         }
     }
     if (libraryData != null) {
-        OutlinedButton(onClick = { libraryOpen = !libraryOpen }, modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(onClick = { libraryOpen = !libraryOpen }, modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
             Icon(Icons.Default.CollectionsBookmark, null)
             Text(" Minha biblioteca (${libraryData.places.size})", Modifier.weight(1f))
             Icon(if (libraryOpen) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)

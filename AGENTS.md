@@ -1,3 +1,9 @@
+# v0.1.200 — Expansão da padronização visual
+- Usar `UaiShapes.button`, `.card`, `.item`, `.dialog` e `.sheet` nos controles de Flow, Vozes IA, Central de Vozes, Legendas, Corte, Exportação, Home e configurações Gemini. Não alterar formas de indicadores, seleção da galeria, miniaturas, PiP nem alças da timeline para fins cosméticos.
+- Estúdio Flow: apenas formatos de botões e cartões mudam; preservados prompts, referências, créditos, modos de geração, cache e operações. Vozes Gemini preservam identidade, cota, fila e confirmação antes de chamadas.
+- Diálogos de personagens e sincronização, cadastro de chaves, folha do editor e exportação usam cantos discretos; ações permanecem acessíveis. Manter os controles táteis e layout responsivo para fonte ampliada.
+- VersionName 0.1.200/versionCode 201, schemaVersion 4 e cinco APKs previstos. Confirmar Gradle/Android Lint e testes visuais antes de afirmar compilação real.
+
 # v0.1.199 — Padronização visual e pré-escuta isolada de áudio
 - `UaiShapes` define tokens de cantos discretos e configura `MaterialTheme.shapes` para claro, escuro e AMOLED; manter áreas de toque adequadas e não substituir geometrias de máscaras, PiP ou controles circulares indiscriminadamente.
 - PiP: prévia com altura máxima inicial 250 dp, expansão sob demanda; quatro ações 58 dp, opacidade compacta e rodapé fixo. Não modificar matriz/posição, origem, som, exportação ou limite de sobreposições.

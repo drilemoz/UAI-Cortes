@@ -46,7 +46,7 @@ private fun CompactExportOption(label: String,icon: ImageVector?,selected: Boole
     enabled: Boolean,modifier: Modifier=Modifier,horizontal: Boolean=false,onSelect:()->Unit) {
     Surface(onClick=onSelect,enabled=enabled,modifier=modifier,
         color=if(selected) Blue.copy(alpha=.08f) else MaterialTheme.colorScheme.surface,
-        shape=RoundedCornerShape(10.dp),border=BorderStroke(if(selected)2.dp else 1.dp,
+        shape=UaiShapes.card,border=BorderStroke(if(selected)2.dp else 1.dp,
             if(selected)Blue else MaterialTheme.colorScheme.outlineVariant)) {
         if(horizontal) {
             Row(Modifier.fillMaxSize().padding(horizontal=3.dp),
@@ -192,7 +192,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
             OutlinedTextField(value=name,onValueChange={name=it},singleLine=true,
                 modifier=Modifier.fillMaxWidth(),textStyle=MaterialTheme.typography.bodyMedium,
                 leadingIcon={Icon(Icons.Default.Description,contentDescription=null,modifier=Modifier.size(19.dp))},
-                shape=RoundedCornerShape(12.dp),enabled=!working)
+                shape=UaiShapes.card,enabled=!working)
             Spacer(Modifier.height(12.dp))
             CompactExportLabel("Destino",Icons.Default.MovieFilter)
             Spacer(Modifier.height(5.dp))
@@ -255,7 +255,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                 }
             }
             Surface(onClick={previewExpanded=!previewExpanded},
-                modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(10.dp),
+                modifier=Modifier.fillMaxWidth(),shape=UaiShapes.card,
                 color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.48f)) {
                 Row(Modifier.fillMaxWidth().padding(horizontal=10.dp,vertical=8.dp),
                     verticalAlignment=Alignment.CenterVertically) {
@@ -444,7 +444,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                     }
                 },enabled=!working && name.isNotBlank() && p.clips.isNotEmpty(),
                     modifier=Modifier.fillMaxWidth().height(48.dp),
-                    shape=RoundedCornerShape(14.dp),
+                    shape=UaiShapes.card,
                     colors=ButtonDefaults.buttonColors(containerColor=Blue)) {
                     Icon(Icons.Default.SaveAlt,contentDescription=null,modifier=Modifier.size(19.dp))
                     Spacer(Modifier.width(8.dp))
@@ -533,7 +533,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                         Spacer(Modifier.height(18.dp))
                         OutlinedButton(onClick={confirmCancelExport=true},
                             enabled=ExportProgressUi.canCancel(exportPhase),
-                            modifier=Modifier.fillMaxWidth()) {
+                            modifier=Modifier.fillMaxWidth(), shape = UaiShapes.button) {
                             Text(if(exportPhase==ExportPhase.SAVING) "Concluindo salvamento…" else "Cancelar exportação")
                         }
                     }

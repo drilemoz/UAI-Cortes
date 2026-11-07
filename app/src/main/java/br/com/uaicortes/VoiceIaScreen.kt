@@ -1017,7 +1017,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
             comparator.compare(a.label, b.label)
         }
         AlertDialog(onDismissRequest = { closeStylePicker() },
-            modifier = Modifier.padding(horizontal = 10.dp), shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.padding(horizontal = 10.dp), shape = UaiShapes.dialog,
             title = { Text(when {
                 forAll -> "Interpretação geral"
                 speakerId != null -> "Interpretação do personagem"
@@ -1345,7 +1345,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                         if (review.canStretch) Button(onClick = {
                             pendingSyncId = null
                             adjustWav(cue, take, review.availableMs)
-                        }, modifier = Modifier.weight(1f), enabled = !busy) {
+                        }, modifier = Modifier.weight(1f), enabled = !busy, shape = UaiShapes.button) {
                             Text("Ajustar WAV", fontSize = 12.sp)
                         }
                         OutlinedButton(onClick = {
@@ -1353,7 +1353,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                             quickGenerateId = cue.id
                             forceCueId = cue.id
                             promptGenerate = listOf(cue.id)
-                        }, modifier = Modifier.weight(1f), enabled = !busy) {
+                        }, modifier = Modifier.weight(1f), enabled = !busy, shape = UaiShapes.button) {
                             Text("Regenerar breve", fontSize = 12.sp)
                         }
                     }
