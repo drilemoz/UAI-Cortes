@@ -25,7 +25,11 @@ assert 'fun validChannel' in d and 'fun validVideoId' in d
 assert 'YouTubeSocialApi.channel(token)' in p and 'YouTubeSocialApi.upload(context, token' in p
 assert 'YouTubeSocialApi.metrics(token, publication.remoteVideoId)' in p
 assert 'Autorizar e enviar' in p and 'Vincular canal YouTube?' in p
-assert 'Text("Enviar ao YouTube pela API")' in p and 'testBusy' in p
+assert 'Text("Enviar ao YouTube pela API")' in p and 'youtubeBusy' in p
+# O teste OAuth foi movido com a Central, sem alterar o upload na tela Redes.
+c = (s/'SocialIntegrationsUi.kt').read_text()
+assert 'youtubeAuth { token ->' in c and 'YouTubeSocialApi.channel(token)' in c
+assert 'Text("Autorizar Google e testar")' in c
 assert 'SocialPublicConfig' in p and 'remoteChannelId' not in p.split('internal object SocialPublicConfig {')[1].split('@Composable')[0]
 assert (r/'app/src/androidTest/java/br/com/uaicortes/YouTubeSocialAndroidTest.kt').exists()
 assert '.put("schemaVersion", 4)' in (s/'ProjectStore.kt').read_text()

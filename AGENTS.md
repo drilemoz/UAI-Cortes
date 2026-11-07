@@ -1,3 +1,7 @@
+# v0.1.218 — Correção do CI180 após modularização do YouTube
+- O workflow 180 falhou no teste estático `test_social_youtube_166_contract.py` porque exigia `testBusy` em `SocialScreens.kt`. A versão 0.1.217 separou a Central para `SocialIntegrationsUi.kt`, e o controle da publicação continuou com `youtubeBusy`. Atualizar o contrato para verificar cada fluxo no arquivo correto, não restaurar variáveis removidas apenas por testes.
+- Incluir teste de regressão CI180 para o upload protegido, revisão de resultado e autorização Google real no novo arquivo. Preservar credenciais, `SocialStore`, schemaVersion 4, assinatura e cinco APKs. VersionName 0.1.218, versionCode 219. Executar Gradle/Android e OAuth de verdade antes de afirmar build funcional.
+
 # v0.1.217 — Central de Integrações e Redes compactas
 - Mover a tela `SocialApiCenterScreen` de `SocialScreens.kt` para `SocialIntegrationsUi.kt`, separando guias por serviço da lógica de apresentação e preservando `SocialPublicConfig`/backup somente de identificadores públicos.
 - Central compacta por serviços com detalhes por destino, orientação para usuários e desenvolvedores, links oficiais, autorização Google real por ação, login Meta somente se build configurado, opção avançada para teste de token Meta/TikTok e compartilhamento manual para Kwai/Facebook Perfil. Não inventar login TikTok, token persistido ou status de publicação.

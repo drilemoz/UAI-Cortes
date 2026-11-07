@@ -9,7 +9,7 @@ dashboard = (SRC/'SocialScreens.kt').read_text()
 nav = (SRC/'MainActivity.kt').read_text()
 store = (SRC/'SocialStore.kt').read_text()
 test = ROOT/'app/src/test/java/br/com/uaicortes/SocialIntegrationGuidesTest.kt'
-assert check(ROOT) == ('0.1.217', 218)
+assert check(ROOT)[1] >= 218  # contrato introduzido na v217; válido nas versões posteriores
 assert dashboard.count('internal fun SocialApiCenterScreen(') == 0
 assert center.count('internal fun SocialApiCenterScreen(') == 1
 assert 'SocialApiCenterScreen(::back' in nav and '{ screen = "social" }' in nav

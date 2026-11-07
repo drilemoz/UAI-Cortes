@@ -1,3 +1,8 @@
+# Uai Cortes · v0.1.218 — Correção do workflow 180
+- O workflow 180 falhou na etapa de testes Python antes de compilar Android porque `tools/test_social_youtube_166_contract.py` exigia a variável legada `testBusy` em `SocialScreens.kt`, removida durante a separação da Central na v217.
+- O contrato agora verifica a ação de upload com `youtubeBusy` em Redes e a autorização/teste real via `SocialIntegrationsUi.kt`. Incluído `tools/test_ci180_youtube_integration_contract.py` com verificações de canal vinculado, revisão de upload e OAuth sem persistência de token.
+- Contrato da Central v217 passa a aceitar versões subsequentes, preservando seus requisitos funcionais. Versão 0.1.218/versionCode 219; sem mudança em dados ou serviços. Build e uso Android ainda a validar.
+
 # Uai Cortes · v0.1.217 — Integrações simplificadas
 - Substituição dos cartões longos da Central de APIs por lista compacta de serviços e telas individuais de conexão.
 - Guias de obtenção/configuração, etapas para usuário e desenvolvedor e URLs oficiais; identificação clara de chave de API, OAuth e modo manual.

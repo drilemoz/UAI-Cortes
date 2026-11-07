@@ -1,3 +1,6 @@
+# Uai Cortes · v0.1.218 — Correção CI180 (YouTube)
+**Atualização v0.1.218 (versionCode 219):** correção do teste estrutural legado do YouTube, que ainda exigia `testBusy` na tela antiga; agora valida o estado real (`youtubeBusy`) do upload e o teste Google OAuth na nova Central de Integrações. Sem alterar o fluxo de publicação, credenciais, interface ou schema 4. Build Gradle e OAuth real pendentes.
+
 # Uai Cortes · v0.1.217 — Integrações e redes sociais
 
 **Atualização v0.1.217 (versionCode 218):** Central de Integrações reorganizada com cartões compactos, telas específicas para cada serviço e guias de configuração em português; a aba Redes coloca publicar e contas em primeiro plano, mantendo autorizações reais, testes opcionais e compartilhamento manual. Versão de código-fonte; ainda requer build Gradle e testes Android reais.

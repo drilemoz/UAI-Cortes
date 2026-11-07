@@ -1,3 +1,8 @@
+# Uai Cortes · versão 0.1.218 — Compatibilidade do CI (versionCode 219)
+## v0.1.218
+- Corrigido teste de regressão que impedia o GitHub Actions de chegar à compilação após a reorganização da Central de Integrações.
+- Publicação YouTube, autenticação Google e telas da versão anterior foram preservadas. Ainda é necessário validar a compilação e os testes no Android.
+
 # Uai Cortes · versão 0.1.217 — Central de Integrações (versionCode 218)
 ## v0.1.217
 - Encontre Google Gemini, YouTube, Facebook, TikTok e Kwai em uma lista mais curta, com ajuda por serviço.
