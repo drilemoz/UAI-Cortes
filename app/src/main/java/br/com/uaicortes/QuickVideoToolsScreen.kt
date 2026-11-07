@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 internal enum class QuickToolMode { SPLIT_VIDEO, EXTRACT_AUDIO }
+private enum class SplitView { SETUP, RUNNING, RESULT }
 
 /** Tela independente: arquivos originais e projetos nunca são modificados. */
 @Composable
@@ -58,6 +59,9 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
     var completed by remember { mutableIntStateOf(0) }
     var phase by remember { mutableStateOf("") }
     var confirmCancel by remember { mutableStateOf(false) }
+    var splitView by remember { mutableStateOf(SplitView.SETUP) }
+    val savedSplitFiles = remember { mutableStateListOf<QuickSplitSavedFile>() }
+    var openFileError by remember { mutableStateOf("") }
     val partsResult = remember(sourceDurationMs, partDuration) {
         runCatching { QuickVideoSplitPolicy.parts(sourceDurationMs, partDuration) }
     }
@@ -85,6 +89,8 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
             sourceDurationMs = duration
             hasAudio = containsAudio
             finished = false; error = ""; completed = 0
+            splitView = SplitView.SETUP
+            savedSplitFiles.clear()
             if (!containsAudio && mode == QuickToolMode.SPLIT_VIDEO && audioMode == "separate")
                 audioMode = "keep"
         }
@@ -107,8 +113,12 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
     fun leave() {
         if (processing) confirmCancel = true else onBack()
     }
-    BackHandler(galleryOpen || processing) {
-        if (galleryOpen) galleryOpen = false else confirmCancel = true
+    BackHandler(galleryOpen || processing || splitView == SplitView.RESULT) {
+        when {
+            galleryOpen -> galleryOpen = false
+            processing -> confirmCancel = true
+            splitView == SplitView.RESULT -> splitView = SplitView.SETUP
+        }
     }
     if (confirmCancel) AlertDialog(
         onDismissRequest = { confirmCancel = false },
@@ -117,7 +127,11 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
         confirmButton = { TextButton(onClick = {
             splitEngine.cancel(); audioEngine.cancel()
             processing = false; confirmCancel = false
-            phase = "Cancelado. Arquivos concluídos foram preservados."
+            phase = "Cancelado. Arquivos já publicados continuam no armazenamento."
+            if (mode == QuickToolMode.SPLIT_VIDEO) {
+                error = "Divisão cancelada pelo usuário."
+                splitView = SplitView.RESULT
+            }
         }) { Text("Cancelar tarefa") } },
         dismissButton = { TextButton(onClick = { confirmCancel = false }) { Text("Continuar") } }
     )
@@ -132,6 +146,38 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
             openDocuments = { picker.launch(arrayOf("video/*")) },
             scope = GalleryScope.VIDEOS,
             allowMultiple = false
+        )
+    } else if (mode == QuickToolMode.SPLIT_VIDEO && splitView == SplitView.RUNNING) {
+        QuickSplitProgressScreen(
+            sourceName = sourceName,
+            partIndex = progressIndex,
+            totalParts = progressTotal,
+            completedParts = completed,
+            phase = phase,
+            onCancel = { confirmCancel = true }
+        )
+    } else if (mode == QuickToolMode.SPLIT_VIDEO && splitView == SplitView.RESULT) {
+        QuickSplitResultScreen(
+            totalParts = parts.size,
+            files = savedSplitFiles.toList(),
+            issue = error,
+            fileError = openFileError,
+            onOpen = { file ->
+                openFileError = ""
+                runCatching {
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(file.uri, if (file.isAudio) "audio/mp4" else "video/mp4")
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(intent)
+                }.onFailure { openFileError = "Não foi possível abrir este arquivo com os aplicativos instalados." }
+            },
+            onNew = {
+                splitView = SplitView.SETUP; error = ""; finished = false
+                completed = 0; progressIndex = 0; progressTotal = 0; phase = ""
+                openFileError = ""; savedSplitFiles.clear()
+            },
+            onFinish = onBack
         )
     } else Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Heading(if (mode == QuickToolMode.SPLIT_VIDEO) "Dividir vídeo" else "Extrair áudio", ::leave)
@@ -345,7 +391,9 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
                     Button(onClick = {
                         if (sourceText.isBlank() || parts.isEmpty()) return@Button
                         error = ""; finished = false; completed = 0; progressIndex = 0
-                        processing = true
+                        progressTotal = parts.size; phase = "Preparando cortes"
+                        openFileError = ""; savedSplitFiles.clear()
+                        processing = true; splitView = SplitView.RUNNING
                         runCatching {
                             splitEngine.start(Uri.parse(sourceText), sourceName, parts, audioMode,
                                 onProgress = { index, total, step ->
@@ -354,12 +402,16 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
                                 onDone = { count ->
                                     processing = false; finished = true; completed = count
                                     phase = "Partes concluídas e salvas na galeria"
+                                    splitView = SplitView.RESULT
                                 },
                                 onError = { reason, count ->
                                     processing = false; completed = count; error = reason
-                                })
+                                    splitView = SplitView.RESULT
+                                },
+                                onSaved = { saved -> savedSplitFiles.add(saved) })
                         }.onFailure {
                             processing = false; error = it.message ?: "Não foi possível iniciar a divisão."
+                            splitView = SplitView.RESULT
                         }
                     }, enabled = !processing && sourceText.isNotBlank() && parts.isNotEmpty() &&
                         Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&

@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.211"
-    const val VERSION_CODE = 212
+    const val VERSION_NAME = "0.1.212"
+    const val VERSION_CODE = 213
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.212", listOf(
+            ReleaseFeature("quick-split-fullscreen-212", "Divisão com acompanhamento em tela inteira",
+                "Após iniciar o corte, acompanhe cada parte e o salvamento do MP4/M4A em uma tela exclusiva. Ao finalizar, consulte e abra os arquivos realmente salvos, inclusive os concluídos antes de uma interrupção.", "film")
+        )),
 		        ReleaseSummary("0.1.211", listOf(
             ReleaseFeature("quick-split-accessibility-211", "Dividir vídeo adaptado a telas menores",
                 "Cartões de duração se reorganizam em telas estreitas ou com fonte ampliada, e as seleções são mais acessíveis para leitores de tela. Progresso sem percentuais inventados.", "film")

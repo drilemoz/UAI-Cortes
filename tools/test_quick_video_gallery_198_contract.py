@@ -19,8 +19,10 @@ assert 'openDocuments = { picker.launch(arrayOf("video/*")) }' in quick
 assert 'if (uri != null) useVideo(uri, persistDocumentAccess = true)' in quick
 assert 'if (persistDocumentAccess) runCatching {' in quick
 assert 'takePersistableUriPermission' in quick
-assert 'BackHandler(galleryOpen || processing)' in quick
-assert 'if (galleryOpen) galleryOpen = false else confirmCancel = true' in quick
+assert 'BackHandler(galleryOpen || processing || splitView == SplitView.RESULT)' in quick
+assert 'galleryOpen -> galleryOpen = false' in quick
+assert 'processing -> confirmCancel = true' in quick
+assert 'splitView == SplitView.RESULT -> splitView = SplitView.SETUP' in quick
 assert 'pendingPicker = "new"; selectedClip = ""; openGallery("home", "new")' in main
 assert '"new", "append" -> importVideoClips(chosen.map { it.uri }, persistDocumentAccess = false)' in main
 assert '"new", "append" -> videoPicker.launch(arrayOf("video/*"))' in main

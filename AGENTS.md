@@ -1,3 +1,8 @@
+# v0.1.212 — Divisão em tela inteira com resultado real
+- Após iniciar Dividir vídeo, sair da configuração visual para uma tela de execução exclusiva, mostrando parte atual, fase Media3, partes concluídas e cancelamento com confirmação; não inventar porcentagem de transcodificação.
+- Conclusão/cancelamento/erro abre tela de resultado com MP4 e M4A realmente publicados em MediaStore, com nomes e abertura individual via ACTION_VIEW e permissão de leitura. Arquivos não concluídos não devem aparecer. Manter arquivos existentes e originais intocados.
+- Preservar 9,5/10 s, 180 partes, Media3, salvamento pendente e separado, extração rápida sem alterações, novo fluxo sem mexer em projetos. `versionName=0.1.212`, `versionCode=213`, schema 4 e cinco APKs Release. Validação Gradle, Lint e aparelho ainda pendentes.
+
 # v0.1.211 — Dividir vídeo responsivo e acessível
 - Em `QuickVideoToolsScreen.kt`, os cartões 9,5 s/10 s passam de duas colunas a empilhados quando a largura útil for menor que 330 dp ou o fontScale for pelo menos 1,3. Não reduzir área de toque nem mudar opções ou duração real.
 - Escolhas de duração/áudio expõem estado de seleção acessível; mensagens de resultado e progresso comunicam mudanças, sem afirmar porcentagem não medida. Evitar forçar uma paleta que prejudique tema AMOLED/escuro.

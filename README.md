@@ -1,3 +1,8 @@
+# Uai Cortes · versão 0.1.212 — Dividir vídeo em tela inteira (versionCode 213)
+- **Dividir vídeo**: o processamento agora ocupa uma tela própria, indicando exatamente qual parte está sendo cortada ou salva. Ao finalizar, a tela Resultado lista os MP4 e M4A realmente publicados e permite abrir cada arquivo, além de iniciar nova divisão.
+- Cancelar pede confirmação, não apaga originais nem partes já gravadas. A barra avança apenas com partes completas; não é uma estimativa de FPS nem de bytes do Media3.
+- Requer CI Gradle, Lint e validação visual/funcional em Android físico. Nenhum APK validado foi produzido nesta edição.
+
 # Uai Cortes · versão 0.1.211 — Dividir vídeo responsivo (versionCode 212)
 - **Dividir vídeo**: a seleção de 9,5/10 s se adapta a larguras menores e fonte ampliada; cartões de áudio e duração sinalizam estado para acessibilidade. Progresso informa a parte real, sem percentual fictício.
 - Testar em dispositivos Android e tema escuro/AMOLED, inclusive fontes de 130% ou mais. O ambiente de edição não possui Android SDK e não conseguiu verificar compilação Gradle/CI no GitHub.

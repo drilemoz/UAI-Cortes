@@ -28,7 +28,9 @@ for item in [
     'enabled = !processing && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && hasAudio',
     'splitEngine.start(Uri.parse(sourceText), sourceName, parts, audioMode,',
     'audioDocument.launch(QuickVideoSplitPolicy.fileBase(sourceName) + ".m4a")',
-    'if (galleryOpen) galleryOpen = false else confirmCancel = true',
+    'galleryOpen -> galleryOpen = false',
+    'processing -> confirmCancel = true',
+    'splitView == SplitView.RESULT -> splitView = SplitView.SETUP',
     'splitEngine.cancel(); audioEngine.cancel()'
 ]:
     assert item in ui, item
@@ -38,4 +40,4 @@ assert 'MAX_PARTS = 180' in policy
 assert 'setRemoveAudio(audioMode == "mute")' in engine
 assert 'GalleryVideoSaver.save(context, output, fileName, subfolder = "Divididos")' in engine
 assert 'VideoProject(' not in ui
-print('OK: cartões/etapas/rodapé e fluxos antigos de galeria, áudio e cancelamento preservados')
+print('OK: cartões/etapas/rodapé e navegação por fases preservados')

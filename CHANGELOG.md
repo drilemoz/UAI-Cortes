@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.212 — divisão com acompanhamento e resultados (versionCode 213)
+## 0.1.212 (versionCode 213) · Processo separado da configuração
+- Ao iniciar a divisão, a tela de configuração é substituída por acompanhamento em tela inteira: parte em andamento, etapa real (cortar MP4, salvar, extrair M4A), contador de partes efetivamente concluídas e botão Cancelar com confirmação.
+- Ao concluir ou interromper, uma tela de resultado mostra apenas MP4/M4A publicados com sucesso no MediaStore; cada arquivo pode ser aberto individualmente, com acesso aos destinos Filmes e Música. Botões Concluído e Nova divisão.
+- Não exibir percentuais inventados para o Media3; barra representa somente partes concluídas, nunca o avanço da parte atual. Preservados vídeos originais, 9,5/10 s, áudio, 180 partes, cancelamento e funcionamento sem projeto.
+- Testes estáticos e PSI são verificações parciais. Build Android/Lint e testes com arquivos reais ainda necessários.
+
 # Uai Cortes · versão 0.1.211 — acessibilidade e telas pequenas (versionCode 212)
 ## 0.1.211 (versionCode 212) · Dividir vídeo responsivo e acessível
 - Seleção de 9,5/10 segundos empilha automaticamente em largura útil pequena ou com fonte ampliada, mantendo cartões com área de toque suficiente.

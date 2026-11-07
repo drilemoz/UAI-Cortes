@@ -44,6 +44,14 @@ internal object QuickSplitAudioStore {
     fun discard(context: Context, uri: Uri) { runCatching { context.contentResolver.delete(uri, null, null) } }
 }
 
+/** Saída realmente publicada no MediaStore; nunca representa apenas uma parte prevista. */
+internal data class QuickSplitSavedFile(
+    val partIndex: Int,
+    val fileName: String,
+    val uri: Uri,
+    val isAudio: Boolean
+)
+
 /** Divide um único vídeo em MP4s independentes, um Transformer ativo por vez. */
 @androidx.annotation.OptIn(UnstableApi::class)
 internal class QuickVideoSplitEngine(private val context: Context) {
@@ -74,7 +82,8 @@ internal class QuickVideoSplitEngine(private val context: Context) {
         audioMode: String,
         onProgress: (Int, Int, String) -> Unit,
         onDone: (Int) -> Unit,
-        onError: (String, Int) -> Unit
+        onError: (String, Int) -> Unit,
+        onSaved: (QuickSplitSavedFile) -> Unit = {}
     ) {
         require(audioMode in listOf("keep", "mute", "separate"))
         require(parts.isNotEmpty() && parts.size <= QuickVideoSplitPolicy.MAX_PARTS)
@@ -137,7 +146,9 @@ internal class QuickVideoSplitEngine(private val context: Context) {
                                 temp = null
                                 result.onFailure { error ->
                                     fail(error.message ?: "Não foi possível salvar o MP4.")
-                                }.onSuccess {
+                                }.onSuccess { videoUri ->
+                                    // Só informar arquivo depois de o MediaStore finalizar IS_PENDING.
+                                    onSaved(QuickSplitSavedFile(part.index, fileName, videoUri, isAudio = false))
                                     if (audioMode != "separate") {
                                         completed++
                                         nextPart(index + 1)
@@ -167,6 +178,7 @@ internal class QuickVideoSplitEngine(private val context: Context) {
                                                                 QuickSplitAudioStore.discard(context, destination)
                                                                 fail(err.message ?: "Não foi possível finalizar M4A.")
                                                             }.onSuccess {
+                                                                onSaved(QuickSplitSavedFile(part.index, audioName, destination, isAudio = true))
                                                                 completed++
                                                                 nextPart(index + 1)
                                                             }

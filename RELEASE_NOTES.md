@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.212 — Dividir vídeo em tela cheia (versionCode 213)
+## v0.1.212 · Acompanhamento e resultado de cada corte
+- Ao iniciar Dividir vídeo, abra uma tela exclusiva de acompanhamento, com a parte atual, fase do processamento e quantas partes já terminaram.
+- Ao concluir, a tela Resultado lista os MP4/M4A publicados, com abertura individual e localização das pastas. Em erro ou cancelamento, as partes concluídas continuam acessíveis.
+- Sem mudança em Media3, 9,5/10 s, seleção de áudio, original, projetos, assinatura ou cinco variantes Release. Executar CI e testes em aparelho antes de publicar APK.
+
 # Uai Cortes · versão 0.1.211 — Dividir vídeo em qualquer tela (versionCode 212)
 ## v0.1.211 · Dividir vídeo adaptado a telas pequenas
 - Opções de duração agora se organizam verticalmente em telas estreitas e quando o tamanho da fonte é ampliado.
