@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.208 — correção de regressão CI172 (versionCode 209)
+
+- O workflow 172 parou antes do Gradle porque `tools/test_main_image_clip_169_contract.py` ainda procurava o antigo atalho **Imagem** na barra inferior do editor.
+- O teste agora verifica a integração real da inserção de imagens pelo menu **Linha do tempo > Adicionar**, incluindo o encaminhamento a `onAddImage`. Não foram restaurados botões duplicados nem alterada a lógica de inserção/exportação.
+- Mantidas as melhorias de 0.1.205–0.1.207: cópias de mídias, Salvar no cabeçalho, Animar imagens em posição visível e Sobre sem duplicar o histórico. `schemaVersion=4` permanece intacto.
+- Testes de contrato e verificação do pacote-fonte podem passar localmente; Gradle Android, Android Lint e os cinco APKs Release ainda dependem de novo CI. Não há APK validado nesta entrega.
+
 # Uai Cortes · versão 0.1.207 — proteção de mídias, editor e informações (versionCode 208)
 
 - **Parte 1 · 0.1.205 (versionCode 206):** cópia automática de vídeos, áudios e PiPs, com MediaStore e confirmação antes do uso, reuso por projeto, limpeza de cópias parciais e proteção conservadora de projetos antigos ao reabrir. Imagens da faixa principal mantêm a cópia privada anterior.

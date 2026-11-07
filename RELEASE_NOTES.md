@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.208 — correção de CI172 (versionCode 209)
+
+- Corrigido o teste estrutural que procurava o botão Imagem onde ele não existe mais; a opção continua em **Linha do tempo > Adicionar**.
+- Preservadas as cópias automáticas de mídias, a barra de ferramentas reorganizada e as telas Sobre/Novidades da 0.1.207.
+- Este é um pacote de código-fonte, não cinco APKs compilados. Um novo CI deve executar JUnit, Lint e compilações Release antes de publicação.
+
 # Uai Cortes · versão 0.1.207 — editor e proteção dos projetos (versionCode 208)
 
 - **0.1.205 (206):** mídia importada com cópia independente e validada, vídeos em Filmes, áudios em Música, PiPs de imagem em Imagens; proteção de fontes antigas na abertura do editor.

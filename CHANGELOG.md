@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.208 — CI172: teste de imagens atualizado (versionCode 209)
+
+## 0.1.208 (versionCode 209) · Teste de regressão compatível com novo editor
+- Corrigido `tools/test_main_image_clip_169_contract.py`, cujo contrato antigo exigia o botão Imagem diretamente na barra inferior, removido intencionalmente em 0.1.206.
+- A verificação agora garante que `EditorScreen` passa `onAddImage` para `UnifiedEditorTimeline` e que a opção Imagem permanece no menu Adicionar; também rejeita o retorno do atalho duplicado.
+- Nenhuma mudança no comportamento de inserção, dados, cópias de mídias, exportação, assinatura ou atualização automática das novidades.
+- CI 172 interrompeu a validação local antes do Gradle; compilar e testar no GitHub Actions continua pendente.
+
 # Uai Cortes · versão 0.1.207 — editor, mídia e Sobre (versionCode 208)
 
 ## 0.1.207 (versionCode 208) · Sobre e Novidades

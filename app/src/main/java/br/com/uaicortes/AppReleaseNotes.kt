@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.207"
-    const val VERSION_CODE = 208
+    const val VERSION_NAME = "0.1.208"
+    const val VERSION_CODE = 209
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.208", listOf(
+            ReleaseFeature("ci172-image-entry-208", "Validação da inserção de imagens corrigida",
+                "O teste de regressão acompanha o novo caminho Linha do tempo > Adicionar > Imagem, sem exigir o botão duplicado que foi removido do editor.", "check")
+        )),
         ReleaseSummary("0.1.207", listOf(
             ReleaseFeature("protection-media-207", "Mídias mais protegidas durante a edição",
                 "Vídeos, áudios e PiPs importados recebem cópias independentes; projetos antigos podem ser protegidos ao reabrir. Os originais não são apagados.", "shield"),

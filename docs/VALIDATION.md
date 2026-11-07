@@ -1,3 +1,11 @@
+## v0.1.208 (versionCode 209): correção do contrato CI172
+
+- Falha observada: workflow **Gerar APK Uai Cortes 172**, etapa **Validar código-fonte e regressões locais**; `AssertionError` em `tools/test_main_image_clip_169_contract.py:12`.
+- Causa: teste da versão anterior ainda exigia o botão Imagem na barra horizontal, apesar da mudança planejada para o menu da linha do tempo.
+- Correção limitada ao teste: verificar encaminhamento `onAddImage` em `EditorScreen`, item Imagem e menu Adicionar em `UnifiedEditorTimeline`; impedir retorno de atalho duplicado.
+- A falha foi antes da etapa Gradle; o log fornecido não comprova nem refuta compilação Android da v0.1.207.
+- Necessário executar `:subtitle-core:test :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin :app:lintDebug :app:assembleRelease` no CI e testes no aparelho.
+
 ## v0.1.193 (versionCode 194): Vozes IA compacta e lembrete de pendências
 
 - Ver `docs/VALIDATION_0.1.193.md` para testes, comportamento do retorno e limitações. A síntese só ocorre após confirmação; filas de resultado incerto exigem revisão. Gradle Android e teste visual continuam pendentes.

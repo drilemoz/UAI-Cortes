@@ -1,3 +1,9 @@
+# v0.1.208 — CI172: teste legado de Imagem deve acompanhar o editor reorganizado
+- O workflow 172 parou em `tools/test_main_image_clip_169_contract.py`: esperava `Triple("Imagem", Icons.Default.AddPhotoAlternate, "image")` na barra, removido deliberadamente na 0.1.206.
+- Atualizar o teste para exigir a rota real `EditorScreen(onAddImage) -> UnifiedEditorTimeline -> Adicionar > Imagem -> onAddImage()`, sem reintroduzir duplicatas.
+- Sem mudanças funcionais; preservar mídia protegida, animação de imagens, schema 4, Gradle/AGP, assinatura, cinco variantes Release e as novidades pós-atualização. Versão 0.1.208, versionCode 209.
+- Gradle/Lint e testes físicos continuam pendentes até novo workflow.
+
 # v0.1.207 — Sobre compacto sem comprometer Novidades
 - Sobre tem apenas um destaque vindo de `AppReleaseNotes.forAbout()`, desenvolvedor Adriedson Lemos, Pix com copiar e GitHub vindo de `BuildConfig.GITHUB_RELEASE_REPOSITORY`; não inventar repositório. Novidades sobe nas Configurações, mas a tela de primeira execução, fingerprint, marcação e histórico completo não podem ser removidos.
 - `schemaVersion=4` preservado; versionName 0.1.207, versionCode 208.
