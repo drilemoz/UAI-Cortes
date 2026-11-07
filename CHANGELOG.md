@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.209 — ferramentas fora da edição (versionCode 210)
+
+## 0.1.209 (versionCode 210) · Barra do editor específica para edição
+- Removidos **Animar imagens** e **Prompt Flow** da barra horizontal do editor, pois são módulos independentes e não operações da timeline.
+- Animar fotos e Estúdio de Cenas (Flow) continuam acessíveis pela tela inicial. Cortar, Transição, Legendas, Áudio, Marca d'água, Vozes IA e Descrição continuam na barra.
+- Testes de contratos legados atualizados e novo teste de regressão para impedir retorno das duas ações à barra. Nenhum projeto, mídia ou rotina de exportação foi modificado.
+- Compilação Gradle, Lint e funcionamento físico ainda precisam ser confirmados no CI/aparelho.
+
 # Uai Cortes · versão 0.1.208 — CI172: teste de imagens atualizado (versionCode 209)
 
 ## 0.1.208 (versionCode 209) · Teste de regressão compatível com novo editor

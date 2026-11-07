@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.209 — ferramentas do editor simplificadas (versionCode 210)
+
+- A barra horizontal de edição não inclui mais Animar imagens nem Prompt Flow. Use **Animar fotos** e **Estúdio de Cenas** pela Home.
+- Mantidos Corte, Transição, Legendas, Áudio, Marca d'água, Vozes IA e Descrição no editor, com Salvar no cabeçalho e inclusão de mídias na linha do tempo.
+- A atualização mantém a proteção de mídias, rascunhos, schema 4 e exportação; conferir CI e testes no Android antes da distribuição.
+
 # Uai Cortes · versão 0.1.208 — correção de regressão CI172 (versionCode 209)
 
 - O workflow 172 parou antes do Gradle porque `tools/test_main_image_clip_169_contract.py` ainda procurava o antigo atalho **Imagem** na barra inferior do editor.

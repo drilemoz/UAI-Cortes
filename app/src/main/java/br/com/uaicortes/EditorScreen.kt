@@ -443,18 +443,18 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                     (id!="music" && p.audioTracks.firstOrNull {it.id==id}?.clipId==null)
             })
         Spacer(Modifier.height(5.dp));HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
-        // Inserir Vídeo/Imagem/PiP/Áudio já fica em Linha do tempo > Adicionar.
-        // Salvar é ação fixa no cabeçalho; a barra contém somente ferramentas de edição.
+        // Vídeo, Imagem e PiP são inseridos em Linha do tempo > Adicionar.
+        // Animar imagens e Prompt Flow são ferramentas independentes acessíveis pela Home,
+        // não operações da linha do tempo do projeto em edição.
+        // Salvar permanece no cabeçalho; aqui ficam apenas ações relacionadas ao editor.
         val actions = remember { listOf(
             Triple("Cortar", Icons.Default.ContentCut, "trim"),
-            Triple("Animar imagens", Icons.Default.AutoAwesomeMotion, "animate"),
             Triple("Transição", Icons.Default.Transform, "transition"),
             Triple("Legendas", Icons.Default.ClosedCaption, "subtitles"),
             Triple("Áudio", Icons.Default.MusicNote, "audio"),
             Triple("Marca d'água", Icons.Default.TextFields, "watermark"),
             Triple("Vozes IA", Icons.Default.RecordVoiceOver, "voices"),
-            Triple("Descrição", Icons.Default.Description, "publication"),
-            Triple("Prompt Flow", Icons.Default.AutoAwesome, "flow_prompt")
+            Triple("Descrição", Icons.Default.Description, "publication")
         ) }
         val toolsScroll = rememberLazyListState()
         LazyRow(state = toolsScroll, modifier = Modifier.fillMaxWidth().navigationBarsPadding()

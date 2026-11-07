@@ -1,3 +1,8 @@
+# v0.1.209 — ferramentas independentes fora do menu do editor
+- Remover apenas os atalhos Animar imagens e Prompt Flow da barra horizontal do EditorScreen, pois pertencem à Home, não ao projeto/timeline.
+- Preservar acesso a Animar fotos e Estúdio de Cenas na Home, rotas existentes e projetos antigos, sem mexer em exportação, cópia de mídias, schemaVersion 4, assinatura ou cinco APKs.
+- Atualizar contratos antigos v194, v206 e Flow para verificar a nova separação e acrescentar teste de regressão v209. versionName 0.1.209, versionCode 210; Gradle/Android Lint e aparelho pendentes.
+
 # v0.1.208 — CI172: teste legado de Imagem deve acompanhar o editor reorganizado
 - O workflow 172 parou em `tools/test_main_image_clip_169_contract.py`: esperava `Triple("Imagem", Icons.Default.AddPhotoAlternate, "image")` na barra, removido deliberadamente na 0.1.206.
 - Atualizar o teste para exigir a rota real `EditorScreen(onAddImage) -> UnifiedEditorTimeline -> Adicionar > Imagem -> onAddImage()`, sem reintroduzir duplicatas.

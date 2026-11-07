@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.209 — barra de edição limpa (versionCode 210)
+
+- **Animar imagens** e **Prompt Flow** foram removidos do menu horizontal do editor, porque seus módulos são independentes da linha do tempo.
+- Ambos permanecem disponíveis na Home: **Animar fotos** e **Estúdio de Cenas**.
+- Ferramentas de edição, mídias e projetos preservados. Os contratos locais foram atualizados; aguardam-se Gradle/JUnit/Lint e testes Android reais.
+
 # Uai Cortes · versão 0.1.208 — correção de CI172 (versionCode 209)
 
 - Corrigido o teste estrutural que procurava o botão Imagem onde ele não existe mais; a opção continua em **Linha do tempo > Adicionar**.

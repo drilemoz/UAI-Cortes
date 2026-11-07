@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.208"
-    const val VERSION_CODE = 209
+    const val VERSION_NAME = "0.1.209"
+    const val VERSION_CODE = 210
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.209", listOf(
+            ReleaseFeature("editor-standalone-tools-209", "Ferramentas independentes fora do editor",
+                "Animar imagens e Prompt Flow não aparecem mais na barra do editor. Ambas continuam acessíveis pela tela inicial, sem alterar projetos ou a linha do tempo.", "film")
+        )),
         ReleaseSummary("0.1.208", listOf(
             ReleaseFeature("ci172-image-entry-208", "Validação da inserção de imagens corrigida",
                 "O teste de regressão acompanha o novo caminho Linha do tempo > Adicionar > Imagem, sem exigir o botão duplicado que foi removido do editor.", "check")
