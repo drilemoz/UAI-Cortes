@@ -1,3 +1,9 @@
+# v0.1.204 — Subtitle Studio: curvas temporais suaves e compatibilidade
+- `SubtitleMotionPolicy` em `:subtitle-core` implementa 5 curvas puras e determinísticas (`soft_pop`, `cinematic`, `soft_fade`, `impact`, `glide`), sem chamadas de rede, biblioteca externa ou estado dependente de FPS. Ambas as renderizações devem continuar consumindo `SubtitleAnimations.frame`, compartilhando transformações de alpha, escala e posição.
+- Efeitos novos nunca reescrevem `SubtitleCue.text`, SRT, horários, vozes Gemini, personagens ou o esquema do projeto (`schemaVersion=4`). 22 animações existentes e 25 presets legados permanecem compatíveis, incluindo carregamento de projetos anteriores.
+- `SubtitleStudioPresets` mantém 8 estilos recomendados, com curvas novas quando apropriado; velocidades de 0,5×–2×. Não alterar a renderização de legendas legadas por acidente.
+- Testar `:subtitle-core:test`, `:app:testDebugUnitTest`, Android Lint e a exportação MP4 em 720p/1080p (especialmente 9:16) no CI/aparelho. Teste sintático não equivale a build Android. versionName 0.1.204, versionCode 205, cinco APKs Release e assinatura preservados.
+
 # v0.1.203 — CI169: contrato de tipografia após introdução de Cursiva
 - Workflow 169: 636 testes, 1 falha em `SubtitleTypographyTest.fontsAreLocalAndUnknownFallsBack`. A fonte local Cursiva foi introduzida na 0.1.202 mas o teste exigia apenas sans, serif e mono.
 - Atualizar o teste para quatro famílias, incluindo Cursiva, validação de fallback seguro para nomes/URLs desconhecidos e round-trip no JSON. Não remover a fonte nem mudar o normalizador funcional para satisfazer um teste desatualizado.

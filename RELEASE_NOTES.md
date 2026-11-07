@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.204 — Subtitle Studio: animações suaves (versionCode 205)
+- Cinco efeitos de legenda aprimorados, com animações suaves de entrada e saída e velocidade ajustável.
+- Os estilos principais do Subtitle Studio usam novos movimentos; legado, personalizações e projetos antigos preservados.
+- Cálculo de movimento isolado no `:subtitle-core` e compartilhado por prévia Compose e exportação MP4, sem nova dependência externa.
+- Build Android, Lint, instrumentação e comparação real de exportação ainda exigem GitHub Actions e aparelho.
+
 # Uai Cortes · versão 0.1.203 — Correção CI169: teste da fonte Cursiva (versionCode 204)
 - Corrigido o contrato JUnit de tipografia do Subtitle Studio para reconhecer a quarta fonte Cursiva sem remover essa opção do aplicativo.
 - Teste adicional confirma que o estilo Cursiva sobrevive ao salvamento e leitura do projeto; URL remota desconhecida continua usando fonte segura.

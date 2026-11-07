@@ -1,3 +1,9 @@
+## 0.1.204 (versionCode 205) — Subtitle Studio: movimentos suaves
+- Cinco animações temporais novas com entrada/saída em curvas suaves: `soft_pop`, `cinematic`, `soft_fade`, `impact` e `glide`.
+- Núcleo de curvas e limites no módulo Kotlin `:subtitle-core`, usado pelos mesmos quadros de `SubtitleAnimations.frame` que abastecem prévia e exportação MP4.
+- Oito estilos principais agora combinam aparência e movimento moderno; 25 presets anteriores, 22 animações legadas e serialização permanecem disponíveis.
+- Contratos/JUnit cobrindo velocidade, duração curta, determinismo, valores finitos e persistência. Verificar Gradle, Lint e MP4 reais no CI/aparelho antes de afirmar equivalência visual total.
+
 ## 0.1.203 (versionCode 204) — CI169: contrato da tipografia
 - Corrigido o teste `SubtitleTypographyTest.fontsAreLocalAndUnknownFallsBack`, que ainda esperava três famílias apesar da inclusão de Cursiva na 0.1.202.
 - Adicionados testes para normalização da fonte Cursiva, rejeição segura de URL remota e persistência pelo JSON do projeto.

@@ -1,6 +1,7 @@
 package br.com.uaicortes
 
 import br.com.uaicortes.subtitles.core.SubtitleTextCasePolicy
+import br.com.uaicortes.subtitles.core.SubtitleMotionPolicy
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.PI
@@ -31,6 +32,11 @@ object SubtitleAnimations {
     const val FLOAT = "float"
     const val SWAY = "sway"
     const val SOFT_SHAKE = "soft_shake"
+    const val SOFT_POP = SubtitleMotionPolicy.SOFT_POP
+    const val CINEMATIC = SubtitleMotionPolicy.CINEMATIC
+    const val SOFT_FADE = SubtitleMotionPolicy.SOFT_FADE
+    const val IMPACT = SubtitleMotionPolicy.IMPACT
+    const val GLIDE = SubtitleMotionPolicy.GLIDE
     val choices = listOf(
         NONE to "Sem efeito", TYPEWRITER to "Letra por letra",
         PHRASES to "Frase por frase", KARAOKE to "Palavra destacada",
@@ -41,14 +47,17 @@ object SubtitleAnimations {
         RISE to "Subir", DROP to "Descer",
         SLIDE_LEFT to "Entrar esquerda", SLIDE_RIGHT to "Entrar direita",
         WORD_REVEAL to "Palavra por palavra", ELASTIC to "Elástico",
-        FLOAT to "Flutuar", SWAY to "Balançar", SOFT_SHAKE to "Tremor suave"
+        FLOAT to "Flutuar", SWAY to "Balançar", SOFT_SHAKE to "Tremor suave",
+        SOFT_POP to "Pop suave", CINEMATIC to "Cinema suave",
+        SOFT_FADE to "Fade delicado", IMPACT to "Impacto limpo",
+        GLIDE to "Deslizar suave"
     )
     /** A organização por categorias evita uma única lista horizontal com dezenas de efeitos. */
     val groups: List<Pair<String, List<String>>> = listOf(
-        "Entrada" to listOf(NONE, POP, FADE, SLIDE, ZOOM_OUT, RISE, DROP, SLIDE_LEFT, SLIDE_RIGHT, ELASTIC),
+        "Entrada" to listOf(NONE, POP, FADE, SLIDE, ZOOM_OUT, RISE, DROP, SLIDE_LEFT, SLIDE_RIGHT, ELASTIC, SOFT_POP, CINEMATIC, SOFT_FADE, GLIDE),
         "Texto" to listOf(TYPEWRITER, PHRASES, WORD_REVEAL, KARAOKE,
             KARAOKE_PULSE, KARAOKE_BOLD, KARAOKE_UNDERLINE),
-        "Movimento" to listOf(BOUNCE, PULSE, FLOAT, SWAY, SOFT_SHAKE)
+        "Movimento" to listOf(BOUNCE, PULSE, FLOAT, SWAY, SOFT_SHAKE, IMPACT)
     )
     fun label(id: String): String = choices.firstOrNull { it.first == id }?.second ?: "Sem efeito"
     fun isKaraoke(id: String): Boolean = normalize(id) in setOf(
@@ -71,6 +80,11 @@ object SubtitleAnimations {
         val entranceMs = (minOf(duration * .25f, 450f) / rate).coerceAtLeast(1f)
         val enter = (elapsed / entranceMs).coerceIn(0f, 1f)
         return when (normalize(cue.animation)) {
+            SOFT_POP, CINEMATIC, SOFT_FADE, IMPACT, GLIDE -> {
+                val motion = SubtitleMotionPolicy.evaluate(cue.animation, elapsed, duration, rate)
+                Frame(text, alpha = motion.alpha, scale = motion.scale,
+                    slideX = motion.slideX, slideY = motion.slideY)
+            }
             TYPEWRITER -> {
                 val count = (text.length * (ratio * rate).coerceIn(0f, 1f)).roundToInt()
                 Frame(text.take(count))

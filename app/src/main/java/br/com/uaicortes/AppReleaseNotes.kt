@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.203"
-    const val VERSION_CODE = 204
+    const val VERSION_NAME = "0.1.204"
+    const val VERSION_CODE = 205
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.204", listOf(
+            ReleaseFeature("subtitle-soft-motion-204", "Legendas com movimentos suaves",
+                "Cinco animações novas: Pop suave, Cinema suave, Fade delicado, Impacto limpo e Deslizar suave, com entrada e saída controladas.", "captions"),
+            ReleaseFeature("subtitle-shared-motion-204", "Prévia e exportação consistentes",
+                "Curvas temporais calculadas no módulo Subtitle Studio, usadas tanto na prévia quanto na exportação, sem novas bibliotecas ou internet.", "film"),
+            ReleaseFeature("subtitle-legacy-204", "Estilos anteriores preservados",
+                "Os oito modelos principais usam movimentos mais refinados; os 25 estilos antigos e seus efeitos continuam acessíveis.", "check")
+        )),
         ReleaseSummary("0.1.203", listOf(
             ReleaseFeature("subtitle-font-ci169-203", "Correção de testes das fontes de legenda",
                 "O teste de tipografia agora inclui a fonte Cursiva adicionada ao Subtitle Studio e verifica o fallback para fontes desconhecidas, sem alterar o resultado visual.", "check")

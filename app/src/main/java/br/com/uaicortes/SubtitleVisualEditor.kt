@@ -199,12 +199,12 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
                     5,onChange={onChange(draft.copy(lineSpacingPercent=it.toInt()))})
             }
         } else {
-            Text("Movimentos recomendados",fontWeight=FontWeight.SemiBold)
+            Text("Movimentos suaves e legíveis",fontWeight=FontWeight.SemiBold)
             val recommendedEffects = listOf(
-                SubtitleAnimations.NONE, SubtitleAnimations.POP, SubtitleAnimations.FADE,
-                SubtitleAnimations.RISE, SubtitleAnimations.KARAOKE,
-                SubtitleAnimations.WORD_REVEAL, SubtitleAnimations.PULSE,
-                SubtitleAnimations.SOFT_SHAKE)
+                SubtitleAnimations.NONE, SubtitleAnimations.SOFT_POP,
+                SubtitleAnimations.CINEMATIC, SubtitleAnimations.SOFT_FADE,
+                SubtitleAnimations.IMPACT, SubtitleAnimations.GLIDE,
+                SubtitleAnimations.KARAOKE, SubtitleAnimations.WORD_REVEAL)
             SubtitleTwoColumnChoices(recommendedEffects.map(SubtitleAnimations::label),
                 selected={ label -> draft.animation in recommendedEffects &&
                     SubtitleAnimations.label(draft.animation)==label },

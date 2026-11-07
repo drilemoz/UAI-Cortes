@@ -88,7 +88,7 @@ class SubtitleAnimationsTest {
     }
 
     @Test fun newEffectsPreserveTextAndHaveFiniteMotion() {
-        assertEquals(22,SubtitleAnimations.choices.size)
+        assertEquals(27,SubtitleAnimations.choices.size)
         val known=SubtitleAnimations.groups.flatMap { it.second }.toSet()
         assertEquals(known.size,SubtitleAnimations.choices.size)
         assertTrue(known.contains(SubtitleAnimations.WORD_REVEAL))

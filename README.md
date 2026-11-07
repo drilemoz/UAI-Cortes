@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.204 — Subtitle Studio: animações suaves (versionCode 205)
+
+**Subtitle Studio, segunda etapa:** Pop suave, Cinema suave, Fade delicado, Impacto limpo e Deslizar suave; curvas temporais determinísticas implementadas no módulo `:subtitle-core` e usadas na prévia Compose e na exportação Media3. Os oito estilos recomendados passam a usar novas curvas quando apropriado, mantendo todos os 25 modelos legados e animações anteriores. As animações usam tempo absoluto, sem rede e sem Lottie/libass; velocidade existente (0,5×–2×) continua válida.
+
+**Compatibilidade:** esquema de projeto 4, textos originais, SRT, horários por palavra, personagens, vozes Gemini, mídia e cinco variantes APK preservados. Build Gradle, Lint e renderização MP4 real ainda precisam ser verificados no GitHub Actions e em aparelho.
+
 # Uai Cortes · versão 0.1.203 — Correção CI169: fontes do Subtitle Studio (versionCode 204)
 
 O workflow 169 compilou Kotlin, mas `:app:testDebugUnitTest` reprovou 1 de 636 testes: `SubtitleTypographyTest.fontsAreLocalAndUnknownFallsBack`. O teste ainda exigia três famílias, embora o Subtitle Studio 0.1.202 tenha acrescentado a fonte local Cursiva. Atualizado o contrato para quatro famílias e acrescentado round-trip da fonte Cursiva e fallback para fonte remota desconhecida. Nenhuma alteração de UI, renderer, fonte ou modelo de projeto foi necessária. Reexecutar o Gradle/JUnit/Lint completo no GitHub Actions.
