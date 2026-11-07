@@ -1,3 +1,15 @@
+# Uai Cortes · versão 0.1.216 — revisão da divisão (versionCode 217)
+## v0.1.216
+- Melhorias de segurança ao cancelar cortes durante o salvamento de MP4, com tentativa de limpeza de arquivo pendente.
+- Segundos e Minutos agora mantêm a última opção escolhida; campos personalizados se adaptam a telas pequenas.
+- As opções de duração anteriores continuam disponíveis; a compilação Android e testes com vídeos reais seguem pendentes.
+
+# Uai Cortes · versão 0.1.215 — novas durações de divisão (versionCode 216)
+## v0.1.215 · Cortes adequados a diferentes redes sociais
+- Divida vídeos em 9,5 s, 10 s, 30 s, 60 s, 1 min, 1min05s, 2 min, 2min59s, 3 min, 4 min ou 8 min; ou escolha horas, minutos e segundos.
+- Prévia mostra as partes e intervalos reais; o limite de 180 partes continua valendo. A interface explica que duração não garante monetização.
+- Mídias originais, extração de áudio, acompanhamento em tela cheia e resultados anteriores preservados. Exige teste real de processamento no Android.
+
 # Uai Cortes · versão 0.1.214 — Revisão de extração de áudio (versionCode 215)
 ## v0.1.214 · Mais controle sobre M4As incompletos
 - Após erro ou cancelamento em Extrair áudio, o resultado pode apresentar ação para excluir o M4A incompleto com confirmação; não há exclusão automática.

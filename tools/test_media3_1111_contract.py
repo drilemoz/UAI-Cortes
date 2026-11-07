@@ -17,7 +17,9 @@ assert 'Presentation.createForShortSide(height)' in engine
 assert 'setVideoMimeType(MimeTypes.VIDEO_H264)' in engine
 assert 'encodeElapsedMs = encodeElapsedMs' in engine
 assert 'galleryCopyElapsedMs =' in engine
-assert 'input.copyTo(output, COPY_BUFFER_BYTES)' in saver
+assert 'val buffer = ByteArray(COPY_BUFFER_BYTES)' in saver
+assert 'input.read(buffer)' in saver and 'output.write(buffer, 0, size)' in saver
+assert 'if (!shouldContinue()) throw java.util.concurrent.CancellationException(' in saver
 assert 'COPY_BUFFER_BYTES = 256 * 1024' in saver
 assert 'check(copied == source.length())' in saver
 assert 'resolver.delete(target, null, null)' in saver

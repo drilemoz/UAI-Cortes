@@ -16,11 +16,21 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.214"
-    const val VERSION_CODE = 215
+    const val VERSION_NAME = "0.1.216"
+    const val VERSION_CODE = 217
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.216", listOf(
+            ReleaseFeature("split-cancel-save-216", "Salvamento mais seguro ao cancelar",
+                "A cópia dos MP4 para a galeria verifica o cancelamento durante a gravação e descarta arquivos parciais antes de publicar.", "film"),
+            ReleaseFeature("split-duration-ui-216", "Durações e campos mais consistentes",
+                "Segundos e Minutos mantêm suas seleções ao alternar; horas, minutos e segundos se adaptam a telas estreitas e fontes ampliadas.", "film")
+        )),
+        ReleaseSummary("0.1.215", listOf(
+            ReleaseFeature("split-social-presets-215", "Cortes alinhados às redes sociais",
+                "Novas durações em segundos e minutos, incluindo 1, 2, 3, 4 e 8 minutos, 1min05s, 2min59s e duração personalizada em horas, minutos e segundos. Prévia com intervalos precisos; limites de 180 partes mantidos.", "film")
+        )),
         ReleaseSummary("0.1.214", listOf(
             ReleaseFeature("audio-partial-cleanup-214", "Revisão do salvamento de áudio",
                 "Após uma falha ou cancelamento, você pode excluir o M4A incompleto com confirmação; o app aguarda a escrita terminar e avisa quando o Android impede a exclusão.", "film")

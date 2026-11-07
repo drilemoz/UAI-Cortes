@@ -59,7 +59,7 @@ internal class QuickVideoSplitEngine(private val context: Context) {
     private var transformer: Transformer? = null
     private var audioEngine: AudioExtractionEngine? = null
     private var temp: File? = null
-    private var activeGeneration = 0
+    @Volatile private var activeGeneration = 0
     private var saving = false
     private var pendingAudio: Uri? = null
 
@@ -137,12 +137,13 @@ internal class QuickVideoSplitEngine(private val context: Context) {
                         onProgress(index + 1, parts.size, "Salvando MP4")
                         Thread {
                             val result = runCatching {
-                                GalleryVideoSaver.save(context, output, fileName, subfolder = "Divididos")
+                                GalleryVideoSaver.save(context, output, fileName,
+                                    subfolder = "Divididos", shouldContinue = { isCurrent() })
                             }
                             output.delete()
                             main.post {
-                                saving = false
                                 if (!isCurrent()) return@post
+                                saving = false
                                 temp = null
                                 result.onFailure { error ->
                                     fail(error.message ?: "Não foi possível salvar o MP4.")

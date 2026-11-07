@@ -14,16 +14,16 @@ for item in [
     'QuickToolStep(3, "Como salvar o áudio")',
     'onClick = { galleryOpen = true }',
     'QuickToolChoice(',
-    'QuickToolDurationChoice("9,5 s",',
-    'QuickToolDurationChoice("10 s",',
-    'partDuration = QuickVideoSplitPolicy.SHORT_MS',
-    'partDuration = QuickVideoSplitPolicy.TEN_SECONDS_MS',
+    'QuickDurationPreset("9,5 s",',
+    'QuickDurationPreset("10 s",',
+    'lastSecondsDuration by rememberSaveable',
+    'QuickVideoSplitPolicy.TEN_SECONDS_MS',
     'Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())',
     'Surface(tonalElevation = 3.dp, color = MaterialTheme.colorScheme.surface)',
     'parts.take(5)',
     'if (previewExpanded.value)',
     'Modifier.fillMaxWidth().navigationBarsPadding()',
-    'partDuration == QuickVideoSplitPolicy.SHORT_MS',
+    'partDuration == option.milliseconds',
     'audioMode == "keep"', 'audioMode == "mute"', 'audioMode == "separate"',
     'enabled = !processing && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && hasAudio',
     'splitEngine.start(Uri.parse(sourceText), sourceName, parts, audioMode,',
@@ -38,6 +38,6 @@ assert ui.count('QuickToolChoice(') == 4
 assert 'SHORT_MS = 9_500L' in policy and 'TEN_SECONDS_MS = 10_000L' in policy
 assert 'MAX_PARTS = 180' in policy
 assert 'setRemoveAudio(audioMode == "mute")' in engine
-assert 'GalleryVideoSaver.save(context, output, fileName, subfolder = "Divididos")' in engine
+assert 'GalleryVideoSaver.save(context, output, fileName,' in engine
 assert 'VideoProject(' not in ui
 print('OK: cartões/etapas/rodapé e navegação por fases preservados')

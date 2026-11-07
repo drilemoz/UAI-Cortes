@@ -13,7 +13,7 @@ saver = (src/'GalleryVideoSaver.kt').read_text()
 for text in ['SHORT_MS = 9_500L', 'TEN_SECONDS_MS = 10_000L', 'MAX_PARTS = 180',
              'minOf(durationMs, start + partLengthMs)', 'fun partName(']:
     assert text in policy, text
-assert 'GalleryVideoSaver.save(context, output, fileName, subfolder = "Divididos")' in engine
+assert 'GalleryVideoSaver.save(context, output, fileName,' in engine
 assert 'QuickSplitAudioStore.createPending' in engine
 assert 'QuickSplitAudioStore.discard' in engine and 'IS_PENDING, 0' in engine
 assert 'setRemoveAudio(audioMode == "mute")' in engine

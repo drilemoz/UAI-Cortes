@@ -1,3 +1,13 @@
+# v0.1.216 — Revisão da divisão e proteção no salvamento
+- `GalleryVideoSaver.save` aceita callback opcional de continuidade e verifica cancelamento entre blocos de 256 KiB e antes de publicar `IS_PENDING=0`, descartando arquivo parcial em erro/cancelamento. Compatibilidade do método anterior preservada.
+- `QuickVideoSplitEngine` passa a usar geração visível à thread de cópia e ignora callbacks antigos antes de modificar flags da nova execução. A janela residual entre publicação e cancelamento não torna o fluxo persistente em background.
+- A UI preserva duração selecionada separadamente em Segundos e Minutos e empilha HH/MM/SS em telas estreitas ou fontes ampliadas. v0.1.216/versionCode 217. Manter 180 partes e todos os modos de áudio. Validar build Android e execução real pendentes.
+
+# v0.1.215 — Durações de cortes por redes sociais e tempo personalizado
+- Dividir vídeo mantém 9,5 e 10 s e oferece presets 30 s, 60 s, 1 min, 1min05s, 2 min, 2min59s, 3 min, 4 min e 8 min, organizados em grupos Segundos/Minutos/Personalizado. Durações são referências editoriais, não garantias de monetização.
+- Tempo personalizado: campos HH/MM/SS, limites de 00:00:01 a 23:59:59, minutos e segundos <=59; entradas inválidas bloqueiam geração. Não criar duração presumida no preview. Limite MAX_PARTS=180 continua com validação antes de alocar lista.
+- Prévia de cortes preserva os 500 ms dos 9,5 segundos e mostra horas para trechos longos. Exibir aviso para grande número de partes; manter opções de áudio, tela cheia de execução, resultados/URIs, original, schema 4, CI e cinco APKs. v0.1.215/versionCode 216. Build Android e aparelho pendentes.
+
 # v0.1.214 — Revisão de cancelamento e arquivos parciais da extração de áudio
 - Ao cancelar ou falhar uma extração rápida, a tela Resultado deve oferecer **Excluir M4A incompleto** somente após confirmação explícita do usuário; não excluir automaticamente o arquivo criado pelo SAF.
 - Em exclusão autorizada, aguardar até 5 segundos o fechamento da escrita interrompida antes de excluir; se a escrita continuar ativa ou o provedor de Documentos impedir exclusão, informar o problema e permitir ação manual no app Arquivos.

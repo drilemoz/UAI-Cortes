@@ -7,7 +7,7 @@ engine = (root / 'app/src/main/java/br/com/uaicortes/QuickVideoSplitEngine.kt').
 policy = (root / 'app/src/main/java/br/com/uaicortes/QuickVideoSplitPolicy.kt').read_text()
 assert 'BoxWithConstraints(Modifier.fillMaxWidth())' in ui
 assert 'maxWidth < 330.dp || LocalDensity.current.fontScale >= 1.3f' in ui
-assert 'QuickToolDurationChoice("9,5 s"' in ui and 'QuickToolDurationChoice("10 s"' in ui
+assert 'QuickDurationPreset("9,5 s"' in ui and 'QuickDurationPreset("10 s"' in ui
 assert 'Modifier.weight(1f)' in ui and 'Modifier.fillMaxWidth()' in ui
 assert 'stateDescription = if (selected) "Selecionado" else "Não selecionado"' in ui
 assert 'role = Role.RadioButton' in ui
@@ -19,5 +19,5 @@ assert 'MAX_PARTS = 180' in policy
 assert 'splitEngine.start(Uri.parse(sourceText), sourceName, parts, audioMode,' in ui
 assert 'onClick = { galleryOpen = true }' in ui
 assert 'AudioExtractionEngine(context.applicationContext)' in ui
-assert 'GalleryVideoSaver.save(context, output, fileName, subfolder = "Divididos")' in engine
+assert 'GalleryVideoSaver.save(context, output, fileName,' in engine
 print('OK: responsividade/acessibilidade e contratos do corte preservados')

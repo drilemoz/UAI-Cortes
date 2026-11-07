@@ -8,6 +8,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -27,11 +28,30 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 internal enum class QuickToolMode { SPLIT_VIDEO, EXTRACT_AUDIO }
 private enum class SplitView { SETUP, RUNNING, RESULT }
+private enum class DurationGroup { SECONDS, MINUTES, CUSTOM }
+private data class QuickDurationPreset(val label: String, val hint: String, val milliseconds: Long)
+
+private val secondsPresets = listOf(
+    QuickDurationPreset("9,5 s", "Clipes rápidos", QuickVideoSplitPolicy.SHORT_MS),
+    QuickDurationPreset("10 s", "Clipes rápidos", QuickVideoSplitPolicy.TEN_SECONDS_MS),
+    QuickDurationPreset("30 s", "Reels e Shorts", QuickVideoSplitPolicy.THIRTY_SECONDS_MS),
+    QuickDurationPreset("60 s", "Vídeos curtos", QuickVideoSplitPolicy.ONE_MINUTE_MS)
+)
+private val minutesPresets = listOf(
+    QuickDurationPreset("1 min", "Clipes de um minuto", QuickVideoSplitPolicy.ONE_MINUTE_MS),
+    QuickDurationPreset("1 min 05 s", "TikTok: acima de 1 min", QuickVideoSplitPolicy.ONE_MINUTE_FIVE_MS),
+    QuickDurationPreset("2 min", "Tutoriais curtos", QuickVideoSplitPolicy.TWO_MINUTES_MS),
+    QuickDurationPreset("2 min 59 s", "Shorts: margem até 3 min", QuickVideoSplitPolicy.SHORTS_MARGIN_MS),
+    QuickDurationPreset("3 min", "Vídeos de até 3 minutos", QuickVideoSplitPolicy.THREE_MINUTES_MS),
+    QuickDurationPreset("4 min", "YouTube tradicional", QuickVideoSplitPolicy.FOUR_MINUTES_MS),
+    QuickDurationPreset("8 min", "YouTube: anúncios intermediários*", QuickVideoSplitPolicy.EIGHT_MINUTES_MS)
+)
 
 /** Tela independente: arquivos originais e projetos nunca são modificados. */
 @Composable
@@ -50,6 +70,16 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
     var sourceDurationMs by rememberSaveable(mode) { mutableLongStateOf(0L) }
     var hasAudio by rememberSaveable(mode) { mutableStateOf(false) }
     var partDuration by rememberSaveable { mutableLongStateOf(QuickVideoSplitPolicy.SHORT_MS) }
+    var lastSecondsDuration by rememberSaveable { mutableLongStateOf(QuickVideoSplitPolicy.SHORT_MS) }
+    var lastMinutesDuration by rememberSaveable { mutableLongStateOf(QuickVideoSplitPolicy.ONE_MINUTE_MS) }
+    var durationGroup by rememberSaveable { mutableStateOf(DurationGroup.SECONDS) }
+    var customHours by rememberSaveable { mutableStateOf("0") }
+    var customMinutes by rememberSaveable { mutableStateOf("1") }
+    var customSeconds by rememberSaveable { mutableStateOf("0") }
+    val customMs = QuickVideoSplitPolicy.customDurationMs(
+        customHours.toIntOrNull(), customMinutes.toIntOrNull(), customSeconds.toIntOrNull()
+    )
+    val effectivePartDurationMs = if (durationGroup == DurationGroup.CUSTOM) customMs ?: 0L else partDuration
     var audioMode by rememberSaveable { mutableStateOf("keep") }
     var processing by remember { mutableStateOf(false) }
     var finished by remember { mutableStateOf(false) }
@@ -67,8 +97,13 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
     var incompleteAudioUri by remember { mutableStateOf<Uri?>(null) }
     var deleteIncompleteConfirm by remember { mutableStateOf(false) }
     var deletingIncomplete by remember { mutableStateOf(false) }
-    val partsResult = remember(sourceDurationMs, partDuration) {
-        runCatching { QuickVideoSplitPolicy.parts(sourceDurationMs, partDuration) }
+    val partsResult = remember(sourceDurationMs, effectivePartDurationMs, durationGroup) {
+        runCatching {
+            if (durationGroup == DurationGroup.CUSTOM && customMs == null) {
+                throw IllegalArgumentException("Use de 00:00:01 até 23:59:59, com minutos e segundos entre 0 e 59.")
+            }
+            QuickVideoSplitPolicy.parts(sourceDurationMs, effectivePartDurationMs)
+        }
     }
     val parts = partsResult.getOrNull().orEmpty()
     fun useVideo(uri: Uri, persistDocumentAccess: Boolean) {
@@ -292,7 +327,7 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Text(
-                            if (mode == QuickToolMode.SPLIT_VIDEO) "Cortes rápidos em MP4" else "Áudio direto do vídeo",
+                            if (mode == QuickToolMode.SPLIT_VIDEO) "Divisão flexível em MP4" else "Áudio direto do vídeo",
                             style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold
                         )
                         Text(
@@ -347,38 +382,108 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
             if (mode == QuickToolMode.SPLIT_VIDEO) {
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     QuickToolStep(2, "Duração das partes")
-                    // Adaptar os dois cartões a telas estreitas e fonte ampliada,
-                    // sem perder a área de toque ou truncar o valor selecionado.
+                    // Três grupos, sem esconder as opções de 9,5/10 segundos anteriores.
                     BoxWithConstraints(Modifier.fillMaxWidth()) {
                         val stackChoices = maxWidth < 330.dp || LocalDensity.current.fontScale >= 1.3f
                         if (stackChoices) {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                QuickToolDurationChoice("9,5 s",
-                                    partDuration == QuickVideoSplitPolicy.SHORT_MS, !processing,
-                                    modifier = Modifier.fillMaxWidth()) {
-                                    partDuration = QuickVideoSplitPolicy.SHORT_MS
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                QuickDurationGroupChip("Segundos", durationGroup == DurationGroup.SECONDS, !processing,
+                                    Modifier.fillMaxWidth()) {
+                                    durationGroup = DurationGroup.SECONDS; partDuration = lastSecondsDuration
                                 }
-                                QuickToolDurationChoice("10 s",
-                                    partDuration == QuickVideoSplitPolicy.TEN_SECONDS_MS, !processing,
-                                    modifier = Modifier.fillMaxWidth()) {
-                                    partDuration = QuickVideoSplitPolicy.TEN_SECONDS_MS
+                                QuickDurationGroupChip("Minutos", durationGroup == DurationGroup.MINUTES, !processing,
+                                    Modifier.fillMaxWidth()) {
+                                    durationGroup = DurationGroup.MINUTES; partDuration = lastMinutesDuration
                                 }
+                                QuickDurationGroupChip("Personalizado", durationGroup == DurationGroup.CUSTOM, !processing,
+                                    Modifier.fillMaxWidth()) { durationGroup = DurationGroup.CUSTOM }
                             }
                         } else {
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                QuickToolDurationChoice("9,5 s",
-                                    partDuration == QuickVideoSplitPolicy.SHORT_MS, !processing,
-                                    modifier = Modifier.weight(1f)) {
-                                    partDuration = QuickVideoSplitPolicy.SHORT_MS
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                QuickDurationGroupChip("Segundos", durationGroup == DurationGroup.SECONDS, !processing,
+                                    Modifier.weight(1f)) {
+                                    durationGroup = DurationGroup.SECONDS; partDuration = lastSecondsDuration
                                 }
-                                QuickToolDurationChoice("10 s",
-                                    partDuration == QuickVideoSplitPolicy.TEN_SECONDS_MS, !processing,
-                                    modifier = Modifier.weight(1f)) {
-                                    partDuration = QuickVideoSplitPolicy.TEN_SECONDS_MS
+                                QuickDurationGroupChip("Minutos", durationGroup == DurationGroup.MINUTES, !processing,
+                                    Modifier.weight(1f)) {
+                                    durationGroup = DurationGroup.MINUTES; partDuration = lastMinutesDuration
+                                }
+                                QuickDurationGroupChip("Personalizado", durationGroup == DurationGroup.CUSTOM, !processing,
+                                    Modifier.weight(1f)) { durationGroup = DurationGroup.CUSTOM }
+                            }
+                        }
+                    }
+                    if (durationGroup == DurationGroup.CUSTOM) {
+                        Text("Defina horas, minutos e segundos", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        BoxWithConstraints(Modifier.fillMaxWidth()) {
+                            val stackCustom = maxWidth < 330.dp || LocalDensity.current.fontScale >= 1.3f
+                            if (stackCustom) {
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    QuickCustomTimeField("Horas", customHours, !processing,
+                                        Modifier.fillMaxWidth()) { customHours = it }
+                                    QuickCustomTimeField("Min", customMinutes, !processing,
+                                        Modifier.fillMaxWidth()) { customMinutes = it }
+                                    QuickCustomTimeField("Seg", customSeconds, !processing,
+                                        Modifier.fillMaxWidth()) { customSeconds = it }
+                                }
+                            } else {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    QuickCustomTimeField("Horas", customHours, !processing,
+                                        Modifier.weight(1f)) { customHours = it }
+                                    QuickCustomTimeField("Min", customMinutes, !processing,
+                                        Modifier.weight(1f)) { customMinutes = it }
+                                    QuickCustomTimeField("Seg", customSeconds, !processing,
+                                        Modifier.weight(1f)) { customSeconds = it }
+                                }
+                            }
+                        }
+                        if (customMs == null) {
+                            QuickToolNotice("Use 00:00:01 a 23:59:59; minutos e segundos de 0 a 59.", isError = true)
+                        } else {
+                            Text("Cada parte: ${QuickVideoSplitPolicy.timeLabel(customMs)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    } else {
+                        val options = if (durationGroup == DurationGroup.SECONDS) secondsPresets else minutesPresets
+                        BoxWithConstraints(Modifier.fillMaxWidth()) {
+                            val stackChoices = maxWidth < 330.dp || LocalDensity.current.fontScale >= 1.3f
+                            if (stackChoices) {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    options.forEach { option ->
+                                        QuickToolDurationChoice(option.label, partDuration == option.milliseconds,
+                                            !processing, modifier = Modifier.fillMaxWidth(), subtitle = option.hint) {
+                                            partDuration = option.milliseconds
+                                            if (durationGroup == DurationGroup.SECONDS) lastSecondsDuration = partDuration
+                                            else lastMinutesDuration = partDuration
+                                        }
+                                    }
+                                }
+                            } else {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    options.chunked(2).forEach { pair ->
+                                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                            pair.forEach { option ->
+                                                QuickToolDurationChoice(option.label, partDuration == option.milliseconds,
+                                                    !processing, modifier = Modifier.weight(1f), subtitle = option.hint) {
+                                                    partDuration = option.milliseconds
+                                                    if (durationGroup == DurationGroup.SECONDS) lastSecondsDuration = partDuration
+                                                    else lastMinutesDuration = partDuration
+                                                }
+                                            }
+                                            if (pair.size == 1) Spacer(Modifier.weight(1f))
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
+                    Text("*8 minutos permite anúncios intermediários no YouTube para canais/vídeos elegíveis; " +
+                        "a duração, sozinha, não garante monetização ou alcance.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -407,7 +512,7 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
                     QuickToolNotice("O salvamento automático dos cortes requer Android 10 ou superior.", isError = true)
                 }
                 if (sourceText.isNotBlank()) {
-                    val previewExpanded = rememberSaveable(sourceText, partDuration) { mutableStateOf(false) }
+                    val previewExpanded = rememberSaveable(sourceText, effectivePartDurationMs) { mutableStateOf(false) }
                     Surface(shape = UaiShapes.card, color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)) {
                         Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -435,14 +540,19 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
                             } else if (previewExpanded.value) {
                                 parts.take(5).forEach { part ->
                                     Text("Parte ${part.index.toString().padStart(3, '0')}  ·  " +
-                                        "${"%.1f".format(java.util.Locale.ROOT, part.startMs / 1000.0)}–" +
-                                        "${"%.1f".format(java.util.Locale.ROOT, part.endMs / 1000.0)} s",
+                                        "${QuickVideoSplitPolicy.timeLabel(part.startMs)}–" +
+                                        QuickVideoSplitPolicy.timeLabel(part.endMs),
                                         style = MaterialTheme.typography.bodySmall)
                                 }
                                 if (parts.size > 5) Text("… e mais ${parts.size - 5} partes",
                                     style = MaterialTheme.typography.bodySmall)
                             }
                         }
+                    }
+                    if (parts.size >= 30) {
+                        QuickToolNotice("Esta divisão gerará ${parts.size} arquivos de vídeo" +
+                            (if (audioMode == "separate") " e ${parts.size} arquivos de áudio" else "") +
+                            ". Confira espaço livre, bateria e aquecimento antes de começar.", isError = false)
                     }
                 }
             } else if (sourceText.isNotBlank() && !hasAudio) {
@@ -553,6 +663,32 @@ private fun QuickToolStep(number: Int, title: String) {
     }
 }
 
+/** Evita sobrepor campos numéricos em telas estreitas e com fontes ampliadas. */
+@Composable
+private fun QuickCustomTimeField(
+    label: String, value: String, enabled: Boolean, modifier: Modifier,
+    onValueChange: (String) -> Unit
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = { onValueChange(it.filter { c -> c in '0'..'9' }.take(2)) },
+        label = { Text(label) }, enabled = enabled, singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = modifier
+    )
+}
+
+/** Alterna entre presets rápidos, em minutos e tempo manual. */
+@Composable
+private fun QuickDurationGroupChip(
+    label: String, selected: Boolean, enabled: Boolean, modifier: Modifier, onClick: () -> Unit
+) {
+    FilterChip(selected = selected, onClick = onClick, enabled = enabled,
+        label = { Text(label, maxLines = 2) }, modifier = modifier,
+        leadingIcon = if (selected) {{ Icon(Icons.Default.Check, contentDescription = null,
+            modifier = Modifier.size(16.dp)) }} else null)
+}
+
 /** A escolha de duração se adapta ao espaço e expõe a seleção para leitores de tela. */
 @Composable
 private fun QuickToolDurationChoice(
@@ -560,6 +696,7 @@ private fun QuickToolDurationChoice(
     selected: Boolean,
     enabled: Boolean,
     modifier: Modifier,
+    subtitle: String? = null,
     onClick: () -> Unit
 ) {
     Surface(
@@ -580,9 +717,13 @@ private fun QuickToolDurationChoice(
                 tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(7.dp))
-            Text(label, style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                maxLines = 2)
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(label, style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                    maxLines = 2)
+                if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3)
+            }
         }
     }
 }

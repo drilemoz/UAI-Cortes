@@ -1,3 +1,15 @@
+# Uai Cortes · versão 0.1.216 — revisão da divisão (versionCode 217)
+## 0.1.216 (versionCode 217) · Cancelamento e seleção de duração
+- Cópia do MP4 para a galeria interrompe gravação por blocos quando recebe cancelamento, retirando item parcial pendente do MediaStore; callbacks atrasados não alteram o estado de uma nova tarefa.
+- Os grupos Segundos e Minutos lembram a última duração escolhida quando alternados; o tempo personalizado empilha campos em aparelhos estreitos ou fonte grande.
+- Mantidos presets de redes sociais e duração personalizada, 180 partes, Media3, modos de áudio, telas de execução e resultado. Ainda não há validação física/Gradle.
+
+# Uai Cortes · versão 0.1.215 — durações para redes sociais (versionCode 216)
+## 0.1.215 (versionCode 216) · Cortes rápidos, em minutos e personalizados
+- Seleção de duração em grupos Segundos, Minutos e Personalizado, mantendo 9,5 s e 10 s e acrescentando 30 s, 60 s, 1 min, 1min05s, 2 min, 2min59s, 3 min, 4 min e 8 min.
+- Duração personalizada com horas, minutos e segundos, validação de 1 segundo a 23h59min59s; prévia da divisão exibe horários precisos, inclusive frações, e limita a no máximo 180 partes por execução.
+- Preservados motor Media3, modos de áudio, cancelamento, arquivos de saída, telas cheias de execução e resultado e mídia original. Textos sobre redes sociais não prometem monetização. Ainda exige compilação e validação Android.
+
 # Uai Cortes · versão 0.1.214 — revisão da extração M4A (versionCode 215)
 ## 0.1.214 (versionCode 215) · Saídas incompletas e exclusão segura
 - Revisão de `AudioExtractionEngine` e do fluxo em tela cheia: sucesso continua dependendo do fechamento da gravação do M4A; cancelamento e erro não exibem saída como concluída.

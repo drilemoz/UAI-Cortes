@@ -1,3 +1,13 @@
+# Uai Cortes · versão 0.1.216 — divisão de vídeo revisada (versionCode 217)
+- Revisão de Dividir vídeo: cópia MP4 cooperativamente cancelável, limpeza de itens não publicados, isolamento de callbacks antigos após nova tentativa, grupos de duração com memória de seleção e campos HH:MM:SS responsivos.
+- Preserva 9,5/10/30/60s, presets em minutos e duração personalizada, limite 180 partes, Media3 e módulos existentes.
+- Validação: contratos Python/Kotlin; build Android e teste real ainda pendentes.
+
+# Uai Cortes · versão 0.1.215 — opções de divisão para redes sociais (versionCode 216)
+- **Dividir vídeo**: cortes rápidos (9,5, 10, 30 e 60 s), em minutos (1, 1min05s, 2, 2min59s, 3, 4 e 8 min) e duração personalizada (HH:MM:SS entre 1 s e 23h59min59s).
+- Cálculo de até 180 partes com última parte menor quando necessário, prévia precisa e avisos para trabalhos grandes. O app não garante requisitos de monetização; cada plataforma aplica condições próprias.
+- Media3, salvamento de MP4/M4A, vídeo original e fluxo de resultado mantidos. Requer build Gradle e testes físicos no Android.
+
 # Uai Cortes · versão 0.1.214 — Revisão de extração e arquivos incompletos (versionCode 215)
 - **Extrair áudio**: continua com escolha SAF, progresso em tela cheia e resultado real. Agora há opção explícita de apagar somente o arquivo M4A parcial criado na tentativa cancelada/com erro, com diálogo de confirmação.
 - A limpeza espera o fechamento da cópia; se o provedor de documentos rejeitar a exclusão, o usuário recebe mensagem para usar Arquivos. Não apaga automaticamente documentos nem a mídia original.

@@ -16,7 +16,13 @@ internal object GalleryVideoSaver {
     /** Cópia local em blocos: menos operações de I/O para MP4s grandes, memória limitada. */
     internal const val COPY_BUFFER_BYTES = 256 * 1024
 
-    fun save(context: Context, source: File, displayName: String, subfolder: String = ""): Uri {
+    fun save(
+        context: Context,
+        source: File,
+        displayName: String,
+        subfolder: String = "",
+        shouldContinue: () -> Boolean = { true }
+    ): Uri {
         require(source.isFile && source.length() > 0L) {
             "O arquivo MP4 temporário está vazio ou não foi gerado."
         }
@@ -37,8 +43,21 @@ internal object GalleryVideoSaver {
             ?: error("Não foi possível criar o arquivo na galeria")
         try {
             val copied = resolver.openOutputStream(target, "w")?.use { output ->
-                source.inputStream().use { input -> input.copyTo(output, COPY_BUFFER_BYTES) }
+                source.inputStream().use { input ->
+                    val buffer = ByteArray(COPY_BUFFER_BYTES)
+                    var total = 0L
+                    while (true) {
+                        // Checar entre blocos para não publicar um MP4 cujo salvamento foi cancelado.
+                        if (!shouldContinue()) throw java.util.concurrent.CancellationException("Salvamento cancelado")
+                        val size = input.read(buffer)
+                        if (size == -1) break
+                        output.write(buffer, 0, size)
+                        total += size
+                    }
+                    total
+                }
             } ?: error("Não foi possível gravar o vídeo")
+            if (!shouldContinue()) throw java.util.concurrent.CancellationException("Salvamento cancelado")
             check(copied == source.length()) { "A cópia do MP4 para a galeria está incompleta" }
             val finished = resolver.update(target, ContentValues().apply {
                 put(MediaStore.Video.Media.IS_PENDING, 0)
