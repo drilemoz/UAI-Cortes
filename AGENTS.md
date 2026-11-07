@@ -1,3 +1,8 @@
+# v0.1.210 — reformulação visual de Dividir vídeo
+- `QuickVideoToolsScreen.kt`: reformulação apenas visual da ferramenta rápida Dividir vídeo; cartão da mídia selecionada, etapas numeradas, seleção de duração e áudio em cartões completos, prévia recolhível e barra de ação fixa. Extração de áudio independente compartilha o visual, sem alterar seus contratos.
+- Preservar a galeria integrada e fallback SAF, 9,5/10 s, limite 180 partes, detecção de áudio, Media3, cancelamento/rollback, destinos, áudio opcional e não alteração dos originais nem projetos.
+- Testes estruturais de regressão, regras de divisão e sync de versão. Build Gradle, Lint e teste em aparelho ainda pendentes. `versionName=0.1.210`, `versionCode=211`, schemaVersion 4 e cinco APKs Release mantidos.
+
 # v0.1.209 — ferramentas independentes fora do menu do editor
 - Remover apenas os atalhos Animar imagens e Prompt Flow da barra horizontal do EditorScreen, pois pertencem à Home, não ao projeto/timeline.
 - Preservar acesso a Animar fotos e Estúdio de Cenas na Home, rotas existentes e projetos antigos, sem mexer em exportação, cópia de mídias, schemaVersion 4, assinatura ou cinco APKs.

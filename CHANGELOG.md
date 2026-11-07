@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.210 — tela Dividir vídeo renovada (versionCode 211)
+## 0.1.210 (versionCode 211) · Dividir vídeo com interface por etapas
+- Vídeo de origem destacado com nome, duração, indicação de áudio e botão de troca diretamente no cartão.
+- Duração de 9,5 ou 10 segundos escolhida em cartões laterais; três opções de áudio com seleção visível e explicações. Opções indisponíveis indicadas sem ativação incorreta.
+- Prévia recolhível apresenta contagem estimada e intervalos, sem aumentar a tela quando ainda não há mídia selecionada.
+- Ação de dividir e destino ficam no rodapé fixo; progresso/cancelamento, erro e conclusão continuam acessíveis. A extração rápida também recebe o padrão visual consistente.
+- Não foram alterados processamento, limite de 180 partes, Media3, fluxos de importação, cópia, exportação, banco do projeto, assinatura nem cinco APKs Release. Compilação Android e teste visual em aparelho pendentes.
+
 # Uai Cortes · versão 0.1.209 — ferramentas fora da edição (versionCode 210)
 
 ## 0.1.209 (versionCode 210) · Barra do editor específica para edição

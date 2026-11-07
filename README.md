@@ -1,3 +1,7 @@
+# Uai Cortes · versão 0.1.210 — interface Dividir vídeo renovada (versionCode 211)
+- **Dividir vídeo**: interface por etapas, seleção de mídia destacada, cartões para 9,5 s/10 s e modos de áudio, prévia recolhível das partes e ação fixa no rodapé. Mesmos formatos, cópias e destinos anteriores.
+- Essa evolução é visual. Requer validar compilação Gradle/Android Lint e testar em aparelho, principalmente telas pequenas, rolagem, acessibilidade e tema escuro.
+
 # Uai Cortes · versão 0.1.209 — ferramentas do editor simplificadas (versionCode 210)
 
 - A barra horizontal de edição não inclui mais Animar imagens nem Prompt Flow. Use **Animar fotos** e **Estúdio de Cenas** pela Home.

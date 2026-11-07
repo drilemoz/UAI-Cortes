@@ -9,7 +9,8 @@ quick=(source/'QuickVideoToolsScreen.kt').read_text()
 main=(source/'MainActivity.kt').read_text()
 browser=(source/'MediaBrowser.kt').read_text()
 assert 'var galleryOpen by rememberSaveable(mode)' in quick
-assert 'OutlinedButton(onClick = { galleryOpen = true }' in quick
+assert 'onClick = { galleryOpen = true }' in quick  # cartão de mídia substitui o botão antigo
+assert 'Surface(' in quick and 'QuickToolStep(1, "Vídeo de origem")' in quick
 assert 'DeviceMediaBrowser(' in quick
 assert 'scope = GalleryScope.VIDEOS' in quick and 'allowMultiple = false' in quick
 assert 'chosen.firstOrNull()?.takeUnless { it.isImage }' in quick

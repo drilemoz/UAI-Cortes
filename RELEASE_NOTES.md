@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.210 — edição rápida visual mais clara (versionCode 211)
+## v0.1.210 · Dividir vídeo mais simples de usar
+- Nova organização por etapas para escolher o vídeo, definir a duração e decidir o áudio.
+- Cartões de seleção com estados claros, prévia de partes e botão fixo de execução com destino informado.
+- O vídeo original continua preservado; durações, exportação, cancelamento e extração M4A permanecem com o comportamento anterior.
+- A compilação Android e os testes em dispositivos ainda precisam ser executados no CI.
+
 # Uai Cortes · versão 0.1.209 — barra de edição limpa (versionCode 210)
 
 - **Animar imagens** e **Prompt Flow** foram removidos do menu horizontal do editor, porque seus módulos são independentes da linha do tempo.

@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.209"
-    const val VERSION_CODE = 210
+    const val VERSION_NAME = "0.1.210"
+    const val VERSION_CODE = 211
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+		ReleaseSummary("0.1.210", listOf(
+            ReleaseFeature("quick-split-ui-210", "Dividir vídeo com interface renovada",
+                "Seleção de vídeo destacada, duração em cartões, opções de áudio mais claras, prévia dos cortes e botão sempre acessível, sem alterar os arquivos de origem.", "film")
+        )),
         ReleaseSummary("0.1.209", listOf(
             ReleaseFeature("editor-standalone-tools-209", "Ferramentas independentes fora do editor",
                 "Animar imagens e Prompt Flow não aparecem mais na barra do editor. Ambas continuam acessíveis pela tela inicial, sem alterar projetos ou a linha do tempo.", "film")
