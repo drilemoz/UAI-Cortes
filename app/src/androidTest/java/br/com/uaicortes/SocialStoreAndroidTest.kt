@@ -65,6 +65,36 @@ class SocialStoreAndroidTest {
         }
     }
 
+    @Test fun importacaoAutomaticaDoisCanaisSemDuplicarOuPerderHistorico() {
+        val first = "UC1234567890123456789012"
+        val second = "UC8765432109876543210987"
+        val a = SocialPublicationPolicy.upsertYouTube(SocialData(), first, "Primeiro canal")
+        val one = a.accounts.single()
+        val post = SocialPublication(accountId = one.id,
+            videoUri = "content://media/external/video/media/123", videoName = "teste.mp4")
+        val withHistory = a.copy(publications = listOf(post))
+        val b = SocialPublicationPolicy.upsertYouTube(withHistory, second, "Segundo canal")
+        assertEquals(2, b.accounts.size)
+        assertEquals(listOf(first, second), b.accounts.map { it.remoteChannelId })
+        assertEquals(one.id, b.publications.single().accountId)
+        val repeated = SocialPublicationPolicy.upsertYouTube(b, first, "Primeiro alterado")
+        assertEquals(2, repeated.accounts.size)
+        assertEquals(one.id, repeated.accounts.first().id)
+        assertEquals("Primeiro canal", repeated.accounts.first().label)
+        assertThrows(IllegalArgumentException::class.java) {
+            SocialPublicationPolicy.upsertYouTube(b, "site-falso", "Site")
+        }
+    }
+
+    @Test fun paginasMetaAutomaticasNaoDuplicamCadastrosManuais() {
+        val first = SocialPublicationPolicy.upsertFacebookPage(SocialData(), "1234567890", "Minha página")
+        val next = SocialPublicationPolicy.upsertFacebookPage(first, "1234567890", "Nova tentativa")
+        assertEquals(1, next.accounts.size)
+        assertEquals(first.accounts.single().id, next.accounts.single().id)
+        assertEquals(SocialDestination.FACEBOOK_PAGE, next.accounts.single().destination)
+        assertFalse(next.accounts.single().toJson().toString().contains("accessToken"))
+    }
+
     @Test fun catalogoCorrompidoNaoPodeSerSobrescrito() {
         val context = temporaryContext()
         val store = SocialStore(context)

@@ -34,6 +34,17 @@ class YouTubeSocialAndroidTest {
         }
     }
 
+    @Test fun diagnostico403NaoRevelaRespostaBruta() {
+        val apiOff = """{"error":{"errors":[{"reason":"accessNotConfigured"}],"message":"private_project_123"}}"""
+        assertTrue(YouTubeSocialApi.errorDescription(403, apiOff).contains("API v3 desativada"))
+        assertFalse(YouTubeSocialApi.errorDescription(403, apiOff).contains("private_project_123"))
+        val quota = """{"error":{"errors":[{"reason":"quotaExceeded"}]}}"""
+        assertTrue(YouTubeSocialApi.errorDescription(403, quota).contains("cota"))
+        val disabled = """{"error":{"status":"PERMISSION_DENIED","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"SERVICE_DISABLED"}]}}"""
+        assertTrue(YouTubeSocialApi.errorDescription(403, disabled).contains("API v3 desativada"))
+        assertTrue(YouTubeSocialApi.errorDescription(403, "não-json").contains("motivo não identificado"))
+    }
+
     @Test fun uploadNaoRepetidoSemRevisao() {
         val account = SocialAccount(destination = SocialDestination.YOUTUBE, label = "Canal")
         val original = SocialPublication(accountId = account.id,

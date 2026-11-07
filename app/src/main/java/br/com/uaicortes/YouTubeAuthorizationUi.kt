@@ -12,7 +12,7 @@ import com.google.android.gms.common.api.Scope
 
 /** Autorização Google no próprio Android, sem webview, client_secret ou token persistido. */
 @Composable
-internal fun rememberYouTubeAuthorization(onError: (String) -> Unit): ((String) -> Unit) -> Unit {
+internal fun rememberYouTubeAuthorization(onError: (String) -> Unit): (Boolean, (String) -> Unit) -> Unit {
     val context = LocalContext.current
     val activity = context as? Activity
     val callback = remember { mutableStateOf<((String) -> Unit)?>(null) }
@@ -33,17 +33,21 @@ internal fun rememberYouTubeAuthorization(onError: (String) -> Unit): ((String) 
                 }.onFailure { onErrorNow("Falha ao concluir autorização do YouTube.") }
         }
     }
-    return { next ->
+    return { chooseAccount, next ->
         if (client == null) {
             onErrorNow("Não foi possível acessar a autorização Google neste aparelho.")
         } else if (callback.value != null) {
             onErrorNow("Já existe uma autorização em andamento.")
         } else {
             callback.value = next
-            val request = AuthorizationRequest.builder().setRequestedScopes(listOf(
+            val requestBuilder = AuthorizationRequest.builder().setRequestedScopes(listOf(
                 Scope("https://www.googleapis.com/auth/youtube.upload"),
                 Scope("https://www.googleapis.com/auth/youtube.readonly")
-            )).build()
+            ))
+            // Ao adicionar outro destino, pedir escolha explícita da conta Google.
+            // Nunca reaproveitar silenciosamente o canal do primeiro usuário.
+            if (chooseAccount) requestBuilder.setPrompt(AuthorizationRequest.Prompt.SELECT_ACCOUNT)
+            val request = requestBuilder.build()
             client.authorize(request).addOnSuccessListener { grant ->
                 if (grant.hasResolution()) {
                     val intent = grant.pendingIntent

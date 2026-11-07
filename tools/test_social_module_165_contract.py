@@ -29,7 +29,7 @@ assert 'takePersistableUriPermission' in screens and 'ActivityResultContracts.Op
 assert 'ActivityResultContracts.CreateDocument("application/json")' in integrations
 assert 'uai-social-public-v1' in screens and 'require(json.length() == 2' in screens
 assert 'require(entry.length() == 2)' in screens and 'put("profileUrl", account.profileUrl)' not in screens
-assert 'Autorizar Google e testar' in integrations
+assert 'Conectar canal YouTube' in integrations
 assert 'SocialApiCenterScreen(' in main and 'SocialDashboardScreen(' in main
 assert '"social_publish"' in nav and '"social"' in nav and '"api_center"' in nav
 assert 'MainNav("social", onTab)' in screens and 'Triple("social",Icons.Default.Public,"Redes")' in home

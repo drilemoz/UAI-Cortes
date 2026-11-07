@@ -35,10 +35,11 @@ internal data class SocialIntegrationGuide(
 internal object SocialIntegrationGuides {
     fun forDestination(dest: SocialDestination): SocialIntegrationGuide = when (dest) {
         SocialDestination.YOUTUBE -> SocialIntegrationGuide(
-            "Autorize sua conta Google para consultar o canal. O vínculo é salvo em Minhas contas.",
-            listOf("Toque em Autorizar Google e testar.",
-                "Escolha a conta e conceda as permissões solicitadas.",
-                "Em Redes > Minhas contas, adicione YouTube e toque em Vincular."),
+            "Escolha uma conta Google. O canal identificado pela API será adicionado após sua confirmação.",
+            listOf("Toque em Conectar canal YouTube.",
+                "Escolha a conta Google e autorize o acesso.",
+                "Confirme o nome e o ID do canal para adicioná-lo automaticamente em Minhas contas.",
+                "Para outra conta, repita a conexão e selecione o segundo canal."),
             listOf("Abra o Google Cloud Console e selecione um projeto.",
                 "Ative YouTube Data API v3 e configure a tela de consentimento OAuth.",
                 "Crie um cliente OAuth Android para br.com.uaicortes e registre a SHA-1 do certificado de assinatura.",
@@ -46,9 +47,8 @@ internal object SocialIntegrationGuides {
             "https://console.cloud.google.com/apis/credentials", "Abrir Google Cloud Console")
         SocialDestination.FACEBOOK_PAGE -> SocialIntegrationGuide(
             "Conecte sua conta Facebook e escolha uma Página autorizada. Conta cadastrada não significa login ativo.",
-            listOf("Entre com Facebook nesta tela.",
-                "Autorize o acesso necessário e consulte suas Páginas.",
-                "Em Redes > Minhas contas, adicione Facebook Página e toque em Vincular.",
+            listOf("Entre com Facebook e conceda acesso às Páginas.",
+                "Escolha uma Página retornada pela API e toque em Adicionar.",
                 "Para publicar via API, autorize a postagem quando necessário."),
             listOf("Crie um aplicativo em Meta for Developers e configure Facebook Login para Android.",
                 "Cadastre o identificador do pacote e o hash de assinatura da versão instalada.",
@@ -169,6 +169,14 @@ internal fun SocialApiCenterScreen(
     var showBackup by rememberSaveable { mutableStateOf(false) }
     var externalTest by remember { mutableStateOf<SocialDestination?>(null) }
     var metaPages by remember { mutableStateOf<List<SocialExternalApis.FacebookPage>>(emptyList()) }
+    var youtubeChannelToAdd by remember { mutableStateOf<YouTubeSocialApi.Channel?>(null) }
+    var verifiedYoutubeId by remember { mutableStateOf("") }
+    var savedSocialAccounts by remember { mutableStateOf<List<SocialAccount>>(emptyList()) }
+    LaunchedEffect(selected) {
+        runCatching { store.load().accounts }
+            .onSuccess { savedSocialAccounts = it }
+            .onFailure { feedback = "Não foi possível ler os destinos salvos." }
+    }
     val youtubeAuth = rememberYouTubeAuthorization { error -> feedback = error; busy = false }
 
     fun loadMetaPages() {
@@ -306,10 +314,10 @@ internal fun SocialApiCenterScreen(
                     SocialDestination.YOUTUBE -> {
                         Button(onClick = {
                             busy = true
-                            youtubeAuth { token ->
+                            youtubeAuth(true) { token ->
                                 scope.launch {
                                     runCatching { YouTubeSocialApi.channel(token) }
-                                        .onSuccess { feedback = "Canal autorizado: ${it.title} (${it.id}). Vincule-o em Minhas contas." }
+                                        .onSuccess { youtubeChannelToAdd = it; feedback = "" }
                                         .onFailure { feedback = it.message ?: "Não foi possível consultar o canal." }
                                     busy = false
                                 }
@@ -317,7 +325,28 @@ internal fun SocialApiCenterScreen(
                         }, enabled = !busy, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
                             shape = UaiShapes.button) {
                             Icon(Icons.Default.Link, null); Spacer(Modifier.width(8.dp))
-                            Text("Autorizar Google e testar")
+                            Text("Conectar canal YouTube")
+                        }
+                        Text("Para adicionar outro canal, toque novamente e escolha outra conta Google.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        val knownChannels = savedSocialAccounts.filter {
+                            it.destination == SocialDestination.YOUTUBE && it.remoteChannelId.isNotBlank()
+                        }
+                        if (knownChannels.isNotEmpty()) {
+                            Text("Canais adicionados", style = MaterialTheme.typography.titleSmall)
+                            knownChannels.take(10).forEach { account ->
+                                Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 3.dp)) {
+                                    Text(account.label, fontWeight = FontWeight.Medium)
+                                    Text(if (account.remoteChannelId == verifiedYoutubeId)
+                                        "Verificado nesta sessão · ${account.remoteChannelId}" else
+                                        "Salvo · reautorize para utilizar · ${account.remoteChannelId}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            if (knownChannels.size > 10) Text("Demais canais disponíveis em Minhas contas.",
+                                style = MaterialTheme.typography.bodySmall)
                         }
                     }
                     SocialDestination.FACEBOOK_PAGE -> {
@@ -338,9 +367,23 @@ internal fun SocialApiCenterScreen(
                             }
                         }
                         if (metaPages.isNotEmpty()) {
-                            Text("Páginas consultadas", style = MaterialTheme.typography.titleSmall)
+                            Text("Páginas disponíveis", style = MaterialTheme.typography.titleSmall)
                             metaPages.forEach { page ->
-                                Text("• ${page.name} · ${page.id}", style = MaterialTheme.typography.bodySmall)
+                                OutlinedButton(onClick = {
+                                    runCatching {
+                                        val next = SocialPublicationPolicy.upsertFacebookPage(
+                                            store.load(), page.id, page.name)
+                                        store.save(next)
+                                        next.accounts
+                                    }.onSuccess { accounts ->
+                                        savedSocialAccounts = accounts
+                                        feedback = "Página ${page.name} adicionada em Minhas contas."
+                                    }.onFailure {
+                                        feedback = it.message ?: "Falha ao salvar a Página no aparelho."
+                                    }
+                                }, modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
+                                    Text("Adicionar ${page.name}")
+                                }
                             }
                         }
                     }
@@ -402,6 +445,25 @@ internal fun SocialApiCenterScreen(
             }
             Spacer(Modifier.height(12.dp))
         }
+    }
+    youtubeChannelToAdd?.let { channel ->
+        AlertDialog(onDismissRequest = { youtubeChannelToAdd = null },
+            title = { Text("Adicionar canal identificado?") },
+            text = { Text("${channel.title}\nID: ${channel.id}\n\n" +
+                "Somente o nome e o ID público serão salvos. Nenhum token Google será armazenado.") },
+            confirmButton = { TextButton(onClick = {
+                runCatching {
+                    val next = SocialPublicationPolicy.upsertYouTube(store.load(), channel.id, channel.title)
+                    store.save(next)
+                    next.accounts
+                }.onSuccess { accounts ->
+                    savedSocialAccounts = accounts
+                    verifiedYoutubeId = channel.id
+                    feedback = "Canal ${channel.title} adicionado em Minhas contas."
+                }.onFailure { feedback = it.message ?: "Falha ao salvar canal no aparelho." }
+                youtubeChannelToAdd = null
+            }) { Text("Adicionar") } },
+            dismissButton = { TextButton(onClick = { youtubeChannelToAdd = null }) { Text("Cancelar") } })
     }
     externalTest?.let { test ->
         SocialExternalApiTestDialog(test, onDismiss = { externalTest = null })

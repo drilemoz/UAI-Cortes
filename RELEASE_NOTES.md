@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.223 — Redes sociais com contas identificadas (versionCode 224)
+- Em Redes > Adicionar, conecte um canal YouTube ou uma Página Meta, identifique o nome e ID reais, confirme e salve sem criar cadastro previamente. Outros destinos permanecem manuais.
+- Adicione vários canais YouTube escolhendo explicitamente a conta; uploads continuam exigindo o canal correto. Páginas disponíveis via login Meta podem ser adicionadas uma a uma.
+- Erro YouTube 403 agora diferencia motivos conhecidos (API desativada, cota, autorização) quando presentes; motivo não especificado continua inconclusivo.
+- Nenhum token é persistido; páginas/canais salvos não significam autorização permanente. Sem alterações no schema 4 do editor, assinatura, cinco APKs nem exportação dos vídeos.
+- Compilação Android e testes em aparelhos/contas reais devem ocorrer em CI após o envio do fonte.
+
 # Uai Cortes · versão 0.1.222 — Compilação do painel de voz (versionCode 223)
 ## v0.1.222
 - Corrigido o erro de compilação do Material 3 em `VoiceTonePanel.kt` com declaração explícita para a API experimental dos painéis de ajustes.

@@ -1,3 +1,10 @@
+# v0.1.223 — Redes sociais: canais múltiplos e diagnóstico de autenticação
+- Ao conectar YouTube, chamar AuthorizationClient com seleção explícita de conta (`setPrompt(SELECT_ACCOUNT)`), consultar `channels.list mine=true` e salvar somente ID e título públicos após confirmação. Permitir vários canais distintos sem duplicar o mesmo ID; tokens nunca persistidos.
+- Páginas Facebook podem ser adicionadas a partir da lista validada pelo SDK Meta; sem configuração de build e permissões Meta, não simular conexão. Compartilhamento manual preservado para Facebook Perfil, Kwai e TikTok.
+- Diferenciar cadastro salvo de autorização verificada na sessão. Antes de publicar, comparar canal OAuth atual ao destino; jamais enviar automaticamente para canal diferente. Conservar proteção contra duplicatas/retries após upload incerto.
+- Erros YouTube 403 devem interpretar somente razões permitidas da API sem exibir corpos, contas, tokens ou dados pessoais. A API precisa estar habilitada externamente no Google Cloud.
+- Atualizar 0.1.223/versionCode 224, contratos, notas, README, CI, identidade e testes. Preservar schema 4 e catálogo social 1. Compilação real Android/OAuth/Meta pendente.
+
 # v0.1.222 — CI184: autorizar API experimental do painel de voz
 - O workflow 184 passou nas verificações locais, mas `:app:compileReleaseKotlin` e `:app:compileDebugKotlin` falharam em `VoiceTonePanel.kt` linhas 201–202: `ModalBottomSheet` e `rememberModalBottomSheetState` exigem `ExperimentalMaterial3Api` no Compose Material 3 utilizado.
 - Aplicar `@OptIn(ExperimentalMaterial3Api::class)` exclusivamente ao composable `VoiceTonePanel`, mantendo painéis, filtros, prévia A/B, assinaturas, schemaVersion 4 e cinco APKs inalterados. Contrato de regressão deve impedir remoção acidental do opt-in.

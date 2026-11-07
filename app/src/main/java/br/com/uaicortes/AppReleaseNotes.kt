@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.222"
-    const val VERSION_CODE = 223
+    const val VERSION_NAME = "0.1.223"
+    const val VERSION_CODE = 224
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.223", listOf(
+            ReleaseFeature("social-multichannel-223", "Contas YouTube e Facebook mais simples",
+                "Em Redes, Conectar identifica canal ou Página automaticamente, sem cadastrar nomes antes. É possível adicionar mais contas selecionando outra conta Google; o canal é verificado antes da publicação.", "check"),
+            ReleaseFeature("youtube-diagnostics-223", "Diagnóstico YouTube mais claro",
+                "Erros HTTP 403 agora distinguem API desativada, cota e permissões quando o servidor informa a causa, sem expor tokens ou respostas privadas.", "check")
+        )),
         ReleaseSummary("0.1.222", listOf(
             ReleaseFeature("ci184-voice-sheet-222", "Correção de compilação dos ajustes de voz",
                 "Os painéis inferiores de Melhorar voz agora usam a declaração compatível com a API experimental do Material 3. Presets, EQ e processamento de áudio continuam iguais.", "check")

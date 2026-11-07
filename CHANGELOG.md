@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.223 (2026-11-07)
+- Redes: adicionar canal YouTube ou Página Facebook pela API, sem cadastro de nome manual, com confirmação dos IDs e proteção contra duplicação; opção manual preservada para Kwai/TikTok/Facebook Perfil e Página avançada.
+- Autorização Google: seleção explícita da conta para adicionar outros canais e conferência do ID na publicação; nenhum token OAuth entra no catálogo local ou backup.
+- Central de Integrações: conexão YouTube passa a salvar canal real mediante confirmação; Meta permite cadastrar Página consultada diretamente. Identificadores e status visíveis na aba Redes, sem prometer sessão persistente.
+- Diagnóstico YouTube: mensagens para 401, 403 (cota, API desligada, permissões) e 429 interpretam apenas códigos conhecidos e não exibem corpo bruto/segredos.
+- Testes novos de destinos independentes, deduplicação, parsing 403 e contratos estruturais. `schemaVersion` de projetos 4 e catálogo social 1 mantidos. Build Android, OAuth real e Meta ainda pendentes.
+
 # Uai Cortes · v0.1.222 — Correção CI184 do painel Melhorar voz
 - Corrigida a falha de compilação Kotlin Debug/Release do workflow 184 na `VoiceTonePanel.kt` (linhas 201–202). Uso de `ModalBottomSheet` e `rememberModalBottomSheetState` anotado com `@OptIn(ExperimentalMaterial3Api::class)` no composable responsável.
 - Adicionado teste de regressão específico para garantir a anotação e manter o painel funcional. Sem alterar presets, DSP, exportação, esquemas de projetos ou segredos.

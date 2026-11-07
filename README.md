@@ -1,3 +1,6 @@
+# Uai Cortes · v0.1.223 — Contas sociais e diagnóstico YouTube
+A aba **Redes > Adicionar** agora apresenta conexão automática de YouTube e Facebook Página. O app consulta o canal ou Página pela API e pede confirmação antes de salvar nome e ID públicos; permite vários canais Google por seleção de conta e evita duplicatas. Destinos sem OAuth validado continuam manuais. Na hora de publicar, o ID do canal é novamente comparado ao ID autorizado. HTTP 403 YouTube informa categoria conhecida de erro sem exibir resposta privada. A API YouTube Data v3 precisa estar ativa no Google Cloud; mudanças no código não resolvem quotas ou permissões bloqueadas. Teste real Android/Meta/OAuth e Gradle pendentes.
+
 # Uai Cortes · v0.1.222 — Correção do build do painel de voz
 O workflow 184 identificou que o novo painel inferior em **Editor > Áudio > Melhorar voz** utiliza APIs experimentais do Compose Material 3 sem `@OptIn`. A correção declara `@OptIn(ExperimentalMaterial3Api::class)` no componente afetado, sem modificar efeitos, projetos nem exportação. Incluído teste de regressão CI184; compilação Android final depende de reexecutar o GitHub Actions.
 

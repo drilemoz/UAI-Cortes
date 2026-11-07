@@ -23,10 +23,10 @@ assert 'SocialPublicationPolicy.confirmApiUpload(' in dashboard
 # A Central testa a conta com autorização Google real, sem persistir token OAuth.
 assert center.count('internal fun SocialApiCenterScreen(') == 1
 assert 'val youtubeAuth = rememberYouTubeAuthorization' in center
-assert 'youtubeAuth { token ->' in center
+assert 'youtubeAuth(true) { token ->' in center
 assert 'YouTubeSocialApi.channel(token)' in center
 assert 'enabled = !busy' in center
-assert 'Text("Autorizar Google e testar")' in center
+assert 'Text("Conectar canal YouTube")' in center
 assert 'Identity.getAuthorizationClient' in auth
 assert 'putString("token"' not in auth
 

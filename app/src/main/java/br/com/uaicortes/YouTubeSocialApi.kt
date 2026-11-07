@@ -47,16 +47,52 @@ internal object YouTubeSocialApi {
         }
     }
 
-    private fun ensureOk(code: Int, operation: String) {
+    /** Retorna somente categorias conhecidas, sem expor mensagens, tokens ou URLs da API. */
+    internal fun errorDescription(http: Int, raw: String): String {
+        val detail = runCatching {
+            JSONObject(raw).optJSONObject("error")?.let { error ->
+                // Há respostas Google com ErrorInfo.details.reason em vez de errors[].reason.
+                val details = error.optJSONArray("details")
+                val detailReason = (0 until (details?.length() ?: 0)).asSequence()
+                    .mapNotNull { details?.optJSONObject(it)?.optString("reason") }
+                    .firstOrNull { it.isNotBlank() }.orEmpty()
+                detailReason.ifBlank {
+                    error.optJSONArray("errors")?.optJSONObject(0)?.optString("reason").orEmpty()
+                }.ifBlank { error.optString("status") }
+            }.orEmpty()
+        }.getOrDefault("")
+        return when (http) {
+            401 -> "HTTP 401: autorização expirada ou conta Google sem acesso ao canal. Autorize novamente."
+            403 -> when (detail) {
+                "quotaExceeded", "dailyLimitExceeded", "rateLimitExceeded", "userRateLimitExceeded", "RESOURCE_EXHAUSTED" ->
+                    "HTTP 403: cota ou limite de consultas do YouTube excedido neste projeto Google Cloud."
+                "accessNotConfigured", "SERVICE_DISABLED", "accessNotConfiguredException" ->
+                    "HTTP 403: YouTube Data API v3 desativada ou não habilitada neste projeto Google Cloud."
+                "insufficientPermissions", "PERMISSION_DENIED", "channelForbidden", "forbidden", "accountDelegationForbidden" ->
+                    "HTTP 403: acesso não permitido. Confira as permissões OAuth e o canal escolhido."
+                "authenticatedUserNotChannel" ->
+                    "HTTP 403: a conta Google autorizada não possui um canal YouTube acessível pela API."
+                else -> "HTTP 403: acesso negado pelo YouTube (motivo não identificado). Confira API ativada, permissões e cotas no Google Cloud."
+            }
+            429 -> "HTTP 429: muitas solicitações ao YouTube. Tente mais tarde."
+            else -> "HTTP $http: o YouTube não concluiu a operação."
+        }
+    }
+
+    private fun ensureOk(connection: HttpURLConnection, operation: String) {
+        val code = connection.responseCode
         DiagnosticRecorder.api("youtube", operation.lowercase().replace(' ', '_'), null, code,
             null, outcome=if (code in 200..299) "ok" else "http_error")
-        if (code !in 200..299) throw IOException("$operation: HTTP $code. Confira autorização, cotas e API ativada.")
+        if (code !in 200..299) {
+            val description = errorDescription(code, runCatching { readLimited(connection) }.getOrDefault(""))
+            throw IOException("$operation: $description")
+        }
     }
 
     suspend fun channel(token: String): Channel = withContext(Dispatchers.IO) {
         val conn = connect("$API/channels?part=id%2Csnippet&mine=true", token, "GET")
         try {
-            ensureOk(conn.responseCode, "Canal YouTube")
+            ensureOk(conn, "Canal YouTube")
             val json = JSONObject(readLimited(conn))
             val first = json.optJSONArray("items")?.optJSONObject(0)
                 ?: throw IOException("Nenhum canal YouTube acessível nesta conta Google.")
@@ -71,7 +107,7 @@ internal object YouTubeSocialApi {
         require(SocialPublicationPolicy.validVideoId(videoId) && videoId.isNotBlank())
         val conn = connect("$API/videos?part=statistics&id=$videoId", token, "GET")
         try {
-            ensureOk(conn.responseCode, "Métricas YouTube")
+            ensureOk(conn, "Métricas YouTube")
             val stats = JSONObject(readLimited(conn)).optJSONArray("items")?.optJSONObject(0)
                 ?.optJSONObject("statistics") ?: throw IOException("Estatísticas indisponíveis para este vídeo.")
             fun number(key: String): Long? = stats.optString(key).toLongOrNull()?.takeIf { it >= 0L }
@@ -130,7 +166,7 @@ internal object YouTubeSocialApi {
             setup.doOutput = true
             setup.setFixedLengthStreamingMode(body.size)
             setup.outputStream.use { it.write(body) }
-            ensureOk(setup.responseCode, "Iniciar upload YouTube")
+            ensureOk(setup, "Iniciar upload YouTube")
             session = setup.getHeaderField("Location")
                 ?: throw IOException("A API não devolveu a sessão de upload.")
             val address = Uri.parse(session)
@@ -170,7 +206,7 @@ internal object YouTubeSocialApi {
                         progress(size, size)
                         return@withContext result
                     } else {
-                        throw IOException("Upload YouTube: HTTP $code. Consulte o YouTube Studio antes de repetir.")
+                        throw IOException("Upload YouTube: ${errorDescription(code, runCatching { readLimited(put) }.getOrDefault(""))} Consulte o YouTube Studio antes de repetir.")
                     }
                 } finally { put.disconnect() }
             }

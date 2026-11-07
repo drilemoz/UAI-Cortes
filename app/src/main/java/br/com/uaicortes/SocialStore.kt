@@ -138,6 +138,32 @@ internal object SocialPublicationPolicy {
     fun validRemoteReference(id: String): Boolean =
         id.matches(Regex("[A-Za-z0-9_~.:-]{5,120}"))
 
+    /** Vincula um destino identificado de verdade pela API, sem salvar tokens OAuth. */
+    fun upsertYouTube(data: SocialData, channelId: String, title: String): SocialData {
+        require(channelId.isNotBlank() && validChannel(channelId))
+        val current = data.accounts.firstOrNull { it.destination == SocialDestination.YOUTUBE &&
+            it.remoteChannelId == channelId }
+        if (current != null) return data
+        require(data.accounts.size < 30) { "Limite de 30 destinos atingido." }
+        val label = title.trim().take(70).ifBlank { "YouTube · ${channelId.takeLast(8)}" }
+        return data.copy(accounts = data.accounts + SocialAccount(
+            destination = SocialDestination.YOUTUBE, label = label,
+            remoteChannelId = channelId,
+            profileUrl = "https://www.youtube.com/channel/$channelId"))
+    }
+
+    fun upsertFacebookPage(data: SocialData, pageId: String, name: String): SocialData {
+        require(validPageId(pageId))
+        val current = data.accounts.firstOrNull { it.destination == SocialDestination.FACEBOOK_PAGE &&
+            it.remotePageId == pageId }
+        if (current != null) return data
+        require(data.accounts.size < 30) { "Limite de 30 destinos atingido." }
+        return data.copy(accounts = data.accounts + SocialAccount(
+            destination = SocialDestination.FACEBOOK_PAGE,
+            label = name.trim().take(70).ifBlank { "Página $pageId" },
+            remotePageId = pageId))
+    }
+
     fun bindPage(account: SocialAccount, pageId: String): SocialAccount {
         require(account.destination == SocialDestination.FACEBOOK_PAGE && validPageId(pageId))
         return account.copy(remotePageId = pageId)

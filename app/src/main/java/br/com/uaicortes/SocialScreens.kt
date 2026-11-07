@@ -68,6 +68,10 @@ internal fun SocialDashboardScreen(
     var metaPages by remember { mutableStateOf<List<SocialExternalApis.FacebookPage>>(emptyList()) }
     val activity = context as? ComponentActivity
     var confirmedPage by remember { mutableStateOf<Pair<SocialAccount, SocialExternalApis.FacebookPage>?>(null) }
+    var showMetaPagePicker by remember { mutableStateOf(false) }
+    var newPageToAdd by remember { mutableStateOf<SocialExternalApis.FacebookPage?>(null) }
+    var newChannelToAdd by remember { mutableStateOf<YouTubeSocialApi.Channel?>(null) }
+    var verifiedYouTubeIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var pageFromMeta by remember { mutableStateOf<SocialAccount?>(null) }
     fun consultMetaPages(accountToLink: SocialAccount? = null) {
         val userToken = SocialMetaAuth.currentUserToken()
@@ -79,10 +83,9 @@ internal fun SocialDashboardScreen(
                 SocialMetaAuth.putPageTokens(pages)
                 // Nunca transferir accessToken para Compose ou para SocialStore.
                 metaPages = pages.map { it.copy(accessToken = "") }
-                if (accountToLink != null) {
-                    if (metaPages.isEmpty()) failure = "Nenhuma Página autorizada encontrada."
-                    else pageFromMeta = accountToLink
-                }
+                if (metaPages.isEmpty()) failure = "Nenhuma Página autorizada encontrada. Confira as permissões concedidas."
+                else if (accountToLink != null) pageFromMeta = accountToLink
+                else showMetaPagePicker = true
             }.onFailure { failure = "Não foi possível consultar suas Páginas autorizadas." }
             metaBusy = false
         }
@@ -109,7 +112,8 @@ internal fun SocialDashboardScreen(
             .onFailure { failure = "Falha ao salvar. Nenhuma alteração foi aplicada." }
     }
     LaunchedEffect(Unit) { refresh() }
-    var showAccountDialog by remember { mutableStateOf(false) }
+    var showAddDialog by remember { mutableStateOf(false) }
+    var manualDestination by remember { mutableStateOf<SocialDestination?>(null) }
     var deletingAccount by remember { mutableStateOf<SocialAccount?>(null) }
     var selectedPost by remember { mutableStateOf<SocialPublication?>(null) }
     var tikTokStatusPost by remember { mutableStateOf<SocialPublication?>(null) }
@@ -166,12 +170,12 @@ internal fun SocialDashboardScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Minhas contas (${state.accounts.size})", modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.titleMedium)
-                    TextButton(onClick = { showAccountDialog = true },
-                        enabled = state.accounts.size < 30) {
+                    TextButton(onClick = { showAddDialog = true },
+                        enabled = state.accounts.size < 30 && !youtubeBusy && !metaBusy) {
                         Icon(Icons.Default.Add, null); Text("Adicionar")
                     }
                 }
-                if (state.accounts.isEmpty()) Text("Adicione uma conta para organizar publicações. O vínculo é feito depois.",
+                if (state.accounts.isEmpty()) Text("Conecte YouTube ou Facebook Página; outras redes usam cadastro manual.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 // Controles Meta aparecem apenas quando há Página cadastrada.
                 // Configuração técnica e guia ficam na Central de Integrações.
@@ -236,29 +240,56 @@ internal fun SocialDashboardScreen(
                             Spacer(Modifier.width(10.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(account.label, fontWeight = FontWeight.Medium)
-                                Text("${account.destination.label} · " + if (account.destination ==
-                                    SocialDestination.FACEBOOK_PAGE &&
-                                    SocialMetaAuth.pageToken(account.remotePageId) != null)
-                                    "Meta autorizada nesta sessão" else "Cadastro local",
+                                val connectionLabel = when (account.destination) {
+                                    SocialDestination.YOUTUBE -> when {
+                                        account.remoteChannelId.isBlank() -> "Cadastro manual · não vinculado"
+                                        account.remoteChannelId in verifiedYouTubeIds -> "Canal verificado nesta sessão"
+                                        else -> "Canal salvo · confirmar autorização"
+                                    }
+                                    SocialDestination.FACEBOOK_PAGE -> when {
+                                        account.remotePageId.isBlank() -> "Cadastro manual · não vinculado"
+                                        SocialMetaAuth.pageToken(account.remotePageId) != null -> "Publicação autorizada nesta sessão"
+                                        SocialMetaAuth.currentUserToken() != null &&
+                                            metaPages.any { it.id == account.remotePageId } ->
+                                            "Página identificada · publicação não autorizada"
+                                        else -> "Página salva · confirmar autorização"
+                                    }
+                                    else -> "Destino de compartilhamento manual"
+                                }
+                                Text("${account.destination.label} · $connectionLabel",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                val publicId = when (account.destination) {
+                                    SocialDestination.YOUTUBE -> account.remoteChannelId
+                                    SocialDestination.FACEBOOK_PAGE -> account.remotePageId
+                                    else -> ""
+                                }
+                                if (publicId.isNotBlank()) Text("ID: $publicId",
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis,
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             if (account.destination == SocialDestination.YOUTUBE) {
                                 Column(horizontalAlignment = Alignment.End) {
-                                    Text(if (account.remoteChannelId.isBlank()) "Não vinculado" else "Canal vinculado",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     TextButton(onClick = {
                                         youtubeBusy = true
-                                        authorizeYouTube { token ->
+                                        authorizeYouTube(true) { token ->
                                             scope.launch {
                                                 runCatching { YouTubeSocialApi.channel(token) }
-                                                    .onSuccess { channel -> channelToBind = account to channel; failure = "" }
-                                                    .onFailure { failure = it.message ?: "Falha ao consultar canal." }
+                                                    .onSuccess { channel ->
+                                                        if (account.remoteChannelId.isBlank())
+                                                            channelToBind = account to channel
+                                                        else if (channel.id == account.remoteChannelId) {
+                                                            verifiedYouTubeIds = verifiedYouTubeIds + channel.id
+                                                            failure = "Canal ${channel.title} verificado nesta sessão."
+                                                        } else failure = "O Google retornou ${channel.title} (${channel.id}), diferente deste destino. Use Adicionar para salvar outro canal."
+                                                    }.onFailure { failure = it.message ?: "Falha ao consultar canal." }
                                                 youtubeBusy = false
                                             }
                                         }
-                                    }, enabled = !youtubeBusy) { Text("Vincular") }
+                                    }, enabled = !youtubeBusy) {
+                                        Text(if (account.remoteChannelId.isBlank()) "Vincular" else "Verificar / trocar")
+                                    }
                                 }
                             }
                             if (account.destination == SocialDestination.FACEBOOK_PAGE) {
@@ -312,7 +343,7 @@ internal fun SocialDashboardScreen(
                                 publication.remoteVideoId.isNotBlank()) {
                                 TextButton(onClick = {
                                     youtubeBusy = true
-                                    authorizeYouTube { token ->
+                                    authorizeYouTube(true) { token ->
                                         scope.launch {
                                             runCatching {
                                                 val channel = YouTubeSocialApi.channel(token)
@@ -371,12 +402,78 @@ internal fun SocialDashboardScreen(
         }
         MainNav("social", onTab)
     }
-    if (showAccountDialog) SocialAccountDialog(onDismiss = { showAccountDialog = false },
-        onSave = { account ->
-            val state = data ?: return@SocialAccountDialog
-            persist(state.copy(accounts = state.accounts + account))
-            if (failure.isBlank()) showAccountDialog = false
-        })
+    if (showAddDialog) SocialAddDestinationDialog(
+        metaAvailable = SocialMetaAuth.isConfigured,
+        onDismiss = { showAddDialog = false },
+        onYouTube = {
+            showAddDialog = false
+            youtubeBusy = true
+            authorizeYouTube(true) { token ->
+                scope.launch {
+                    runCatching { YouTubeSocialApi.channel(token) }
+                        .onSuccess { newChannelToAdd = it; failure = "" }
+                        .onFailure { failure = it.message ?: "Não foi possível consultar o canal YouTube." }
+                    youtubeBusy = false
+                }
+            }
+        },
+        onFacebook = {
+            showAddDialog = false
+            if (SocialMetaAuth.currentUserToken() != null) consultMetaPages()
+            else connectMeta(false)
+        },
+        onManual = { manualDestination = it; showAddDialog = false }
+    )
+    manualDestination?.let { choice ->
+        SocialAccountDialog(initialDestination = choice, onDismiss = { manualDestination = null },
+            onSave = { account ->
+                val state = data ?: return@SocialAccountDialog
+                persist(state.copy(accounts = state.accounts + account))
+                if (failure.isBlank()) manualDestination = null
+            })
+    }
+    newChannelToAdd?.let { channel ->
+        AlertDialog(onDismissRequest = { newChannelToAdd = null },
+            title = { Text("Adicionar canal YouTube?") },
+            text = { Text("${channel.title}\nID: ${channel.id}\n\n" +
+                "O canal será identificado automaticamente. O token Google não será salvo. " +
+                "Você poderá autorizar outros canais depois.") },
+            confirmButton = { TextButton(onClick = {
+                data?.let { current ->
+                    runCatching { SocialPublicationPolicy.upsertYouTube(current, channel.id, channel.title) }
+                        .onSuccess { next ->
+                            persist(next)
+                            if (failure.isBlank()) verifiedYouTubeIds = verifiedYouTubeIds + channel.id
+                        }.onFailure { failure = it.message ?: "Não foi possível adicionar o canal." }
+                }
+                newChannelToAdd = null
+            }) { Text("Adicionar") } },
+            dismissButton = { TextButton(onClick = { newChannelToAdd = null }) { Text("Cancelar") } })
+    }
+    if (showMetaPagePicker) AlertDialog(onDismissRequest = { showMetaPagePicker = false },
+        title = { Text("Escolher Página Facebook") },
+        text = { Column(Modifier.heightIn(max = 350.dp).verticalScroll(rememberScrollState())) {
+            metaPages.forEach { page ->
+                TextButton(onClick = { newPageToAdd = page; showMetaPagePicker = false },
+                    modifier = Modifier.fillMaxWidth()) { Text(page.name) }
+            }
+        } },
+        confirmButton = { TextButton(onClick = { showMetaPagePicker = false }) { Text("Cancelar") } })
+    newPageToAdd?.let { page ->
+        AlertDialog(onDismissRequest = { newPageToAdd = null },
+            title = { Text("Adicionar Página Facebook?") },
+            text = { Text("${page.name}\nID: ${page.id}\n\n" +
+                "O app salvará apenas o identificador público da Página, não o token Meta.") },
+            confirmButton = { TextButton(onClick = {
+                data?.let { current ->
+                    runCatching { SocialPublicationPolicy.upsertFacebookPage(current, page.id, page.name) }
+                        .onSuccess { persist(it) }
+                        .onFailure { failure = it.message ?: "Não foi possível adicionar a Página." }
+                }
+                newPageToAdd = null
+            }) { Text("Adicionar") } },
+            dismissButton = { TextButton(onClick = { newPageToAdd = null }) { Text("Cancelar") } })
+    }
     deletingAccount?.let { target ->
         AlertDialog(onDismissRequest = { deletingAccount = null },
             title = { Text("Remover destino?") },
@@ -407,9 +504,12 @@ internal fun SocialDashboardScreen(
                         it.id != account.id && it.remoteChannelId == channel.id
                     }
                     if (conflict) failure = "Este canal já está vinculado a outra conta."
-                    else persist(state.copy(accounts = state.accounts.map {
-                        if (it.id == account.id) SocialPublicationPolicy.bindChannel(it, channel.id) else it
-                    }))
+                    else {
+                        persist(state.copy(accounts = state.accounts.map {
+                            if (it.id == account.id) SocialPublicationPolicy.bindChannel(it, channel.id) else it
+                        }))
+                        if (failure.isBlank()) verifiedYouTubeIds = verifiedYouTubeIds + channel.id
+                    }
                 }
                 channelToBind = null
             }) { Text("Vincular") } },
@@ -467,9 +567,46 @@ internal fun SocialDashboardScreen(
 }
 
 @Composable
-private fun SocialAccountDialog(onDismiss: () -> Unit, onSave: (SocialAccount) -> Unit) {
-    var selected by remember { mutableStateOf(SocialDestination.FACEBOOK_PAGE) }
-    var expanded by remember { mutableStateOf(false) }
+private fun SocialAddDestinationDialog(metaAvailable: Boolean, onDismiss: () -> Unit,
+                                       onYouTube: () -> Unit, onFacebook: () -> Unit,
+                                       onManual: (SocialDestination) -> Unit) {
+    AlertDialog(onDismissRequest = onDismiss,
+        title = { Text("Adicionar conta ou destino") },
+        text = { Column(Modifier.heightIn(max = 450.dp).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("CONTAS COM CONEXÃO", style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedButton(onClick = onYouTube, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.SmartDisplay, null); Spacer(Modifier.width(8.dp))
+                Text("Conectar canal YouTube")
+            }
+            OutlinedButton(onClick = onFacebook, modifier = Modifier.fillMaxWidth(),
+                enabled = metaAvailable) {
+                Icon(Icons.Default.Pages, null); Spacer(Modifier.width(8.dp))
+                Text("Conectar Página Facebook")
+            }
+            if (!metaAvailable) Text("Facebook Página: configure Meta no build para conectar automaticamente.",
+                style = MaterialTheme.typography.bodySmall)
+            HorizontalDivider()
+            Text("COMPARTILHAMENTO MANUAL", style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            listOf(SocialDestination.FACEBOOK_PROFILE, SocialDestination.TIKTOK,
+                SocialDestination.KWAI).forEach { dest ->
+                TextButton(onClick = { onManual(dest) }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Adicionar ${dest.label}")
+                }
+            }
+            TextButton(onClick = { onManual(SocialDestination.FACEBOOK_PAGE) }) {
+                Text("Cadastrar Página manualmente (avançado)")
+            }
+        } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Fechar") } })
+}
+
+@Composable
+private fun SocialAccountDialog(initialDestination: SocialDestination,
+                                onDismiss: () -> Unit, onSave: (SocialAccount) -> Unit) {
+    val selected = initialDestination
     var label by remember { mutableStateOf("") }
     var url by remember { mutableStateOf("") }
     val valid = label.trim().length in 1..70 && SocialPublicationPolicy.isSafeHttps(url)
@@ -477,20 +614,8 @@ private fun SocialAccountDialog(onDismiss: () -> Unit, onSave: (SocialAccount) -
         title = { Text("Adicionar destino") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Primeiro cadastre; depois vincule a conta, se disponível.",
+                Text("Cadastro manual: ${selected.label}. Para YouTube, use Conectar canal.",
                     style = MaterialTheme.typography.bodySmall)
-                Box {
-                    OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text(selected.label, modifier = Modifier.weight(1f)); Icon(Icons.Default.ArrowDropDown, null)
-                    }
-                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                        SocialDestination.entries.forEach { dest ->
-                            DropdownMenuItem(text = { Text(dest.label) }, onClick = {
-                                selected = dest; expanded = false
-                            })
-                        }
-                    }
-                }
                 OutlinedTextField(value = label, onValueChange = { label = it.take(70) },
                     modifier = Modifier.fillMaxWidth(), label = { Text("Nome da conta ou Página") },
                     singleLine = true)
@@ -799,7 +924,7 @@ internal fun SocialPublishScreen(initialUri: Uri?, initialName: String,
                     youtubeBusy = true
                     youtubeProgress = "Autorizando canal..."
                     val chosenPrivacy = uploadPrivacy
-                    authorizeYouTube { token ->
+                    authorizeYouTube(true) { token ->
                         scope.launch {
                             runCatching {
                                 val channel = YouTubeSocialApi.channel(token)

@@ -22,7 +22,7 @@ for uri in ('https://console.cloud.google.com/apis/credentials',
     assert uri in center
 assert 'SocialDestination.KWAI' in center and 'SocialDestination.FACEBOOK_PROFILE' in center
 assert 'Autorização ao utilizar' in center and 'Somente compartilhamento manual' in center
-assert 'Autorizar Google e testar' in center and 'YouTubeSocialApi.channel(token)' in center
+assert 'Conectar canal YouTube' in center and 'YouTubeSocialApi.channel(token)' in center
 assert 'SocialMetaAuth.start(activity, forPublishing)' in center
 assert 'SocialExternalApis.facebookPages(userToken)' in center
 assert 'SocialMetaAuth.putPageTokens(pages)' in center
