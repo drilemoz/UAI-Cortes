@@ -1,3 +1,11 @@
+# v0.1.226 — Histórico social e processamento remoto sob demanda
+
+- Continuar a evolução do fluxo exportar → publicar da 0.1.225 sem mexer em autenticação, schema de projetos 4 ou assinatura Android.
+- Histórico de publicações usa filtros e estados reais, sem confundir compartilhamento aberto, upload incerto e vídeo recebido; oferecer Studio e métricas apenas para vídeos confirmados. Corrigir o botão Compartilhar em envios confirmados.
+- Consultar status YouTube apenas por ação explícita, conferindo canal OAuth atual contra o destino e vídeo ID exato. `videos.list(part=status,processingDetails)` armazena somente último estado e timestamp, nunca tokens. Resultados de processamento e privacidade não garantem disponibilidade global ou monetização.
+- Catálogo social schema 1 preservado, campos opcionais no JSON para status do YouTube e fallback de versões anteriores. Sem retry automático nem transferência de tokens.
+- Versão 0.1.226/versionCode 227; sincronizar metadados, CI, novidades e testes; Gradle real e teste em Android obrigatórios antes de afirmar APK validado.
+
 # v0.1.225 — Primeira etapa da sequência exportar → publicar
 - Simplificar a saída após exportação: ação principal Publicar vídeo e ações opcionais recolhidas. Preservar descrição/IA, cópia e compartilhamento Android.
 - Formulário de publicação: título do YouTube independente do nome MP4; descrição, hashtags, canal e privacidade antes de preparar. Com um único canal, confirmar e autorizar diretamente, sem segundo botão de envio. Para múltiplos destinos, manter operações individuais.

@@ -1,3 +1,13 @@
+# Uai Cortes · v0.1.226 — Histórico de publicação e status do YouTube
+
+## Novidades v0.1.226
+
+- Histórico em Redes com quatro filtros compactos: Todas, Pendentes, Recebidas e Revisar.
+- Card do vídeo usa título editado, não nome do arquivo; envios já confirmados não oferecem compartilhar como se fosse obrigatório.
+- Consulta voluntária de status oficial YouTube `videos.list(part=status,processingDetails)` após selecionar o canal correto no OAuth. Exibe privacidade e andamento da última consulta, sem declarar vídeo público apenas porque foi recebido.
+- Cache local de status público sem tokens, campos opcionais compatíveis com `social_v1` e `schemaVersion=4`; nenhuma chamada automática nem reenvio após upload incerto.
+- Build Android, API real, processamento remoto e visual no aparelho ainda pendentes de validação.
+
 # Uai Cortes · v0.1.225 — Publicação após exportação mais direta
 
 - Ao salvar um vídeo, **Publicar vídeo** é a ação principal. Descrição, Gemini e compartilhamento manual continuam disponíveis em opções secundárias.

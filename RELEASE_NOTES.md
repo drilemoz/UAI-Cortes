@@ -1,3 +1,7 @@
+# Uai Cortes · versão 0.1.226 — Histórico e status real do YouTube (versionCode 227)
+
+O histórico da aba Redes agora separa **Pendentes**, **Recebidas** e **Revisar**. Os vídeos aparecem pelo título escolhido e a opção de compartilhar não se repete em envios já confirmados. Para vídeos enviados pelo YouTube, há uma consulta explícita ao status de processamento e privacidade da plataforma, com hora da última verificação. Essa consulta exige nova autorização quando solicitada e confere o canal vinculado. Não comprova que o vídeo está público só por ter sido recebido e não reenvia um upload incerto. Dados existentes e token não persistido são preservados. Build e testes físicos pendentes.
+
 # Uai Cortes · versão 0.1.225 — Publicar vídeo com menos etapas (versionCode 226)
 - Depois da exportação, Publicar vídeo destaca a próxima ação. Texto/IA e compartilhamento ficam em Mais opções.
 - Canal, título editável e privacidade ficam juntos. Um canal YouTube abre a confirmação diretamente, sem a etapa extra Preparar e novo botão Enviar.

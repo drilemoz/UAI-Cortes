@@ -313,90 +313,76 @@ internal fun SocialDashboardScreen(
                         }
                     }
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Publicações (${state.publications.size})", modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.titleMedium)
-                    TextButton(onClick = { refresh() }) {
-                        Icon(Icons.Default.Refresh, null); Text("Atualizar")
-                    }
-                }
-                if (state.publications.isEmpty()) Text("Ainda não há publicações preparadas.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                state.publications.sortedByDescending { it.updatedAt }.take(80).forEach { publication ->
-                    val account = state.accounts.firstOrNull { it.id == publication.accountId }
-                    OutlinedCard {
-                        Column(Modifier.fillMaxWidth().padding(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                            Text(publication.videoName, fontWeight = FontWeight.Medium,
-                                maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            Text("${account?.label ?: "Conta indisponível"} · ${publication.status.label}",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodySmall)
-                            if (publication.metrics.hasData) {
-                                Text("${publication.metrics.views ?: "—"} visualizações · " +
-                                    if (publication.metrics.source == "youtube_api") "YouTube API" else "Dados manuais",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                SocialPublicationHistoryUi(
+                    data = state,
+                    busy = youtubeBusy,
+                    onRefresh = { refresh() },
+                    onDetails = { selectedPost = it },
+                    onTikTokStatus = { tikTokStatusPost = it },
+                    onShare = { publication ->
+                        if (tryShareVideo(context, publication)) {
+                            // O compartilhamento Android não prova publicação na rede.
+                            val current = data ?: state
+                            persist(current.copy(publications = current.publications.map {
+                                if (it.id == publication.id && it.status in setOf(
+                                        SocialPublicationStatus.PREPARED,
+                                        SocialPublicationStatus.SHARED_UNCONFIRMED))
+                                    it.copy(status = SocialPublicationStatus.SHARED_UNCONFIRMED,
+                                        updatedAt = System.currentTimeMillis())
+                                else it
+                            }))
+                        } else failure = "Vídeo indisponível. Selecione-o novamente na galeria."
+                    },
+                    onYouTubeMetrics = { publication, account ->
+                        youtubeBusy = true
+                        authorizeYouTube(true) { token ->
+                            scope.launch {
+                                runCatching {
+                                    val channel = YouTubeSocialApi.channel(token)
+                                    require(channel.id == account.remoteChannelId) {
+                                        "A conta Google não corresponde ao canal vinculado." }
+                                    YouTubeSocialApi.metrics(token, publication.remoteVideoId)
+                                }.onSuccess { latest ->
+                                    runCatching {
+                                        val snapshot = store.load()
+                                        val next = snapshot.copy(publications = snapshot.publications.map {
+                                            if (it.id == publication.id &&
+                                                it.status == SocialPublicationStatus.CONFIRMED_BY_API)
+                                                it.copy(metrics = latest, updatedAt = System.currentTimeMillis())
+                                            else it
+                                        })
+                                        store.save(next); data = next; failure = ""
+                                    }.onFailure { failure = "Falha ao salvar métricas no aparelho." }
+                                }.onFailure { failure = it.message ?: "Métricas indisponíveis." }
+                                youtubeBusy = false
                             }
-                            if (account?.destination == SocialDestination.YOUTUBE &&
-                                publication.status == SocialPublicationStatus.CONFIRMED_BY_API &&
-                                publication.remoteVideoId.isNotBlank()) {
-                                TextButton(onClick = {
-                                    youtubeBusy = true
-                                    authorizeYouTube(true) { token ->
-                                        scope.launch {
-                                            runCatching {
-                                                val channel = YouTubeSocialApi.channel(token)
-                                                require(channel.id == account.remoteChannelId) {
-                                                    "A conta Google não corresponde ao canal vinculado." }
-                                                YouTubeSocialApi.metrics(token, publication.remoteVideoId)
-                                            }.onSuccess { latest ->
-                                                runCatching {
-                                                    val state = store.load()
-                                                    val next = state.copy(publications = state.publications.map {
-                                                        if (it.id == publication.id &&
-                                                            it.status == SocialPublicationStatus.CONFIRMED_BY_API)
-                                                            it.copy(metrics = latest, updatedAt = System.currentTimeMillis())
-                                                        else it
-                                                    })
-                                                    store.save(next); data = next; failure = ""
-                                                }.onFailure { failure = "Falha ao salvar métricas no aparelho." }
-                                            }.onFailure { failure = it.message ?: "Métricas indisponíveis." }
-                                            youtubeBusy = false
-                                        }
-                                    }
-                                }, enabled = !youtubeBusy) { Text("Atualizar métricas YouTube") }
-                            }
-                            if (account?.destination == SocialDestination.TIKTOK &&
-                                publication.status == SocialPublicationStatus.REMOTE_SUBMITTED &&
-                                publication.remoteVideoId.isNotBlank()) {
-                                TextButton(onClick = { tikTokStatusPost = publication }) {
-                                    Text("Consultar status TikTok")
-                                }
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                OutlinedButton(onClick = {
-                                    val sent = tryShareVideo(context, publication)
-                                    if (sent) persist(state.copy(publications = state.publications.map {
-                                        if (it.id == publication.id &&
-                                            it.status in setOf(SocialPublicationStatus.PREPARED,
-                                                SocialPublicationStatus.SHARED_UNCONFIRMED))
-                                            it.copy(status = SocialPublicationStatus.SHARED_UNCONFIRMED,
-                                                updatedAt = System.currentTimeMillis()) else it
-                                    })) else failure = "Vídeo indisponível. Selecione-o novamente na galeria."
-                                }, modifier = Modifier.weight(1f)) {
-                                    Icon(Icons.Default.Share, null, Modifier.size(17.dp))
-                                    Spacer(Modifier.width(4.dp)); Text("Compartilhar", fontSize = 12.sp)
-                                }
-                                OutlinedButton(onClick = { selectedPost = publication },
-                                    modifier = Modifier.weight(1f)) {
-                                    Icon(Icons.Default.Edit, null, Modifier.size(17.dp))
-                                    Spacer(Modifier.width(4.dp)); Text("Detalhes", fontSize = 12.sp)
-                                }
+                        }
+                    },
+                    onYouTubeStatus = { publication, account ->
+                        youtubeBusy = true
+                        authorizeYouTube(true) { token ->
+                            scope.launch {
+                                runCatching {
+                                    val channel = YouTubeSocialApi.channel(token)
+                                    require(channel.id == account.remoteChannelId) {
+                                        "A conta Google não corresponde ao canal vinculado." }
+                                    YouTubeSocialApi.videoState(token, publication.remoteVideoId)
+                                }.onSuccess { remote ->
+                                    runCatching {
+                                        val snapshot = store.load()
+                                        val next = snapshot.copy(publications = snapshot.publications.map {
+                                            if (it.id == publication.id)
+                                                SocialPublicationPolicy.applyYouTubeState(it, remote)
+                                            else it
+                                        })
+                                        store.save(next); data = next; failure = ""
+                                    }.onFailure { failure = "Falha ao salvar o status no aparelho." }
+                                }.onFailure { failure = it.message ?: "Status do vídeo indisponível." }
+                                youtubeBusy = false
                             }
                         }
                     }
-                }
+                )
                 Spacer(Modifier.height(14.dp))
             }
         }

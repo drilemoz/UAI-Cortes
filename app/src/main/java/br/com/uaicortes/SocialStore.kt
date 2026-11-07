@@ -86,6 +86,52 @@ internal data class SocialMetrics(
     }
 }
 
+/** Estado remoto consultado SOMENTE sob ação do usuário; não implica publicação pública. */
+internal data class SocialYouTubeState(
+    val privacy: String = "",
+    val processing: String = "",
+    val upload: String = "",
+    val checkedAt: Long = 0L
+) {
+    fun toJson(): JSONObject = JSONObject().put("privacy", privacy)
+        .put("processing", processing).put("upload", upload).put("checkedAt", checkedAt)
+
+    fun summary(): String = when {
+        checkedAt <= 0L -> "Processamento ainda não consultado"
+        upload == "failed" || upload == "rejected" -> "YouTube informou falha ou rejeição do envio"
+        upload == "deleted" -> "Vídeo removido ou indisponível no YouTube"
+        processing == "failed" -> "Falha no processamento do vídeo"
+        processing == "processing" -> "Vídeo em processamento no YouTube"
+        processing == "succeeded" -> "Processamento concluído no YouTube"
+        processing == "terminated" -> "Processamento não disponível para consulta"
+        else -> "Recebido pelo YouTube; processamento não informado"
+    }
+
+    fun privacyLabel(): String = when (privacy) {
+        "public" -> "Público"
+        "unlisted" -> "Não listado"
+        "private" -> "Privado"
+        else -> "Não informado"
+    }
+
+    companion object {
+        private val PRIVACY = setOf("", "private", "public", "unlisted")
+        private val PROCESSING = setOf("", "processing", "succeeded", "failed", "terminated")
+        private val UPLOAD = setOf("", "deleted", "failed", "processed", "rejected", "uploaded")
+        fun fromJson(json: JSONObject?): SocialYouTubeState {
+            if (json == null) return SocialYouTubeState()
+            return SocialYouTubeState(
+                privacy = json.optString("privacy").takeIf { it in PRIVACY }.orEmpty(),
+                processing = json.optString("processing").takeIf { it in PROCESSING }.orEmpty(),
+                upload = json.optString("upload").takeIf { it in UPLOAD }.orEmpty(),
+                checkedAt = json.optLong("checkedAt", 0L).coerceAtLeast(0L)
+            )
+        }
+        fun valid(state: SocialYouTubeState): Boolean = state.privacy in PRIVACY &&
+            state.processing in PROCESSING && state.upload in UPLOAD && state.checkedAt >= 0L
+    }
+}
+
 /** Título inicial editável; não confundir o nome técnico do MP4 com o título publicado. */
 internal fun suggestedVideoTitle(fileName: String): String =
     fileName.substringBeforeLast('.').trim().take(100).ifBlank { "Vídeo" }
@@ -105,6 +151,7 @@ internal data class SocialPublication(
     val postUrl: String = "",
     val remoteVideoId: String = "",
     val metrics: SocialMetrics = SocialMetrics(),
+    val youtubeState: SocialYouTubeState = SocialYouTubeState(),
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = createdAt
 ) {
@@ -113,7 +160,8 @@ internal data class SocialPublication(
         .put("description", description).put("hashtags", hashtags)
         .put("status", status.name).put("postUrl", postUrl)
         .put("remoteVideoId", remoteVideoId)
-        .put("metrics", metrics.toJson()).put("createdAt", createdAt).put("updatedAt", updatedAt)
+        .put("metrics", metrics.toJson()).put("youtubeState", youtubeState.toJson())
+        .put("createdAt", createdAt).put("updatedAt", updatedAt)
     companion object {
         fun fromJson(json: JSONObject): SocialPublication = SocialPublication(
             id = json.getString("id"), accountId = json.getString("accountId"),
@@ -124,6 +172,7 @@ internal data class SocialPublication(
             status = SocialPublicationStatus.parse(json.optString("status")),
             postUrl = json.optString("postUrl"), remoteVideoId = json.optString("remoteVideoId"),
             metrics = SocialMetrics.fromJson(json.optJSONObject("metrics")),
+            youtubeState = SocialYouTubeState.fromJson(json.optJSONObject("youtubeState")),
             createdAt = json.optLong("createdAt", 0L), updatedAt = json.optLong("updatedAt", 0L)
         )
     }
@@ -181,6 +230,14 @@ internal object SocialPublicationPolicy {
         require(post.status == SocialPublicationStatus.UPLOAD_REVIEW && validRemoteReference(id))
         return post.copy(status = SocialPublicationStatus.REMOTE_SUBMITTED, remoteVideoId = id,
             updatedAt = System.currentTimeMillis())
+    }
+
+    /** Atualiza apenas dados confirmados pela API, sem mudar o estado seguro do upload. */
+    fun applyYouTubeState(post: SocialPublication, remote: SocialYouTubeState): SocialPublication {
+        require(post.status == SocialPublicationStatus.CONFIRMED_BY_API &&
+            validVideoId(post.remoteVideoId) && post.remoteVideoId.isNotBlank())
+        require(SocialYouTubeState.valid(remote) && remote.checkedAt > 0L)
+        return post.copy(youtubeState = remote, updatedAt = System.currentTimeMillis())
     }
 
     fun validVideoId(id: String): Boolean =
@@ -288,6 +345,8 @@ internal class SocialStore(context: Context) {
                     SocialPublicationPolicy.validRemoteReference(it.remoteVideoId)
                 else -> false
             }) &&
+            SocialYouTubeState.valid(it.youtubeState) &&
+            (it.youtubeState.checkedAt == 0L || it.status == SocialPublicationStatus.CONFIRMED_BY_API) &&
             it.metrics.source in setOf("manual", "youtube_api") &&
             listOf(it.metrics.views,it.metrics.likes,it.metrics.comments,it.metrics.shares)
                 .all { value -> value == null || value >= 0 } })

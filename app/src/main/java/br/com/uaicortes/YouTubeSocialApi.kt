@@ -117,6 +117,25 @@ internal object YouTubeSocialApi {
         } finally { conn.disconnect() }
     }
 
+    /** Consulta explícita ao vídeo do próprio canal; exige OAuth e não publica nem reenvia. */
+    suspend fun videoState(token: String, videoId: String): SocialYouTubeState = withContext(Dispatchers.IO) {
+        require(videoId.isNotBlank() && SocialPublicationPolicy.validVideoId(videoId))
+        val conn = connect("$API/videos?part=status%2CprocessingDetails&id=$videoId", token, "GET")
+        try {
+            ensureOk(conn, "Status do vídeo YouTube")
+            val video = JSONObject(readLimited(conn)).optJSONArray("items")?.optJSONObject(0)
+                ?: throw IOException("Vídeo indisponível na conta Google autorizada. Confira no YouTube Studio.")
+            require(video.optString("id") == videoId) { "Vídeo retornado não corresponde ao solicitado." }
+            val status = video.optJSONObject("status")
+            val processing = video.optJSONObject("processingDetails")
+            SocialYouTubeState.fromJson(JSONObject()
+                .put("privacy", status?.optString("privacyStatus").orEmpty())
+                .put("upload", status?.optString("uploadStatus").orEmpty())
+                .put("processing", processing?.optString("processingStatus").orEmpty())
+                .put("checkedAt", System.currentTimeMillis()))
+        } finally { conn.disconnect() }
+    }
+
     private fun sizeOf(context: Context, uri: Uri): Long {
         val fromColumn = context.contentResolver.query(uri, arrayOf(OpenableColumns.SIZE),
             null, null, null)?.use { c ->

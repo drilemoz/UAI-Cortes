@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.226 (2026-11-07)
+
+- Histórico de publicações modularizado em `SocialPublicationHistoryUi.kt`, com filtros, título real e ações condicionais ao estado.
+- Consulta explícita de `videos.list` para processamento e privacidade do YouTube, após conferir o canal OAuth. Persistência opcional no catálogo social 1, sem tokens nem migrações.
+- Upload recebido, público/privado e envio sem confirmação permanecem estados diferentes; não há retry automático.
+- Regressões adicionadas para filtros, serialização de estado e isolamento da consulta; compilação Android e teste real permanecem pendentes.
+
 # Uai Cortes 0.1.225 (2026-11-07)
 - Saída da exportação com botão principal **Publicar vídeo** e opções de descrição/IA e compartilhamento manual sem excesso de cartões.
 - Publicar vídeo: título editável separado do nome do MP4, privacidade visível no formulário e etapa Preparar eliminada para um único canal YouTube. Operações para várias redes seguem separadas.
