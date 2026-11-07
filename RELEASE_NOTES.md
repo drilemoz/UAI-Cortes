@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.221 — Ajustes de voz mais organizados (versionCode 222)
+## v0.1.221
+- Em Áudio > Melhorar voz, atalhos claros abrem painéis separados de Estilo, Ajustes, Equalizador, Limpeza e Meus ajustes, mantendo a comparação Original/Tratada no cartão principal.
+- Seleção sem corte dos presets, rolagem vertical nos pop-ups e mesmos componentes Material 3 e temas do editor.
+- Nenhum filtro ou projeto foi alterado: DSP, arquivos, favoritos, exportação, assinatura e schemaVersion 4 preservados. Confirmar layout e compilação no Android.
+
 # Uai Cortes · versão 0.1.220 — Tratamento de voz mais perceptível (versionCode 221)
 ## v0.1.220
 - Voz Encorpada reforçada, novo preset Estúdio, controles independentes de compressão e compensação automática de ganho, EQ em quatro bandas, de-esser e redução de ruído leve opcional (expander, não IA).

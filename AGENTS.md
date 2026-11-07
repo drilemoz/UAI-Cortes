@@ -1,3 +1,8 @@
+# v0.1.221 — Organizar o tratamento de voz em painéis compactos
+- Em Áudio > Melhorar voz, manter a seleção de faixa, o estilo ativo e A/B visíveis, com atalhos Estilo, Ajustes, Equalizador, Limpeza e Meus ajustes. Cada grupo abre ModalBottomSheet com UaiShapes.sheet, sem rolagem horizontal de presets.
+- Preservar campos, alcance e valores de VoiceTone, favoritos, cópia confirmada, salvamento do projeto, exportação Media3, schemaVersion 4 e cinco APKs. Esta é uma mudança de UI, não de DSP, RNNoise ou mixagem.
+- v0.1.221/versionCode 222; atualizar CI, sobre/novidades, documentação e contratos, testar tela estreita/fonte ampliada/temas e compilar Gradle quando possível.
+
 # v0.1.220 — Voz mais encorpada sem quebrar o editor
 - Ajustar VoiceTone DSP para melhorar volume percebido sem hard clipping, com compressor/auto makeup, EQ de quatro bandas, de-esser e expander leve opcional; não chamar expander de RNNoise nem de separador de voz e música. Pico é por amostra, não true peak.
 - Preservar modo desligado e fluxo GainProcessor; prévia A/B deve retomar o mesmo ponto em vez de reiniciar. Não alterar music automaticamente. Perfis locais de ajuste são opcionais e não armazenam tokens nem arquivos; copiar para outros clipes exige confirmação.

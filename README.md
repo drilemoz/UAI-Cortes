@@ -1,3 +1,6 @@
+# Uai Cortes · v0.1.221 — Ajustes de voz em pop-ups
+Em **Editor > Áudio > Melhorar voz**, o painel mostra só a faixa, o estilo atual, quatro atalhos (Estilo, Ajustes, Equalizador, Limpeza), perfis e comparação Original/Tratada. Os detalhes são editados em painéis inferiores Material 3 com o mesmo tema e formas do Uai Cortes, sem opções cortadas por rolagem horizontal. O processamento PCM, presets, perfis e exportação permanecem inalterados.
+
 # Uai Cortes · v0.1.220 — Tratamento de voz aperfeiçoado
 
 Em **Editor > Áudio > Melhorar voz**, o painel oferece Natural/Encorpada/Clara/Estúdio, intensidade, compressão, compensação de volume, EQ de quatro bandas (±6 dB), de-esser e redução de ruído leve por expander. A/B retoma o mesmo ponto da faixa ao alternar. Três perfis de ajuste podem ser salvos localmente; é possível copiar o ajuste para outros vídeos mediante confirmação. Os efeitos offline são aplicados na exportação Media3 à fonte escolhida, sem alterar os arquivos originais nem automaticamente a música de fundo. Não há RNNoise, separação de fontes, cálculo LUFS ou limitador true peak nesta versão. A qualidade auditiva, a compilação Android e o uso de memória devem ser verificados no aparelho.

@@ -15,7 +15,7 @@ for label in ('Compensar volume', 'Compressão', 'Redução de ruído leve', 'Su
               'Usar ajuste', 'Copiar ajuste para outros vídeos'):
     assert label in panel,label
 assert 'showCopyDialog' in panel and 'AlertDialog(' in panel
-assert 'project.clips.map' in panel and 'if (it.isImage) it else it.copy(voiceTone=tone)' in panel
+assert 'project.clips.map' in panel and 'if (it.isImage) it else it.copy(voiceTone = tone)' in panel
 assert 'project.music' not in panel
 assert 'voicePreviewKey.substringBeforeLast' in play and 'player.seekTo(resumeAt' in play
 assert 'setAudioProcessors(arrayOf<AudioProcessor>(VoiceToneProcessor(tone)))' in (s/'VoiceToneProcessor.kt').read_text()

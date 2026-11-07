@@ -1,3 +1,8 @@
+# Uai Cortes · v0.1.221 — Painel de voz simplificado
+- Reorganizado Melhorar voz para mostrar informações essenciais e botões com pop-ups próprios: Estilo, Ajustes de intensidade/compressão/ganho, Equalizador de 4 bandas, Limpeza e Meus ajustes.
+- Corrigido corte do preset Desligado na rolagem horizontal; textos longos de mídia truncados corretamente, painéis com rolagem vertical limitada e layout responsivo em duas ações por linha.
+- Preview A/B, armazenamento de perfis, cópia para vídeos com confirmação, processamento offline, schemaVersion 4 e originais preservados. Nenhuma mudança em parâmetros DSP. versionName 0.1.221/versionCode 222; compilação Android e teste no aparelho pendentes.
+
 # Uai Cortes · v0.1.220 — Aperfeiçoamento do tratamento de voz
 - Áudio > Melhorar voz: presets mais perceptíveis e Estúdio; EQ com graves/corpo/clareza/brilho (±6 dB), compressão e compensação de ganho, expander opcional e suavização de sibilância.
 - Alternância A/B preserva o ponto da faixa. Três perfis locais persistidos por SharedPreferences e ação de copiar somente para clipes de vídeo mediante confirmação.
