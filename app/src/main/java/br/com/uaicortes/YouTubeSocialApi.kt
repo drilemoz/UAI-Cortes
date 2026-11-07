@@ -150,7 +150,7 @@ internal object YouTubeSocialApi {
         require(size in 1L..2_147_483_647L) {
             "O vídeo precisa ter tamanho conhecido entre 1 byte e 2 GiB para este envio."
         }
-        val name = publication.videoName.substringBeforeLast('.').trim().take(100).ifBlank { "Vídeo" }
+        val name = publication.title.trim().take(100).ifBlank { suggestedVideoTitle(publication.videoName) }
         val description = listOf(publication.description.trim(), publication.hashtags.trim())
             .filter { it.isNotEmpty() }.joinToString("\n\n").take(4800)
         val body = JSONObject().put("snippet", JSONObject().put("title", name)

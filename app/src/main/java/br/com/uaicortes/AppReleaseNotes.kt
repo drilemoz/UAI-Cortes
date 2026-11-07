@@ -16,12 +16,20 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.223"
-    const val VERSION_CODE = 224
+    const val VERSION_NAME = "0.1.225"
+    const val VERSION_CODE = 226
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
-        ReleaseSummary("0.1.223", listOf(
+        ReleaseSummary("0.1.225", listOf(
+            ReleaseFeature("publish-flow-225", "Publicar vídeo com menos etapas",
+                "Após salvar, Publicar vídeo abre o formulário com canal, título, descrição e privacidade. Um único canal abre diretamente a confirmação; o envio continua dependendo de autorização e ação explícita.", "film"),
+            ReleaseFeature("youtube-status-225", "Resultado do YouTube mais claro",
+                "Progresso ativo separado de resultado não confirmado, título independente do nome MP4 e confirmação de recebimento com acesso ao YouTube Studio. A proteção contra reenvios automáticos foi preservada.", "check"),
+            ReleaseFeature("mp4-orientation-225", "Conferência da orientação do MP4",
+                "A tela de exportação lê as dimensões e a rotação do MP4 salvo, quando disponíveis, distinguindo a resolução de exibição daquela informada pelo codificador.", "film")
+        )),
+        ReleaseSummary("0.1.224", listOf(
             ReleaseFeature("social-multichannel-223", "Contas YouTube e Facebook mais simples",
                 "Em Redes, Conectar identifica canal ou Página automaticamente, sem cadastrar nomes antes. É possível adicionar mais contas selecionando outra conta Google; o canal é verificado antes da publicação.", "check"),
             ReleaseFeature("youtube-diagnostics-223", "Diagnóstico YouTube mais claro",

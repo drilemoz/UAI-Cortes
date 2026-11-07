@@ -20,9 +20,22 @@ internal data class ExportQualityReport(
     val galleryCopyElapsedMs: Long = -1L,
     val requestedFrameWidth: Int = 0,
     val requestedFrameHeight: Int = 0,
-    val destinationLabel: String? = null
+    val destinationLabel: String? = null,
+    val savedFileWidth: Int = 0,
+    val savedFileHeight: Int = 0,
+    val savedRotationDegrees: Int? = null
 ) {
-    val resolution: String get() = if (width > 0 && height > 0) "${width} × ${height}" else "Não informada"
+    /** Dimensões de exibição do MP4 salvo, considerando sua rotação; fallback no Media3. */
+    val displayDimensions: Pair<Int, Int>? get() {
+        if (savedFileWidth > 0 && savedFileHeight > 0) {
+            val rotated = savedRotationDegrees == 90 || savedRotationDegrees == 270
+            return if (rotated) savedFileHeight to savedFileWidth
+                else savedFileWidth to savedFileHeight
+        }
+        return if (width > 0 && height > 0) width to height else null
+    }
+    val resolution: String get() = displayDimensions?.let { "${it.first} × ${it.second}" }
+        ?: "Não informada"
     val effectiveBitrate: String get() = if (videoBitrateBps > 0)
         String.format(Locale.forLanguageTag("pt-BR"), "%.1f Mb/s", videoBitrateBps / 1_000_000.0)
         else "Não informado"
@@ -46,16 +59,21 @@ internal data class ExportQualityReport(
     private fun formatElapsed(elapsedMs: Long): String = String.format(
         Locale.forLanguageTag("pt-BR"), "%.1f s", elapsedMs / 1000.0
     )
-    val fellBackInResolution: Boolean get() = width > 0 && height > 0 && (
+    val fellBackInResolution: Boolean get() = displayDimensions?.let { (w, h) ->
         if (requestedFrameWidth > 0 && requestedFrameHeight > 0)
-            width != requestedFrameWidth || height != requestedFrameHeight
-        else minOf(width, height) != requestedShortSide
-    )
+            w != requestedFrameWidth || h != requestedFrameHeight
+        else minOf(w, h) != requestedShortSide
+    } ?: false
+
 
     fun lines(): List<String> = buildList {
         val requested = if (requestedFrameWidth > 0 && requestedFrameHeight > 0)
             "${requestedFrameWidth} × ${requestedFrameHeight}" else "lado menor ${requestedShortSide}px"
-        add("Resolução obtida: $resolution (solicitada: $requested)")
+        add("Resolução de exibição: $resolution (solicitada: $requested)")
+        if (savedFileWidth > 0 && savedFileHeight > 0) {
+            add("MP4 salvo: ${savedFileWidth} × ${savedFileHeight}" +
+                (savedRotationDegrees?.let { " · rotação $it°" } ?: ""))
+        } else add("Não foi possível conferir a rotação do MP4 salvo; valores do exportador.")
         destinationLabel?.takeIf { it.isNotBlank() }?.let { add("Destino de exportação: $it") }
         if (requestedVideoBitrateBps > 0) {
             add("Bitrate solicitado: $requestedBitrate" +

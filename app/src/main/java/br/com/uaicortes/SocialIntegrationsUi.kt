@@ -447,11 +447,12 @@ internal fun SocialApiCenterScreen(
         }
     }
     youtubeChannelToAdd?.let { channel ->
-        AlertDialog(onDismissRequest = { youtubeChannelToAdd = null },
-            title = { Text("Adicionar canal identificado?") },
-            text = { Text("${channel.title}\nID: ${channel.id}\n\n" +
-                "Somente o nome e o ID público serão salvos. Nenhum token Google será armazenado.") },
-            confirmButton = { TextButton(onClick = {
+        SocialIdentifiedAccountDialog(
+            destination = SocialDestination.YOUTUBE,
+            accountName = channel.title,
+            publicId = channel.id,
+            onDismiss = { youtubeChannelToAdd = null },
+            onConfirm = {
                 runCatching {
                     val next = SocialPublicationPolicy.upsertYouTube(store.load(), channel.id, channel.title)
                     store.save(next)
@@ -462,8 +463,7 @@ internal fun SocialApiCenterScreen(
                     feedback = "Canal ${channel.title} adicionado em Minhas contas."
                 }.onFailure { feedback = it.message ?: "Falha ao salvar canal no aparelho." }
                 youtubeChannelToAdd = null
-            }) { Text("Adicionar") } },
-            dismissButton = { TextButton(onClick = { youtubeChannelToAdd = null }) { Text("Cancelar") } })
+            })
     }
     externalTest?.let { test ->
         SocialExternalApiTestDialog(test, onDismiss = { externalTest = null })

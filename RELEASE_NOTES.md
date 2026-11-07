@@ -1,4 +1,15 @@
-# Uai Cortes · versão 0.1.223 — Redes sociais com contas identificadas (versionCode 224)
+# Uai Cortes · versão 0.1.225 — Publicar vídeo com menos etapas (versionCode 226)
+- Depois da exportação, Publicar vídeo destaca a próxima ação. Texto/IA e compartilhamento ficam em Mais opções.
+- Canal, título editável e privacidade ficam juntos. Um canal YouTube abre a confirmação diretamente, sem a etapa extra Preparar e novo botão Enviar.
+- Durante a transferência, o upload não é apresentado como incerto. Após resposta válida, o app exibe ID confirmado e atalho ao Studio; o processamento e a visibilidade pública ainda dependem do YouTube.
+- Nova leitura opcional da rotação do MP4 salvo para evitar falsa divergência de 9:16. Sem alteração da assinatura, OAuth ou comportamento de vários canais.
+- Build Android e testes reais no celular ainda necessários.
+
+# Uai Cortes · versão 0.1.224 — Confirmação de canais e Páginas (versionCode 225)
+- Pop-up de confirmação padronizado para contas YouTube e Páginas Meta, com canal identificado, ID público e ações Cancelar/Adicionar ou Vincular.
+- Mesmo componente nas telas Redes e Integrações. Sem mudança no OAuth, autorizações, gravação de dados, segurança do upload ou edição de vídeo.
+- Compilação Gradle, integração OAuth e teste visual no celular ainda pendentes.
+
 - Em Redes > Adicionar, conecte um canal YouTube ou uma Página Meta, identifique o nome e ID reais, confirme e salve sem criar cadastro previamente. Outros destinos permanecem manuais.
 - Adicione vários canais YouTube escolhendo explicitamente a conta; uploads continuam exigindo o canal correto. Páginas disponíveis via login Meta podem ser adicionadas uma a uma.
 - Erro YouTube 403 agora diferencia motivos conhecidos (API desativada, cota, autorização) quando presentes; motivo não especificado continua inconclusivo.

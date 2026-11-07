@@ -24,7 +24,10 @@ assert 'remoteChannelId' in d and 'source = "youtube_api"' in a
 assert 'fun validChannel' in d and 'fun validVideoId' in d
 assert 'YouTubeSocialApi.channel(token)' in p and 'YouTubeSocialApi.upload(context, token' in p
 assert 'YouTubeSocialApi.metrics(token, publication.remoteVideoId)' in p
-assert 'Autorizar e enviar' in p and 'Vincular canal YouTube?' in p
+assert 'Autorizar e enviar' in p
+# v224: confirmação/vínculo mudaram para um diálogo reutilizável.
+assert 'SocialIdentifiedAccountDialog(' in p and 'linkingExisting = true' in p
+assert 'SocialPublicationPolicy.bindChannel(it, channel.id)' in p
 assert 'Text("Enviar ao YouTube pela API")' in p and 'youtubeBusy' in p
 # O teste OAuth foi movido com a Central, sem alterar o upload na tela Redes.
 c = (s/'SocialIntegrationsUi.kt').read_text()

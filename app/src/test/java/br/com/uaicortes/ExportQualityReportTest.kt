@@ -62,6 +62,21 @@ class ExportQualityReportTest {
         assertFalse(portrait.fellBackInResolution)
         assertEquals("1080 × 1920",portrait.resolution)
     }
+    @Test fun savedMp4RotationIsUsedForDisplayWithoutInventingAnOrientation() {
+        val original = ExportQualityReport(720, 1280, 720, 9_000_000, 192_000,
+            10_000, 300, 12_000_000, "video/avc", null,
+            requestedFrameWidth = 720, requestedFrameHeight = 1280)
+        assertTrue(original.fellBackInResolution)
+        val rotated = original.copy(savedFileWidth=1280, savedFileHeight=720,
+            savedRotationDegrees=90)
+        assertEquals("720 × 1280", rotated.resolution)
+        assertFalse(rotated.fellBackInResolution)
+        assertTrue(rotated.lines().any { it.contains("rotação 90") })
+        val wrongOrientation = original.copy(savedFileWidth=1280, savedFileHeight=720,
+            savedRotationDegrees=0)
+        assertTrue(wrongOrientation.fellBackInResolution)
+    }
+
     @Test fun knownFullHdMetricsAreDisplayed() {
         val value = ExportQualityReport(1080,1920,1080,18_000_000,192_000,8000,240,
             18_000_000,"video/avc",null)

@@ -2,6 +2,7 @@ package br.com.uaicortes
 
 import android.content.ContentValues
 import android.content.Context
+import android.media.MediaMetadataRetriever
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
@@ -37,6 +38,24 @@ import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.roundToInt
+
+/** Metadados do arquivo de fato salvo, sem inferir orientação pela configuração solicitada. */
+private fun savedMp4Geometry(context: Context, uri: Uri): Triple<Int, Int, Int?>? {
+    val retriever = MediaMetadataRetriever()
+    return try {
+        retriever.setDataSource(context, uri)
+        val width = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
+            ?.toIntOrNull() ?: return null
+        val height = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
+            ?.toIntOrNull() ?: return null
+        if (width <= 0 || height <= 0) return null
+        val rotation = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_ROTATION)
+            ?.toIntOrNull()?.takeIf { it in listOf(0, 90, 180, 270) }
+        Triple(width, height, rotation)
+    } finally {
+        retriever.release()
+    }
+}
 
 @OptIn(UnstableApi::class)
 class GainProcessor(private val gain: Float) : BaseAudioProcessor() {
@@ -395,11 +414,16 @@ class ExportEngine(private val context: Context) {
                         var savedUri: Uri? = null
                         val copyStartedAtMs = SystemClock.elapsedRealtime()
                         var copyElapsedMs = -1L
+                        var galleryGeometry: Triple<Int, Int, Int?>? = null
                         var saveError: Exception? = null
                         try {
                             savedUri = saveToGallery(target, requestedName)
                             copyElapsedMs = (SystemClock.elapsedRealtime() - copyStartedAtMs)
                                 .coerceAtLeast(0L)
+                            // Verificar MP4 salvo em IO, sem bloquear a thread de interface.
+                            galleryGeometry = savedUri?.let { uri ->
+                                runCatching { savedMp4Geometry(context, uri) }.getOrNull()
+                            }
                         } catch (e: Exception) {
                             DiagnosticRecorder.exception("export_gallery", e)
                             saveError = e
@@ -410,9 +434,14 @@ class ExportEngine(private val context: Context) {
                                 transformer = null
                                 isSavingToGallery = false
                                 if (saveError != null) onError(saveError?.message ?: "Falha ao salvar vídeo")
-                                else savedUri?.let { onSuccess(it, report.copy(
-                                    galleryCopyElapsedMs = copyElapsedMs
-                                )) }
+                                else savedUri?.let { uri ->
+                                    onSuccess(uri, report.copy(
+                                        galleryCopyElapsedMs = copyElapsedMs,
+                                        savedFileWidth = galleryGeometry?.first ?: 0,
+                                        savedFileHeight = galleryGeometry?.second ?: 0,
+                                        savedRotationDegrees = galleryGeometry?.third
+                                    ))
+                                }
                                     ?: onError("Não foi possível confirmar o vídeo salvo.")
                             }
                         }

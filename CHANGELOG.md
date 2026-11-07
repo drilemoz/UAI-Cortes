@@ -1,3 +1,17 @@
+# Uai Cortes 0.1.225 (2026-11-07)
+- Saída da exportação com botão principal **Publicar vídeo** e opções de descrição/IA e compartilhamento manual sem excesso de cartões.
+- Publicar vídeo: título editável separado do nome do MP4, privacidade visível no formulário e etapa Preparar eliminada para um único canal YouTube. Operações para várias redes seguem separadas.
+- Progresso de upload ativo distinguido do estado persistido de resultado sem confirmação; conclusão de recebimento por ID da API em diálogo compacto com acesso ao Studio; sem reenvio automático.
+- Estado do canal salvo passa a informar que nova autorização poderá ser necessária para publicar; preservadas contas múltiplas e conferência do ID Google.
+- Exportação consulta metadados de rotação e dimensões do MP4 salvo fora da thread principal, quando disponíveis, para mostrar dimensões de exibição.
+- Catálogo social schema 1 mantém leitura dos registros antigos por campo `title` opcional, sem migrar projeto schema 4, tokens ou vídeos existentes.
+- Contratos/testes de regressão atualizados. Compilação Gradle e teste físico de upload/rotacão pendentes.
+
+# Uai Cortes 0.1.224 (2026-11-07)
+- Confirmação de canal YouTube e Página Facebook redesenhada com cartão compacto, identificação visual, nome e ID públicos, aviso resumido de privacidade e ações lado a lado.
+- Novo `SocialIdentifiedAccountDialog.kt` compartilhado entre Central de Integrações e Redes; também utilizado para vincular cadastros antigos, sem duplicar regras de salvamento.
+- Mantidos o OAuth, seleção de várias contas, prevenção de duplicatas, token fora do catálogo, schema de projeto 4, catálogo social 1 e APKs assinados. Teste de contrato v224; build Android e visual em dispositivo pendentes.
+
 # Uai Cortes 0.1.223 (2026-11-07)
 - Redes: adicionar canal YouTube ou Página Facebook pela API, sem cadastro de nome manual, com confirmação dos IDs e proteção contra duplicação; opção manual preservada para Kwai/TikTok/Facebook Perfil e Página avançada.
 - Autorização Google: seleção explícita da conta para adicionar outros canais e conferência do ID na publicação; nenhum token OAuth entra no catálogo local ou backup.

@@ -1,3 +1,16 @@
+# v0.1.225 — Primeira etapa da sequência exportar → publicar
+- Simplificar a saída após exportação: ação principal Publicar vídeo e ações opcionais recolhidas. Preservar descrição/IA, cópia e compartilhamento Android.
+- Formulário de publicação: título do YouTube independente do nome MP4; descrição, hashtags, canal e privacidade antes de preparar. Com um único canal, confirmar e autorizar diretamente, sem segundo botão de envio. Para múltiplos destinos, manter operações individuais.
+- Persistir título opcional no catálogo social schema 1 (compatível com registros anteriores, fallback no nome do arquivo); schemaVersion 4 e OAuth existentes intocados.
+- UPLOAD_REVIEW é marcação persistente de segurança antes do POST; durante transmissão exibir progresso real e não “Upload incerto”. Após interrupção, orientar conferência no Studio, sem retry automático. Confirmar recebimento somente com ID validado pela API, nunca assumir disponibilidade pública.
+- Diagnóstico de orientação: ler metadados do MP4 salvo em thread de fundo com MediaMetadataRetriever; fallback explícito quando indisponível. Testar rotação no aparelho.
+- 0.1.225/versionCode 226, sincronizar Gradle/CI/README/CHANGELOG/RELEASE e Novidades. Executar regressões, PSI e compilação Android/fluxo real quando possível. Refatoração completa e acompanhamento remoto de processamento continuam etapas futuras.
+
+# v0.1.224 — Confirmação social compacta e compartilhada
+- Central e Redes compartilham `SocialIdentifiedAccountDialog.kt` para confirmação de canais YouTube e Páginas Facebook (adicionar e vincular). Preservar somente nome/ID públicos, sem token persistido; nenhum cadastro sem confirmação.
+- Modal Material 3 usa `UaiShapes.dialog` e `UaiShapes.button`, altura com rolagem, largura limitada, controles de toque de 48 dp e cores do tema. Manter confirmação acessível em telas pequenas e fontes ampliadas.
+- Versão 0.1.224/versionCode 225, notas/CI/identidade sincronizadas; testar regressões, sintaxe Kotlin, build Gradle e UI em Android antes de afirmar APK aprovado. Schema projeto 4 e catálogo social 1 inalterados.
+
 # v0.1.223 — Redes sociais: canais múltiplos e diagnóstico de autenticação
 - Ao conectar YouTube, chamar AuthorizationClient com seleção explícita de conta (`setPrompt(SELECT_ACCOUNT)`), consultar `channels.list mine=true` e salvar somente ID e título públicos após confirmação. Permitir vários canais distintos sem duplicar o mesmo ID; tokens nunca persistidos.
 - Páginas Facebook podem ser adicionadas a partir da lista validada pelo SDK Meta; sem configuração de build e permissões Meta, não simular conexão. Compartilhamento manual preservado para Facebook Perfil, Kwai e TikTok.

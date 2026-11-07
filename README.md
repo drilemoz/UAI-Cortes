@@ -1,4 +1,14 @@
-# Uai Cortes · v0.1.223 — Contas sociais e diagnóstico YouTube
+# Uai Cortes · v0.1.225 — Publicação após exportação mais direta
+
+- Ao salvar um vídeo, **Publicar vídeo** é a ação principal. Descrição, Gemini e compartilhamento manual continuam disponíveis em opções secundárias.
+- A tela **Publicar vídeo** reúne canal, título editável, descrição/hashtags e privacidade. Com um único canal YouTube selecionado, Continuar abre diretamente a confirmação de autorização/envio; vários destinos seguem com confirmação individual.
+- O envio distingue progresso ativo de resultado sem confirmação; após resposta da API mostra o ID do vídeo e opção de abrir o Studio. **Recebido não significa público.** Sem reenvio automático de operação incerta.
+- O diagnóstico de resolução tenta ler a orientação do arquivo MP4 salvo; sem metadados, mantém a informação do exportador, sinalizando a limitação. Catálogo social schema 1 e projetos schema 4 preservados, inclusive títulos antigos.
+- Build Gradle, teste real YouTube e verificação visual em Android permanecem necessários.
+
+# Uai Cortes · v0.1.224 — Confirmação de contas sociais mais simples
+
+- v0.1.224: confirmação de canais YouTube e Páginas Facebook compacta, com dados públicos, botões visíveis e diálogo reutilizado em Redes e Integrações. OAuth, catálogo social, assinatura e exportação preservados.
 A aba **Redes > Adicionar** agora apresenta conexão automática de YouTube e Facebook Página. O app consulta o canal ou Página pela API e pede confirmação antes de salvar nome e ID públicos; permite vários canais Google por seleção de conta e evita duplicatas. Destinos sem OAuth validado continuam manuais. Na hora de publicar, o ID do canal é novamente comparado ao ID autorizado. HTTP 403 YouTube informa categoria conhecida de erro sem exibir resposta privada. A API YouTube Data v3 precisa estar ativa no Google Cloud; mudanças no código não resolvem quotas ou permissões bloqueadas. Teste real Android/Meta/OAuth e Gradle pendentes.
 
 # Uai Cortes · v0.1.222 — Correção do build do painel de voz

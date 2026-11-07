@@ -34,7 +34,7 @@ internal enum class SocialPublicationStatus(val label: String) {
     PREPARED("Preparada"),
     SHARED_UNCONFIRMED("Compartilhamento aberto · confirmar postagem"),
     CONFIRMED_MANUALLY("Publicada · confirmada manualmente"),
-    UPLOAD_REVIEW("Envio iniciado · verificar na plataforma"),
+    UPLOAD_REVIEW("Envio sem confirmação · confira a plataforma"),
     CONFIRMED_BY_API("Enviada · confirmada pelo YouTube"),
     REMOTE_SUBMITTED("Recebida pela API · verifique o processamento");
     companion object {
@@ -86,6 +86,10 @@ internal data class SocialMetrics(
     }
 }
 
+/** Título inicial editável; não confundir o nome técnico do MP4 com o título publicado. */
+internal fun suggestedVideoTitle(fileName: String): String =
+    fileName.substringBeforeLast('.').trim().take(100).ifBlank { "Vídeo" }
+
 private fun JSONObject.optLongOrNull(key: String): Long? =
     if (isNull(key) || !has(key)) null else getLong(key)
 
@@ -94,6 +98,7 @@ internal data class SocialPublication(
     val accountId: String,
     val videoUri: String,
     val videoName: String,
+    val title: String = videoName.substringBeforeLast('.').trim().take(100).ifBlank { "Vídeo" },
     val description: String = "",
     val hashtags: String = "",
     val status: SocialPublicationStatus = SocialPublicationStatus.PREPARED,
@@ -104,7 +109,7 @@ internal data class SocialPublication(
     val updatedAt: Long = createdAt
 ) {
     fun toJson() = JSONObject().put("id", id).put("accountId", accountId)
-        .put("videoUri", videoUri).put("videoName", videoName)
+        .put("videoUri", videoUri).put("videoName", videoName).put("title", title)
         .put("description", description).put("hashtags", hashtags)
         .put("status", status.name).put("postUrl", postUrl)
         .put("remoteVideoId", remoteVideoId)
@@ -113,6 +118,8 @@ internal data class SocialPublication(
         fun fromJson(json: JSONObject): SocialPublication = SocialPublication(
             id = json.getString("id"), accountId = json.getString("accountId"),
             videoUri = json.getString("videoUri"), videoName = json.getString("videoName"),
+            title = json.optString("title").takeIf { it.isNotBlank() }
+                ?: suggestedVideoTitle(json.getString("videoName")),
             description = json.optString("description"), hashtags = json.optString("hashtags"),
             status = SocialPublicationStatus.parse(json.optString("status")),
             postUrl = json.optString("postUrl"), remoteVideoId = json.optString("remoteVideoId"),
@@ -213,9 +220,11 @@ internal object SocialPublicationPolicy {
 
     fun prepare(data: SocialData, accountIds: Set<String>, videoUri: String,
                 videoName: String, description: String, hashtags: String,
-                now: Long = System.currentTimeMillis()): SocialData {
+                now: Long = System.currentTimeMillis(),
+                title: String = suggestedVideoTitle(videoName)): SocialData {
         require(isShareableVideo(videoUri)) { "Selecione um vídeo do armazenamento Android." }
-        require(videoName.length in 1..200 && description.length <= 3000 && hashtags.length <= 1500)
+        require(videoName.length in 1..200 && title.trim().length in 1..100 &&
+            description.length <= 3000 && hashtags.length <= 1500)
         require(accountIds.isNotEmpty() && accountIds.size <= 10)
         require(accountIds.all { id -> data.accounts.any { it.id == id } })
         val output = data.publications.toMutableList()
@@ -223,10 +232,11 @@ internal object SocialPublicationPolicy {
             // O mesmo vídeo para a mesma conta não vira duas tarefas sem decisão do usuário.
             val existing = output.indexOfFirst { it.accountId == id && it.videoUri == videoUri }
             if (existing < 0) output.add(SocialPublication(accountId = id, videoUri = videoUri,
-                videoName = videoName, description = description, hashtags = hashtags, createdAt = now))
+                videoName = videoName, title = title.trim(), description = description,
+                hashtags = hashtags, createdAt = now))
             else if (output[existing].status == SocialPublicationStatus.PREPARED)
                 output[existing] = output[existing].copy(videoName = videoName,
-                    description = description, hashtags = hashtags, updatedAt = now)
+                    title = title.trim(), description = description, hashtags = hashtags, updatedAt = now)
         }
         return data.copy(publications = output)
     }
@@ -269,7 +279,8 @@ internal class SocialStore(context: Context) {
         val ids = data.accounts.map { it.id }.toSet()
         require(data.publications.all { it.accountId in ids &&
             SocialPublicationPolicy.isShareableVideo(it.videoUri) &&
-            it.videoName.length in 1..200 && it.description.length <= 3000 && it.hashtags.length <= 1500 &&
+            it.videoName.length in 1..200 && it.title.trim().length in 1..100 &&
+            it.description.length <= 3000 && it.hashtags.length <= 1500 &&
             SocialPublicationPolicy.isSafeHttps(it.postUrl) &&
             (it.remoteVideoId.isBlank() || when (it.status) {
                 SocialPublicationStatus.CONFIRMED_BY_API -> SocialPublicationPolicy.validVideoId(it.remoteVideoId)

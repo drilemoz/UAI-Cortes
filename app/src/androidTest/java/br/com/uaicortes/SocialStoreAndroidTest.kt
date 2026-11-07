@@ -95,6 +95,29 @@ class SocialStoreAndroidTest {
         assertFalse(next.accounts.single().toJson().toString().contains("accessToken"))
     }
 
+    @Test fun tituloEditavelDoYouTubeNaoModificaOArquivoOriginalNemCorrompeRegistrosAntigos() {
+        val channel = SocialAccount(destination = SocialDestination.YOUTUBE,
+            label = "Canal", remoteChannelId = "UC1234567890123456789012")
+        val record = SocialPublicationPolicy.prepare(SocialData(accounts = listOf(channel)),
+            setOf(channel.id), "content://media/external/video/media/23", "Meu_video.mp4",
+            "Descrição", "#Teste", title = "Título escolhido")
+            .publications.single()
+        assertEquals("Meu_video.mp4", record.videoName)
+        assertEquals("Título escolhido", record.title)
+        assertEquals("Título escolhido", SocialPublication.fromJson(record.toJson()).title)
+        val legacy = record.toJson().apply { remove("title") }
+        assertEquals("Meu_video", SocialPublication.fromJson(legacy).title)
+        val context = temporaryContext()
+        val store = SocialStore(context)
+        store.save(SocialData(accounts = listOf(channel), publications = listOf(record)))
+        assertEquals("Título escolhido", store.load().publications.single().title)
+        assertThrows(IllegalArgumentException::class.java) {
+            SocialPublicationPolicy.prepare(SocialData(accounts = listOf(channel)),
+                setOf(channel.id), record.videoUri, record.videoName,
+                "", "", title = " ")
+        }
+    }
+
     @Test fun catalogoCorrompidoNaoPodeSerSobrescrito() {
         val context = temporaryContext()
         val store = SocialStore(context)

@@ -21,7 +21,7 @@ assert 'accessToken' not in data and 'put("schema", 1)' in data
 assert 'SocialAddDestinationDialog(' in dash and 'Conectar canal YouTube' in dash
 assert 'showMetaPagePicker' in dash and 'SocialPublicationPolicy.upsertYouTube(' in dash
 assert 'SocialPublicationPolicy.upsertFacebookPage(' in dash
-assert 'Canal salvo · confirmar autorização' in dash and 'Página salva · confirmar autorização' in dash
+assert 'Canal cadastrado · autorização necessária ao publicar' in dash and 'Página salva · confirmar autorização' in dash
 assert 'require(channel.id == account.remoteChannelId)' in dash
 assert 'SocialPublicationPolicy.markUploadReview(source)' in dash
 assert 'YouTubeSocialApi.upload(context, token' in dash

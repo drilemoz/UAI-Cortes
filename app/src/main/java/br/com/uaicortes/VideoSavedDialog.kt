@@ -195,7 +195,7 @@ internal fun VideoSavedDialog(
                 Spacer(Modifier.height(4.dp))
                 Text("Pronto para publicar", style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold)
-                Text("Escolha uma ação. Descrição e hashtags ficam em uma janela própria.",
+                Text("O vídeo está salvo. Publique agora ou ajuste a descrição antes.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (exportDetails.isNotEmpty()) {
@@ -224,71 +224,59 @@ internal fun VideoSavedDialog(
                     style = MaterialTheme.typography.bodySmall) }
                 }
                 Spacer(Modifier.height(10.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    OutlinedCard(onClick = {
-                        showAiOptions = false
-                        showCaptionDialog = true
-                    }, modifier = Modifier.weight(1f), shape = UaiShapes.card) {
-                        Column(Modifier.fillMaxWidth().height(78.dp),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.Description, null, Modifier.size(25.dp),
-                                tint = MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.height(4.dp))
-                            Text("Gerar descrição", style = MaterialTheme.typography.labelSmall,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
-                    OutlinedCard(onClick = {
-                        showAiOptions = true
-                        showCaptionDialog = true
-                    }, modifier = Modifier.weight(1f), shape = UaiShapes.card) {
-                        Column(Modifier.fillMaxWidth().height(78.dp),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.AutoAwesome, null, Modifier.size(25.dp),
-                                tint = MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.height(4.dp))
-                            Text("Gerar com IA", style = MaterialTheme.typography.labelSmall,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
-                    Card(onClick = {
-                    runCatching {
-                        context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-                            type = "video/mp4"
-                            putExtra(Intent.EXTRA_STREAM, uri)
-                            if (captionValid) putExtra(Intent.EXTRA_TEXT,
-                                VideoCaption(description.trim(), hashtags.trim()).combined)
-                            clipData = ClipData.newUri(context.contentResolver, "Vídeo", uri)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }, "Compartilhar vídeo"))
-                    }.onFailure { failure = "Não foi possível compartilhar este vídeo." }
-
-                    }, modifier = Modifier.weight(1f),
-                        shape = UaiShapes.card) {
-                        Column(Modifier.fillMaxWidth().height(78.dp),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.Share, null, Modifier.size(25.dp),
-                                tint = MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.height(4.dp))
-                            Text("Compartilhar", style = MaterialTheme.typography.labelSmall,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
+                if (onSocialPublish != null) {
+                    Button(onClick = {
+                        if (persistDraft()) onSocialPublish(uri, displayedName, currentDraft())
+                    }, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                        shape = UaiShapes.button) {
+                        Icon(Icons.Default.CloudUpload, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Publicar vídeo")
                     }
                 }
-                if (onSocialPublish != null) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
                     OutlinedButton(onClick = {
-                        if (persistDraft()) onSocialPublish(uri, displayedName, currentDraft())
-                    }, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.Public, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Publicar nas redes sociais")
+                        showAiOptions = false
+                        showCaptionDialog = true
+                    }, modifier = Modifier.weight(1f), shape = UaiShapes.button) {
+                        Icon(Icons.Default.Description, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Descrição e IA", maxLines = 1)
                     }
-                    Text("Selecione destinos e compartilhe separadamente. A publicação é confirmada por você.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Box {
+                        var menuExpanded by remember(uri) { mutableStateOf(false) }
+                        TextButton(onClick = { menuExpanded = true }) {
+                            Text("Mais opções")
+                            Icon(Icons.Default.MoreVert, contentDescription = null)
+                        }
+                        DropdownMenu(expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false }) {
+                            DropdownMenuItem(text = { Text("Gerar descrição") }, onClick = {
+                                menuExpanded = false
+                                showAiOptions = false
+                                showCaptionDialog = true
+                            })
+                            DropdownMenuItem(text = { Text("Gerar com IA") }, onClick = {
+                                menuExpanded = false
+                                showAiOptions = true
+                                showCaptionDialog = true
+                            })
+                            DropdownMenuItem(text = { Text("Compartilhar") }, onClick = {
+                                menuExpanded = false
+                                runCatching {
+                                    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                                        type = "video/mp4"
+                                        putExtra(Intent.EXTRA_STREAM, uri)
+                                        if (captionValid) putExtra(Intent.EXTRA_TEXT,
+                                            VideoCaption(description.trim(), hashtags.trim()).combined)
+                                        clipData = ClipData.newUri(context.contentResolver, "Vídeo", uri)
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }, "Compartilhar vídeo"))
+                                }.onFailure { failure = "Não foi possível compartilhar este vídeo." }
+                            })
+                        }
+                    }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically) {
