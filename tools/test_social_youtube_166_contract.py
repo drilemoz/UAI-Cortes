@@ -6,7 +6,7 @@ s=r/'app/src/main/java/br/com/uaicortes'
 a=(s/'YouTubeSocialApi.kt').read_text()
 u=(s/'YouTubeAuthorizationUi.kt').read_text()
 d=(s/'SocialStore.kt').read_text()
-p=(s/'SocialScreens.kt').read_text()
+p = '\n'.join((s/name).read_text(encoding='utf-8') for name in ('SocialScreens.kt', 'SocialPublishScreen.kt', 'SocialPublicConfig.kt',))
 assert 'play-services-auth:22.0.0' in (r/'app/build.gradle.kts').read_text()
 assert 'Identity.getAuthorizationClient' in u and 'AuthorizationRequest.builder()' in u
 assert 'StartIntentSenderForResult' in u and 'youtube.upload' in u and 'youtube.readonly' in u

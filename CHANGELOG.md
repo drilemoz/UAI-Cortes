@@ -1,3 +1,9 @@
+# Uai Cortes 0.1.227 (2026-11-07)
+- Refatoração sem mudança de schema: telas Redes e Publicar, diálogos e exportação pública das contas em arquivos separados, mantendo os mesmos pontos de navegação e regras OAuth.
+- Cards de contas compactos com ações recolhidas, vínculos verificados somente quando realmente consultados. Histórico com detalhes e operações secundárias recolhidos; alertas sobre resultado incerto permanecem visíveis.
+- Regressões v227 adicionadas, testes legados atualizados para os módulos de origem; preservados assinatura, cinco APKs, catálogo social 1 e projeto schema 4.
+- Sem build Android nem teste de UI física nesta entrega; validar no CI e em aparelho.
+
 # Uai Cortes 0.1.226 (2026-11-07)
 
 - Histórico de publicações modularizado em `SocialPublicationHistoryUi.kt`, com filtros, título real e ações condicionais ao estado.

@@ -5,7 +5,7 @@ r = Path(__file__).resolve().parents[1]
 src = r/'app/src/main/java/br/com/uaicortes'
 api = (src/'SocialExternalApis.kt').read_text()
 ui = (src/'SocialExternalDialogs.kt').read_text()
-main = (src/'SocialScreens.kt').read_text()
+main = '\n'.join((src/name).read_text() for name in ('SocialScreens.kt', 'SocialPublishScreen.kt'))
 store = (src/'SocialStore.kt').read_text()
 assert 'v26.0' in api and 'facebookPage(token)' not in api
 assert 'https://open.tiktokapis.com' in api

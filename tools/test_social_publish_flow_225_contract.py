@@ -9,7 +9,7 @@ r = Path(__file__).resolve().parents[1]
 s = r/'app/src/main/java/br/com/uaicortes'
 store = (s/'SocialStore.kt').read_text()
 api = (s/'YouTubeSocialApi.kt').read_text()
-ui = (s/'SocialScreens.kt').read_text()
+ui = '\n'.join((s/name).read_text(encoding='utf-8') for name in ('SocialPublishScreen.kt',))
 saved = (s/'VideoSavedDialog.kt').read_text()
 quality = (s/'ExportQualityReport.kt').read_text()
 engine = (s/'ExportEngine.kt').read_text()

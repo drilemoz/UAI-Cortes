@@ -5,7 +5,7 @@ from check_version_sync import check
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT/'app/src/main/java/br/com/uaicortes'
 center = (SRC/'SocialIntegrationsUi.kt').read_text()
-dashboard = (SRC/'SocialScreens.kt').read_text()
+dashboard = '\n'.join((SRC/name).read_text(encoding='utf-8') for name in ('SocialScreens.kt', 'SocialAccountDialogs.kt', 'SocialPublishScreen.kt', 'SocialPublicConfig.kt',))
 nav = (SRC/'MainActivity.kt').read_text()
 store = (SRC/'SocialStore.kt').read_text()
 test = ROOT/'app/src/test/java/br/com/uaicortes/SocialIntegrationGuidesTest.kt'
@@ -38,7 +38,7 @@ assert 'GeminiCredentialStore' not in center  # apenas abre as configurações e
 assert 'META_APP_SECRET' not in center and 'TIKTOK_CLIENT_SECRET' not in center
 assert 'connectMeta(false, account)' in dashboard and 'consultMetaPages(account)' in dashboard
 assert 'if (state.accounts.any { it.destination == SocialDestination.FACEBOOK_PAGE })' in dashboard
-assert 'metricsExpanded' in dashboard and 'Preparar publicação' in dashboard
+assert 'metricsExpanded' in dashboard and 'Publicar vídeo' in dashboard
 assert 'SHARED_UNCONFIRMED' in dashboard and 'CONFIRMED_MANUALLY' in dashboard
 assert 'AtomicFile(' in store and 'accessToken' not in store
 assert test.exists()

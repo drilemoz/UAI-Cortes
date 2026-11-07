@@ -43,6 +43,7 @@ internal fun SocialPublicationHistoryUi(
     onTikTokStatus: (SocialPublication) -> Unit
 ) {
     var filterName by rememberSaveable { mutableStateOf(SocialHistoryFilter.ALL.name) }
+    var expandedPublicationId by rememberSaveable { mutableStateOf<String?>(null) }
     val filter = SocialHistoryFilter.entries.firstOrNull { it.name == filterName } ?: SocialHistoryFilter.ALL
     val posts = data.publications.filter { filter.matches(it.status) }
         .sortedByDescending { it.updatedAt }.take(80)
@@ -112,6 +113,19 @@ internal fun SocialPublicationHistoryUi(
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     else -> Unit
                 }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = {
+                        expandedPublicationId = if (expandedPublicationId == publication.id) null else publication.id
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (expandedPublicationId == publication.id) "Recolher ações" else "Ações e detalhes")
+                        Spacer(Modifier.width(6.dp))
+                        Icon(if (expandedPublicationId == publication.id) Icons.Default.ExpandLess
+                            else Icons.Default.ExpandMore,
+                            contentDescription = if (expandedPublicationId == publication.id)
+                                "Recolher publicação" else "Expandir publicação")
+                    }
+                }
+                if (expandedPublicationId == publication.id) {
                 if (publication.metrics.hasData) Text(
                     "${publication.metrics.views ?: "—"} visualizações · " +
                         if (publication.metrics.source == "youtube_api") "YouTube API" else "Dados manuais",
@@ -162,6 +176,7 @@ internal fun SocialPublicationHistoryUi(
                         Spacer(Modifier.width(4.dp)); Text("Detalhes")
                     }
                 }
+                } // Somente as ações secundárias são recolhidas; alertas permanecem visíveis.
             }
         }
     }

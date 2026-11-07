@@ -8,7 +8,7 @@ src=root/'app/src/main/java/br/com/uaicortes'
 auth=(src/'YouTubeAuthorizationUi.kt').read_text()
 api=(src/'YouTubeSocialApi.kt').read_text()
 data=(src/'SocialStore.kt').read_text()
-dash=(src/'SocialScreens.kt').read_text()
+dash = '\n'.join((src/name).read_text(encoding='utf-8') for name in ('SocialScreens.kt', 'SocialAccountDialogs.kt', 'SocialPublishScreen.kt',))
 center=(src/'SocialIntegrationsUi.kt').read_text()
 assert 'AuthorizationRequest.Prompt.SELECT_ACCOUNT' in auth
 assert 'if (chooseAccount)' in auth and 'requestOfflineAccess' not in auth
@@ -21,7 +21,7 @@ assert 'accessToken' not in data and 'put("schema", 1)' in data
 assert 'SocialAddDestinationDialog(' in dash and 'Conectar canal YouTube' in dash
 assert 'showMetaPagePicker' in dash and 'SocialPublicationPolicy.upsertYouTube(' in dash
 assert 'SocialPublicationPolicy.upsertFacebookPage(' in dash
-assert 'Canal cadastrado · autorização necessária ao publicar' in dash and 'Página salva · confirmar autorização' in dash
+assert 'Canal cadastrado' in dash and 'Página cadastrada' in dash
 assert 'require(channel.id == account.remoteChannelId)' in dash
 assert 'SocialPublicationPolicy.markUploadReview(source)' in dash
 assert 'YouTubeSocialApi.upload(context, token' in dash

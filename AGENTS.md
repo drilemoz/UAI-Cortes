@@ -1,3 +1,10 @@
+# v0.1.227 — Refatoração do módulo social e adequação visual
+
+- Separar Redes, Publicar, diálogos, cartões e backup público em arquivos dedicados. Não alterar rotas da MainActivity, contratos OAuth, tokens temporários, SocialStore schema 1, VideoProject schemaVersion 4 ou regras de publicação.
+- Contas exibem status resumido e ações recolhidas. Histórico mostra alertas sobre resultados incertos mesmo quando ações estão recolhidas. Nenhum status de cadastro implica login persistente.
+- Preservar verificação de canal antes de upload, marcação de risco antes de enviar e proibição de repetição automática. Recebido pela API não equivale a vídeo público.
+- Sincronizar 0.1.227/versionCode 228 em Gradle, CI, APKs, documentação e Novidades. Executar todos os testes Python, PSI Kotlin, build Gradle e verificações Android quando disponíveis; não confundir teste sintático com compilação real.
+
 # v0.1.226 — Histórico social e processamento remoto sob demanda
 
 - Continuar a evolução do fluxo exportar → publicar da 0.1.225 sem mexer em autenticação, schema de projetos 4 ou assinatura Android.

@@ -1,3 +1,11 @@
+# Uai Cortes · v0.1.227 — Redes e publicação compactas
+
+- Redes agora apresenta cada conta em uma linha compacta com nome e tipo; verificar, vincular ou remover aparecem ao expandir. O status de cadastro não afirma login permanente.
+- Histórico mantém filtros e avisos importantes, mas recolhe consultas, métricas, Studio, compartilhamento e detalhes, reduzindo o excesso de botões visíveis.
+- Refatoração em arquivos dedicados: `SocialScreens.kt` (Redes), `SocialPublishScreen.kt` (publicação), `SocialAccountDialogs.kt` (diálogos), `SocialAccountCard.kt` (conta) e `SocialPublicConfig.kt` (backup público).
+- A autorização e o envio continuam exigindo confirmação e canal certo. Nenhum token persistido, sem migração do catálogo social schema 1 ou projetos schema 4, sem reenvio automático.
+- Compilação Gradle/Android e testes físicos de acessibilidade, upload e layout continuam pendentes.
+
 # Uai Cortes · v0.1.226 — Histórico de publicação e status do YouTube
 
 ## Novidades v0.1.226

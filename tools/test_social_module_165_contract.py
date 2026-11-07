@@ -7,7 +7,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 source = root/'app/src/main/java/br/com/uaicortes'
 store = (source/'SocialStore.kt').read_text(encoding='utf-8')
-screens = (source/'SocialScreens.kt').read_text(encoding='utf-8')
+screens = '\n'.join((source/name).read_text(encoding='utf-8') for name in ('SocialScreens.kt', 'SocialAccountDialogs.kt', 'SocialPublishScreen.kt', 'SocialPublicConfig.kt',))
 integrations = (source/'SocialIntegrationsUi.kt').read_text(encoding='utf-8')
 nav = (source/'EditorNavigation.kt').read_text(encoding='utf-8')
 main = (source/'MainActivity.kt').read_text(encoding='utf-8')

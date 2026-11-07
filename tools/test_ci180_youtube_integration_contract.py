@@ -7,7 +7,7 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 src = root / 'app/src/main/java/br/com/uaicortes'
-dashboard = (src / 'SocialScreens.kt').read_text(encoding='utf-8')
+dashboard = '\n'.join((src/name).read_text(encoding='utf-8') for name in ('SocialScreens.kt', 'SocialPublishScreen.kt',))
 center = (src / 'SocialIntegrationsUi.kt').read_text(encoding='utf-8')
 auth = (src / 'YouTubeAuthorizationUi.kt').read_text(encoding='utf-8')
 

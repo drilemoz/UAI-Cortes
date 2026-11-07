@@ -5,7 +5,7 @@ root = Path(__file__).resolve().parents[1]
 src = root/'app/src/main/java/br/com/uaicortes'
 ui = (src/'SocialPublicationHistoryUi.kt').read_text()
 store = (src/'SocialStore.kt').read_text()
-screen = (src/'SocialScreens.kt').read_text()
+screen = '\n'.join((src/name).read_text(encoding='utf-8') for name in ('SocialScreens.kt', 'SocialPublishScreen.kt',))
 api = (src/'YouTubeSocialApi.kt').read_text()
 assert all(x in ui for x in ('PENDING("Pendentes")','RECEIVED("Recebidas")','REVIEW("Revisar")',
                             'SocialPublicationHistoryUi(', 'publication.title', 'publication.youtubeState.summary()',

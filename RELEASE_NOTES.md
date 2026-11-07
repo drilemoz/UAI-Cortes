@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.227 — Redes e publicação organizadas (versionCode 228)
+
+- **Redes:** cartões de conta compactos, com ações Vincular/Verificar/Remover recolhidas e status fiel ao vínculo OAuth temporário.
+- **Publicações:** avisos sobre envio incerto visíveis; consultas ao YouTube, métricas, Studio e demais ações agrupadas em "Ações e detalhes".
+- **Estrutura:** telas separadas de diálogos e backup público, preservando leitura dos dados antigos, proteção contra upload duplicado e seleção da conta correta.
+- Código-fonte validado por regressões e sintaxe; APK/CI e interface em dispositivo ainda precisam de confirmação.
+
 # Uai Cortes · versão 0.1.226 — Histórico e status real do YouTube (versionCode 227)
 
 O histórico da aba Redes agora separa **Pendentes**, **Recebidas** e **Revisar**. Os vídeos aparecem pelo título escolhido e a opção de compartilhar não se repete em envios já confirmados. Para vídeos enviados pelo YouTube, há uma consulta explícita ao status de processamento e privacidade da plataforma, com hora da última verificação. Essa consulta exige nova autorização quando solicitada e confere o canal vinculado. Não comprova que o vídeo está público só por ter sido recebido e não reenvia um upload incerto. Dados existentes e token não persistido são preservados. Build e testes físicos pendentes.

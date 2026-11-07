@@ -16,18 +16,24 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.226"
-    const val VERSION_CODE = 227
+    const val VERSION_NAME = "0.1.227"
+    const val VERSION_CODE = 228
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.227", listOf(
+            ReleaseFeature("social-layout-227", "Redes com ações sob demanda",
+                "Contas mostram nome e vínculo de forma compacta; toque para verificar ou remover. Publicações recolhem as ações secundárias e mantêm os alertas importantes visíveis.", "check"),
+            ReleaseFeature("social-structure-227", "Publicação organizada internamente",
+                "Telas de Redes e Publicar, diálogos e cadastro público foram separados em componentes, preservando contas, histórico, tokens apenas temporários e confirmação de upload pelo YouTube.", "film")
+        )),
         ReleaseSummary("0.1.226", listOf(
             ReleaseFeature("social-history-226", "Histórico de publicações organizado",
                 "Redes reúne Pendentes, Recebidas e Revisar. Envios confirmados não exibem compartilhamento como etapa obrigatória; registros antigos permanecem disponíveis.", "check"),
             ReleaseFeature("youtube-processing-226", "Status real do YouTube sob demanda",
                 "Para vídeos confirmados, consulta manual à API exibe processamento e privacidade da última verificação. Não confunde vídeo recebido com público e não repete uploads automaticamente.", "film")
         )),
-        ReleaseSummary("0.1.226", listOf(
+        ReleaseSummary("0.1.225", listOf(
             ReleaseFeature("publish-flow-225", "Publicar vídeo com menos etapas",
                 "Após salvar, Publicar vídeo abre o formulário com canal, título, descrição e privacidade. Um único canal abre diretamente a confirmação; o envio continua dependendo de autorização e ação explícita.", "film"),
             ReleaseFeature("youtube-status-225", "Resultado do YouTube mais claro",
