@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.201 — Novidades e atualizações padronizadas (versionCode 202)
+- A abertura de Novidades apresenta somente o que mudou nesta versão, deixando o histórico para consulta opcional.
+- Sobre mostra últimas três versões e permite abrir o histórico completo sob demanda.
+- Tela Atualizações mais compacta, com progresso, velocidade local de download em MiB/s, bytes recebidos e previsão aproximada quando disponível.
+- Mantidas validação SHA-256, instalação com autorização, dados de projetos, compatibilidade e os cinco APKs previstos no CI. Compilação Android e testes em aparelho pendentes.
+
 # Uai Cortes · versão 0.1.200 — Padronização visual ampliada (versionCode 201)
 - Botões, cartões e diálogos do Estúdio Flow, Vozes IA, Legendas e configurações Gemini seguem a mesma geometria discreta.
 - Cortes, inserção/edição, exportação e Home receberam ajustes de formato sem alterar ações, importações, projetos ou arquivos.

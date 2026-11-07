@@ -9,7 +9,8 @@ class HomeAboutVersionContractTest {
         assertEquals(BuildConfig.VERSION_NAME, AppReleaseNotes.VERSION_NAME)
         assertEquals(BuildConfig.VERSION_CODE, AppReleaseNotes.VERSION_CODE)
         assertEquals(AppReleaseNotes.VERSION_NAME, AppReleaseNotes.forAbout().first().version)
-        assertEquals(AppReleaseNotes.forAbout(), AppReleaseNotes.forWhatsNew())
+        assertEquals(listOf(AppReleaseNotes.current), AppReleaseNotes.forWhatsNew())
+        assertEquals(AppReleaseNotes.recent.take(3), AppReleaseNotes.forAbout())
     }
 
     @Test fun homeChangeIsDocumented() {

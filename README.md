@@ -1,3 +1,7 @@
+# Uai Cortes · versão 0.1.201 — Atualizações e Novidades
+
+A tela Novidades exibe apenas os destaques da versão instalada na primeira abertura, com histórico opcional. A tela Sobre resume as três versões recentes. O atualizador integrado informa taxa de download, bytes recebidos e progresso, mantendo verificação SHA-256 e confirmação explícita antes de instalar.
+
 ## Novidades v0.1.200
 - **Visual mais uniforme:** diálogos e cartões de Flow, Vozes IA, Legendas, Corte, Exportação e configurações Gemini passaram a reutilizar a escala `UaiShapes`.
 - **Botões discretos:** ações principais usam cantos de 8 dp, sem mudar o processamento, áudio, vídeo ou projetos.

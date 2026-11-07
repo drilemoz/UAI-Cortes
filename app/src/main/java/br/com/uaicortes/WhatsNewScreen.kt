@@ -3,12 +3,15 @@ package br.com.uaicortes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,10 +40,10 @@ internal fun ReleaseHighlights(entries: List<ReleaseSummary>, modifier: Modifier
         entries.forEachIndexed { index, entry ->
             Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (index == 0) "Nesta versão" else "Atualização anterior",
+                    Text(if (entry.version == AppReleaseNotes.VERSION_NAME) "Nesta versão" else "Atualização anterior",
                         style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f))
-                    Surface(shape = RoundedCornerShape(50),
+                    Surface(shape = UaiShapes.chip,
                         color = MaterialTheme.colorScheme.primaryContainer) {
                         Text("v${entry.version}", Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
                             style = MaterialTheme.typography.labelMedium,
@@ -53,7 +56,7 @@ internal fun ReleaseHighlights(entries: List<ReleaseSummary>, modifier: Modifier
                         tonalElevation = 2.dp) {
                         Row(Modifier.fillMaxWidth().padding(15.dp),
                             verticalAlignment = Alignment.Top) {
-                            Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp))
+                            Box(Modifier.size(44.dp).clip(UaiShapes.button)
                                 .background(MaterialTheme.colorScheme.primaryContainer),
                                 contentAlignment = Alignment.Center) {
                                 Icon(releaseSymbol(feature.symbol), contentDescription = null,
@@ -77,6 +80,7 @@ internal fun ReleaseHighlights(entries: List<ReleaseSummary>, modifier: Modifier
 
 @Composable
 internal fun WhatsNewScreen(onContinue: () -> Unit) {
+    var showHistory by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)) {
@@ -102,8 +106,18 @@ internal fun WhatsNewScreen(onContinue: () -> Unit) {
             }
             Spacer(Modifier.height(24.dp))
             ReleaseHighlights(AppReleaseNotes.forWhatsNew())
+            Spacer(Modifier.height(16.dp))
+            OutlinedButton(onClick = { showHistory = !showHistory }, shape = UaiShapes.button) {
+                Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(19.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(if (showHistory) "Ocultar histórico" else "Ver histórico de versões")
+            }
+            if (showHistory) {
+                Spacer(Modifier.height(16.dp))
+                ReleaseHighlights(AppReleaseNotes.forHistory())
+            }
             Spacer(Modifier.height(24.dp))
-            Text("Você pode rever estas informações em Configurações → Novidades ou Sobre.",
+            Text("As mudanças anteriores ficam no histórico, disponível quando você quiser consultar.",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth())

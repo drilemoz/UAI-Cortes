@@ -1,3 +1,9 @@
+## 0.1.201 (versionCode 202) — Atualizações e Novidades mais compactas
+- Novidades na primeira abertura mostra somente a versão instalada; histórico completo continua acessível ao tocar em Ver histórico.
+- Sobre destaca as três últimas versões e permite consultar versões antigas por opção, sem lista interminável ao abrir.
+- Atualizações mostra porcentagem, velocidade recente (MiB/s), quantidade transferida e tempo restante aproximado quando houver dados; interface usa UaiShapes e evita ações duplicadas.
+- Regras de segurança mantidas: descarga manual, verificação SHA-256, pacote/versão, confirmação Android e preservação de projetos. Build Android/Lint completos pendentes.
+
 ## 0.1.200 (versionCode 201) — Padronização visual ampliada
 - Estúdio de Cenas Flow e assistentes: botões principais com `UaiShapes.button`, preservando funções e diálogos.
 - Central de Vozes, Vozes IA, personagens, sincronização de palavras e configurações Gemini: cartões e janelas com cantos padronizados.

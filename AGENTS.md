@@ -1,3 +1,9 @@
+# v0.1.201 — Tela de atualização e novidades focadas na versão atual
+- `AppReleaseNotes.forWhatsNew()` retorna somente a versão instalada; Sobre resume 3 versões, histórico completo é opcional. Não reapresentar versões anteriores na abertura automática.
+- `GitHubDownloadProgress` calcula taxa local de bytes/tempo, não faz consultas extras; mostrar progresso em MiB e MiB/s com estimativa somente com medição suficiente, sem confundir com velocidade de rede do Android.
+- Download continua 100% iniciado pelo usuário, valida SHA-256, pacote, versão e assinatura Android na instalação. Não instalar automaticamente, não remover projetos, não afrouxar host/HTTPS. Testar Gradle, Lint e aparelho antes de afirmar APK funcional.
+- VersionName 0.1.201, versionCode 202, schemaVersion 4 e cinco variantes Release preservados.
+
 # v0.1.200 — Expansão da padronização visual
 - Usar `UaiShapes.button`, `.card`, `.item`, `.dialog` e `.sheet` nos controles de Flow, Vozes IA, Central de Vozes, Legendas, Corte, Exportação, Home e configurações Gemini. Não alterar formas de indicadores, seleção da galeria, miniaturas, PiP nem alças da timeline para fins cosméticos.
 - Estúdio Flow: apenas formatos de botões e cartões mudam; preservados prompts, referências, créditos, modos de geração, cache e operações. Vozes Gemini preservam identidade, cota, fila e confirmação antes de chamadas.

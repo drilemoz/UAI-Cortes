@@ -44,5 +44,5 @@ assert 'shape = RoundedCornerShape(24.dp)' in media_browser  # medalha circular 
 assert 'RoundedCornerShape(3.dp)' in (src/'VoiceIaScreen.kt').read_text()  # barras/segmentos
 assert 'shape = UaiShapes.sheet' in (src/'PipScreen.kt').read_text()
 assert 'class QuickVideoSplitPolicy' not in (src/'QuickVideoToolsScreen.kt').read_text()
-assert (root/'VERSION').read_text().strip() == '0.1.200'
-print('OK: escala, 18 módulos, elementos especiais e versão 0.1.200')
+assert tuple(map(int, (root/'VERSION').read_text().strip().split('.'))) >= (0, 1, 200)
+print('OK: escala, 18 módulos e elementos especiais preservados a partir da v0.1.200')

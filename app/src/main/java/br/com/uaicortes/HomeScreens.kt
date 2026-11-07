@@ -294,7 +294,7 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
         ItemCard(Icons.Default.AutoAwesome,"Google Gemini — API de IA",
             "Chave, vozes e narrações") { onClick("gemini_settings") }
         ItemCard(Icons.Default.BugReport,"Diagnóstico","Capturar erros e toques, exportar relatório") {onClick("diagnostics")}
-        ItemCard(Icons.Default.AutoAwesome,"Novidades","Veja o que mudou nas últimas versões") { onClick("whats_new") }
+        ItemCard(Icons.Default.AutoAwesome,"Novidades","Mudanças da versão atual e histórico") { onClick("whats_new") }
         ItemCard(Icons.Default.Info,"Sobre","Versão e informações do aplicativo") {onClick("about")}
         }
         MainNav("settings",onTab)
@@ -337,6 +337,7 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
 }
 
 @Composable internal fun AboutScreen(back: () -> Unit, onUpdates: () -> Unit) {
+    var showOlderReleases by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp)) {
         Heading("Sobre", back)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),
@@ -359,6 +360,14 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
             }
             Spacer(Modifier.height(22.dp))
             ReleaseHighlights(AppReleaseNotes.forAbout())
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(onClick = { showOlderReleases = !showOlderReleases }, shape = UaiShapes.button) {
+                Text(if (showOlderReleases) "Ocultar histórico" else "Ver histórico completo")
+            }
+            if (showOlderReleases) {
+                Spacer(Modifier.height(16.dp))
+                ReleaseHighlights(AppReleaseNotes.forOlderAbout())
+            }
             Spacer(Modifier.height(24.dp))
         }
     }

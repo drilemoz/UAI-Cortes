@@ -38,6 +38,12 @@ internal class GitHubUpdateManager(private val context: Context) {
         private set
     var downloadPercent by mutableStateOf(0)
         private set
+    var downloadedBytes by mutableStateOf(0L)
+        private set
+    var downloadTotalBytes by mutableStateOf(0L)
+        private set
+    var downloadSpeedBytesPerSecond by mutableStateOf(0L)
+        private set
     var readyFile: File? by mutableStateOf(null)
         private set
     var downloadError: String? by mutableStateOf(null)
@@ -107,6 +113,9 @@ internal class GitHubUpdateManager(private val context: Context) {
         readyFile = null
         downloading = true
         downloadPercent = 0
+        downloadedBytes = 0L
+        downloadTotalBytes = release.size
+        downloadSpeedBytesPerSecond = 0L
         try {
             val downloaded = withContext(Dispatchers.IO) {
                 val dir = File(context.cacheDir, "updates").apply { mkdirs() }
@@ -121,6 +130,9 @@ internal class GitHubUpdateManager(private val context: Context) {
                         if (length > GitHubUpdateCore.MAX_APK_BYTES) error("APK maior que o limite permitido")
                         val md = MessageDigest.getInstance("SHA-256")
                         var count = 0L
+                        var lastReportedBytes = 0L
+                        var lastReportedAt = SystemClock.elapsedRealtime()
+                        var smoothedRate = 0L
                         connection.inputStream.use { source ->
                             partial.outputStream().buffered().use { target ->
                                 val buffer = ByteArray(32 * 1024)
@@ -132,8 +144,23 @@ internal class GitHubUpdateManager(private val context: Context) {
                                     md.update(buffer, 0, n)
                                     target.write(buffer, 0, n)
                                     val progress = ((count * 100L) / release.size).toInt().coerceIn(0, 100)
-                                    if (progress != downloadPercent) withContext(Dispatchers.Main) {
-                                        downloadPercent = progress
+                                    val now = SystemClock.elapsedRealtime()
+                                    val elapsed = now - lastReportedAt
+                                    // Atualizar a cada ~500 ms, não a cada 32 KiB lidos.
+                                    if (elapsed >= 500L || count == release.size) {
+                                        val instant = GitHubDownloadProgress.rateBytesPerSecond(
+                                            count - lastReportedBytes, elapsed)
+                                        if (instant > 0L) {
+                                            smoothedRate = if (smoothedRate <= 0L) instant
+                                                else (smoothedRate * 2L + instant) / 3L
+                                        }
+                                        withContext(Dispatchers.Main) {
+                                            downloadPercent = progress
+                                            downloadedBytes = count
+                                            downloadSpeedBytesPerSecond = smoothedRate
+                                        }
+                                        lastReportedBytes = count
+                                        lastReportedAt = now
                                     }
                                 }
                             }
@@ -156,8 +183,10 @@ internal class GitHubUpdateManager(private val context: Context) {
                 } finally { partial.delete() }
             }
             readyFile = downloaded
+            downloadedBytes = release.size
             downloadPercent = 100
         } catch (error: Exception) {
+            downloadSpeedBytesPerSecond = 0L
             downloadError = error.message?.take(180) ?: "Falha ao baixar o APK"
         } finally { downloading = false }
     }

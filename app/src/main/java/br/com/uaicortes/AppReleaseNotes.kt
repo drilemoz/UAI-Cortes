@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.200"
-    const val VERSION_CODE = 201
+    const val VERSION_NAME = "0.1.201"
+    const val VERSION_CODE = 202
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.201", listOf(
+            ReleaseFeature("updates-speed-201", "Download com velocidade visível",
+                "A tela Atualizações informa a taxa de transferência e os megabytes baixados, com progresso mais claro e botões no padrão visual do aplicativo.", "sync"),
+            ReleaseFeature("whatsnew-current-201", "Novidades sem histórico acumulado",
+                "Na primeira abertura, só aparecem as mudanças da versão instalada. As versões anteriores permanecem disponíveis por uma ação opcional.", "check"),
+            ReleaseFeature("about-history-201", "Sobre e histórico mais organizados",
+                "A seção Sobre destaca as últimas atualizações e permite consultar o histórico completo sem ocupar a tela de entrada.", "film")
+        )),
         ReleaseSummary("0.1.200", listOf(
             ReleaseFeature("visual-flow-200", "Estúdio Flow e assistentes mais consistentes",
                 "Botões principais do Flow, geração em lote e assistentes agora seguem cantos discretos e os formatos compartilhados do Uai Cortes.", "check"),
@@ -1003,8 +1011,13 @@ internal object AppReleaseNotes {
 
     val current: ReleaseSummary get() = recent.first()
 
-    fun forAbout(): List<ReleaseSummary> = recent
-    fun forWhatsNew(): List<ReleaseSummary> = recent
+    /** Sobre resume as três últimas versões e mantém o restante sob demanda. */
+    fun forAbout(): List<ReleaseSummary> = recent.take(3)
+    /** A abertura após atualização mostra somente as mudanças da versão instalada. */
+    fun forWhatsNew(): List<ReleaseSummary> = listOf(current)
+    /** A consulta histórica é sempre explícita; não polui o primeiro acesso. */
+    fun forHistory(): List<ReleaseSummary> = recent.drop(1)
+    fun forOlderAbout(): List<ReleaseSummary> = recent.drop(3)
 
     /** Não usa versionCode: recompilar sem mudanças não deve reapresentar a tela. */
     fun fingerprintFor(features: List<ReleaseFeature>): String {

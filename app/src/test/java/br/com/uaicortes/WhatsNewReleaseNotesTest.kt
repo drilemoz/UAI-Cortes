@@ -4,8 +4,13 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class WhatsNewReleaseNotesTest {
-    @Test fun aboutAndWhatsNewShowExactlyTheSameChangesInTheSameOrder() {
-        assertEquals(AppReleaseNotes.forAbout(), AppReleaseNotes.forWhatsNew())
+    @Test fun initialWhatsNewOnlyShowsCurrentVersionWhileHistoryIsAvailableSeparately() {
+        assertEquals(listOf(AppReleaseNotes.current), AppReleaseNotes.forWhatsNew())
+        assertEquals(1, AppReleaseNotes.forWhatsNew().size)
+        assertEquals(AppReleaseNotes.VERSION_NAME, AppReleaseNotes.forWhatsNew().single().version)
+        assertEquals(AppReleaseNotes.recent.take(3), AppReleaseNotes.forAbout())
+        assertEquals(AppReleaseNotes.recent.drop(1), AppReleaseNotes.forHistory())
+        assertEquals(AppReleaseNotes.recent.drop(3), AppReleaseNotes.forOlderAbout())
         assertEquals(AppReleaseNotes.VERSION_NAME, AppReleaseNotes.forAbout().first().version)
         assertTrue(AppReleaseNotes.forAbout().all { release ->
             release.features.isNotEmpty() && release.features.all {
