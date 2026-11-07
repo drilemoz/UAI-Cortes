@@ -1,3 +1,9 @@
+# Uai Cortes · v0.1.220 — Aperfeiçoamento do tratamento de voz
+- Áudio > Melhorar voz: presets mais perceptíveis e Estúdio; EQ com graves/corpo/clareza/brilho (±6 dB), compressão e compensação de ganho, expander opcional e suavização de sibilância.
+- Alternância A/B preserva o ponto da faixa. Três perfis locais persistidos por SharedPreferences e ação de copiar somente para clipes de vídeo mediante confirmação.
+- DSP offline com estados por canal, limitador suave de pico de amostra (não true peak) e sem RNNoise; nenhum áudio é sobrescrito. Campos opcionais em `voiceTone` mantêm compatibilidade com schema 4. VersionName 0.1.220/versionCode 221; cinco APKs Release e fluxos existentes preservados.
+- Testes sintáticos e estruturais não substituem build Gradle, testes físicos ou validação auditiva.
+
 # Uai Cortes · v0.1.219 — Voz natural e equalizador por faixa
 - Nova área compacta **Áudio > Melhorar voz**, com seleção de vídeo/áudio, presets Natural/Encorpada/Clara, intensidade, EQ avançado por graves/corpo/clareza e comparação entre original e tratada.
 - Efeito não destrutivo por fonte: filtros IIR, compressão suave e limitador PCM na exportação Media3 e prévia isolada, sem APIs externas. Música e outros sons não são alterados automaticamente; faixa que mistura voz e música continua misturada.

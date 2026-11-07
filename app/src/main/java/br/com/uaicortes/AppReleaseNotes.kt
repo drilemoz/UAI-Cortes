@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.219"
-    const val VERSION_CODE = 220
+    const val VERSION_NAME = "0.1.220"
+    const val VERSION_CODE = 221
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.220", listOf(
+            ReleaseFeature("voice-studio-220", "Tratamento de voz mais perceptível",
+                "Presets reforçados, Estúdio, compressão ajustável, compensação de volume, EQ de quatro bandas, suavização de sibilância, perfis locais e comparação A/B no mesmo trecho.", "music")
+        )),
         ReleaseSummary("0.1.219", listOf(
             ReleaseFeature("voice-tone-219", "Voz natural e encorpada",
                 "Áudio > Melhorar voz traz presets, intensidade, EQ avançado e comparação com o original. O efeito offline é aplicado à faixa escolhida na exportação, sem alterar a mídia.", "music")

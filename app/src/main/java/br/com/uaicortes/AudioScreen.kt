@@ -258,6 +258,12 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
             return
         }
         val source = voiceToneSources(p).firstOrNull { it.id == sourceId } ?: return
+        // Ao alternar A/B, continuar no mesmo ponto da fonte em vez de voltar ao início.
+        val sameSource = voicePreviewKey.substringBeforeLast(':', "") == source.id
+        val resumeAt = if (sameSource) voicePreviewPlayer?.currentPosition
+            ?.coerceIn(source.sourceStartMs.coerceAtLeast(0L),
+                (source.sourceStartMs + source.durationMs - 1L).coerceAtLeast(source.sourceStartMs))
+            ?: source.sourceStartMs else source.sourceStartMs
         runCatching {
             voicePreviewPlayer?.release(); voicePreviewPlayer=null;voicePreviewKey=""
             isolatedPlayer.pause(); isolatedPlaying=false
@@ -268,7 +274,7 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
             player.setMediaItem(MediaItem.fromUri(Uri.parse(source.uri)))
             player.volume=source.volume.coerceIn(0f,1f)
             player.prepare()
-            player.seekTo(source.sourceStartMs.coerceAtLeast(0L))
+            player.seekTo(resumeAt.coerceAtLeast(0L))
             voicePreviewEnd=source.sourceStartMs+source.durationMs
             voicePreviewKey=key
             voicePreviewPlayer=player

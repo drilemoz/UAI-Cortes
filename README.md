@@ -1,3 +1,7 @@
+# Uai Cortes · v0.1.220 — Tratamento de voz aperfeiçoado
+
+Em **Editor > Áudio > Melhorar voz**, o painel oferece Natural/Encorpada/Clara/Estúdio, intensidade, compressão, compensação de volume, EQ de quatro bandas (±6 dB), de-esser e redução de ruído leve por expander. A/B retoma o mesmo ponto da faixa ao alternar. Três perfis de ajuste podem ser salvos localmente; é possível copiar o ajuste para outros vídeos mediante confirmação. Os efeitos offline são aplicados na exportação Media3 à fonte escolhida, sem alterar os arquivos originais nem automaticamente a música de fundo. Não há RNNoise, separação de fontes, cálculo LUFS ou limitador true peak nesta versão. A qualidade auditiva, a compilação Android e o uso de memória devem ser verificados no aparelho.
+
 # Uai Cortes · v0.1.219 — Melhorar voz offline no editor
 
 Em **Editor > Áudio > Melhorar voz**, selecione o áudio de um vídeo ou uma faixa adicionada. Ative Natural, Encorpada ou Clara e ajuste a intensidade; o **Equalizador (EQ) avançado** permite alterar graves, corpo/médios e clareza (±4 dB). Use **Original** e **Tratada** para comparar a fonte isolada. Os mesmos filtros PCM são usados na exportação Media3, sem modificar a mídia de origem. Projetos anteriores mantêm o efeito desligado. O efeito não isola voz de música nem remove ruído por IA; processamento e testes de nível de saída dependem de avaliação em aparelho. Release 0.1.219, versionCode 220.

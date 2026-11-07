@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.220 — Tratamento de voz mais perceptível (versionCode 221)
+## v0.1.220
+- Voz Encorpada reforçada, novo preset Estúdio, controles independentes de compressão e compensação automática de ganho, EQ em quatro bandas, de-esser e redução de ruído leve opcional (expander, não IA).
+- Prévia original/tratada continua no mesmo ponto da fonte, três perfis salvos no aparelho, cópia de ajuste para outros vídeos após confirmação explícita. Música de fundo não recebe o efeito por padrão.
+- PCM com estado por faixa e canal, limitação suave de pico de amostra (não true peak), persistência opcional sem alteração do schemaVersion 4. O projeto original e o histórico permanecem intactos.
+- Não inclui RNNoise nem separação de voz e música. Gradle/Android e escuta real em diferentes aparelhos continuam pendentes.
+
 # Uai Cortes · versão 0.1.219 — Voz natural e encorpada (versionCode 220)
 ## v0.1.219
 - Em Áudio, nova opção Melhorar voz: presets Natural/Encorpada/Clara, ajuste de intensidade e equalizador avançado de 3 controles. A prévia permite comparar a faixa original com o processamento.
