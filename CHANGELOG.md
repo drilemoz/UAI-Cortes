@@ -1,3 +1,10 @@
+# Uai Cortes · v0.1.217 — Integrações simplificadas
+- Substituição dos cartões longos da Central de APIs por lista compacta de serviços e telas individuais de conexão.
+- Guias de obtenção/configuração, etapas para usuário e desenvolvedor e URLs oficiais; identificação clara de chave de API, OAuth e modo manual.
+- Ação real de autorização/teste YouTube, consulta Meta quando configurada e teste temporário de Meta/TikTok oculto em opções avançadas. Nenhuma promessa de login TikTok concluído.
+- Aba Redes com ação principal em destaque, métricas recolhíveis, Meta mostrada somente para Páginas cadastradas, preservando fluxos de compartilhamento, publicação, histórico e catálogo local.
+- v0.1.217/versionCode 218; compilação Android completa e validação em aparelhos ainda pendentes.
+
 # Uai Cortes · versão 0.1.216 — revisão da divisão (versionCode 217)
 ## 0.1.216 (versionCode 217) · Cancelamento e seleção de duração
 - Cópia do MP4 para a galeria interrompe gravação por blocos quando recebe cancelamento, retirando item parcial pendente do MediaStore; callbacks atrasados não alteram o estado de uma nova tarefa.

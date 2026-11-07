@@ -499,7 +499,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 "social_publish" -> SocialPublishScreen(pendingSocialVideoUri.takeIf(String::isNotBlank)?.let(Uri::parse),
                     pendingSocialVideoName, VideoPublicationDraft(pendingSocialDescription, pendingSocialHashtags), { screen = "social" })
                 "settings" -> SettingsScreen(::back, { previous = "settings"; screen = it }, { screen = it })
-                "api_center" -> SocialApiCenterScreen(::back, { previous = "api_center"; screen = "gemini_settings" })
+                "api_center" -> SocialApiCenterScreen(::back, { previous = "api_center"; screen = "gemini_settings" }, { screen = "social" })
                 "updates" -> GitHubUpdatesScreen(githubUpdates, ::back)
                 "whats_new" -> WhatsNewScreen(::back)
                 "diagnostics" -> DiagnosticScreen(::back, onEnabledChanged = { diagnosticsEnabled = it })

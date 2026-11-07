@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.217 — Central de Integrações (versionCode 218)
+## v0.1.217
+- Encontre Google Gemini, YouTube, Facebook, TikTok e Kwai em uma lista mais curta, com ajuda por serviço.
+- Saiba quando precisa configurar uma API, autorizar conta ou usar compartilhamento manual. Controles técnicos ficam dentro dos detalhes.
+- Página Redes mais direta, com publicação em destaque e opções de conexão e desempenho recolhíveis.
+- Não altera credenciais nem permite acesso automático em serviços que exigem análise e autorização. Compilação Gradle e teste físico pendentes.
+
 # Uai Cortes · versão 0.1.216 — revisão da divisão (versionCode 217)
 ## v0.1.216
 - Melhorias de segurança ao cancelar cortes durante o salvamento de MP4, com tentativa de limpeza de arquivo pendente.

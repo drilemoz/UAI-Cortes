@@ -1,3 +1,9 @@
+# v0.1.217 — Central de Integrações e Redes compactas
+- Mover a tela `SocialApiCenterScreen` de `SocialScreens.kt` para `SocialIntegrationsUi.kt`, separando guias por serviço da lógica de apresentação e preservando `SocialPublicConfig`/backup somente de identificadores públicos.
+- Central compacta por serviços com detalhes por destino, orientação para usuários e desenvolvedores, links oficiais, autorização Google real por ação, login Meta somente se build configurado, opção avançada para teste de token Meta/TikTok e compartilhamento manual para Kwai/Facebook Perfil. Não inventar login TikTok, token persistido ou status de publicação.
+- Em Redes, manter criação/publicação, importação SAF, vínculos, confirmação e métricas; reduzir cartão inicial, recolher conexão Meta para quando houver Página cadastrada e recolher métricas. `SocialMetaAuth` continua protegido e sem App Secret no APK. Preservar schemaVersion 4, cinco APKs Release, assinatura, Android 16 e histórico.
+- Sincronizar Gradle versionName 0.1.217/versionCode 218, README/CHANGELOG/RELEASE/Novidades/JSON/CI; validar contratos, Kotlin PSI, CI Gradle e teste físico OAuth/tema/scroll; compilação local ainda a confirmar.
+
 # v0.1.216 — Revisão da divisão e proteção no salvamento
 - `GalleryVideoSaver.save` aceita callback opcional de continuidade e verifica cancelamento entre blocos de 256 KiB e antes de publicar `IS_PENDING=0`, descartando arquivo parcial em erro/cancelamento. Compatibilidade do método anterior preservada.
 - `QuickVideoSplitEngine` passa a usar geração visível à thread de cópia e ignora callbacks antigos antes de modificar flags da nova execução. A janela residual entre publicação e cancelamento não torna o fluxo persistente em background.

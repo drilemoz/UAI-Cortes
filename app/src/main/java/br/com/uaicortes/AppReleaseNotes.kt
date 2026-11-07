@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.216"
-    const val VERSION_CODE = 217
+    const val VERSION_NAME = "0.1.217"
+    const val VERSION_CODE = 218
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.217", listOf(
+            ReleaseFeature("social-integrations-217", "Central de Integrações mais simples",
+                "Conexões organizadas por serviço, status honesto e guias passo a passo para APIs, OAuth e compartilhamento manual.", "check"),
+            ReleaseFeature("social-compact-217", "Redes Sociais mais compacta",
+                "Configuração Meta e métricas ficam recolhidas; publicar, cadastrar contas e vincular canais estão mais fáceis de encontrar.", "check")
+        )),
         ReleaseSummary("0.1.216", listOf(
             ReleaseFeature("split-cancel-save-216", "Salvamento mais seguro ao cancelar",
                 "A cópia dos MP4 para a galeria verifica o cancelamento durante a gravação e descarta arquivos parciais antes de publicar.", "film"),

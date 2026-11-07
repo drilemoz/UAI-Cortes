@@ -67,30 +67,35 @@ internal fun SocialDashboardScreen(
     var metaBusy by remember { mutableStateOf(false) }
     var metaPages by remember { mutableStateOf<List<SocialExternalApis.FacebookPage>>(emptyList()) }
     val activity = context as? ComponentActivity
-    fun connectMeta(publish: Boolean) {
+    var confirmedPage by remember { mutableStateOf<Pair<SocialAccount, SocialExternalApis.FacebookPage>?>(null) }
+    var pageFromMeta by remember { mutableStateOf<SocialAccount?>(null) }
+    fun consultMetaPages(accountToLink: SocialAccount? = null) {
+        val userToken = SocialMetaAuth.currentUserToken()
+        if (userToken == null) { failure = "A autorização Meta expirou."; return }
+        metaBusy = true
+        scope.launch {
+            runCatching {
+                val pages = SocialExternalApis.facebookPages(userToken)
+                SocialMetaAuth.putPageTokens(pages)
+                // Nunca transferir accessToken para Compose ou para SocialStore.
+                metaPages = pages.map { it.copy(accessToken = "") }
+                if (accountToLink != null) {
+                    if (metaPages.isEmpty()) failure = "Nenhuma Página autorizada encontrada."
+                    else pageFromMeta = accountToLink
+                }
+            }.onFailure { failure = "Não foi possível consultar suas Páginas autorizadas." }
+            metaBusy = false
+        }
+    }
+    fun connectMeta(publish: Boolean, accountToLink: SocialAccount? = null) {
         if (activity == null) { failure = "Esta tela requer uma Activity Android."; return }
         metaBusy = true
         metaPages = emptyList()
         SocialMetaAuth.start(activity, publish) { success, message ->
             failure = message
-            if (success) {
-                scope.launch {
-                    runCatching {
-                        val userToken = SocialMetaAuth.currentUserToken()
-                            ?: error("A sessão Meta não retornou autorização válida.")
-                        val pages = SocialExternalApis.facebookPages(userToken)
-                        SocialMetaAuth.putPageTokens(pages)
-                        // Não guardar tokens em estado de UI ou no catálogo.
-                        metaPages = pages.map { it.copy(accessToken = "") }
-                    }.onFailure { failure = "Não foi possível consultar suas Páginas autorizadas." }
-                    metaBusy = false
-                }
-            } else metaBusy = false
+            if (success) consultMetaPages(accountToLink) else metaBusy = false
         }
     }
-
-    var confirmedPage by remember { mutableStateOf<Pair<SocialAccount, SocialExternalApis.FacebookPage>?>(null) }
-    var pageFromMeta by remember { mutableStateOf<SocialAccount?>(null) }
     val authorizeYouTube = rememberYouTubeAuthorization { error ->
         youtubeBusy = false
         failure = error
@@ -117,92 +122,111 @@ internal fun SocialDashboardScreen(
                 Text("Contas e publicações", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            IconButton(onClick = onApiCenter) { Icon(Icons.Default.Settings, "Central de APIs") }
+            IconButton(onClick = onApiCenter) { Icon(Icons.Default.Settings, "Integrações e APIs") }
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (failure.isNotBlank()) Text(failure, color = MaterialTheme.colorScheme.error)
-            Card {
-                Column(Modifier.fillMaxWidth().padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Share, null, tint = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Publicação assistida", style = MaterialTheme.typography.titleMedium)
-                    }
-                    Text("Prepare a mesma descrição e hashtags para várias contas. " +
-                        "Compartilhamento Android permanece disponível; envios por API exigem " +
-                        "permissões válidas e confirmação individual.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Button(onClick = onCompose, modifier = Modifier.fillMaxWidth(),
-                        enabled = data != null) { Icon(Icons.Default.Upload, null)
-                        Spacer(Modifier.width(8.dp)); Text("Preparar publicação") }
-                }
+            Button(onClick = onCompose, modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
+                shape = UaiShapes.button, enabled = data != null) {
+                Icon(Icons.Default.Upload, null)
+                Spacer(Modifier.width(8.dp))
+                Text("Preparar publicação")
             }
             val state = data
             if (state != null) {
                 val metricPosts = state.publications.filter { it.metrics.hasData }
                 val views = metricPosts.sumOf { it.metrics.views ?: 0L }
-                OutlinedCard {
-                    Column(Modifier.fillMaxWidth().padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Desempenho registrado", style = MaterialTheme.typography.titleMedium)
-                        Text(if (metricPosts.isEmpty()) "Sem métricas disponíveis" else
-                            "$views visualizações informadas · ${metricPosts.size} publicação(ões) com dados",
-                            style = MaterialTheme.typography.bodyMedium)
-                        Text("Dados manuais ou consultas YouTube autorizadas. Sem sincronização de " +
-                            "métricas TikTok, Meta ou Kwai nesta versão.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-                OutlinedCard {
-                    Column(Modifier.fillMaxWidth().padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                        Text("Conexão Facebook Página", style = MaterialTheme.typography.titleMedium)
-                        Text(if (!SocialMetaAuth.isConfigured)
-                            "O login oficial precisa de META_APP_ID, META_CLIENT_TOKEN, hash de assinatura e permissões aprovadas. O compartilhamento manual segue disponível."
-                        else "Autorização pelo Facebook. O app guarda apenas IDs públicos de Páginas; tokens permanecem em sessão.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(onClick = { connectMeta(false) },
-                                enabled = !metaBusy && SocialMetaAuth.isConfigured) {
-                                Text("Conectar Meta")
+                var metricsExpanded by rememberSaveable { mutableStateOf(false) }
+                OutlinedCard(shape = UaiShapes.card) {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp)) {
+                        Row(Modifier.fillMaxWidth().clickable { metricsExpanded = !metricsExpanded }
+                            .heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.BarChart, null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(10.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("Desempenho", fontWeight = FontWeight.Medium)
+                                Text(if (metricPosts.isEmpty()) "Sem métricas registradas" else
+                                    "$views visualizações · ${metricPosts.size} com dados",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            TextButton(onClick = { connectMeta(true) },
-                                enabled = !metaBusy && SocialMetaAuth.isConfigured &&
-                                    SocialMetaAuth.currentUserToken() != null) {
-                                Text("Autorizar postagem")
-                            }
+                            Icon(if (metricsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                "Mostrar ou ocultar detalhes")
                         }
-                        if (metaBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
-                        if (metaPages.isNotEmpty()) {
-                            Text("Páginas autorizadas (selecione um cadastro abaixo para vincular):",
-                                style = MaterialTheme.typography.labelSmall)
-                            metaPages.forEach { page ->
-                                Text("• ${page.name} (ID ${page.id})",
-                                    style = MaterialTheme.typography.bodySmall)
-                            }
-                            TextButton(onClick = {
-                                SocialMetaAuth.disconnect(); metaPages = emptyList()
-                                failure = "Sessão Meta desconectada. IDs públicos já cadastrados foram preservados."
-                            }) { Text("Desconectar Meta") }
+                        if (metricsExpanded) {
+                            Text("Métricas manuais ou obtidas do YouTube com autorização. " +
+                                "Outras redes não têm sincronização automática nesta versão.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.height(8.dp))
                         }
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Meus destinos (${state.accounts.size})", modifier = Modifier.weight(1f),
+                    Text("Minhas contas (${state.accounts.size})", modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.titleMedium)
                     TextButton(onClick = { showAccountDialog = true },
                         enabled = state.accounts.size < 30) {
                         Icon(Icons.Default.Add, null); Text("Adicionar")
                     }
                 }
-                if (state.accounts.isEmpty()) Text("Adicione Facebook Página, Facebook Perfil, " +
-                    "YouTube, TikTok ou Kwai. O cadastro local não conecta uma conta.",
+                if (state.accounts.isEmpty()) Text("Adicione uma conta para organizar publicações. O vínculo é feito depois.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+                // Controles Meta aparecem apenas quando há Página cadastrada.
+                // Configuração técnica e guia ficam na Central de Integrações.
+                if (state.accounts.any { it.destination == SocialDestination.FACEBOOK_PAGE }) {
+                    var metaExpanded by rememberSaveable { mutableStateOf(false) }
+                    OutlinedCard(shape = UaiShapes.card) {
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
+                            Row(Modifier.fillMaxWidth().clickable { metaExpanded = !metaExpanded }
+                                .heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Link, null, tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Conexão Facebook Página", modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.bodyMedium)
+                                Icon(if (metaExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    "Expandir conexão")
+                            }
+                            if (metaExpanded) {
+                                Text(when {
+                                    !SocialMetaAuth.isConfigured ->
+                                        "Configuração Meta pendente. Veja Integrações para preparar o aplicativo."
+                                    SocialMetaAuth.currentUserToken() != null ->
+                                        "Sessão Meta ativa. Consulte as Páginas para vincular ao cadastro."
+                                    else -> "Entre com Facebook para consultar suas Páginas."
+                                }, style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    TextButton(onClick = {
+                                        if (SocialMetaAuth.currentUserToken() != null) consultMetaPages()
+                                        else connectMeta(false)
+                                    }, enabled = !metaBusy && SocialMetaAuth.isConfigured) {
+                                        Text(if (SocialMetaAuth.currentUserToken() != null) "Consultar Páginas" else "Entrar com Facebook")
+                                    }
+                                    TextButton(onClick = { connectMeta(true) },
+                                        enabled = !metaBusy && SocialMetaAuth.isConfigured &&
+                                            SocialMetaAuth.currentUserToken() != null) {
+                                        Text("Autorizar postagem")
+                                    }
+                                }
+                                if (metaBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                                if (metaPages.isNotEmpty()) {
+                                    Text("${metaPages.size} Página(s) disponíveis. Toque em Vincular na conta desejada.",
+                                        style = MaterialTheme.typography.bodySmall)
+                                }
+                                TextButton(onClick = onApiCenter) { Text("Como configurar Meta") }
+                                if (SocialMetaAuth.currentUserToken() != null) {
+                                    TextButton(onClick = {
+                                        SocialMetaAuth.disconnect()
+                                        metaPages = emptyList()
+                                        failure = "Sessão Meta encerrada. Cadastros locais preservados."
+                                    }) { Text("Desconectar") }
+                                }
+                            }
+                        }
+                    }
+                }
                 state.accounts.forEach { account ->
                     OutlinedCard {
                         Row(Modifier.fillMaxWidth().padding(12.dp),
@@ -243,10 +267,12 @@ internal fun SocialDashboardScreen(
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     TextButton(onClick = {
-                                        if (metaPages.isNotEmpty()) {
-                                            // A seleção será feita em diálogo, com verificação do destino.
-                                            pageFromMeta = account
-                                        } else pageToBind = account
+                                        when {
+                                            metaPages.isNotEmpty() -> pageFromMeta = account
+                                            SocialMetaAuth.currentUserToken() != null -> consultMetaPages(account)
+                                            SocialMetaAuth.isConfigured -> connectMeta(false, account)
+                                            else -> pageToBind = account // Alternativa avançada com token da Página.
+                                        }
                                     }) { Text("Vincular") }
                                 }
                             }
@@ -451,7 +477,7 @@ private fun SocialAccountDialog(onDismiss: () -> Unit, onSave: (SocialAccount) -
         title = { Text("Adicionar destino") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Cadastro local para organizar publicações. Não é um login.",
+                Text("Primeiro cadastre; depois vincule a conta, se disponível.",
                     style = MaterialTheme.typography.bodySmall)
                 Box {
                     OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
@@ -846,143 +872,3 @@ internal object SocialPublicConfig {
     }
 }
 
-@Composable
-internal fun SocialApiCenterScreen(back: () -> Unit, openGemini: () -> Unit) {
-    val context = LocalContext.current
-    val store = remember(context) { SocialStore(context) }
-    var feedback by remember { mutableStateOf("") }
-    val scope = rememberCoroutineScope()
-    var testBusy by remember { mutableStateOf(false) }
-    var externalTest by remember { mutableStateOf<SocialDestination?>(null) }
-    val authorizeYouTube = rememberYouTubeAuthorization { error ->
-        feedback = error; testBusy = false
-    }
-    val exporter = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        if (uri != null) runCatching {
-            val bytes = SocialPublicConfig.export(store.load()).toByteArray(Charsets.UTF_8)
-            context.contentResolver.openOutputStream(uri, "wt")?.use { it.write(bytes) }
-                ?: error("Falha ao criar arquivo")
-        }.onSuccess { feedback = "Configuração pública exportada, sem chaves ou tokens." }
-            .onFailure { feedback = "Falha ao exportar configuração pública." }
-    }
-    val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) runCatching {
-            val bytes = context.contentResolver.openInputStream(uri)?.use { input ->
-                val buffer = ByteArray(8192)
-                val result = java.io.ByteArrayOutputStream()
-                while (true) {
-                    val count = input.read(buffer)
-                    if (count < 0) break
-                    require(result.size() + count <= 100_000) { "Arquivo excede 100 KB." }
-                    result.write(buffer, 0, count)
-                }
-                result.toByteArray()
-            } ?: error("Falha ao ler")
-            store.save(SocialPublicConfig.merge(store.load(), bytes))
-        }.onSuccess { feedback = "Contas locais importadas. Nenhuma conexão OAuth foi configurada." }
-            .onFailure { feedback = "Arquivo incompatível ou armazenamento indisponível. Nenhum dado foi substituído." }
-    }
-    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-        Heading("Central de APIs e Contas", back)
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Conexões de serviços", style = MaterialTheme.typography.titleMedium)
-            Text("Chaves de desenvolvedor não equivalem a autorização para publicar na conta. " +
-                "YouTube usa autorização Google no Android. Meta Página agora pode iniciar " +
-                    "login oficial quando a integração estiver configurada; TikTok requer backend OAuth. " +
-                    "O modo avançado por token temporário continua opcional.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            ItemCard(Icons.Default.AutoAwesome, "Google Gemini", "Chaves e testes já existentes") { openGemini() }
-            OutlinedCard {
-                Column(Modifier.fillMaxWidth().padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Autorização Meta — Facebook Página", fontWeight = FontWeight.SemiBold)
-                    Text(if (SocialMetaAuth.isConfigured)
-                        "App ID e Client Token públicos configurados no build. Conecte a conta pela aba Redes Sociais."
-                    else "Aguardando configuração de META_APP_ID e META_CLIENT_TOKEN no CI e registro do hash da assinatura na Meta. Nenhum App Secret deve ir para o APK.",
-                        style = MaterialTheme.typography.bodySmall)
-                    Text("TikTok: Login Kit requer domínio HTTPS registrado, certificado do app e um backend seu para trocar o código OAuth por tokens. Sem esses requisitos, o modo avançado por token continua disponível.",
-                        style = MaterialTheme.typography.bodySmall)
-                    TextButton(onClick = {
-                        SocialMetaAuth.disconnect()
-                        feedback = "Sessão Meta desconectada. Cadastros locais mantidos."
-                    }, enabled = SocialMetaAuth.isConfigured &&
-                        SocialMetaAuth.currentUserToken() != null) { Text("Desconectar sessão Meta") }
-                }
-            }
-
-            SocialDestination.entries.forEach { dest ->
-                OutlinedCard {
-                    Column(Modifier.fillMaxWidth().padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                        Text(dest.label, fontWeight = FontWeight.SemiBold)
-                        Text((if (dest == SocialDestination.YOUTUBE) "Autorização por ação · "
-                            else "Não conectado · ") + dest.help, style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(onClick = {
-                                runCatching { context.startActivity(Intent(Intent.ACTION_VIEW,
-                                    Uri.parse(dest.developerUrl))) }
-                                    .onFailure { feedback = "Não há navegador disponível." }
-                            }) { Text("Ajuda oficial") }
-                            TextButton(onClick = {
-                                copyText(context, dest.developerUrl)
-                                feedback = "Link oficial copiado."
-                            }) { Icon(Icons.Default.ContentCopy, null, Modifier.size(16.dp)); Text("Copiar") }
-                        }
-                        OutlinedButton(onClick = {
-                            if (dest == SocialDestination.FACEBOOK_PAGE || dest == SocialDestination.TIKTOK) {
-                                externalTest = dest
-                            } else if (dest == SocialDestination.YOUTUBE) {
-                                testBusy = true
-                                authorizeYouTube { token ->
-                                    scope.launch {
-                                        runCatching { YouTubeSocialApi.channel(token) }
-                                            .onSuccess { feedback = "YouTube autorizado: ${it.title} (${it.id})" }
-                                            .onFailure { feedback = it.message ?: "Erro ao consultar canal." }
-                                        testBusy = false
-                                    }
-                                }
-                            }
-                        }, enabled = (dest == SocialDestination.YOUTUBE ||
-                            dest == SocialDestination.FACEBOOK_PAGE || dest == SocialDestination.TIKTOK) && !testBusy) {
-                            Icon(Icons.Default.CheckCircleOutline, null, Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp)); Text(when (dest) {
-                                SocialDestination.YOUTUBE -> "Testar YouTube com autorização"
-                                SocialDestination.FACEBOOK_PAGE, SocialDestination.TIKTOK ->
-                                    "Testar token OAuth temporário"
-                                else -> "Teste depende de OAuth"
-                            })
-                        }
-                        Text(when (dest) {
-                            SocialDestination.YOUTUBE -> "Para publicar, vincule o canal na aba Redes."
-                            SocialDestination.FACEBOOK_PAGE -> "Para publicar, vincule uma Página e autorize cada envio."
-                            SocialDestination.TIKTOK -> "A autorização e privacidade serão verificadas antes de cada envio."
-                            else -> "Sem OAuth, nenhum teste fictício é realizado."
-                        },
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
-            HorizontalDivider()
-            Text("Backup de cadastros públicos", style = MaterialTheme.typography.titleMedium)
-            Text("Exporta e importa somente nomes e tipos de redes. Links privados, " +
-                "credenciais, tokens, vídeos e métricas não são exportados.",
-                style = MaterialTheme.typography.bodySmall)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { exporter.launch("uai-redes-config.json") },
-                    modifier = Modifier.weight(1f)) { Text("Exportar") }
-                OutlinedButton(onClick = { importer.launch(arrayOf("application/json", "text/plain")) },
-                    modifier = Modifier.weight(1f)) { Text("Importar") }
-            }
-            if (feedback.isNotBlank()) Text(feedback, style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary)
-        }
-    }
-    externalTest?.let { dest ->
-        SocialExternalApiTestDialog(dest, onDismiss = { externalTest = null })
-    }
-}

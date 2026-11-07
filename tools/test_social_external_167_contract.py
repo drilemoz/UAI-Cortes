@@ -28,7 +28,7 @@ assert 'SocialPublicationPolicy.markExternalSubmitted' in ui
 assert 'validRemoteReference' in store and 'remotePageId' in store
 assert 'REMOTE_SUBMITTED' in store
 assert 'SocialExternalPublishDialog' in main and 'SocialFacebookPageBindDialog' in main
-assert 'SocialExternalApiTestDialog' in main and 'SocialTikTokStatusDialog' in main
+assert 'SocialExternalApiTestDialog' in (src/'SocialIntegrationsUi.kt').read_text() and 'SocialTikTokStatusDialog' in main
 assert 'SocialDestination.FACEBOOK_PROFILE' not in api
 assert 'SocialDestination.KWAI' not in api
 assert (r/'app/src/androidTest/java/br/com/uaicortes/SocialExternalAndroidTest.kt').is_file()

@@ -8,6 +8,7 @@ root = Path(__file__).resolve().parents[1]
 source = root/'app/src/main/java/br/com/uaicortes'
 store = (source/'SocialStore.kt').read_text(encoding='utf-8')
 screens = (source/'SocialScreens.kt').read_text(encoding='utf-8')
+integrations = (source/'SocialIntegrationsUi.kt').read_text(encoding='utf-8')
 nav = (source/'EditorNavigation.kt').read_text(encoding='utf-8')
 main = (source/'MainActivity.kt').read_text(encoding='utf-8')
 home = (source/'HomeScreens.kt').read_text(encoding='utf-8')
@@ -25,10 +26,10 @@ assert 'Métricas informadas manualmente' in screens
 assert 'socialCaption(' in screens and 'Intent.ACTION_SEND' in screens
 assert 'FLAG_GRANT_READ_URI_PERMISSION' in screens and 'ClipData.newUri' in screens
 assert 'takePersistableUriPermission' in screens and 'ActivityResultContracts.OpenDocument()' in screens
-assert 'ActivityResultContracts.CreateDocument("application/json")' in screens
+assert 'ActivityResultContracts.CreateDocument("application/json")' in integrations
 assert 'uai-social-public-v1' in screens and 'require(json.length() == 2' in screens
 assert 'require(entry.length() == 2)' in screens and 'put("profileUrl", account.profileUrl)' not in screens
-assert 'Testar YouTube com autorização' in screens
+assert 'Autorizar Google e testar' in integrations
 assert 'SocialApiCenterScreen(' in main and 'SocialDashboardScreen(' in main
 assert '"social_publish"' in nav and '"social"' in nav and '"api_center"' in nav
 assert 'MainNav("social", onTab)' in screens and 'Triple("social",Icons.Default.Public,"Redes")' in home

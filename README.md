@@ -1,3 +1,7 @@
+# Uai Cortes · v0.1.217 — Integrações e redes sociais
+
+**Atualização v0.1.217 (versionCode 218):** Central de Integrações reorganizada com cartões compactos, telas específicas para cada serviço e guias de configuração em português; a aba Redes coloca publicar e contas em primeiro plano, mantendo autorizações reais, testes opcionais e compartilhamento manual. Versão de código-fonte; ainda requer build Gradle e testes Android reais.
+
 # Uai Cortes · versão 0.1.216 — divisão de vídeo revisada (versionCode 217)
 - Revisão de Dividir vídeo: cópia MP4 cooperativamente cancelável, limpeza de itens não publicados, isolamento de callbacks antigos após nova tentativa, grupos de duração com memória de seleção e campos HH:MM:SS responsivos.
 - Preserva 9,5/10/30/60s, presets em minutos e duração personalizada, limite 180 partes, Media3 e módulos existentes.
