@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.221"
-    const val VERSION_CODE = 222
+    const val VERSION_NAME = "0.1.222"
+    const val VERSION_CODE = 223
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.222", listOf(
+            ReleaseFeature("ci184-voice-sheet-222", "Correção de compilação dos ajustes de voz",
+                "Os painéis inferiores de Melhorar voz agora usam a declaração compatível com a API experimental do Material 3. Presets, EQ e processamento de áudio continuam iguais.", "check")
+        )),
         ReleaseSummary("0.1.221", listOf(
             ReleaseFeature("voice-ui-221", "Ajustes de voz mais simples",
                 "Áudio > Melhorar voz agora usa atalhos compactos para Estilo, Ajustes, Equalizador e Limpeza. Controles e perfis aparecem em painéis próprios, sem cortar opções na tela.", "music")

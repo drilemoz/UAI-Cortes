@@ -1,3 +1,8 @@
+# v0.1.222 — CI184: autorizar API experimental do painel de voz
+- O workflow 184 passou nas verificações locais, mas `:app:compileReleaseKotlin` e `:app:compileDebugKotlin` falharam em `VoiceTonePanel.kt` linhas 201–202: `ModalBottomSheet` e `rememberModalBottomSheetState` exigem `ExperimentalMaterial3Api` no Compose Material 3 utilizado.
+- Aplicar `@OptIn(ExperimentalMaterial3Api::class)` exclusivamente ao composable `VoiceTonePanel`, mantendo painéis, filtros, prévia A/B, assinaturas, schemaVersion 4 e cinco APKs inalterados. Contrato de regressão deve impedir remoção acidental do opt-in.
+- v0.1.222/versionCode 223; testes estáticos não equivalem a compilação Gradle, reexecutar workflow e validar no Android.
+
 # v0.1.221 — Organizar o tratamento de voz em painéis compactos
 - Em Áudio > Melhorar voz, manter a seleção de faixa, o estilo ativo e A/B visíveis, com atalhos Estilo, Ajustes, Equalizador, Limpeza e Meus ajustes. Cada grupo abre ModalBottomSheet com UaiShapes.sheet, sem rolagem horizontal de presets.
 - Preservar campos, alcance e valores de VoiceTone, favoritos, cópia confirmada, salvamento do projeto, exportação Media3, schemaVersion 4 e cinco APKs. Esta é uma mudança de UI, não de DSP, RNNoise ou mixagem.

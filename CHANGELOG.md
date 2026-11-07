@@ -1,3 +1,8 @@
+# Uai Cortes · v0.1.222 — Correção CI184 do painel Melhorar voz
+- Corrigida a falha de compilação Kotlin Debug/Release do workflow 184 na `VoiceTonePanel.kt` (linhas 201–202). Uso de `ModalBottomSheet` e `rememberModalBottomSheetState` anotado com `@OptIn(ExperimentalMaterial3Api::class)` no composable responsável.
+- Adicionado teste de regressão específico para garantir a anotação e manter o painel funcional. Sem alterar presets, DSP, exportação, esquemas de projetos ou segredos.
+- Atualizados versão 0.1.222/versionCode 223, Novidades, documentação, workflow, pacotes e metadados. Gradle/Android e teste físico ainda pendentes de execução no CI.
+
 # Uai Cortes · v0.1.221 — Painel de voz simplificado
 - Reorganizado Melhorar voz para mostrar informações essenciais e botões com pop-ups próprios: Estilo, Ajustes de intensidade/compressão/ganho, Equalizador de 4 bandas, Limpeza e Meus ajustes.
 - Corrigido corte do preset Desligado na rolagem horizontal; textos longos de mídia truncados corretamente, painéis com rolagem vertical limitada e layout responsivo em duas ações por linha.

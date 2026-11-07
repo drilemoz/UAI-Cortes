@@ -1,3 +1,6 @@
+# Uai Cortes · v0.1.222 — Correção do build do painel de voz
+O workflow 184 identificou que o novo painel inferior em **Editor > Áudio > Melhorar voz** utiliza APIs experimentais do Compose Material 3 sem `@OptIn`. A correção declara `@OptIn(ExperimentalMaterial3Api::class)` no componente afetado, sem modificar efeitos, projetos nem exportação. Incluído teste de regressão CI184; compilação Android final depende de reexecutar o GitHub Actions.
+
 # Uai Cortes · v0.1.221 — Ajustes de voz em pop-ups
 Em **Editor > Áudio > Melhorar voz**, o painel mostra só a faixa, o estilo atual, quatro atalhos (Estilo, Ajustes, Equalizador, Limpeza), perfis e comparação Original/Tratada. Os detalhes são editados em painéis inferiores Material 3 com o mesmo tema e formas do Uai Cortes, sem opções cortadas por rolagem horizontal. O processamento PCM, presets, perfis e exportação permanecem inalterados.
 

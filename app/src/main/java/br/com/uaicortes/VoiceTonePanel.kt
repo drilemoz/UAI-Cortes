@@ -50,6 +50,7 @@ private fun voicePresetLabel(preset: String): String = when (preset) {
  * Edição não destrutiva por fonte. A tela principal mostra apenas status, atalhos e A/B.
  * Controles avançados ficam em folhas modais alinhadas ao design do editor.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun VoiceTonePanel(project: VideoProject, update: (VideoProject) -> Unit,
                             onPreview: (String, Boolean) -> Unit,

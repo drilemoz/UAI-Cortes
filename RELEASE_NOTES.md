@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.222 — Compilação do painel de voz (versionCode 223)
+## v0.1.222
+- Corrigido o erro de compilação do Material 3 em `VoiceTonePanel.kt` com declaração explícita para a API experimental dos painéis de ajustes.
+- Funcionalidades de Melhorar voz, EQ, presets, perfis locais e comparação A/B preservadas, assim como a exportação e a assinatura Android.
+- O workflow 184 confirmou a falha; a correção precisa ser validada no próximo build Android. Nenhuma migração de projeto foi feita.
+
 # Uai Cortes · versão 0.1.221 — Ajustes de voz mais organizados (versionCode 222)
 ## v0.1.221
 - Em Áudio > Melhorar voz, atalhos claros abrem painéis separados de Estilo, Ajustes, Equalizador, Limpeza e Meus ajustes, mantendo a comparação Original/Tratada no cartão principal.
