@@ -19,6 +19,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -148,7 +155,7 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
                         )
                     }
                     Spacer(Modifier.width(12.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Text(
                             if (mode == QuickToolMode.SPLIT_VIDEO) "Cortes rápidos em MP4" else "Áudio direto do vídeo",
                             style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold
@@ -205,29 +212,34 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
             if (mode == QuickToolMode.SPLIT_VIDEO) {
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     QuickToolStep(2, "Duração das partes")
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        listOf(QuickVideoSplitPolicy.SHORT_MS to "9,5 s",
-                            QuickVideoSplitPolicy.TEN_SECONDS_MS to "10 s").forEach { (value, label) ->
-                            val selected = partDuration == value
-                            Surface(
-                                onClick = { partDuration = value }, enabled = !processing,
-                                modifier = Modifier.weight(1f).heightIn(min = 64.dp),
-                                shape = UaiShapes.card,
-                                color = if (selected) MaterialTheme.colorScheme.primaryContainer
-                                    else MaterialTheme.colorScheme.surface,
-                                border = BorderStroke(if (selected) 2.dp else 1.dp,
-                                    if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
-                            ) {
-                                Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 14.dp),
-                                    horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(if (selected) Icons.Default.RadioButtonChecked else Icons.Default.RadioButtonUnchecked,
-                                        contentDescription = null,
-                                        tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(20.dp))
-                                    Spacer(Modifier.width(7.dp))
-                                    Text(label, style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                                        maxLines = 1)
+                    // Adaptar os dois cartões a telas estreitas e fonte ampliada,
+                    // sem perder a área de toque ou truncar o valor selecionado.
+                    BoxWithConstraints(Modifier.fillMaxWidth()) {
+                        val stackChoices = maxWidth < 330.dp || LocalDensity.current.fontScale >= 1.3f
+                        if (stackChoices) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                QuickToolDurationChoice("9,5 s",
+                                    partDuration == QuickVideoSplitPolicy.SHORT_MS, !processing,
+                                    modifier = Modifier.fillMaxWidth()) {
+                                    partDuration = QuickVideoSplitPolicy.SHORT_MS
+                                }
+                                QuickToolDurationChoice("10 s",
+                                    partDuration == QuickVideoSplitPolicy.TEN_SECONDS_MS, !processing,
+                                    modifier = Modifier.fillMaxWidth()) {
+                                    partDuration = QuickVideoSplitPolicy.TEN_SECONDS_MS
+                                }
+                            }
+                        } else {
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                QuickToolDurationChoice("9,5 s",
+                                    partDuration == QuickVideoSplitPolicy.SHORT_MS, !processing,
+                                    modifier = Modifier.weight(1f)) {
+                                    partDuration = QuickVideoSplitPolicy.SHORT_MS
+                                }
+                                QuickToolDurationChoice("10 s",
+                                    partDuration == QuickVideoSplitPolicy.TEN_SECONDS_MS, !processing,
+                                    modifier = Modifier.weight(1f)) {
+                                    partDuration = QuickVideoSplitPolicy.TEN_SECONDS_MS
                                 }
                             }
                         }
@@ -310,7 +322,8 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
             ) {
                 if (processing) {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                    Text(if (mode == QuickToolMode.SPLIT_VIDEO) "$phase · Parte $progressIndex/$progressTotal" else phase,
+                    Text(if (mode == QuickToolMode.SPLIT_VIDEO) "$phase · Parte $progressIndex de $progressTotal" else phase,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                         style = MaterialTheme.typography.bodySmall)
                     OutlinedButton(onClick = { confirmCancel = true }, modifier = Modifier.fillMaxWidth(),
                         shape = UaiShapes.button) {
@@ -399,6 +412,40 @@ private fun QuickToolStep(number: Int, title: String) {
     }
 }
 
+/** A escolha de duração se adapta ao espaço e expõe a seleção para leitores de tela. */
+@Composable
+private fun QuickToolDurationChoice(
+    label: String,
+    selected: Boolean,
+    enabled: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick, enabled = enabled,
+        modifier = modifier.heightIn(min = 64.dp).semantics {
+            role = Role.RadioButton
+            stateDescription = if (selected) "Selecionado" else "Não selecionado"
+        },
+        shape = UaiShapes.card,
+        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+        border = BorderStroke(if (selected) 2.dp else 1.dp,
+            if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+            Icon(if (selected) Icons.Default.RadioButtonChecked else Icons.Default.RadioButtonUnchecked,
+                contentDescription = null,
+                tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(7.dp))
+            Text(label, style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 2)
+        }
+    }
+}
+
 /** O cartão inteiro é acionável; não há RadioButton com área de toque pequena. */
 @Composable
 private fun QuickToolChoice(
@@ -410,7 +457,11 @@ private fun QuickToolChoice(
     onClick: () -> Unit
 ) {
     Surface(
-        onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth(),
+        onClick = onClick, enabled = enabled,
+        modifier = Modifier.fillMaxWidth().semantics {
+            role = Role.RadioButton
+            stateDescription = if (selected) "Selecionado" else "Não selecionado"
+        },
         shape = UaiShapes.card,
         color = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f)
             else MaterialTheme.colorScheme.surface,
@@ -439,8 +490,9 @@ private fun QuickToolChoice(
 @Composable
 private fun QuickToolNotice(message: String, isError: Boolean) {
     val colors = MaterialTheme.colorScheme
-    Surface(shape = UaiShapes.item,
-        color = if (isError) colors.errorContainer else colors.primaryContainer) {
+    Surface(shape = UaiShapes.item, modifier = Modifier.semantics {
+        liveRegion = LiveRegionMode.Polite
+    }, color = if (isError) colors.errorContainer else colors.primaryContainer) {
         Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(if (isError) Icons.Default.ErrorOutline else Icons.Default.CheckCircle,
                 contentDescription = null, modifier = Modifier.size(20.dp),

@@ -1,3 +1,7 @@
+# Uai Cortes · versão 0.1.211 — Dividir vídeo responsivo (versionCode 212)
+- **Dividir vídeo**: a seleção de 9,5/10 s se adapta a larguras menores e fonte ampliada; cartões de áudio e duração sinalizam estado para acessibilidade. Progresso informa a parte real, sem percentual fictício.
+- Testar em dispositivos Android e tema escuro/AMOLED, inclusive fontes de 130% ou mais. O ambiente de edição não possui Android SDK e não conseguiu verificar compilação Gradle/CI no GitHub.
+
 # Uai Cortes · versão 0.1.210 — interface Dividir vídeo renovada (versionCode 211)
 - **Dividir vídeo**: interface por etapas, seleção de mídia destacada, cartões para 9,5 s/10 s e modos de áudio, prévia recolhível das partes e ação fixa no rodapé. Mesmos formatos, cópias e destinos anteriores.
 - Essa evolução é visual. Requer validar compilação Gradle/Android Lint e testar em aparelho, principalmente telas pequenas, rolagem, acessibilidade e tema escuro.

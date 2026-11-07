@@ -1,3 +1,8 @@
+# v0.1.211 — Dividir vídeo responsivo e acessível
+- Em `QuickVideoToolsScreen.kt`, os cartões 9,5 s/10 s passam de duas colunas a empilhados quando a largura útil for menor que 330 dp ou o fontScale for pelo menos 1,3. Não reduzir área de toque nem mudar opções ou duração real.
+- Escolhas de duração/áudio expõem estado de seleção acessível; mensagens de resultado e progresso comunicam mudanças, sem afirmar porcentagem não medida. Evitar forçar uma paleta que prejudique tema AMOLED/escuro.
+- Preservar Media3, limites 180 partes, áudio, SAF, cancelamento e caminhos públicos; compilação Android e testes visuais em aparelho ainda pendentes. `versionName=0.1.211`, `versionCode=212`, schemaVersion 4, cinco APKs Release.
+
 # v0.1.210 — reformulação visual de Dividir vídeo
 - `QuickVideoToolsScreen.kt`: reformulação apenas visual da ferramenta rápida Dividir vídeo; cartão da mídia selecionada, etapas numeradas, seleção de duração e áudio em cartões completos, prévia recolhível e barra de ação fixa. Extração de áudio independente compartilha o visual, sem alterar seus contratos.
 - Preservar a galeria integrada e fallback SAF, 9,5/10 s, limite 180 partes, detecção de áudio, Media3, cancelamento/rollback, destinos, áudio opcional e não alteração dos originais nem projetos.

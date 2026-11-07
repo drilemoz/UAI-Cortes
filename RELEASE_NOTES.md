@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.211 — Dividir vídeo em qualquer tela (versionCode 212)
+## v0.1.211 · Dividir vídeo adaptado a telas pequenas
+- Opções de duração agora se organizam verticalmente em telas estreitas e quando o tamanho da fonte é ampliado.
+- Seleção dos cartões mais clara para leitores de tela e melhor leitura das mensagens de processamento.
+- As durações, o motor de corte e a proteção dos arquivos originais foram preservados. Build e testes em Android ainda pendentes.
+
 # Uai Cortes · versão 0.1.210 — edição rápida visual mais clara (versionCode 211)
 ## v0.1.210 · Dividir vídeo mais simples de usar
 - Nova organização por etapas para escolher o vídeo, definir a duração e decidir o áudio.

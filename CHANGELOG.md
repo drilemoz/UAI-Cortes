@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.211 — acessibilidade e telas pequenas (versionCode 212)
+## 0.1.211 (versionCode 212) · Dividir vídeo responsivo e acessível
+- Seleção de 9,5/10 segundos empilha automaticamente em largura útil pequena ou com fonte ampliada, mantendo cartões com área de toque suficiente.
+- Estado selecionado/não selecionado comunicado aos leitores de tela nas opções de duração e áudio; mensagens relevantes usam aviso de alteração acessível.
+- Cabeçalho evita corte de texto na ampliação; progresso usa etapa e parte atual sem inventar percentual.
+- Motor Media3, configurações, armazenamento, cancelamento e as cinco variantes de APK mantidos. Build Android, lint e validação em dispositivos pendentes.
+
 # Uai Cortes · versão 0.1.210 — tela Dividir vídeo renovada (versionCode 211)
 ## 0.1.210 (versionCode 211) · Dividir vídeo com interface por etapas
 - Vídeo de origem destacado com nome, duração, indicação de áudio e botão de troca diretamente no cartão.
