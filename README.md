@@ -1,3 +1,7 @@
+# Uai Cortes · v0.1.219 — Melhorar voz offline no editor
+
+Em **Editor > Áudio > Melhorar voz**, selecione o áudio de um vídeo ou uma faixa adicionada. Ative Natural, Encorpada ou Clara e ajuste a intensidade; o **Equalizador (EQ) avançado** permite alterar graves, corpo/médios e clareza (±4 dB). Use **Original** e **Tratada** para comparar a fonte isolada. Os mesmos filtros PCM são usados na exportação Media3, sem modificar a mídia de origem. Projetos anteriores mantêm o efeito desligado. O efeito não isola voz de música nem remove ruído por IA; processamento e testes de nível de saída dependem de avaliação em aparelho. Release 0.1.219, versionCode 220.
+
 # Uai Cortes · v0.1.218 — Correção CI180 (YouTube)
 **Atualização v0.1.218 (versionCode 219):** correção do teste estrutural legado do YouTube, que ainda exigia `testBusy` na tela antiga; agora valida o estado real (`youtubeBusy`) do upload e o teste Google OAuth na nova Central de Integrações. Sem alterar o fluxo de publicação, credenciais, interface ou schema 4. Build Gradle e OAuth real pendentes.
 

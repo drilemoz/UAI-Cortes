@@ -247,6 +247,55 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
     DisposableEffect(isolatedPlayer) {
         onDispose { isolatedPlayer.pause(); isolatedPlayer.release() }
     }
+    // Pré-escuta comparativa de uma única fonte: mesmo DSP da exportação, offline.
+    var voicePreviewPlayer by remember(p.id) { mutableStateOf<androidx.media3.exoplayer.ExoPlayer?>(null) }
+    var voicePreviewKey by remember(p.id) { mutableStateOf("") }
+    var voicePreviewEnd by remember(p.id) { mutableLongStateOf(0L) }
+    fun previewVoice(sourceId: String, treated: Boolean) {
+        val key = "$sourceId:${if(treated) "treated" else "original"}"
+        if (voicePreviewKey == key) {
+            voicePreviewPlayer?.release(); voicePreviewPlayer=null; voicePreviewKey=""
+            return
+        }
+        val source = voiceToneSources(p).firstOrNull { it.id == sourceId } ?: return
+        runCatching {
+            voicePreviewPlayer?.release(); voicePreviewPlayer=null;voicePreviewKey=""
+            isolatedPlayer.pause(); isolatedPlaying=false
+            mixPlayer.pause(); mixPlaying=false
+            trackPlayer.pause();trackPlaying=false
+            previewPlayer.pause();previewPlaying=false
+            val player = voiceTonePreviewPlayer(context, if (treated) source.tone else VoiceTone())
+            player.setMediaItem(MediaItem.fromUri(Uri.parse(source.uri)))
+            player.volume=source.volume.coerceIn(0f,1f)
+            player.prepare()
+            player.seekTo(source.sourceStartMs.coerceAtLeast(0L))
+            voicePreviewEnd=source.sourceStartMs+source.durationMs
+            voicePreviewKey=key
+            voicePreviewPlayer=player
+            player.play()
+        }.onFailure {
+            voicePreviewPlayer?.release(); voicePreviewPlayer=null; voicePreviewKey=""
+            message="Falha ao ouvir a faixa. Confira o arquivo selecionado."
+            DiagnosticRecorder.exception("voice_tone_preview",it)
+        }
+    }
+    LaunchedEffect(voicePreviewPlayer, voicePreviewKey, voicePreviewEnd) {
+        while (voicePreviewPlayer != null && voicePreviewKey.isNotBlank()) {
+            val player = voicePreviewPlayer ?: break
+            if (player.playerError != null || player.playbackState == Player.STATE_ENDED ||
+                (voicePreviewEnd > 0L && player.currentPosition >= voicePreviewEnd)) {
+                player.pause(); voicePreviewPlayer=null; voicePreviewKey="";player.release()
+                break
+            }
+            delay(120)
+        }
+    }
+    LaunchedEffect(p.clips.map { it.voiceTone }, p.audioTracks.map { it.voiceTone }) {
+        voicePreviewPlayer?.release();voicePreviewPlayer=null;voicePreviewKey=""
+    }
+    DisposableEffect(p.id) {
+        onDispose { voicePreviewPlayer?.release();voicePreviewPlayer=null }
+    }
     LaunchedEffect(p.audioTracks.map { it.id }, p.music?.uri) {
         if ((isolatedId != null && isolatedId != "music" && p.audioTracks.none { it.id == isolatedId }) ||
             (isolatedId == "music" && p.music == null)) {
@@ -287,6 +336,9 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
         .padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
         Heading("Áudio",back)
         // Narração por legenda permanece em Vozes IA; ajuda contextual substitui texto extenso.
+
+        VoiceTonePanel(p, update, onPreview = { id, treated -> previewVoice(id, treated) },
+            previewKey = voicePreviewKey)
 
         AudioPanelCard {
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {

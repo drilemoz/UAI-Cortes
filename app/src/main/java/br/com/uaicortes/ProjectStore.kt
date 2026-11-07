@@ -20,7 +20,9 @@ data class Clip(
     val imageFrameMode: String = ImageFraming.FIT,
     val imageZoom: Float = 1f,
     val imagePanX: Float = 0f,
-    val imagePanY: Float = 0f
+    val imagePanY: Float = 0f,
+    /** Efeitos opcionais apenas no áudio original deste clipe. */
+    val voiceTone: VoiceTone = VoiceTone()
 ) {
     val durationMs: Long get() = (endMs - startMs).coerceAtLeast(1L)
     fun json() = JSONObject().put("id", id).put("uri", uri).put("title", title)
@@ -31,6 +33,7 @@ data class Clip(
         .put("imageZoom", ImageFraming.zoom(imageZoom).toDouble())
         .put("imagePanX", ImageFraming.pan(imagePanX).toDouble())
         .put("imagePanY", ImageFraming.pan(imagePanY).toDouble())
+        .put("voiceTone", voiceTone.json())
     companion object {
         fun read(j: JSONObject) = Clip(j.optString("id", UUID.randomUUID().toString()),
             j.getString("uri"), j.optString("title", "Vídeo"), j.optLong("sourceDurationMs", 1000L),
@@ -39,7 +42,8 @@ data class Clip(
             ImageFraming.mode(j.optString("imageFrameMode")),
             ImageFraming.zoom(j.optDouble("imageZoom", 1.0).toFloat()),
             ImageFraming.pan(j.optDouble("imagePanX", 0.0).toFloat()),
-            ImageFraming.pan(j.optDouble("imagePanY", 0.0).toFloat()))
+            ImageFraming.pan(j.optDouble("imagePanY", 0.0).toFloat()),
+            VoiceTone.read(j.optJSONObject("voiceTone")))
     }
 }
 
@@ -191,7 +195,9 @@ data class AudioTrack(
     val voiceId: String? = null,
     val ttsModel: String? = null,
     val ttsStyle: String? = null,
-    val subtitleFingerprint: String? = null
+    val subtitleFingerprint: String? = null,
+    /** Tratamento de voz opcional, sem modificar o arquivo original. */
+    val voiceTone: VoiceTone = VoiceTone()
 ) {
     fun json() = JSONObject().put("uri", uri).put("title", title)
         .put("startMs", startMs).put("durationMs", durationMs)
@@ -201,6 +207,7 @@ data class AudioTrack(
         .put("kind", kind).put("subtitleId", subtitleId).put("voiceId", voiceId)
         .put("ttsModel", ttsModel).put("ttsStyle", ttsStyle)
         .put("subtitleFingerprint", subtitleFingerprint)
+        .put("voiceTone", voiceTone.json())
     companion object { fun read(j: JSONObject) = AudioTrack(j.getString("uri"),
         j.optString("title"), j.optLong("startMs"), j.optLong("durationMs"),
         j.optDouble("volume", .35).toFloat().coerceIn(0f,1f),
@@ -213,7 +220,8 @@ data class AudioTrack(
         j.optString("voiceId").takeIf { it.isNotBlank() && it != "null" },
         j.optString("ttsModel").takeIf { it.isNotBlank() && it != "null" },
         j.optString("ttsStyle").takeIf { it.isNotBlank() && it != "null" },
-        j.optString("subtitleFingerprint").takeIf { it.isNotBlank() && it != "null" }) }
+        j.optString("subtitleFingerprint").takeIf { it.isNotBlank() && it != "null" },
+        VoiceTone.read(j.optJSONObject("voiceTone"))) }
 }
 
 /** Rascunho de publicação vinculado ao ID do projeto (nenhuma mídia ou chave de API).

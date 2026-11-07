@@ -1,3 +1,8 @@
+# Uai Cortes · v0.1.219 — Voz natural e equalizador por faixa
+- Nova área compacta **Áudio > Melhorar voz**, com seleção de vídeo/áudio, presets Natural/Encorpada/Clara, intensidade, EQ avançado por graves/corpo/clareza e comparação entre original e tratada.
+- Efeito não destrutivo por fonte: filtros IIR, compressão suave e limitador PCM na exportação Media3 e prévia isolada, sem APIs externas. Música e outros sons não são alterados automaticamente; faixa que mistura voz e música continua misturada.
+- Persistência opcional `voiceTone` em Clip e AudioTrack, preservando schemaVersion 4 e o formato legado. Versão 0.1.219/versionCode 220, documentação, CI e Novidades sincronizados. Build Android e avaliação auditiva em aparelho pendentes.
+
 # Uai Cortes · v0.1.218 — Correção do workflow 180
 - O workflow 180 falhou na etapa de testes Python antes de compilar Android porque `tools/test_social_youtube_166_contract.py` exigia a variável legada `testBusy` em `SocialScreens.kt`, removida durante a separação da Central na v217.
 - O contrato agora verifica a ação de upload com `youtubeBusy` em Redes e a autorização/teste real via `SocialIntegrationsUi.kt`. Incluído `tools/test_ci180_youtube_integration_contract.py` com verificações de canal vinculado, revisão de upload e OAuth sem persistência de token.

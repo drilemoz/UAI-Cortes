@@ -1,3 +1,8 @@
+# v0.1.219 — Tratamento de voz por faixa, EQ e prévia comparativa
+- Em Áudio > Melhorar voz, selecionar vídeo com áudio original ou faixa de áudio, ajustar presets Desligado/Natural/Encorpada/Clara, intensidade e EQ de graves, corpo e clareza. Nunca tratar música por padrão.
+- Preservar originais e ajustes por fonte em JSON opcional, sem mudar schemaVersion 4: leitura de projetos antigos recebe preset desligado. Media3 Transformer usa VoiceToneProcessor PCM 16-bit por faixa; prévia isolada usa o mesmo DSP via AudioSink PCM. Não prometer redução de ruído IA/RNNoise, separação de voz/música ou normalização LUFS nesta versão.
+- Validar DSP com sinais sintéticos, contratos de persistência/exportação, PSI Kotlin, 112+ testes de regressão, CI e testes físicos em Android. Desativado deve preservar a cadeia de ganho anterior; não compartilhar o DSP de áudio entre canais/faixas ou prévias. versionName 0.1.219/versionCode 220.
+
 # v0.1.218 — Correção do CI180 após modularização do YouTube
 - O workflow 180 falhou no teste estático `test_social_youtube_166_contract.py` porque exigia `testBusy` em `SocialScreens.kt`. A versão 0.1.217 separou a Central para `SocialIntegrationsUi.kt`, e o controle da publicação continuou com `youtubeBusy`. Atualizar o contrato para verificar cada fluxo no arquivo correto, não restaurar variáveis removidas apenas por testes.
 - Incluir teste de regressão CI180 para o upload protegido, revisão de resultado e autorização Google real no novo arquivo. Preservar credenciais, `SocialStore`, schemaVersion 4, assinatura e cinco APKs. VersionName 0.1.218, versionCode 219. Executar Gradle/Android e OAuth de verdade antes de afirmar build funcional.

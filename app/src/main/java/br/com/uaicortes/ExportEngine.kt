@@ -56,6 +56,12 @@ class GainProcessor(private val gain: Float) : BaseAudioProcessor() {
     }
 }
 
+/** Mantém o volume anterior quando o efeito está desligado; processa apenas voz selecionada. */
+@OptIn(UnstableApi::class)
+internal fun voiceProcessors(volume: Float, tone: VoiceTone): AudioProcessor =
+    if (tone.safe().enabled) VoiceToneProcessor(tone.safe(), volume)
+    else GainProcessor(volume)
+
 @OptIn(UnstableApi::class)
 class PipCompositor(private val overlays: List<Overlay>) : VideoCompositorSettings {
     private data class Placement(val scaleX: Float, val scaleY: Float, val x: Float, val y: Float)
@@ -260,8 +266,8 @@ class ExportEngine(private val context: Context) {
             // informar incorretamente clip.durationMs como duração da fonte.
             EditedMediaItem.Builder(item)
                 .apply { if (clip.isImage) setFrameRate(30) }
-                .setEffects(Effects(if (clip.isImage || clip.volume == 1f) emptyList()
-                    else listOf(GainProcessor(clip.volume)), videoEffects)).build()
+                .setEffects(Effects(if (clip.isImage || (clip.volume == 1f && !clip.voiceTone.safe().enabled)) emptyList()
+                    else listOf(voiceProcessors(clip.volume, clip.voiceTone)), videoEffects)).build()
         }
         val mainSequence = EditedMediaItemSequence.withAudioAndVideoFrom(mainItems)
         val sequences = mutableListOf<EditedMediaItemSequence>()
@@ -308,7 +314,7 @@ class ExportEngine(private val context: Context) {
                     .setClippingConfiguration(MediaItem.ClippingConfiguration.Builder()
                         .setStartPositionMs(sourceStart)
                         .setEndPositionMs(sourceStart + playable).build()).build())
-                    .setEffects(Effects(listOf(GainProcessor(audio.volume)), emptyList())).build())
+                    .setEffects(Effects(listOf(voiceProcessors(audio.volume, audio.voiceTone)), emptyList())).build())
                 val trailing = project.durationMs - start - playable
                 if (trailing > 0) track.addGap(trailing * 1000L)
                 sequences += track.build()

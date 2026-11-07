@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.219 — Voz natural e encorpada (versionCode 220)
+## v0.1.219
+- Em Áudio, nova opção Melhorar voz: presets Natural/Encorpada/Clara, ajuste de intensidade e equalizador avançado de 3 controles. A prévia permite comparar a faixa original com o processamento.
+- Equalização suave, compressor e proteção de pico aplicados somente à fonte selecionada durante a exportação. Gravações originais ficam intactas. Totalmente offline e sem novas dependências externas.
+- Compatibilidade com projetos antigos preservada; RNNoise e separação de voz/música não estão incluídos. Build Android e teste de qualidade auditiva ainda precisam ser confirmados no dispositivo.
+
 # Uai Cortes · versão 0.1.218 — Compatibilidade do CI (versionCode 219)
 ## v0.1.218
 - Corrigido teste de regressão que impedia o GitHub Actions de chegar à compilação após a reorganização da Central de Integrações.
