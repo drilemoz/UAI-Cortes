@@ -229,7 +229,7 @@ print('OK: build 26 — tipo StrokeJoin.Round existente no Compose, sem PathJoin
 
 # v0.1.171: salvar e Pronto voltam ao editor principal sem apagar mídias.
 assert 'LazyRow(state = toolsScroll' in ui and 'items(count = actions.size)' in ui and 'items(count = Int.MAX_VALUE)' not in ui
-assert 'Triple("Salvar", Icons.Default.Save, "save")' in ui
+assert 'Icon(Icons.Default.Save, "Salvar projeto e sair")' in ui
 assert 'Salvar e voltar à Home' not in ui
 assert 'onDone = { saved -> if (write(saved)) screen = "editor" }' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/TrimSaveLogicTest.kt').exists()
@@ -551,8 +551,10 @@ print('OK: v0.1.64 / versionCode 74, rascunho, voltar, sucesso compartilhado e a
 # v0.1.56: contratos de modularização e serviços compartilhados.
 app_files = root/'app/src/main/java/br/com/uaicortes'
 # v194: fluxo de importação de vídeo tem estado de confirmação no activity; diálogo e política
-# foram extraídos para MediaInsertionUi.kt. Guardar limite sem exigir minificação ilegível.
-assert len((app_files/'MainActivity.kt').read_text().splitlines()) < 760
+# foram extraídos para MediaInsertionUi.kt. A proteção da mídia agora tem Lifecycle
+# próprio, mantendo MainActivity abaixo de 800 linhas sem comprimir ilegivelmente a UI.
+assert (app_files/'ProjectMediaProtectionLifecycle.kt').is_file()
+assert len((app_files/'MainActivity.kt').read_text().splitlines()) < 800
 assert all('internal fun ' in (app_files/name).read_text() for name in [
     'HomeScreens.kt', 'EditorScreen.kt', 'EditorTimelineUi.kt', 'TrimScreen.kt',
     'AudioScreen.kt', 'PipScreen.kt', 'TransitionScreen.kt', 'SubtitleScreen.kt',
@@ -636,7 +638,7 @@ assert 'TransitionBoundaryPolicy.clamp(selectedBoundary, project.clips.size)' in
 assert 'fun clamp(index: Int, clipCount: Int)' in boundary
 assert 'TransitionFramePreview(p.clips[safeBoundary],p.clips[safeBoundary+1]' in transition
 assert 'LaunchedEffect(project) {' in main
-assert 'mediaTasks.videos(uris, persistDocumentAccess)' in main and 'MediaImportTasks(mediaController)' in main
+assert 'mediaTasks.videos(uris, persistDocumentAccess, importTarget.id)' in main and 'MediaImportTasks(mediaController)' in main
 assert 'VideoImportRequest(project?.id.orEmpty()' in main
 assert 'verifiedMediaDuration(context, uri)' in import_operations
 assert 'assertEquals(0, restored.selectedBoundary)' in (root/'app/src/test/java/br/com/uaicortes/EditorWorkspaceStateTest.kt').read_text()
@@ -1105,7 +1107,7 @@ assert 'SubtitleTextCasePolicy.display(cue.text, cue.textCase)' in sub_animation
 assert 'SubtitleWordEffects.colors(active.copy(text=rendered' in fx and 'frame.highlightColorOverride ?: active.highlightColor' in fx
 assert 'SubtitleStyleGallery(draft,onChange)' in (app_files/'SubtitleVisualEditor.kt').read_text() and 'SubtitleWordColorEditor(draft,onChange)' in (app_files/'SubtitleVisualEditor.kt').read_text()
 assert 'val presets = listOf(' in styles and 'Itálico amarelo' in styles
-assert '"animate" -> "home"' in nav and 'onBack = ::back,' in main
+assert '"animate" -> if (animationDestination == "append") "editor" else "home"' in nav and 'onBack = ::back,' in main
 assert 'fun goBack()' in (app_files/'AnimateImagesScreen.kt').read_text()
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleWordEffectsTest.kt').is_file()
 assert (root/'docs/VALIDATION_0.1.89.md').is_file()

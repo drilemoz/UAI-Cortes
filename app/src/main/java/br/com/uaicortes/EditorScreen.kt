@@ -60,6 +60,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     // Estado exclusivamente da prévia; não é salvo no projeto nem enviado ao exportador.
     var previewVolume by remember(p.id) { mutableFloatStateOf(1f) }
     var previewVolumeMenu by remember { mutableStateOf(false) }
+    var editorMoreMenu by remember(p.id) { mutableStateOf(false) }
     val activeFrameIndex = AdaptiveVideoLayout.activeClipIndex(p.clips.map { it.durationMs }, currentMs)
     val activeFrame = p.clips.getOrNull(activeFrameIndex)
     val activeFrameUri = activeFrame?.takeUnless { it.isImage }?.uri
@@ -159,8 +160,21 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                     style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (imageFrameDraft == null) IconButton(onClick = onRepairMedia) {
-                Icon(Icons.Default.FolderOpen, "Reparar arquivos de mídia")
+            if (imageFrameDraft == null) {
+                IconButton(onClick = onSaveHome) {
+                    Icon(Icons.Default.Save, "Salvar projeto e sair")
+                }
+                Box {
+                    IconButton(onClick = { editorMoreMenu = true }) {
+                        Icon(Icons.Default.MoreVert, "Mais ações do editor")
+                    }
+                    DropdownMenu(expanded = editorMoreMenu, onDismissRequest = { editorMoreMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Reparar arquivos de mídia") },
+                            leadingIcon = { Icon(Icons.Default.FolderOpen, null) },
+                            onClick = { editorMoreMenu = false; onRepairMedia() })
+                    }
+                }
             }
             if (imageFrameDraft == null) BlueButton("Exportar",{ onEdit("export") },
                 Modifier.width(102.dp),enabled=p.clips.isNotEmpty())
@@ -429,21 +443,18 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                     (id!="music" && p.audioTracks.firstOrNull {it.id==id}?.clipId==null)
             })
         Spacer(Modifier.height(5.dp));HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
-        // Faixa finita: cada ferramenta aparece uma vez; a última é o limite da rolagem.
+        // Inserir Vídeo/Imagem/PiP/Áudio já fica em Linha do tempo > Adicionar.
+        // Salvar é ação fixa no cabeçalho; a barra contém somente ferramentas de edição.
         val actions = remember { listOf(
-            Triple("Salvar", Icons.Default.Save, "save"),
             Triple("Cortar", Icons.Default.ContentCut, "trim"),
-            Triple("Vídeo +", Icons.Default.Add, "add"),
-            Triple("Imagem", Icons.Default.AddPhotoAlternate, "image"),
-            Triple("PiP", Icons.Default.Layers, "pip"),
-            Triple("Áudio", Icons.Default.MusicNote, "audio"),
-            Triple("Vozes IA", Icons.Default.RecordVoiceOver, "voices"),
-            Triple("Transição", Icons.Default.AutoAwesomeMotion, "transition"),
+            Triple("Animar imagens", Icons.Default.AutoAwesomeMotion, "animate"),
+            Triple("Transição", Icons.Default.Transform, "transition"),
             Triple("Legendas", Icons.Default.ClosedCaption, "subtitles"),
+            Triple("Áudio", Icons.Default.MusicNote, "audio"),
             Triple("Marca d'água", Icons.Default.TextFields, "watermark"),
+            Triple("Vozes IA", Icons.Default.RecordVoiceOver, "voices"),
             Triple("Descrição", Icons.Default.Description, "publication"),
-            Triple("Prompt Flow", Icons.Default.AutoAwesome, "flow_prompt"),
-            Triple("Animar Imagens", Icons.Default.AutoAwesomeMotion, "animate")
+            Triple("Prompt Flow", Icons.Default.AutoAwesome, "flow_prompt")
         ) }
         val toolsScroll = rememberLazyListState()
         LazyRow(state = toolsScroll, modifier = Modifier.fillMaxWidth().navigationBarsPadding()
@@ -452,14 +463,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             items(count = actions.size) { index ->
                 val (name, icon, key) = actions[index]
                 Column(Modifier.width(56.dp).clip(RoundedCornerShape(12.dp)).clickable {
-                    when (key) {
-                        "save" -> onSaveHome()
-                        "add" -> onAddVideo()
-                        "image" -> onAddImage()
-                        "pip" -> onPiP()
-                        "audio" -> onEdit("audio")
-                        else -> onEdit(key)
-                    }
+                    onEdit(key)
                 }, horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(Modifier.size(48.dp).clip(RoundedCornerShape(14.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {

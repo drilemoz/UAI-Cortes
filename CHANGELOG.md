@@ -1,3 +1,20 @@
+# Uai Cortes · versão 0.1.207 — editor, mídia e Sobre (versionCode 208)
+
+## 0.1.207 (versionCode 208) · Sobre e Novidades
+- Um único destaque de mudança em Sobre, identificação Adriedson Lemos, Pix com copiar e abertura do link GitHub configurado no build; histórico exclusivo em Novidades.
+- Novidades sobe para o topo das Configurações; `WhatsNewSeenStore`, `forWhatsNew`, histórico e botão Continuar foram preservados.
+
+## 0.1.206 (versionCode 207) · Ferramentas de edição
+- Salvar fixo no topo, Reparar mídias no menu; barra inferior sem duplicatas de Vídeo/Imagem/PiP; Animar imagens em segundo lugar.
+- O menu Adicionar da timeline mantém todas as inserções. Voltar de Animar imagens retorna ao editor quando o módulo foi aberto por um projeto.
+
+## 0.1.205 (versionCode 206) · Proteção das mídias
+- Cópias automáticas antes de usar mídias importadas no projeto, via MediaStore com `IS_PENDING`/rollback e caminho privado em Android 8/9.
+- Reutilização de cópia existente com verificação de acesso, proteção ao abrir projetos antigos, sem sobrescrever rascunhos modificados durante a cópia.
+- Imagens principais já possuíam cópia durável privada e continuam protegidas; novas imagens PiP usam MediaStore.
+- Projetos mantêm `schemaVersion=4`, dados antigos, exportação e autenticação; sem apagar originais nem limpar mídias automaticamente.
+- Pendentes compilação Gradle, instrumentação e testes com armazenamento baixo/mídias longas.
+
 ## 0.1.204 (versionCode 205) — Subtitle Studio: movimentos suaves
 - Cinco animações temporais novas com entrada/saída em curvas suaves: `soft_pop`, `cinematic`, `soft_fade`, `impact` e `glide`.
 - Núcleo de curvas e limites no módulo Kotlin `:subtitle-core`, usado pelos mesmos quadros de `SubtitleAnimations.frame` que abastecem prévia e exportação MP4.

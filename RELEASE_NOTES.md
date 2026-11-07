@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.207 — editor e proteção dos projetos (versionCode 208)
+
+- **0.1.205 (206):** mídia importada com cópia independente e validada, vídeos em Filmes, áudios em Música, PiPs de imagem em Imagens; proteção de fontes antigas na abertura do editor.
+- **0.1.206 (207):** Salvar no topo, Reparar mídias em Mais, Animar imagens em destaque; inserções de mídia mantidas na timeline.
+- **0.1.207 (208):** Sobre compacto (um destaque, desenvolvedor, Pix, link GitHub) e Novidades no topo das Configurações, sem alterar o reconhecimento e a confirmação de novidades após atualização.
+- Não modifica schemaVersion 4 nem apaga originais; não inclui APK compilado. Executar testes CI/Android antes de publicar Release.
+
 # Uai Cortes · versão 0.1.204 — Subtitle Studio: animações suaves (versionCode 205)
 - Cinco efeitos de legenda aprimorados, com animações suaves de entrada e saída e velocidade ajustável.
 - Os estilos principais do Subtitle Studio usam novos movimentos; legado, personalizações e projetos antigos preservados.

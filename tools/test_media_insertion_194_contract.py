@@ -19,6 +19,7 @@ assert 'MediaPlacementChoices(placement,' in image
 assert 'shiftTimedElements(project, begin, incoming.sumOf { it.durationMs })' in policy
 assert 'onInserted(updated, pending.clips.first(), index)' in ui
 assert 'EditorExitAction("Salvar"' in exit_ui and 'EditorExitAction("Descartar"' in exit_ui and 'EditorExitAction("Continuar"' in exit_ui
-assert 'Triple("Vídeo +"' in editor and 'Modifier.width(56.dp)' in editor
+assert 'Triple("Animar imagens"' in editor and 'Modifier.width(56.dp)' in editor
+assert 'Triple("Vídeo +"' not in editor  # Ações de adicionar agora ficam no menu da linha do tempo
 assert 'Arrange' not in ''  # skip visual-only assertions
 print('OK: v194, save/close, video placement, compact image/exit, temporal reflow')

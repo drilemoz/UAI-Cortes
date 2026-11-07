@@ -283,6 +283,8 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
             .padding(horizontal=18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Heading("Configurações",back)
+        // Novidades acessível no topo, sem interferir na abertura automática pós-update.
+        ItemCard(Icons.Default.AutoAwesome,"Novidades","Mudanças da versão atual e histórico") { onClick("whats_new") }
         ItemCard(Icons.Default.Tune,"Geral","Qualidade e armazenamento") {onClick("general")}
         ItemCard(Icons.Default.Backup,"Salvamento e segurança",
             "Cópias automáticas, restauração e backup externo") { onClick("backup_settings") }
@@ -294,7 +296,6 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
         ItemCard(Icons.Default.AutoAwesome,"Google Gemini — API de IA",
             "Chave, vozes e narrações") { onClick("gemini_settings") }
         ItemCard(Icons.Default.BugReport,"Diagnóstico","Capturar erros e toques, exportar relatório") {onClick("diagnostics")}
-        ItemCard(Icons.Default.AutoAwesome,"Novidades","Mudanças da versão atual e histórico") { onClick("whats_new") }
         ItemCard(Icons.Default.Info,"Sobre","Versão e informações do aplicativo") {onClick("about")}
         }
         MainNav("settings",onTab)
@@ -319,6 +320,10 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Os vídeos são salvos em Filmes/UaiCortes.", color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(12.dp)); Text("Mídias importadas recebem cópias independentes: vídeos em Filmes/UaiCortes/Projetos, áudios em Música/UaiCortes/Projetos e imagens em Imagens/UaiCortes/Projetos. No Android 8/9, cópias ficam em armazenamento privado do aplicativo.",
+            style=MaterialTheme.typography.bodySmall, color=MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(12.dp)); Text("Essas cópias não substituem backup externo. Excluir o aplicativo pode remover dados privados; evite apagar as cópias em uso.",
+            style=MaterialTheme.typography.bodySmall, color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(12.dp)); Text("A edição ocorre no aparelho, sem enviar arquivos para a internet.",
             color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -337,7 +342,11 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
 }
 
 @Composable internal fun AboutScreen(back: () -> Unit, onUpdates: () -> Unit) {
-    var showOlderReleases by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val repository = BuildConfig.GITHUB_RELEASE_REPOSITORY.takeIf {
+        it.matches(Regex("[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}"))
+    }
+    val pix = "drilemoz@gmail.com"
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp)) {
         Heading("Sobre", back)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),
@@ -359,14 +368,56 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
                 Text("Verificar atualizações")
             }
             Spacer(Modifier.height(22.dp))
+            // Um único destaque em Sobre; histórico permanece exclusivamente em Novidades.
             ReleaseHighlights(AppReleaseNotes.forAbout())
+            Spacer(Modifier.height(22.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(Modifier.height(18.dp))
+            Text("Desenvolvimento e apoio", style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp))
-            OutlinedButton(onClick = { showOlderReleases = !showOlderReleases }, shape = UaiShapes.button) {
-                Text(if (showOlderReleases) "Ocultar histórico" else "Ver histórico completo")
-            }
-            if (showOlderReleases) {
-                Spacer(Modifier.height(16.dp))
-                ReleaseHighlights(AppReleaseNotes.forOlderAbout())
+            Surface(shape = UaiShapes.card, color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)) {
+                Column(Modifier.fillMaxWidth().padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Desenvolvido por", style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Adriedson Lemos", fontWeight = FontWeight.SemiBold)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Text("Doação voluntária por Pix", style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(pix, fontWeight = FontWeight.Medium)
+                    OutlinedButton(onClick = {
+                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                            as android.content.ClipboardManager
+                        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Chave Pix", pix))
+                        android.widget.Toast.makeText(context, "Chave Pix copiada", android.widget.Toast.LENGTH_SHORT).show()
+                    }, shape = UaiShapes.button) {
+                        Icon(Icons.Default.ContentCopy, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Copiar chave Pix")
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Text("Código-fonte e versões", style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (repository == null) {
+                        Text("Link do GitHub indisponível nesta compilação.",
+                            style = MaterialTheme.typography.bodySmall)
+                    } else {
+                        Text("github.com/$repository", style = MaterialTheme.typography.bodySmall)
+                        OutlinedButton(onClick = {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW,
+                                Uri.parse("https://github.com/$repository"))
+                            runCatching { context.startActivity(intent) }.onFailure {
+                                android.widget.Toast.makeText(context, "Não foi possível abrir o GitHub.",
+                                    android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }, shape = UaiShapes.button) {
+                            Icon(Icons.Default.OpenInNew, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Abrir projeto no GitHub")
+                        }
+                    }
+                }
             }
             Spacer(Modifier.height(24.dp))
         }

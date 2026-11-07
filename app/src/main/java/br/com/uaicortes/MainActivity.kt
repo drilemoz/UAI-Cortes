@@ -111,6 +111,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     val project = projectSession.project
     val narrationDraft = remember(project?.id) { GeminiNarrationDraft() }
     var resumeVideoPreview by remember { mutableStateOf(false) }
+    var protectingMedia by remember { mutableStateOf(false) }
     ProjectBackupLifecycle(backupStore, if (projectSession.isEditingDraft) "" else activeProjectId, screen)
     var interruptedDraft by remember { mutableStateOf(draftRecoveryStore.load(projects)) }
     var invalidRecovery by remember { mutableStateOf(interruptedDraft == null && draftRecoveryStore.hasStoredDraft()) }
@@ -176,6 +177,8 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
             android.widget.Toast.LENGTH_LONG).show()
         false
     }
+    ProjectMediaProtectionLifecycle(project, screen, activeMediaTask != null,
+        onBusyChanged = { protectingMedia = it }, onProtected = { write(it) })
     fun leaveEditor(decision: String): Boolean {
         val completed = runCatching {
             val savedProject = when (decision) {
@@ -271,10 +274,12 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     fun importVideoClips(uris: List<Uri>, persistDocumentAccess: Boolean) {
         if (uris.isEmpty()) return
         val request = VideoImportRequest(project?.id.orEmpty(), pendingPicker == "new")
+        // ID definido ANTES da cópia, inclusive para projetos ainda não salvos.
+        val importTarget = if (request.createNew) VideoProject() else project ?: VideoProject()
         val selectedBeforePicker = selectedClip
         val origin = MediaTaskOrigin(project?.id.orEmpty(), screen, mediaAction)
         startMediaTask(MediaTaskKind.VIDEO, origin) {
-            val imported = mediaTasks.videos(uris, persistDocumentAccess)
+            val imported = mediaTasks.videos(uris, persistDocumentAccess, importTarget.id)
             if (!request.stillTargets(project?.id.orEmpty()) ||
                 !origin.matches(project?.id.orEmpty(), screen, mediaAction)) {
                 android.widget.Toast.makeText(context, "O destino mudou durante a importação. Selecione novamente.",
@@ -292,7 +297,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 screen = "editor"
                 return@startMediaTask
             }
-            val base = projectSession.append(project, imported.clips, createNew = request.createNew)
+            val base = projectSession.append(importTarget, imported.clips, createNew = false)
             val updated = if (request.createNew) base.copy(title = ProjectNaming.title(newProjectName)) else base
             if (request.createNew) projectSession.beginNew(ClipAudioBindings.pruneDeleted(updated))
             else if (!write(updated)) return@startMediaTask
@@ -339,7 +344,8 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
             val selectedId = selectedOverlayId
             startMediaTask(MediaTaskKind.OVERLAY, origin) {
                 val remaining = ((initialProject?.durationMs ?: 0L) - insertionCursor).coerceAtLeast(0L)
-                val loaded = mediaTasks.overlay(uri, remaining)
+                val targetId = initialProject?.id ?: return@startMediaTask
+                val loaded = mediaTasks.overlay(uri, remaining, targetId)
                 if (!origin.matches(project?.id.orEmpty(), screen, mediaAction) ||
                     project !== initialProject || selectedOverlayId != selectedId || positionMs != insertionCursor) {
                     android.widget.Toast.makeText(context, "O editor mudou. Selecione o PiP novamente.",
@@ -351,7 +357,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                         android.widget.Toast.LENGTH_LONG).show()
                     return@startMediaTask
                 }
-                insertOverlay(uri, loaded.isImage, loaded.durationMs)
+                insertOverlay(loaded.uri, loaded.isImage, loaded.durationMs)
             }
         }
     }
@@ -361,7 +367,9 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
             val origin = MediaTaskOrigin(project?.id.orEmpty(), screen, mediaAction)
             val insertionCursor = positionMs
             startMediaTask(MediaTaskKind.AUDIO, origin) {
-                val track = mediaTasks.audio(uri, initialProject?.durationMs ?: 0L, insertionCursor)
+                val track = initialProject?.let {
+                    mediaTasks.audio(uri, it.durationMs, insertionCursor, it.id)
+                }
                 if (!origin.matches(project?.id.orEmpty(), screen, mediaAction) || project !== initialProject) {
                     android.widget.Toast.makeText(context, "O projeto mudou. Selecione o áudio novamente.",
                         android.widget.Toast.LENGTH_LONG).show()
@@ -508,7 +516,14 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 "media_repair" -> project?.let { p -> ProjectMediaRepairScreen(p, ::back) { changed ->
                     if (projectSession.project != p) false else write(changed)
                 } }
-                "editor" -> project?.let { p -> EditorScreen(p, selectedClip, positionMs,
+                "editor" -> project?.let { p -> Column {
+                    if (protectingMedia) {
+                        LinearProgressIndicator(Modifier.fillMaxWidth())
+                        Text("Criando cópias de segurança das mídias…",
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp))
+                    }
+                    Box(Modifier.weight(1f)) { EditorScreen(p, selectedClip, positionMs,
                     onSelected = { selectedClip = it }, onPosition = { positionMs = it }, onBack = ::back,
                     onEdit = {
                         if (it == "animate") {
@@ -544,6 +559,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     onRepairMedia = { navTo("media_repair") },
                     autoPlayOnReturn = resumeVideoPreview,
                     onReturnPlaybackConsumed = { resumeVideoPreview = false }) }
+                } }
                 "watermark" -> project?.let { current -> TextWatermarkScreen(current, ::back) { changed ->
                     if (write(changed)) screen = "editor"
                 } }

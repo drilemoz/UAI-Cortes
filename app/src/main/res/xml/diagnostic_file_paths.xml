@@ -4,4 +4,5 @@
     <cache-path name="atualizacoes" path="updates/" />
     <files-path name="flow_studio" path="flow_studio_v1/" />
     <files-path name="project_images" path="project_images_v1/" />
+    <files-path name="project_media" path="project_media_v1/" />
 </paths>

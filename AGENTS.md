@@ -1,3 +1,16 @@
+# v0.1.207 — Sobre compacto sem comprometer Novidades
+- Sobre tem apenas um destaque vindo de `AppReleaseNotes.forAbout()`, desenvolvedor Adriedson Lemos, Pix com copiar e GitHub vindo de `BuildConfig.GITHUB_RELEASE_REPOSITORY`; não inventar repositório. Novidades sobe nas Configurações, mas a tela de primeira execução, fingerprint, marcação e histórico completo não podem ser removidos.
+- `schemaVersion=4` preservado; versionName 0.1.207, versionCode 208.
+
+# v0.1.206 — Navegação das ferramentas do editor
+- Salvar fixo no cabeçalho, Reparar mídia em Mais, remover atalhos redundantes Vídeo+/Imagem/PiP da barra; inclusões continuam em Linha do tempo > Adicionar. Animar imagens no início, retorno ao editor no modo append. Não alterar corte, composição, clipes, exportação e undo/redo.
+- versionName 0.1.206, versionCode 207.
+
+# v0.1.205 — Cópias seguras de mídias do projeto
+- Importar vídeo, áudio e PiP com `ProjectMediaCopies.copy` em IO; Android 10+ usa MediaStore `IS_PENDING` e pastas nativas por tipo, Android 8/9 usa arquivo privado e FileProvider. Não deletar originais nem copiar URI parcial. Imagens principais já têm cópia durável privada.
+- Abrir projeto legado deve copiar fontes acessíveis sem sobrescrever alterações ocorridas durante a operação. Após migrar, solicitar salvar novo rascunho. `ProjectBackupStore` continua guardando o JSON e não vira backup completo dos arquivos.
+- Preservar schemaVersion 4, assinatura, cinco APKs e versionamento CI. versionName 0.1.205, versionCode 206.
+
 # v0.1.204 — Subtitle Studio: curvas temporais suaves e compatibilidade
 - `SubtitleMotionPolicy` em `:subtitle-core` implementa 5 curvas puras e determinísticas (`soft_pop`, `cinematic`, `soft_fade`, `impact`, `glide`), sem chamadas de rede, biblioteca externa ou estado dependente de FPS. Ambas as renderizações devem continuar consumindo `SubtitleAnimations.frame`, compartilhando transformações de alpha, escala e posição.
 - Efeitos novos nunca reescrevem `SubtitleCue.text`, SRT, horários, vozes Gemini, personagens ou o esquema do projeto (`schemaVersion=4`). 22 animações existentes e 25 presets legados permanecem compatíveis, incluindo carregamento de projetos anteriores.

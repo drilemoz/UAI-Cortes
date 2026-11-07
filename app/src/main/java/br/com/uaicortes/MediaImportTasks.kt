@@ -40,7 +40,7 @@ internal data class MediaTaskOrigin(val projectId: String, val screen: String, v
         projectId == projectIdNow && screen == screenNow && action == actionNow
 }
 
-internal data class OverlayImportSource(val isImage: Boolean, val durationMs: Long)
+internal data class OverlayImportSource(val uri: Uri, val isImage: Boolean, val durationMs: Long)
 
 /**
  * Limite entre operações de conteúdo (ContentResolver/metadata) e estados da interface.
@@ -50,24 +50,30 @@ internal class MediaImportTasks(
     private val media: MediaImportController,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
-    suspend fun videos(uris: List<Uri>, persistDocuments: Boolean): ClipImportBatch =
-        withContext(ioDispatcher) { media.videoClips(uris, persistDocuments) }
+    suspend fun videos(uris: List<Uri>, persistDocuments: Boolean, projectId: String): ClipImportBatch =
+        withContext(ioDispatcher) { media.videoClips(uris, persistDocuments, projectId) }
 
-    suspend fun audio(uri: Uri, projectDurationMs: Long, cursorMs: Long): AudioTrack? =
+    suspend fun audio(uri: Uri, projectDurationMs: Long, cursorMs: Long, projectId: String): AudioTrack? =
         withContext(ioDispatcher) {
             media.persistReadAccess(uri)
             val name = media.title(uri)
             val duration = media.duration(uri)
-            MediaImportRules.audio(uri.toString(), name, duration, projectDurationMs, cursorMs)
+            if (duration <= 0L) return@withContext null
+            val safe = media.protectedCopy(uri, projectId, ProjectMediaCopies.Kind.AUDIO)
+            MediaImportRules.audio(safe.toString(), name, duration, projectDurationMs, cursorMs)
         }
 
-    suspend fun overlay(uri: Uri, availableMs: Long): OverlayImportSource? =
+    suspend fun overlay(uri: Uri, availableMs: Long, projectId: String): OverlayImportSource? =
         withContext(ioDispatcher) {
             media.persistReadAccess(uri)
             if (availableMs <= 0L) return@withContext null
             val isImage = media.isImage(uri)
             val duration = if (isImage) 5_000L else media.duration(uri)
             if (duration <= 0L) null
-            else OverlayImportSource(isImage, minOf(duration, availableMs))
+            else {
+                val safe = media.protectedCopy(uri, projectId,
+                    if (isImage) ProjectMediaCopies.Kind.IMAGE else ProjectMediaCopies.Kind.VIDEO)
+                OverlayImportSource(safe, isImage, minOf(duration, availableMs))
+            }
         }
 }

@@ -13,7 +13,9 @@ assert 'fun forWhatsNew(): List<ReleaseSummary> = listOf(current)' in notes
 assert 'fun forHistory(): List<ReleaseSummary> = recent.drop(1)' in notes
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in whats
 assert 'if (showHistory)' in whats and 'ReleaseHighlights(AppReleaseNotes.forHistory())' in whats
-assert 'if (showOlderReleases)' in about and 'ReleaseHighlights(AppReleaseNotes.forOlderAbout())' in about
+assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in about
+assert 'showOlderReleases' not in about
+assert 'fun forAbout(): List<ReleaseSummary> = listOf(current.copy(features = current.features.take(1)))' in notes
 assert 'UaiShapes.button' in ui and 'UaiShapes.dialog' in ui and 'UaiShapes.card' in ui
 assert 'downloadSpeedBytesPerSecond' in ui and 'readableRate' in ui and 'readableBytes' in ui
 assert 'manager.download(release)' in ui and 'manager.installDownloaded()' in ui

@@ -1,3 +1,13 @@
+# Uai Cortes · versão 0.1.207 — proteção de mídias, editor e informações (versionCode 208)
+
+- **Parte 1 · 0.1.205 (versionCode 206):** cópia automática de vídeos, áudios e PiPs, com MediaStore e confirmação antes do uso, reuso por projeto, limpeza de cópias parciais e proteção conservadora de projetos antigos ao reabrir. Imagens da faixa principal mantêm a cópia privada anterior.
+- **Parte 2 · 0.1.206 (versionCode 207):** Salvar fixo no cabeçalho; Reparar mídias no menu; Animar imagens em destaque e retorno ao editor; Vídeo/Imagem/PiP inseridos pela linha do tempo.
+- **Parte 3 · 0.1.207 (versionCode 208):** Sobre exibe um único destaque, desenvolvedor Adriedson Lemos, cópia da chave Pix e GitHub obtido do repositório embutido no build; Novidades no topo das Configurações e fluxo pós-atualização preservado.
+
+**Armazenamento:** Android 10+ usa Filmes/Música/Imagens conforme o tipo, sob `UaiCortes/Projetos/<ID>`; Android 8/9 usa cópia privada. Os originais não são movidos ou apagados. Cópias de mídia não substituem backup externo; projetos antigos devem ser salvos após a proteção.
+
+**Validação:** testes estruturais e scripts locais; `:subtitle-core:test`, `:app:testDebugUnitTest`, `:app:lintDebug` e `:app:assembleRelease` ainda precisam ser executados no CI. Testar em aparelho cópias MediaStore, exportação e interface; não há APK validado localmente.
+
 # Uai Cortes · versão 0.1.204 — Subtitle Studio: animações suaves (versionCode 205)
 
 **Subtitle Studio, segunda etapa:** Pop suave, Cinema suave, Fade delicado, Impacto limpo e Deslizar suave; curvas temporais determinísticas implementadas no módulo `:subtitle-core` e usadas na prévia Compose e na exportação Media3. Os oito estilos recomendados passam a usar novas curvas quando apropriado, mantendo todos os 25 modelos legados e animações anteriores. As animações usam tempo absoluto, sem rede e sem Lottie/libass; velocidade existente (0,5×–2×) continua válida.

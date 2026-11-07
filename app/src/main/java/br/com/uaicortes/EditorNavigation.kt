@@ -31,7 +31,7 @@ internal object EditorNavigation {
         "quick_split", "quick_audio" -> "home"
         "flow_workspace" -> "home"
         "voice_center" -> if (previous == "settings") "settings" else "home"
-        "animate" -> "home" // Voltar sempre leva à tela inicial; adicionar ao editor é outra ação.
+        "animate" -> if (animationDestination == "append") "editor" else "home"
         "gemini_settings" -> if (previous == "audio" || previous == "voices" || previous == "api_center") previous else "settings"
         "general", "backup_settings", "appearance", "about", "diagnostics" -> "settings"
         "whats_new" -> if (previous == "settings" || previous == "about") previous else "home"

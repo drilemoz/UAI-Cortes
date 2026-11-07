@@ -16,11 +16,31 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.204"
-    const val VERSION_CODE = 205
+    const val VERSION_NAME = "0.1.207"
+    const val VERSION_CODE = 208
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.207", listOf(
+            ReleaseFeature("protection-media-207", "Mídias mais protegidas durante a edição",
+                "Vídeos, áudios e PiPs importados recebem cópias independentes; projetos antigos podem ser protegidos ao reabrir. Os originais não são apagados.", "shield"),
+            ReleaseFeature("editor-tools-207", "Ferramentas do editor reorganizadas",
+                "Salvar está no cabeçalho, Animar imagens aparece entre as primeiras ferramentas e a linha do tempo concentra a inclusão de mídias.", "film"),
+            ReleaseFeature("about-compact-207", "Sobre e Novidades sem repetição",
+                "Sobre mostra um destaque e os dados do desenvolvedor, com Pix e GitHub. Novidades continua abrindo após atualização e guarda o histórico.", "check")
+        )),
+        ReleaseSummary("0.1.206", listOf(
+            ReleaseFeature("editor-shortcuts-206", "Ações do editor organizadas",
+                "Salvar no cabeçalho, Reparar mídias no menu e Animar imagens em posição visível. Inserção de mídias permanece na linha do tempo.", "film"),
+            ReleaseFeature("animation-back-206", "Retorno à edição após animar fotos",
+                "Quando aberto pelo editor, Voltar no módulo de animação retorna ao mesmo projeto.", "check")
+        )),
+        ReleaseSummary("0.1.205", listOf(
+            ReleaseFeature("media-copy-205", "Cópia automática dos arquivos importados",
+                "Vídeos e PiPs ficam em Filmes, áudio em Música e imagens PiP em Imagens (Android 10+). Fotos da faixa principal já têm proteção privada.", "shield"),
+            ReleaseFeature("media-legacy-205", "Proteção de mídias em projetos antigos",
+                "Ao abrir um projeto, fontes acessíveis podem ser copiadas com verificação integral e sem substituir uma edição feita durante o processamento.", "folder")
+        )),
         ReleaseSummary("0.1.204", listOf(
             ReleaseFeature("subtitle-soft-motion-204", "Legendas com movimentos suaves",
                 "Cinco animações novas: Pop suave, Cinema suave, Fade delicado, Impacto limpo e Deslizar suave, com entrada e saída controladas.", "captions"),
@@ -1031,8 +1051,8 @@ internal object AppReleaseNotes {
 
     val current: ReleaseSummary get() = recent.first()
 
-    /** Sobre resume as três últimas versões e mantém o restante sob demanda. */
-    fun forAbout(): List<ReleaseSummary> = recent.take(3)
+    /** Sobre exibe uma única alteração; histórico completo apenas em Novidades. */
+    fun forAbout(): List<ReleaseSummary> = listOf(current.copy(features = current.features.take(1)))
     /** A abertura após atualização mostra somente as mudanças da versão instalada. */
     fun forWhatsNew(): List<ReleaseSummary> = listOf(current)
     /** A consulta histórica é sempre explícita; não polui o primeiro acesso. */

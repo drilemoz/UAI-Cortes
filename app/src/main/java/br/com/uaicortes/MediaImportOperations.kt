@@ -40,11 +40,18 @@ internal class MediaImportController(private val context: Context) {
         } // Galeria/MediaStore não oferecem concessões persistíveis; esse caso é esperado.
     }
 
-    fun videoClips(uris: List<Uri>, persistDocumentAccess: Boolean): ClipImportBatch {
-        val sources = uris.map { uri ->
+    suspend fun videoClips(uris: List<Uri>, persistDocumentAccess: Boolean, projectId: String): ClipImportBatch {
+        val sources = mutableListOf<ClipSource>()
+        for (uri in uris) {
             if (persistDocumentAccess) persistReadAccess(uri)
-            ClipSource(uri.toString(), runCatching { mediaName(context, uri) }.getOrDefault("Vídeo"),
-                runCatching { verifiedMediaDuration(context, uri) }.getOrDefault(0L))
+            val duration = runCatching { verifiedMediaDuration(context, uri) }.getOrDefault(0L)
+            val title = runCatching { mediaName(context, uri) }.getOrDefault("Vídeo")
+            if (duration <= 0L) {
+                sources.add(ClipSource(uri.toString(), title, 0L))
+            } else {
+                val protected = ProjectMediaCopies.copy(context, uri, projectId, ProjectMediaCopies.Kind.VIDEO)
+                sources.add(ClipSource(protected.toString(), title, duration))
+            }
         }
         return MediaImportRules.clips(sources)
     }
@@ -52,4 +59,6 @@ internal class MediaImportController(private val context: Context) {
     fun isImage(uri: Uri): Boolean = context.contentResolver.getType(uri)?.startsWith("image/") == true
     fun duration(uri: Uri): Long = verifiedMediaDuration(context, uri)
     fun title(uri: Uri): String = mediaName(context, uri)
+    suspend fun protectedCopy(uri: Uri, projectId: String, kind: ProjectMediaCopies.Kind): Uri =
+        ProjectMediaCopies.copy(context, uri, projectId, kind)
 }

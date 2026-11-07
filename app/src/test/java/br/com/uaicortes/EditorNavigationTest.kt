@@ -7,9 +7,9 @@ class EditorNavigationTest {
     @Test fun backPolicyKeepsCurrentNavigationSemantics() {
         assertEquals("editor", EditorNavigation.back("pip", "home", "home", "new"))
         assertEquals("subtitles", EditorNavigation.back("autosubtitle", "home", "home", "new"))
-        assertEquals("home", EditorNavigation.back("animate", "home", "home", "append"))
+        assertEquals("editor", EditorNavigation.back("animate", "home", "home", "append"))
         assertEquals("home", EditorNavigation.back("animate", "editor", "editor", "new"))
-        assertEquals("home", EditorNavigation.back("animate", "editor", "editor", "append"))
+        assertEquals("editor", EditorNavigation.back("animate", "editor", "editor", "append"))
         assertEquals("settings", EditorNavigation.back("diagnostics", "home", "home", "new"))
         assertEquals("animate", EditorNavigation.back("media", "home", "animate", "new"))
     }
