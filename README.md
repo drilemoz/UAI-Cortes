@@ -1,3 +1,7 @@
+# Uai Cortes · versão 0.1.203 — Correção CI169: fontes do Subtitle Studio (versionCode 204)
+
+O workflow 169 compilou Kotlin, mas `:app:testDebugUnitTest` reprovou 1 de 636 testes: `SubtitleTypographyTest.fontsAreLocalAndUnknownFallsBack`. O teste ainda exigia três famílias, embora o Subtitle Studio 0.1.202 tenha acrescentado a fonte local Cursiva. Atualizado o contrato para quatro famílias e acrescentado round-trip da fonte Cursiva e fallback para fonte remota desconhecida. Nenhuma alteração de UI, renderer, fonte ou modelo de projeto foi necessária. Reexecutar o Gradle/JUnit/Lint completo no GitHub Actions.
+
 # Uai Cortes · versão 0.1.202 — Subtitle Studio (versionCode 203)
 
 O Subtitle Studio apresenta 8 presets modernos com os 25 antigos acessíveis, conversão visual para MAIÚSCULAS/minúsculas, uma família de fonte cursiva do Android e módulo puro `:subtitle-core` de transformação. O texto original, marcações por palavra, SRT, vozes Gemini e exportação de mídias são preservados. Gradle/Media3 ainda precisam ser validados no CI e no aparelho.

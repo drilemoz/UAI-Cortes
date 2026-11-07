@@ -1,3 +1,8 @@
+# Uai Cortes · versão 0.1.203 — Correção CI169: teste da fonte Cursiva (versionCode 204)
+- Corrigido o contrato JUnit de tipografia do Subtitle Studio para reconhecer a quarta fonte Cursiva sem remover essa opção do aplicativo.
+- Teste adicional confirma que o estilo Cursiva sobrevive ao salvamento e leitura do projeto; URL remota desconhecida continua usando fonte segura.
+- Mantidas as funções da 0.1.202, o modelo schemaVersion 4, assinatura e cinco variantes Release. Build/JUnit/Lint completos necessitam nova execução no CI.
+
 # Uai Cortes · versão 0.1.202 — Subtitle Studio (versionCode 203)
 - Galeria de 8 estilos de legenda escolhidos; modelos anteriores continuam acessíveis sem perder projetos salvos.
 - Maiúsculas e minúsculas como formatação visual de legenda, mantendo texto e timings do arquivo original.

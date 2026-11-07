@@ -1,3 +1,9 @@
+## 0.1.203 (versionCode 204) — CI169: contrato da tipografia
+- Corrigido o teste `SubtitleTypographyTest.fontsAreLocalAndUnknownFallsBack`, que ainda esperava três famílias apesar da inclusão de Cursiva na 0.1.202.
+- Adicionados testes para normalização da fonte Cursiva, rejeição segura de URL remota e persistência pelo JSON do projeto.
+- Sem alterar a fonte disponível no app, a renderização Compose/Media3, as legendas, o schemaVersion 4 ou os cinco APKs previstos.
+- O CI169 passou pela compilação Kotlin mas falhou em 1/636 testes; a confirmação definitiva exige reexecutar o workflow.
+
 ## 0.1.202 (versionCode 203) — Subtitle Studio
 - Oito estilos de apresentação no início da galeria, com antigos presets acessíveis em uma opção separada. Efeitos recomendados primeiro; efeitos anteriores recolhidos.
 - Formatação visual Original / MAIÚSCULAS / minúsculas persistida por legenda, personagem ou projeto. Texto para SRT e Gemini não é reescrito.

@@ -1,3 +1,8 @@
+# v0.1.203 — CI169: contrato de tipografia após introdução de Cursiva
+- Workflow 169: 636 testes, 1 falha em `SubtitleTypographyTest.fontsAreLocalAndUnknownFallsBack`. A fonte local Cursiva foi introduzida na 0.1.202 mas o teste exigia apenas sans, serif e mono.
+- Atualizar o teste para quatro famílias, incluindo Cursiva, validação de fallback seguro para nomes/URLs desconhecidos e round-trip no JSON. Não remover a fonte nem mudar o normalizador funcional para satisfazer um teste desatualizado.
+- Manter `:subtitle-core`, schemaVersion 4, estilos, dados, cinco APKs e assinatura. Reexecutar JUnit, Android Lint e Release no GitHub Actions antes de afirmar APK compilado.
+
 # v0.1.202 — Subtitle Studio: primeira etapa
 - Preservar `SubtitleCue.text` como fonte original: `textCase` (original/upper/lower) é visual e pode ser aplicado por fala/personagem ou modelo pessoal. Não modificar texto para narração Gemini nem SRT exportado.
 - `:subtitle-core` encapsula política pt-BR sem Android; o Gradle `:app` depende dele. O pacote-fonte deve incluir esse módulo. Prévia Compose, galeria e `TimedSubtitleOverlay` compartilham `SubtitleAnimations.frame` e tratamento de cores das palavras no texto apresentado.

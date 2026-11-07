@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.202"
-    const val VERSION_CODE = 203
+    const val VERSION_NAME = "0.1.203"
+    const val VERSION_CODE = 204
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.203", listOf(
+            ReleaseFeature("subtitle-font-ci169-203", "Correção de testes das fontes de legenda",
+                "O teste de tipografia agora inclui a fonte Cursiva adicionada ao Subtitle Studio e verifica o fallback para fontes desconhecidas, sem alterar o resultado visual.", "check")
+        )),
         ReleaseSummary("0.1.202", listOf(
             ReleaseFeature("subtitle-studio-202", "Subtitle Studio com estilos selecionados",
                 "O editor destaca oito aparências modernas e mantém os antigos modelos em uma seção opcional.", "captions"),

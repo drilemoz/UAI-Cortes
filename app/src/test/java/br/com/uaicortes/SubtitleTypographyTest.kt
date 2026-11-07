@@ -5,11 +5,25 @@ import org.junit.Test
 
 class SubtitleTypographyTest {
     @Test fun fontsAreLocalAndUnknownFallsBack() {
-        assertEquals(listOf("sans", "serif", "mono"), SubtitleStyles.fonts.map { it.first })
+        // O Subtitle Studio adicionou Cursiva na 0.1.202: não descartar a fonte nem regredir o catálogo.
+        assertEquals(listOf("sans", "serif", "mono", "cursive"), SubtitleStyles.fonts.map { it.first })
+        assertEquals(4, SubtitleStyles.fonts.map { it.first }.distinct().size)
         assertEquals("sans", SubtitleStyles.normalizeFont("invalid/remote-font"))
         assertEquals("sans", SubtitleStyles.normalizeFont(""))
         assertEquals("serif", SubtitleStyles.normalizeFont("serif"))
         assertEquals("mono", SubtitleStyles.normalizeFont("mono"))
+        assertEquals("cursive", SubtitleStyles.normalizeFont("cursive"))
+        assertEquals("sans", SubtitleStyles.normalizeFont("https://example.com/font.otf"))
+    }
+
+    @Test fun cursiveTypographySurvivesProjectRoundTrip() {
+        val original = SubtitleCue(id="cursive-local", text="A estrada continua", startMs=210L,
+            endMs=1900L, fontFamily=SubtitleStyles.FONT_CURSIVE)
+        val restored = SubtitleCue.read(original.json())
+        assertEquals(SubtitleStyles.FONT_CURSIVE, restored.fontFamily)
+        assertEquals(original.text, restored.text)
+        assertEquals(original.startMs, restored.startMs)
+        assertEquals(original.endMs, restored.endMs)
     }
 
     @Test fun typographyRoundTripPreservesTimingAndPosition() {
