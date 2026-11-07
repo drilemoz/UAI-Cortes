@@ -1,3 +1,14 @@
+# Uai Cortes · versão 0.1.214 — Revisão de extração e arquivos incompletos (versionCode 215)
+- **Extrair áudio**: continua com escolha SAF, progresso em tela cheia e resultado real. Agora há opção explícita de apagar somente o arquivo M4A parcial criado na tentativa cancelada/com erro, com diálogo de confirmação.
+- A limpeza espera o fechamento da cópia; se o provedor de documentos rejeitar a exclusão, o usuário recebe mensagem para usar Arquivos. Não apaga automaticamente documentos nem a mídia original.
+- Mantidos Dividir vídeo, edição, projetos, cinco variantes previstas e assinatura. Ainda requer compilação Android no CI e testes SAF com provedores reais.
+
+# Uai Cortes · versão 0.1.213 — Extrair áudio em tela cheia (versionCode 214)
+- **Extrair áudio**: após escolher o local de destino do M4A no seletor Android, acompanhar a operação em tela cheia. As fases informam quando o Media3 extrai e quando o aplicativo grava o arquivo final.
+- Resultado mostra o arquivo M4A somente depois de uma gravação concluída, com opção de ouvi-lo, finalizar ou começar outra extração. Erro e cancelamento apresentam feedback específico; arquivo parcial no destino SAF pode precisar ser excluído manualmente.
+- Mantidos os controles e as telas da divisão da 0.1.212, áudio AAC em M4A, vídeos originais, cinco APKs previstos e dados dos projetos.
+- Compilação Android no GitHub Actions e teste físico permanecem pendentes.
+
 # Uai Cortes · versão 0.1.212 — Dividir vídeo em tela inteira (versionCode 213)
 - **Dividir vídeo**: o processamento agora ocupa uma tela própria, indicando exatamente qual parte está sendo cortada ou salva. Ao finalizar, a tela Resultado lista os MP4 e M4A realmente publicados e permite abrir cada arquivo, além de iniciar nova divisão.
 - Cancelar pede confirmação, não apaga originais nem partes já gravadas. A barra avança apenas com partes completas; não é uma estimativa de FPS nem de bytes do Media3.

@@ -62,6 +62,11 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
     var splitView by remember { mutableStateOf(SplitView.SETUP) }
     val savedSplitFiles = remember { mutableStateListOf<QuickSplitSavedFile>() }
     var openFileError by remember { mutableStateOf("") }
+    var extractedAudioUri by remember { mutableStateOf<Uri?>(null) }
+    var extractedAudioName by remember { mutableStateOf("") }
+    var incompleteAudioUri by remember { mutableStateOf<Uri?>(null) }
+    var deleteIncompleteConfirm by remember { mutableStateOf(false) }
+    var deletingIncomplete by remember { mutableStateOf(false) }
     val partsResult = remember(sourceDurationMs, partDuration) {
         runCatching { QuickVideoSplitPolicy.parts(sourceDurationMs, partDuration) }
     }
@@ -91,6 +96,8 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
             finished = false; error = ""; completed = 0
             splitView = SplitView.SETUP
             savedSplitFiles.clear()
+            extractedAudioUri = null; extractedAudioName = ""; openFileError = ""
+            incompleteAudioUri = null; deleteIncompleteConfirm = false; deletingIncomplete = false
             if (!containsAudio && mode == QuickToolMode.SPLIT_VIDEO && audioMode == "separate")
                 audioMode = "keep"
         }
@@ -100,14 +107,38 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
         if (uri != null) useVideo(uri, persistDocumentAccess = true)
     }
     val audioDocument = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("audio/mp4")) { uri ->
-        if (uri != null && sourceText.isNotBlank() && !processing) {
-            processing = true; error = ""; finished = false; phase = "Extraindo áudio"
+        // O SAF pode ser cancelado pelo usuário: só entrar no fluxo após a URI existir.
+        if (uri != null && sourceText.isNotBlank() && hasAudio && !processing) {
+            processing = true; error = ""; finished = false; phase = "Preparando extração"
+            extractedAudioUri = null; openFileError = ""
+            incompleteAudioUri = uri; deleteIncompleteConfirm = false; deletingIncomplete = false
+            extractedAudioName = runCatching { mediaName(context, uri) }
+                .getOrDefault(QuickVideoSplitPolicy.fileBase(sourceName) + ".m4a")
+            splitView = SplitView.RUNNING
             val clip = Clip(uri = sourceText, title = sourceName, sourceDurationMs = sourceDurationMs)
             runCatching {
                 audioEngine.start(listOf(clip), uri,
-                    onSuccess = { processing = false; finished = true; phase = "M4A salvo no destino escolhido" },
-                    onError = { reason -> processing = false; error = reason })
-            }.onFailure { processing = false; error = it.message ?: "Não foi possível extrair o áudio." }
+                    onSuccess = {
+                        if (processing && splitView == SplitView.RUNNING) {
+                            processing = false; finished = true
+                            extractedAudioUri = uri; incompleteAudioUri = null
+                            phase = "M4A salvo no destino escolhido"
+                            splitView = SplitView.RESULT
+                        }
+                    },
+                    onError = { reason ->
+                        if (processing && splitView == SplitView.RUNNING) {
+                            processing = false; error = reason; splitView = SplitView.RESULT
+                        }
+                    },
+                    onPhase = { step ->
+                        if (processing && splitView == SplitView.RUNNING) phase = step
+                    })
+            }.onFailure {
+                audioEngine.cancel()
+                processing = false; error = it.message ?: "Não foi possível extrair o áudio."
+                splitView = SplitView.RESULT
+            }
         }
     }
     fun leave() {
@@ -117,23 +148,48 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
         when {
             galleryOpen -> galleryOpen = false
             processing -> confirmCancel = true
+            deletingIncomplete -> Unit
             splitView == SplitView.RESULT -> splitView = SplitView.SETUP
         }
     }
     if (confirmCancel) AlertDialog(
         onDismissRequest = { confirmCancel = false },
         title = { Text("Cancelar processamento?") },
-        text = { Text("Os arquivos já salvos continuarão na galeria. A parte atual pode ser interrompida.") },
+        text = { Text(if (mode == QuickToolMode.SPLIT_VIDEO)
+            "Os arquivos já salvos continuarão na galeria. A parte atual pode ser interrompida."
+            else "A extração será interrompida. Se o cancelamento ocorrer durante o salvamento, pode permanecer um M4A incompleto no destino escolhido.") },
         confirmButton = { TextButton(onClick = {
             splitEngine.cancel(); audioEngine.cancel()
             processing = false; confirmCancel = false
             phase = "Cancelado. Arquivos já publicados continuam no armazenamento."
-            if (mode == QuickToolMode.SPLIT_VIDEO) {
-                error = "Divisão cancelada pelo usuário."
-                splitView = SplitView.RESULT
-            }
+            error = if (mode == QuickToolMode.SPLIT_VIDEO) "Divisão cancelada pelo usuário."
+                else "Extração cancelada pelo usuário."
+            splitView = SplitView.RESULT
         }) { Text("Cancelar tarefa") } },
         dismissButton = { TextButton(onClick = { confirmCancel = false }) { Text("Continuar") } }
+    )
+    if (deleteIncompleteConfirm) AlertDialog(
+        onDismissRequest = { if (!deletingIncomplete) deleteIncompleteConfirm = false },
+        title = { Text("Excluir M4A incompleto?") },
+        text = { Text("O arquivo criado para esta extração será excluído do local escolhido. Essa ação não afeta o vídeo original nem outros áudios.") },
+        confirmButton = { TextButton(enabled = !deletingIncomplete, onClick = {
+            val candidate = incompleteAudioUri
+            if (candidate != null) {
+                deletingIncomplete = true
+                audioEngine.removeIncompleteDestination(candidate) { removed, detail ->
+                    deletingIncomplete = false; deleteIncompleteConfirm = false
+                    if (removed) {
+                        incompleteAudioUri = null
+                        openFileError = "O M4A incompleto foi excluído."
+                    } else {
+                        openFileError = if (detail?.startsWith("A gravação ainda") == true) detail
+                            else "O Android não permitiu excluir o M4A. Remova-o no app Arquivos."
+                    }
+                }
+            }
+        }) { Text(if (deletingIncomplete) "Excluindo…" else "Excluir arquivo") } },
+        dismissButton = { TextButton(enabled = !deletingIncomplete,
+            onClick = { deleteIncompleteConfirm = false }) { Text("Manter arquivo") } }
     )
     if (galleryOpen) {
         DeviceMediaBrowser(
@@ -146,6 +202,39 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
             openDocuments = { picker.launch(arrayOf("video/*")) },
             scope = GalleryScope.VIDEOS,
             allowMultiple = false
+        )
+    } else if (mode == QuickToolMode.EXTRACT_AUDIO && splitView == SplitView.RUNNING) {
+        QuickAudioProgressScreen(
+            sourceName = sourceName,
+            durationMs = sourceDurationMs,
+            phase = phase,
+            onCancel = { confirmCancel = true }
+        )
+    } else if (mode == QuickToolMode.EXTRACT_AUDIO && splitView == SplitView.RESULT) {
+        QuickAudioResultScreen(
+            sourceName = sourceName,
+            audioName = extractedAudioName,
+            savedUri = extractedAudioUri,
+            issue = error,
+            fileError = openFileError,
+            incompleteUri = incompleteAudioUri,
+            deletingIncomplete = deletingIncomplete,
+            onRemoveIncomplete = { deleteIncompleteConfirm = true },
+            onOpen = { uri ->
+                openFileError = ""
+                runCatching {
+                    context.startActivity(Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(uri, "audio/mp4")
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    })
+                }.onFailure { openFileError = "Não foi possível abrir o M4A com os aplicativos instalados." }
+            },
+            onNew = {
+                splitView = SplitView.SETUP; error = ""; finished = false
+                phase = ""; extractedAudioUri = null; extractedAudioName = ""; openFileError = ""
+                incompleteAudioUri = null; deleteIncompleteConfirm = false; deletingIncomplete = false
+            },
+            onFinish = { if (!deletingIncomplete) onBack() }
         )
     } else if (mode == QuickToolMode.SPLIT_VIDEO && splitView == SplitView.RUNNING) {
         QuickSplitProgressScreen(

@@ -1,3 +1,15 @@
+# v0.1.214 — Revisão de cancelamento e arquivos parciais da extração de áudio
+- Ao cancelar ou falhar uma extração rápida, a tela Resultado deve oferecer **Excluir M4A incompleto** somente após confirmação explícita do usuário; não excluir automaticamente o arquivo criado pelo SAF.
+- Em exclusão autorizada, aguardar até 5 segundos o fechamento da escrita interrompida antes de excluir; se a escrita continuar ativa ou o provedor de Documentos impedir exclusão, informar o problema e permitir ação manual no app Arquivos.
+- Nunca excluir o vídeo original, arquivos já concluídos ou outro destino por engano; não navegar para uma nova extração enquanto a exclusão estiver ativa. Preservar callback `onPhase` e consumidores `AudioScreen` / `QuickVideoSplitEngine`.
+- Preservar modo de divisão, schemaVersion 4, cinco APKs Release, assinatura, Sem percentuais inventados. versionName 0.1.214/versionCode 215. Testes Kotlin PSI e contratos estáticos não substituem CI/Media3/SAF reais.
+
+# v0.1.213 — Extração de áudio em tela inteira e resultado verificado
+- Ferramenta rápida Extrair áudio: manter seletor SAF `CreateDocument(audio/mp4)` antes de iniciar; depois mostrar tela exclusiva com etapa real do Media3 (extraindo/salvando), indicador indeterminado, cancelamento com confirmação e resultado.
+- Só apresentar M4A para abrir/ouvir após `AudioExtractionEngine.onSuccess` terminar a cópia no destino; em erro/cancelamento não afirmar que o arquivo está íntegro. Alertar que pode restar arquivo parcial no destino SAF; não apagar o arquivo do usuário automaticamente.
+- `AudioExtractionEngine` aceita callback opcional `onPhase`, preservando os consumidores anteriores; invalida callbacks atrasados e interrompe a cópia ao cancelar. Não fabricar progresso percentual ou tempo restante.
+- Manter Dividir vídeo da 0.1.212, áudio independente, formato M4A AAC, origem intacta, cinco APKs Release, schema 4 e assinatura. `versionName=0.1.213` e `versionCode=214`. Build Gradle e teste físico pendentes.
+
 # v0.1.212 — Divisão em tela inteira com resultado real
 - Após iniciar Dividir vídeo, sair da configuração visual para uma tela de execução exclusiva, mostrando parte atual, fase Media3, partes concluídas e cancelamento com confirmação; não inventar porcentagem de transcodificação.
 - Conclusão/cancelamento/erro abre tela de resultado com MP4 e M4A realmente publicados em MediaStore, com nomes e abertura individual via ACTION_VIEW e permissão de leitura. Arquivos não concluídos não devem aparecer. Manter arquivos existentes e originais intocados.

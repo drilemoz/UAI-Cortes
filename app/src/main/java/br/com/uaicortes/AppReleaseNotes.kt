@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.212"
-    const val VERSION_CODE = 213
+    const val VERSION_NAME = "0.1.214"
+    const val VERSION_CODE = 215
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.214", listOf(
+            ReleaseFeature("audio-partial-cleanup-214", "Revisão do salvamento de áudio",
+                "Após uma falha ou cancelamento, você pode excluir o M4A incompleto com confirmação; o app aguarda a escrita terminar e avisa quando o Android impede a exclusão.", "film")
+        )),
+        ReleaseSummary("0.1.213", listOf(
+            ReleaseFeature("quick-audio-fullscreen-213", "Extração de áudio em tela inteira",
+                "Depois de escolher o destino, acompanhe a extração e o salvamento do M4A em tela exclusiva. Ao concluir, abra o áudio salvo ou inicie outra extração; cancelamento com confirmação.", "film")
+        )),
         ReleaseSummary("0.1.212", listOf(
             ReleaseFeature("quick-split-fullscreen-212", "Divisão com acompanhamento em tela inteira",
                 "Após iniciar o corte, acompanhe cada parte e o salvamento do MP4/M4A em uma tela exclusiva. Ao finalizar, consulte e abra os arquivos realmente salvos, inclusive os concluídos antes de uma interrupção.", "film")

@@ -1,3 +1,16 @@
+# Uai Cortes · versão 0.1.214 — revisão da extração M4A (versionCode 215)
+## 0.1.214 (versionCode 215) · Saídas incompletas e exclusão segura
+- Revisão de `AudioExtractionEngine` e do fluxo em tela cheia: sucesso continua dependendo do fechamento da gravação do M4A; cancelamento e erro não exibem saída como concluída.
+- Se o destino SAF criado ficou vazio ou parcial, Resultado agora oferece ação voluntária **Excluir M4A incompleto** com confirmação explícita, aguardando o encerramento do worker de cópia antes da exclusão. Erros do provedor de arquivos são exibidos ao usuário; nenhuma exclusão automática.
+- Bloqueio de Nova extração/Concluído durante uma exclusão em andamento; mantidos modo de divisão, editor, galeria, media3, schema e versões anteriores. Validação física pendente.
+
+# Uai Cortes · versão 0.1.213 — extrair áudio em tela cheia (versionCode 214)
+## 0.1.213 (versionCode 214) · Execução e resultado do áudio
+- Após selecionar um vídeo com faixa de áudio e escolher o destino SAF, a extração abre uma tela dedicada com informações da origem e fases reais: extraindo faixa de áudio e salvando M4A.
+- Cancelar solicita confirmação e invalida callbacks antigos, mesmo se o salvamento estiver em execução. A tela final apresenta sucesso com abertura do M4A realmente concluído, ou informa falha/cancelamento sem anunciar arquivo incompleto como concluído.
+- O salvamento continua sob escolha do usuário; arquivos de origem e etapas de divisão de vídeo permanecem intactos. Não simular percentuais Media3.
+- Testes estáticos de regressão e sintaxe Kotlin não substituem CI Gradle/Lint nem teste em aparelho.
+
 # Uai Cortes · versão 0.1.212 — divisão com acompanhamento e resultados (versionCode 213)
 ## 0.1.212 (versionCode 213) · Processo separado da configuração
 - Ao iniciar a divisão, a tela de configuração é substituída por acompanhamento em tela inteira: parte em andamento, etapa real (cortar MP4, salvar, extrair M4A), contador de partes efetivamente concluídas e botão Cancelar com confirmação.

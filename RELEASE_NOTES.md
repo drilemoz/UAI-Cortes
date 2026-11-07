@@ -1,3 +1,16 @@
+# Uai Cortes · versão 0.1.214 — Revisão de extração de áudio (versionCode 215)
+## v0.1.214 · Mais controle sobre M4As incompletos
+- Após erro ou cancelamento em Extrair áudio, o resultado pode apresentar ação para excluir o M4A incompleto com confirmação; não há exclusão automática.
+- A exclusão espera a operação de escrita terminar e informa quando o sistema ou provedor não autoriza remover o documento.
+- Tela cheia, áudio M4A, divisão de vídeo e fontes originais preservados. Compilação e teste Android físico pendentes.
+
+# Uai Cortes · versão 0.1.213 — Extração de áudio em tela cheia (versionCode 214)
+## v0.1.213 · Processamento e resultado visíveis
+- Depois de escolher o destino do M4A, uma tela dedicada mostra as etapas reais de extração e salvamento e permite cancelar com confirmação.
+- Uma tela de resultados identifica o M4A concluído, com ação de abrir/ouvir, além de Concluído e Nova extração.
+- Em cancelamento ou falha, o app não exibe arquivos incompletos como concluídos. Vídeos originais, edição e divisão em partes permanecem inalterados.
+- A funcionalidade requer validação em Android real e compilação CI antes de distribuir APK.
+
 # Uai Cortes · versão 0.1.212 — Dividir vídeo em tela cheia (versionCode 213)
 ## v0.1.212 · Acompanhamento e resultado de cada corte
 - Ao iniciar Dividir vídeo, abra uma tela exclusiva de acompanhamento, com a parte atual, fase do processamento e quantas partes já terminaram.
