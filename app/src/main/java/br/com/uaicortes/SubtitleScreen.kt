@@ -58,6 +58,7 @@ import kotlinx.coroutines.delay
 internal fun subtitleFont(family: String): FontFamily = when (SubtitleStyles.normalizeFont(family)) {
     SubtitleStyles.FONT_SERIF -> FontFamily.Serif
     SubtitleStyles.FONT_MONO -> FontFamily.Monospace
+    SubtitleStyles.FONT_CURSIVE -> FontFamily.Cursive
     else -> FontFamily.SansSerif
 }
 
@@ -86,14 +87,16 @@ internal fun previewSubtitleScale(cue: SubtitleCue, widthPx: Int, textSizePx: Fl
         typeface = android.graphics.Typeface.create(when (SubtitleStyles.normalizeFont(cue.fontFamily)) {
             SubtitleStyles.FONT_SERIF -> "serif"
             SubtitleStyles.FONT_MONO -> "monospace"
+            SubtitleStyles.FONT_CURSIVE -> "cursive"
             else -> "sans-serif"
         }, when { cue.bold && cue.italic -> android.graphics.Typeface.BOLD_ITALIC
             cue.italic -> android.graphics.Typeface.ITALIC
             cue.bold -> android.graphics.Typeface.BOLD
             else -> android.graphics.Typeface.NORMAL })
     }
-    val longest = cue.text.split(Regex("\\s+")).maxOfOrNull { paint.measureText(it) } ?: 0f
-    val total = cue.text.lines().sumOf { paint.measureText(it).toDouble() }.toFloat()
+    val displayText = br.com.uaicortes.subtitles.core.SubtitleTextCasePolicy.display(cue.text, cue.textCase)
+    val longest = displayText.split(Regex("\\s+")).maxOfOrNull { paint.measureText(it) } ?: 0f
+    val total = displayText.lines().sumOf { paint.measureText(it).toDouble() }.toFloat()
     val available = (widthPx * .90f - textSizePx * .65f).coerceAtLeast(1f)
     return SubtitleAutoFit.factor(longest, total, available)
 }
@@ -175,7 +178,7 @@ internal fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
                 }
                 val animatedText=buildAnnotatedString {
                     append(animationFrame.text)
-                    SubtitleWordEffects.colors(cue,animationFrame.text,animationFrame.highlighted,
+                    SubtitleWordEffects.colors(cue.copy(text=animationFrame.text, textCase="original"),animationFrame.text,animationFrame.highlighted,
                         animationFrame.highlightColorOverride ?: cue.highlightColor)
                         .forEach { colored ->
                             addStyle(SpanStyle(color=Color(colored.color)),

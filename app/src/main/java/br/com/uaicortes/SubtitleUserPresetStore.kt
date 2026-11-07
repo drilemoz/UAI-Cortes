@@ -28,7 +28,7 @@ internal class SubtitleUserPresetStore(context: Context) {
         private val STYLE_KEYS = arrayOf(
             "color", "sizeSp", "backgroundColor", "bold", "fontFamily", "outlineWidth",
             "outlineColor", "shadowOffsetDp", "shadowColor", "lineSpacingPercent",
-            "textAlignment", "animation", "animationSpeed", "highlightColor", "italic"
+            "textAlignment", "animation", "animationSpeed", "highlightColor", "italic", "textCase"
         )
 
         /** Persiste apenas propriedades visuais, nunca IDs/textos/horários/posição da legenda. */
@@ -69,9 +69,9 @@ internal class SubtitleUserPresetStore(context: Context) {
                     SubtitleUserPresets.normalizedName(name) == name) { "Nome de modelo inválido." }
                 val visual = objectValue.getJSONObject("style")
                 // Exigir todas as chaves evita aceitar silenciosamente uma biblioteca danificada.
-                require(STYLE_KEYS.all(visual::has)) { "Estilo incompleto ou danificado." }
+                require(STYLE_KEYS.filterNot { it == "textCase" }.all(visual::has)) { "Estilo incompleto ou danificado." }
                 val cue = JSONObject().put("text", "").put("startMs", 0).put("endMs", 1)
-                for (key in STYLE_KEYS) cue.put(key, visual.get(key))
+                for (key in STYLE_KEYS) if (visual.has(key)) cue.put(key, visual.get(key))
                 result += SubtitleUserPreset(id, name,
                     SubtitleUserPresets.snapshot(SubtitleCue.read(cue)))
             }

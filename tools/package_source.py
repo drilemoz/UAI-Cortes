@@ -18,7 +18,7 @@ ROOT_FILES = {
     'build.gradle.kts', 'settings.gradle.kts', 'gradle.properties', 'gradlew',
     'app_identity.json', 'github-manager.json', 'VERSION',
 }
-SOURCE_DIRS = {'app', 'gradle', '.github', 'design', 'docs', 'tools'}
+SOURCE_DIRS = {'app', 'subtitle-core', 'gradle', '.github', 'design', 'docs', 'tools'}
 REQUIRED = {
     'build.gradle.kts', 'settings.gradle.kts', 'app/build.gradle.kts',
     'app_identity.json', 'github-manager.json', 'VERSION',
@@ -26,6 +26,8 @@ REQUIRED = {
     'gradlew', '.github/workflows/android-apk.yml',
     'tools/package_apks.py', 'tools/validate_source.py', 'tools/package_source.py',
     'app/src/main/AndroidManifest.xml',
+    'subtitle-core/build.gradle.kts',
+    'subtitle-core/src/main/kotlin/br/com/uaicortes/subtitles/core/SubtitleTextCasePolicy.kt',
     'app/src/main/java/br/com/uaicortes/AppReleaseNotes.kt',
     'app/src/main/java/br/com/uaicortes/GeminiNarrationUi.kt',
 }

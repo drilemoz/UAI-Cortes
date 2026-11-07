@@ -109,6 +109,7 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
     var tab by remember { mutableIntStateOf(0) }
     var advanced by remember { mutableStateOf(false) }
     var wordColorsOpen by remember { mutableStateOf(false) }
+    var showLegacyEffects by remember { mutableStateOf(false) }
     var positionOpen by remember { mutableStateOf(false) }
     var animationGroup by remember(draft.id) { mutableStateOf(
         SubtitleAnimations.groups.firstOrNull { draft.animation in it.second }?.first ?: "Entrada"
@@ -133,6 +134,18 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
             SubtitleStyleGallery(draft,onChange)
             SubtitleUserPresetPanel(draft,onChange)
             SubtitleTypographyBar(draft,onChange)
+            Text("Formato do texto · apenas visual", style=MaterialTheme.typography.labelMedium)
+            SubtitleTwoColumnChoices(listOf("Original", "MAIÚSCULAS", "minúsculas"),
+                selected={ label -> draft.textCase == when (label) {
+                    "MAIÚSCULAS" -> "upper"
+                    "minúsculas" -> "lower"
+                    else -> "original"
+                } },
+                choose={ label -> onChange(draft.copy(textCase=when (label) {
+                    "MAIÚSCULAS" -> "upper"
+                    "minúsculas" -> "lower"
+                    else -> "original"
+                })) })
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)) {
                 listOf(
                     Triple("Palavras",wordColorsOpen,{wordColorsOpen=!wordColorsOpen}),
@@ -186,21 +199,41 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
                     5,onChange={onChange(draft.copy(lineSpacingPercent=it.toInt()))})
             }
         } else {
-            Text("Efeitos prontos · escolha uma categoria",fontWeight=FontWeight.SemiBold)
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)) {
-                SubtitleAnimations.groups.forEach { group ->
-                    FilterChip(selected=animationGroup==group.first,
-                        onClick={animationGroup=group.first},
-                        label={Text(group.first,fontSize=11.sp)},
-                        modifier=Modifier.weight(1f))
-                }
+            Text("Movimentos recomendados",fontWeight=FontWeight.SemiBold)
+            val recommendedEffects = listOf(
+                SubtitleAnimations.NONE, SubtitleAnimations.POP, SubtitleAnimations.FADE,
+                SubtitleAnimations.RISE, SubtitleAnimations.KARAOKE,
+                SubtitleAnimations.WORD_REVEAL, SubtitleAnimations.PULSE,
+                SubtitleAnimations.SOFT_SHAKE)
+            SubtitleTwoColumnChoices(recommendedEffects.map(SubtitleAnimations::label),
+                selected={ label -> draft.animation in recommendedEffects &&
+                    SubtitleAnimations.label(draft.animation)==label },
+                choose={ label -> recommendedEffects.firstOrNull {
+                    SubtitleAnimations.label(it)==label
+                }?.let { onChange(draft.copy(animation=it)) } })
+            TextButton(onClick={showLegacyEffects=!showLegacyEffects},shape=UaiShapes.button) {
+                Text(if (showLegacyEffects) "Ocultar outros efeitos"
+                    else "Mais efeitos antigos")
             }
-            val ids=SubtitleAnimations.groups.firstOrNull { it.first==animationGroup }?.second.orEmpty()
-            SubtitleTwoColumnChoices(ids.map(SubtitleAnimations::label),
-                selected={label->draft.animation in ids && SubtitleAnimations.label(draft.animation)==label},
-                choose={label-> ids.firstOrNull { SubtitleAnimations.label(it)==label }?.let { id ->
-                    onChange(draft.copy(animation=id))
-                }})
+            if (showLegacyEffects) {
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(5.dp)) {
+                    SubtitleAnimations.groups.forEach { group ->
+                        FilterChip(selected=animationGroup==group.first,
+                            onClick={animationGroup=group.first},
+                            label={Text(group.first,fontSize=11.sp)},
+                            modifier=Modifier.weight(1f))
+                    }
+                }
+                val ids=SubtitleAnimations.groups.firstOrNull {
+                    it.first==animationGroup
+                }?.second.orEmpty()
+                SubtitleTwoColumnChoices(ids.map(SubtitleAnimations::label),
+                    selected={label->draft.animation in ids &&
+                        SubtitleAnimations.label(draft.animation)==label},
+                    choose={label-> ids.firstOrNull {
+                        SubtitleAnimations.label(it)==label
+                    }?.let { id -> onChange(draft.copy(animation=id)) }})
+            }
             Text("Use Reproduzir, Reiniciar e Tempo real para conferir a animação acima.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)

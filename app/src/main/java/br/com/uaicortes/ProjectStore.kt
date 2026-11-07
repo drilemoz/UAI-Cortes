@@ -103,7 +103,8 @@ data class SubtitleCue(
     val wordColors: List<SubtitleWordColor> = emptyList(),
     val highlightColor: Int = SubtitleWordEffects.DEFAULT_HIGHLIGHT,
     val italic: Boolean = false,
-    val speakerId: String? = null
+    val speakerId: String? = null,
+    val textCase: String = br.com.uaicortes.subtitles.core.SubtitleTextCasePolicy.ORIGINAL
 ) {
     fun json() = JSONObject().put("id", id).put("text", text)
         .put("startMs", startMs).put("endMs", endMs).put("color", color)
@@ -118,6 +119,7 @@ data class SubtitleCue(
         .put("wordColors", JSONArray().also { array -> wordColors.forEach { array.put(it.json()) } })
         .put("highlightColor", highlightColor).put("italic", italic)
         .put("speakerId", speakerId)
+        .put("textCase", br.com.uaicortes.subtitles.core.SubtitleTextCasePolicy.normalize(textCase))
     companion object {
         fun read(j: JSONObject) = SubtitleCue(j.optString("id").ifBlank { UUID.randomUUID().toString() },
             j.optString("text"), j.optLong("startMs"), j.optLong("endMs"),
@@ -141,7 +143,8 @@ data class SubtitleCue(
                 SubtitleWordEffects.wordRanges(j.optString("text")).size),
             j.optInt("highlightColor", SubtitleWordEffects.DEFAULT_HIGHLIGHT),
             j.optBoolean("italic", false),
-            j.optString("speakerId").takeIf { it.isNotBlank() && it != "null" }?.take(80))
+            j.optString("speakerId").takeIf { it.isNotBlank() && it != "null" }?.take(80),
+            br.com.uaicortes.subtitles.core.SubtitleTextCasePolicy.normalize(j.optString("textCase")))
     }
 }
 

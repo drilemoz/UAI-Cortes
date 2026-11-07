@@ -61,6 +61,7 @@ class SubtitleOutlineSpan(
         val systemFamily = when (SubtitleStyles.normalizeFont(family)) {
             SubtitleStyles.FONT_SERIF -> "serif"
             SubtitleStyles.FONT_MONO -> "monospace"
+            SubtitleStyles.FONT_CURSIVE -> "cursive"
             else -> "sans-serif"
         }
         outline.typeface = Typeface.create(systemFamily, when {
@@ -106,6 +107,7 @@ class SubtitleShadowSpan(
         textPaint.typeface = Typeface.create(when (SubtitleStyles.normalizeFont(family)) {
             SubtitleStyles.FONT_SERIF -> "serif"
             SubtitleStyles.FONT_MONO -> "monospace"
+            SubtitleStyles.FONT_CURSIVE -> "cursive"
             else -> "sans-serif"
         }, when {
             bold && italic -> Typeface.BOLD_ITALIC
@@ -248,7 +250,7 @@ class TimedSubtitleOverlay(
         }
         if (active != null && frame != null) {
             text.setSpan(ForegroundColorSpan(active.color), 0, text.length, 0)
-            SubtitleWordEffects.colors(active,rendered,frame.highlighted,
+            SubtitleWordEffects.colors(active.copy(text=rendered, textCase="original"),rendered,frame.highlighted,
                 frame.highlightColorOverride ?: active.highlightColor).forEach { colored ->
                 text.setSpan(ForegroundColorSpan(colored.color),colored.range.first,
                     colored.range.last+1,0)
@@ -263,6 +265,7 @@ class TimedSubtitleOverlay(
             val family = when (SubtitleStyles.normalizeFont(active.fontFamily)) {
                 SubtitleStyles.FONT_SERIF -> "serif"
                 SubtitleStyles.FONT_MONO -> "monospace"
+                SubtitleStyles.FONT_CURSIVE -> "cursive"
                 else -> "sans-serif"
             }
             text.setSpan(TypefaceSpan(family), 0, text.length, 0)

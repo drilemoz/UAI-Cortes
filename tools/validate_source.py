@@ -1100,8 +1100,9 @@ assert 'j.optJSONArray("wordTimings")' in model and 'j.optJSONArray("wordColors"
 assert 'val italic: Boolean = false' in model
 assert 'SubtitleWordEffects.activeWordIndex(cue, absoluteMs)' in sub_animation
 assert 'wordTimings = selected.map' in auto and 'animation = SubtitleAnimations.KARAOKE' in auto
-assert 'SubtitleWordEffects.colors(cue,animationFrame.text' in (app_files/'SubtitleScreen.kt').read_text()
-assert 'SubtitleWordEffects.colors(active,rendered,frame.highlighted,' in fx and 'frame.highlightColorOverride ?: active.highlightColor' in fx
+assert 'SubtitleWordEffects.colors(cue.copy(text=animationFrame.text' in (app_files/'SubtitleScreen.kt').read_text()
+assert 'SubtitleTextCasePolicy.display(cue.text, cue.textCase)' in sub_animation
+assert 'SubtitleWordEffects.colors(active.copy(text=rendered' in fx and 'frame.highlightColorOverride ?: active.highlightColor' in fx
 assert 'SubtitleStyleGallery(draft,onChange)' in (app_files/'SubtitleVisualEditor.kt').read_text() and 'SubtitleWordColorEditor(draft,onChange)' in (app_files/'SubtitleVisualEditor.kt').read_text()
 assert 'val presets = listOf(' in styles and 'Itálico amarelo' in styles
 assert '"animate" -> "home"' in nav and 'onBack = ::back,' in main
@@ -1129,7 +1130,8 @@ assert 'ReleaseSummary("0.1.90", listOf(' in notes
 print('OK: v0.1.90 presets, exportação SAF, exclusão total, Gemini consentido e versionamento')
 
 # v0.1.91: faixas horizontais finitas, animação junto ao preset, cache e fontes reduzidas.
-assert 'LazyRow(' in subtitle_gallery and 'itemsIndexed(SubtitleStyles.presets' in subtitle_gallery
+assert 'LazyRow(' in subtitle_gallery and 'itemsIndexed(visiblePresets' in subtitle_gallery
+assert 'SubtitleStudioPresets.recommended' in subtitle_gallery and 'SubtitleStyles.presets' in subtitle_gallery
 assert 'LazyRow(' in (app_files/'SubtitleVisualEditor.kt').read_text()
 assert 'animation=preset.animation ?: cue.animation' in styles
 assert all(x in sub_animation for x in ['BOUNCE', 'PULSE', 'ZOOM_OUT'])
@@ -1246,7 +1248,8 @@ required_source_files = (
     'tools/package_source.py', 'tools/package_apks.py',
 )
 assert all((root / relative).is_file() for relative in required_source_files), 'Pacote-fonte incompleto: Gradle/CI'
-assert 'include(":app")' in (root / 'settings.gradle.kts').read_text()
+assert 'include(":app", ":subtitle-core")' in (root / 'settings.gradle.kts').read_text()
+assert 'implementation(project(":subtitle-core"))' in gradle
 assert 'id("com.android.application")' in (root / 'build.gradle.kts').read_text()
 assert f"VERSION = '{current_version}'" in (root / 'tools/package_apks.py').read_text()
 assert 'ReleaseSummary("0.1.98", listOf(' in notes

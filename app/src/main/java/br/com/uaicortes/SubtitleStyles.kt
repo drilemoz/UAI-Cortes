@@ -8,18 +8,21 @@ data class SubtitleStylePreset(
     val outlineWidth: Int = 0, val outlineColor: Int = 0xFF000000.toInt(),
     val shadowOffsetDp: Int? = null, val fontFamily: String = "sans", val italic: Boolean = false,
     val highlightColor: Int = SubtitleWordEffects.DEFAULT_HIGHLIGHT,
-    val animation: String? = null
+    val animation: String? = null,
+    val textCase: String = br.com.uaicortes.subtitles.core.SubtitleTextCasePolicy.ORIGINAL
 )
 
 object SubtitleStyles {
     const val FONT_SANS = "sans"
     const val FONT_SERIF = "serif"
     const val FONT_MONO = "mono"
+    const val FONT_CURSIVE = "cursive"
     val fonts: List<Pair<String, String>> = listOf(
-        FONT_SANS to "Moderna", FONT_SERIF to "Serifada", FONT_MONO to "Monoespaçada"
+        FONT_SANS to "Moderna", FONT_SERIF to "Serifada",
+        FONT_MONO to "Monoespaçada", FONT_CURSIVE to "Cursiva"
     )
     fun normalizeFont(value: String): String =
-        if (value == FONT_SERIF || value == FONT_MONO) value else FONT_SANS
+        if (value == FONT_SERIF || value == FONT_MONO || value == FONT_CURSIVE) value else FONT_SANS
 
     // Defaults keep pre-v0.1.29 text unchanged when deserializing existing projects.
     const val ALIGN_LEFT = "left"
@@ -96,7 +99,7 @@ object SubtitleStyles {
         cue.outlineColor == preset.outlineColor &&
         (preset.shadowOffsetDp == null || cue.shadowOffsetDp == preset.shadowOffsetDp) &&
         cue.fontFamily == preset.fontFamily && cue.italic == preset.italic &&
-        cue.highlightColor == preset.highlightColor &&
+        cue.highlightColor == preset.highlightColor && cue.textCase == preset.textCase &&
         (preset.animation == null || cue.animation == preset.animation)
 
     fun applyToCue(cue: SubtitleCue, preset: SubtitleStylePreset): SubtitleCue =
@@ -104,6 +107,7 @@ object SubtitleStyles {
             outlineWidth=preset.outlineWidth,outlineColor=preset.outlineColor,
             shadowOffsetDp=preset.shadowOffsetDp ?: cue.shadowOffsetDp,fontFamily=preset.fontFamily,
             italic=preset.italic,highlightColor=preset.highlightColor,
+            textCase=preset.textCase,
             animation=preset.animation ?: cue.animation)
 
     data class CopyOptions(val appearance: Boolean = true, val position: Boolean = false,
@@ -158,6 +162,7 @@ object SubtitleStyles {
             shadowOffsetDp=source.shadowOffsetDp,shadowColor=source.shadowColor,
             lineSpacingPercent=source.lineSpacingPercent,textAlignment=source.textAlignment,
             italic=source.italic,highlightColor=source.highlightColor,
+            textCase=source.textCase,
             wordColors=if (options.wordColors) matchingWordColors(source,cue) else cue.wordColors)
         if (options.position) result = result.copy(x=source.x,y=source.y)
         if (options.animation) result = result.copy(animation=source.animation,
@@ -173,6 +178,7 @@ object SubtitleStyles {
             outlineColor = source.outlineColor,
             shadowOffsetDp = source.shadowOffsetDp, shadowColor = source.shadowColor,
             lineSpacingPercent = source.lineSpacingPercent, textAlignment = source.textAlignment,
-            italic=source.italic,highlightColor=source.highlightColor)
+            italic=source.italic,highlightColor=source.highlightColor,
+            textCase=source.textCase)
     }
 }

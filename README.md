@@ -1,3 +1,7 @@
+# Uai Cortes · versão 0.1.202 — Subtitle Studio (versionCode 203)
+
+O Subtitle Studio apresenta 8 presets modernos com os 25 antigos acessíveis, conversão visual para MAIÚSCULAS/minúsculas, uma família de fonte cursiva do Android e módulo puro `:subtitle-core` de transformação. O texto original, marcações por palavra, SRT, vozes Gemini e exportação de mídias são preservados. Gradle/Media3 ainda precisam ser validados no CI e no aparelho.
+
 # Uai Cortes · versão 0.1.201 — Atualizações e Novidades
 
 A tela Novidades exibe apenas os destaques da versão instalada na primeira abertura, com histórico opcional. A tela Sobre resume as três versões recentes. O atualizador integrado informa taxa de download, bytes recebidos e progresso, mantendo verificação SHA-256 e confirmação explícita antes de instalar.

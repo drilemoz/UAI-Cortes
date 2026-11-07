@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.202 — Subtitle Studio (versionCode 203)
+- Galeria de 8 estilos de legenda escolhidos; modelos anteriores continuam acessíveis sem perder projetos salvos.
+- Maiúsculas e minúsculas como formatação visual de legenda, mantendo texto e timings do arquivo original.
+- Efeitos favoritos compactos, opções antigas recolhidas e fonte cursiva nativa.
+- Núcleo `:subtitle-core` separado, com testes de formatação pt-BR, usado por prévia e MP4.
+- Compilação Android e Lint completos precisam de nova execução no GitHub Actions; sem afirmar resultado de APK.
+
 # Uai Cortes · versão 0.1.201 — Novidades e atualizações padronizadas (versionCode 202)
 - A abertura de Novidades apresenta somente o que mudou nesta versão, deixando o histórico para consulta opcional.
 - Sobre mostra últimas três versões e permite abrir o histórico completo sob demanda.

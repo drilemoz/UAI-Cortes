@@ -15,7 +15,8 @@ assert 'position = false' in model and 'SubtitleStyles.applySelectedToAll' in mo
 assert all(k not in store.split('private val STYLE_KEYS')[1].split(')')[0] for k in ('"text"', '"id"', '"startMs"', '"endMs"', '"x"', '"y"'))
 assert 'getSharedPreferences("subtitle_user_presets", Context.MODE_PRIVATE)' in store
 assert '.commit()' in store and 'NonCancellable' in store
-assert 'require(STYLE_KEYS.all(visual::has))' in store
+assert 'require(STYLE_KEYS.filterNot { it == "textCase" }.all(visual::has))' in store
+assert 'if (visual.has(key)) cue.put(key, visual.get(key))' in store  # arquivos pessoais antigos ainda abrem
 assert 'Não foi possível ler seus modelos' in ui
 assert 'enabled = nameError == null && !busy && ready' in ui
 assert 'SubtitleUserPresets.rename' in ui and 'SubtitleUserPresets.remove' in ui

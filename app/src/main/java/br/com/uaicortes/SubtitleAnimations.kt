@@ -1,5 +1,6 @@
 package br.com.uaicortes
 
+import br.com.uaicortes.subtitles.core.SubtitleTextCasePolicy
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.PI
@@ -61,7 +62,7 @@ object SubtitleAnimations {
         val boldActiveWord: Boolean = false, val underlineActiveWord: Boolean = false)
 
     fun frame(cue: SubtitleCue, absoluteMs: Long): Frame {
-        val text = cue.text
+        val text = SubtitleTextCasePolicy.display(cue.text, cue.textCase)
         val elapsed = (absoluteMs - cue.startMs).coerceAtLeast(0L)
         val duration = (cue.endMs - cue.startMs).coerceAtLeast(1L)
         val ratio = (elapsed.toFloat() / duration).coerceIn(0f, 1f)

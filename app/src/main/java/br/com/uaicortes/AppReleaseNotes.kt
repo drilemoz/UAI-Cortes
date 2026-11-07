@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.201"
-    const val VERSION_CODE = 202
+    const val VERSION_NAME = "0.1.202"
+    const val VERSION_CODE = 203
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.202", listOf(
+            ReleaseFeature("subtitle-studio-202", "Subtitle Studio com estilos selecionados",
+                "O editor destaca oito aparências modernas e mantém os antigos modelos em uma seção opcional.", "captions"),
+            ReleaseFeature("subtitle-case-202", "Maiúsculas sem alterar falas",
+                "Mostre legendas em MAIÚSCULAS, minúsculas ou como foram escritas. O texto original, o SRT e as vozes não são alterados.", "check"),
+            ReleaseFeature("subtitle-core-202", "Núcleo de legendas modular",
+                "Formatação visual de texto em módulo Kotlin independente, reutilizado pelo editor e exportação Media3.", "film")
+        )),
         ReleaseSummary("0.1.201", listOf(
             ReleaseFeature("updates-speed-201", "Download com velocidade visível",
                 "A tela Atualizações informa a taxa de transferência e os megabytes baixados, com progresso mais claro e botões no padrão visual do aplicativo.", "sync"),

@@ -33,23 +33,27 @@ internal fun SubtitleStyleGallery(current: SubtitleCue, onChange: (SubtitleCue) 
     LaunchedEffect(Unit) {
         while (true) { delay(80L); sampleMs = (sampleMs + 80L) % 2500L }
     }
+    var showLegacy by remember { mutableStateOf(false) }
+    val visiblePresets = if (showLegacy) SubtitleStyles.presets else SubtitleStudioPresets.recommended
     Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
-        Text("Deslize para os lados · ${SubtitleStyles.presets.size} modelos de legendas",
+        Text(if (showLegacy) "Modelos clássicos · ${visiblePresets.size}"
+            else "Subtitle Studio · ${visiblePresets.size} estilos selecionados",
             style=MaterialTheme.typography.labelSmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
         LazyRow(horizontalArrangement=Arrangement.spacedBy(9.dp),
             contentPadding=PaddingValues(end=12.dp)) {
-            itemsIndexed(SubtitleStyles.presets, key={ index,preset -> "${index}:${preset.name}" }) { _,preset ->
+            itemsIndexed(visiblePresets, key={ index,preset -> "${index}:${preset.name}" }) { _,preset ->
                 val selected=SubtitleStyles.matches(current,preset)
                 val example=remember(preset) {
-                    SubtitleCue(text="UAI INCRÍVEL",startMs=0,endMs=2500,
+                    SubtitleCue(text="Uai Cortes!",startMs=0,endMs=2500,
                         color=preset.foreground,backgroundColor=preset.background,
                         bold=preset.bold,italic=preset.italic,fontFamily=preset.fontFamily,
                         outlineWidth=preset.outlineWidth,outlineColor=preset.outlineColor,
                         shadowOffsetDp=preset.shadowOffsetDp ?: 0,
                         highlightColor=preset.highlightColor,
                         animation=preset.animation ?: SubtitleAnimations.NONE,
-                        wordColors=listOf(SubtitleWordColor(1,preset.highlightColor)))
+                        wordColors=listOf(SubtitleWordColor(1,preset.highlightColor)),
+                        textCase=preset.textCase)
                 }
                 val frame=SubtitleAnimations.frame(example,sampleMs)
                 Surface(onClick={onChange(SubtitleStyles.applyToCue(current,preset))},
@@ -82,6 +86,10 @@ internal fun SubtitleStyleGallery(current: SubtitleCue, onChange: (SubtitleCue) 
                 }
             }
         }
+        TextButton(onClick={showLegacy=!showLegacy},shape=UaiShapes.button) {
+            Text(if (showLegacy) "Voltar aos 8 estilos principais"
+                else "Ver modelos antigos (${SubtitleStyles.presets.size})")
+        }
     }
 }
 
@@ -94,7 +102,7 @@ internal fun SubtitleStyledSample(cue: SubtitleCue, frame: SubtitleAnimations.Fr
     val shown=frame.text
     val colored=buildAnnotatedString {
         append(shown)
-        SubtitleWordEffects.colors(cue,shown,frame.highlighted,
+        SubtitleWordEffects.colors(cue.copy(text=shown,textCase="original"),shown,frame.highlighted,
             frame.highlightColorOverride ?: cue.highlightColor).forEach { span ->
             addStyle(SpanStyle(color=Color(span.color)),span.range.first,span.range.last+1)
         }

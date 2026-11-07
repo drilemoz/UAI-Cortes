@@ -1,3 +1,9 @@
+# v0.1.202 — Subtitle Studio: primeira etapa
+- Preservar `SubtitleCue.text` como fonte original: `textCase` (original/upper/lower) é visual e pode ser aplicado por fala/personagem ou modelo pessoal. Não modificar texto para narração Gemini nem SRT exportado.
+- `:subtitle-core` encapsula política pt-BR sem Android; o Gradle `:app` depende dele. O pacote-fonte deve incluir esse módulo. Prévia Compose, galeria e `TimedSubtitleOverlay` compartilham `SubtitleAnimations.frame` e tratamento de cores das palavras no texto apresentado.
+- Oito presets modernos em `SubtitleStudioPresets`, legados preservados em `SubtitleStyles.presets` e efeitos antigos recolhidos. Fonte cursiva usa recurso instalado no Android, sem distribuir arquivos de fontes.
+- Manter schemaVersion=4, cinco APKs Release, assinatura, fila de vozes, horários, personagens e testes existentes. Checar compilação Gradle, Android Lint, testes JUnit e renderização em MP4 físico.
+
 # v0.1.201 — Tela de atualização e novidades focadas na versão atual
 - `AppReleaseNotes.forWhatsNew()` retorna somente a versão instalada; Sobre resume 3 versões, histórico completo é opcional. Não reapresentar versões anteriores na abertura automática.
 - `GitHubDownloadProgress` calcula taxa local de bytes/tempo, não faz consultas extras; mostrar progresso em MiB e MiB/s com estimativa somente com medição suficiente, sem confundir com velocidade de rede do Android.

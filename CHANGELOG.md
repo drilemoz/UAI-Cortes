@@ -1,3 +1,9 @@
+## 0.1.202 (versionCode 203) — Subtitle Studio
+- Oito estilos de apresentação no início da galeria, com antigos presets acessíveis em uma opção separada. Efeitos recomendados primeiro; efeitos anteriores recolhidos.
+- Formatação visual Original / MAIÚSCULAS / minúsculas persistida por legenda, personagem ou projeto. Texto para SRT e Gemini não é reescrito.
+- Adicionado módulo Kotlin `:subtitle-core`, independente do Android, para transformação de texto com locale pt-BR, reutilizado na prévia e exportação. Família cursiva do sistema adicionada sem baixar fontes externas.
+- Preservados schemaVersion 4, estilos existentes, fila de vozes e cinco APKs. Gradle/Lint e testes reais de exportação pendentes.
+
 ## 0.1.201 (versionCode 202) — Atualizações e Novidades mais compactas
 - Novidades na primeira abertura mostra somente a versão instalada; histórico completo continua acessível ao tocar em Ver histórico.
 - Sobre destaca as três últimas versões e permite consultar versões antigas por opção, sem lista interminável ao abrir.

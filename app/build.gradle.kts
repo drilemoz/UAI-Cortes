@@ -11,8 +11,8 @@ android {
         applicationId = "br.com.uaicortes"
         minSdk = 26
         targetSdk = 36
-        versionCode = 202
-        versionName = "0.1.201"
+        versionCode = 203
+        versionName = "0.1.202"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Definido pelo runner do GitHub Actions, sem inventar nome de repositório.
         val ciRepository = System.getenv("GITHUB_REPOSITORY").orEmpty()
@@ -73,6 +73,7 @@ android {
 }
 
 dependencies {
+    implementation(project(":subtitle-core"))
     val composeBom = platform("androidx.compose:compose-bom:2025.05.01")
     implementation(composeBom)
     implementation("androidx.activity:activity-compose:1.10.1")
