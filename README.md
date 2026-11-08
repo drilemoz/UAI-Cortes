@@ -1,4 +1,7 @@
-# Uai Cortes · v0.1.234 — Teste cego para comparar timbres no Gemini
+# Uai Cortes · v0.1.235 — Redes mais compacta e biblioteca YouTube agregada
+
+A versão 0.1.235 (versionCode 236) reorganiza a aba **Redes Sociais** para economizar espaço, exibindo as contas em grade com dois quadrinhos por linha quando possível. A área **Vídeos do YouTube** agora mostra as visualizações de cada vídeo e junta, em uma única lista e resumo, os dados já carregados de todos os canais consultados na sessão. A consulta continua manual, sem importar vídeos ao histórico do app e sem persistir tokens OAuth. Build Android e teste real no aparelho seguem pendentes.
+
 
 Na Central de Vozes, abra **A/B** e toque em **Teste cego**. Com pelo menos duas prévias já salvas para a **mesma frase, modelo e estilo**, o app seleciona um par ainda não avaliado quando possível. Toque em 1 e 2 para ouvir offline; os nomes permanecem ocultos até marcar **Parecidas** ou **Diferentes**, ou optar por revelá-los. **Outro par** repete sem custo de API se houver amostras locais. O teste nunca gera áudio automaticamente; novas prévias exigem a confirmação já existente.
 

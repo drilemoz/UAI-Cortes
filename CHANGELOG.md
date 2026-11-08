@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.235 (2026-11-08)
+
+- Redes Sociais agora mostra as contas em quadrinhos lado a lado para economizar espaço, preservando verificar/vincular/remover dentro do cartão expandível.
+- Biblioteca de vídeos do YouTube passa a exibir visualizações por vídeo e agrega, em uma única lista, os vídeos já carregados de todos os canais consultados na sessão.
+- Resumo da biblioteca mostra canais carregados, total de vídeos e soma de visualizações conhecidas; carregar mais continua por canal selecionado, sem busca automática global.
+- Versão 0.1.235/versionCode 236 e documentação/Novidades sincronizados. Build Android e teste real no aparelho permanecem pendentes.
+
 # Uai Cortes 0.1.234 (2026-11-08)
 
 - Central de Vozes: **Teste cego** escolhe voluntariamente duas prévias WAV já armazenadas com o texto/modelo/estilo atual. Reproduz como 1 e 2 sem mostrar nomes; a identidade é revelada quando o usuário avalia ou escolhe revelar. Sem geração ou consumo de API no teste.

@@ -104,7 +104,14 @@ internal object YouTubeSocialApi {
     }
 
     /** Página de vídeos já presentes no canal: consulta manual, sem download ou importação local. */
-    internal data class PreviousVideo(val id: String, val title: String, val publishedAt: String)
+    internal data class PreviousVideo(
+        val id: String,
+        val title: String,
+        val publishedAt: String,
+        val viewCount: Long? = null,
+        val channelId: String = "",
+        val channelTitle: String = ""
+    )
     internal data class PreviousPage(val videos: List<PreviousVideo>, val nextPageToken: String)
 
     /** Não usa search.list: a playlist de uploads permite paginação barata e inclui uploads antigos. */
@@ -152,11 +159,55 @@ internal object YouTubeSocialApi {
                         .ifBlank { "Vídeo sem título" }
                     val date = details?.optString("videoPublishedAt").orEmpty()
                         .ifBlank { snippet?.optString("publishedAt").orEmpty() }
-                    add(PreviousVideo(id, title, date.take(40)))
+                    add(PreviousVideo(id = id, title = title, publishedAt = date.take(40)))
                 }
             }.distinctBy { it.id }
-            PreviousPage(videos, body.optString("nextPageToken").take(1024))
+            val withStats = if (videos.isEmpty()) emptyList() else enrichPreviousVideos(token, videos)
+            PreviousPage(withStats, body.optString("nextPageToken").take(1024))
         } finally { playlistConnection.disconnect() }
+    }
+
+
+    private suspend fun enrichPreviousVideos(
+        token: String,
+        videos: List<PreviousVideo>
+    ): List<PreviousVideo> = withContext(Dispatchers.IO) {
+        val ids = videos.map { it.id }.filter { SocialPublicationPolicy.validVideoId(it) }.distinct()
+        if (ids.isEmpty()) return@withContext videos
+        val idParam = java.net.URLEncoder.encode(ids.joinToString(","), "UTF-8")
+        val conn = connect(
+            "$API/videos?part=snippet%2Cstatistics&id=$idParam&fields=items(id%2Csnippet(channelId%2CchannelTitle)%2Cstatistics(viewCount))",
+            token,
+            "GET"
+        )
+        try {
+            ensureOk(conn, "Estatísticas de vídeos YouTube")
+            val statsItems = JSONObject(readLimited(conn)).optJSONArray("items")
+            val statsById = buildMap<String, Pair<Long?, Pair<String, String>>> {
+                for (index in 0 until (statsItems?.length() ?: 0)) {
+                    val item = statsItems?.optJSONObject(index) ?: continue
+                    val id = item.optString("id")
+                    if (!SocialPublicationPolicy.validVideoId(id) || id.isBlank()) continue
+                    val snippet = item.optJSONObject("snippet")
+                    val statistics = item.optJSONObject("statistics")
+                    val viewCount = statistics?.optString("viewCount")?.toLongOrNull()?.takeIf { it >= 0L }
+                    put(id, viewCount to Pair(
+                        snippet?.optString("channelId").orEmpty(),
+                        snippet?.optString("channelTitle").orEmpty().take(100)
+                    ))
+                }
+            }
+            videos.map { video ->
+                val stat = statsById[video.id]
+                video.copy(
+                    viewCount = stat?.first,
+                    channelId = stat?.second?.first.orEmpty(),
+                    channelTitle = stat?.second?.second.orEmpty()
+                )
+            }
+        } catch (_: Exception) {
+            videos
+        } finally { conn.disconnect() }
     }
 
     suspend fun metrics(token: String, videoId: String): SocialMetrics = withContext(Dispatchers.IO) {

@@ -64,9 +64,10 @@ internal fun SocialDashboardScreen(
     var youtubeBusy by remember { mutableStateOf(false) }
     var youtubeLibraryBusy by remember { mutableStateOf(false) }
     var youtubeLibraryError by remember { mutableStateOf("") }
-    var youtubeLibraryChannelId by remember { mutableStateOf("") }
-    var youtubeLibraryVideos by remember { mutableStateOf<List<YouTubeSocialApi.PreviousVideo>>(emptyList()) }
-    var youtubeLibraryNextPage by remember { mutableStateOf("") }
+    var youtubeLibraryVideosByChannel by remember {
+        mutableStateOf<Map<String, List<YouTubeSocialApi.PreviousVideo>>>(emptyMap())
+    }
+    var youtubeLibraryNextPages by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
 
     var channelToBind by remember { mutableStateOf<Pair<SocialAccount, YouTubeSocialApi.Channel>?>(null) }
     var pageToBind by remember { mutableStateOf<SocialAccount?>(null) }
@@ -114,7 +115,7 @@ internal fun SocialDashboardScreen(
     }
     fun fetchOldYouTubeVideos(account: SocialAccount, page: String) {
         if (youtubeLibraryBusy || youtubeBusy || account.remoteChannelId.isBlank()) return
-        val isNextPage = page.isNotBlank() && youtubeLibraryChannelId == account.remoteChannelId
+        val isNextPage = page.isNotBlank()
         youtubeLibraryBusy = true
         youtubeBusy = true
         youtubeLibraryError = ""
@@ -125,10 +126,20 @@ internal fun SocialDashboardScreen(
                     YouTubeSocialApi.previousVideos(token, account.remoteChannelId,
                         if (isNextPage) page else "")
                 }.onSuccess { result ->
-                    youtubeLibraryChannelId = account.remoteChannelId
-                    youtubeLibraryVideos = (if (isNextPage) youtubeLibraryVideos else emptyList()).plus(result.videos)
-                        .distinctBy { it.id }.take(300)
-                    youtubeLibraryNextPage = if (youtubeLibraryVideos.size >= 300) "" else result.nextPageToken
+                    val previous = if (isNextPage) {
+                        youtubeLibraryVideosByChannel[account.remoteChannelId].orEmpty()
+                    } else emptyList()
+                    val enriched = result.videos.map { video ->
+                        video.copy(
+                            channelId = video.channelId.ifBlank { account.remoteChannelId },
+                            channelTitle = video.channelTitle.ifBlank { account.label }
+                        )
+                    }
+                    val merged = previous.plus(enriched).distinctBy { it.id }.take(300)
+                    youtubeLibraryVideosByChannel = youtubeLibraryVideosByChannel +
+                        (account.remoteChannelId to merged)
+                    youtubeLibraryNextPages = youtubeLibraryNextPages +
+                        (account.remoteChannelId to if (merged.size >= 300) "" else result.nextPageToken)
                     youtubeLibraryError = ""
                 }.onFailure { error ->
                     youtubeLibraryError = error.message ?: "Não foi possível consultar os vídeos do canal."
@@ -266,70 +277,76 @@ internal fun SocialDashboardScreen(
                         }
                     }
                 }
-                state.accounts.forEach { account ->
-                    // A lista mantém o estado resumido; ações de conta ficam disponíveis ao expandir.
-                    val status = when (account.destination) {
-                        SocialDestination.YOUTUBE -> when {
-                            account.remoteChannelId.isBlank() -> "Canal não vinculado"
-                            account.remoteChannelId in verifiedYouTubeIds -> "Verificado nesta sessão"
-                            else -> "Canal cadastrado"
-                        }
-                        SocialDestination.FACEBOOK_PAGE -> when {
-                            account.remotePageId.isBlank() -> "Página não vinculada"
-                            SocialMetaAuth.pageToken(account.remotePageId) != null -> "Postagem autorizada nesta sessão"
-                            SocialMetaAuth.currentUserToken() != null &&
-                                metaPages.any { it.id == account.remotePageId } -> "Página identificada"
-                            else -> "Página cadastrada"
-                        }
-                        else -> "Compartilhamento manual"
-                    }
-                    SocialAccountCard(
-                        account = account,
-                        status = status,
-                        actionLabel = when (account.destination) {
-                            SocialDestination.YOUTUBE ->
-                                if (account.remoteChannelId.isBlank()) "Vincular canal" else "Verificar conta"
-                            SocialDestination.FACEBOOK_PAGE -> "Vincular Página"
-                            else -> null
-                        },
-                        busy = youtubeBusy || metaBusy,
-                        onAction = {
-                            when (account.destination) {
-                                SocialDestination.YOUTUBE -> {
-                                    youtubeBusy = true
-                                    authorizeYouTube(true) { token ->
-                                        scope.launch {
-                                            runCatching { YouTubeSocialApi.channel(token) }
-                                                .onSuccess { channel ->
-                                                    if (account.remoteChannelId.isBlank())
-                                                        channelToBind = account to channel
-                                                    else if (channel.id == account.remoteChannelId) {
-                                                        verifiedYouTubeIds = verifiedYouTubeIds + channel.id
-                                                        failure = "Canal ${channel.title} verificado nesta sessão."
-                                                    } else failure = "O Google retornou ${channel.title} (${channel.id}), diferente deste destino. Use Adicionar para salvar outro canal."
-                                                }.onFailure { failure = it.message ?: "Falha ao consultar canal." }
-                                            youtubeBusy = false
-                                        }
-                                    }
+                state.accounts.chunked(2).forEach { rowAccounts ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        rowAccounts.forEach { account ->
+                            // A lista mantém o estado resumido; ações de conta ficam disponíveis ao expandir.
+                            val status = when (account.destination) {
+                                SocialDestination.YOUTUBE -> when {
+                                    account.remoteChannelId.isBlank() -> "Canal não vinculado"
+                                    account.remoteChannelId in verifiedYouTubeIds -> "Verificado nesta sessão"
+                                    else -> "Canal cadastrado"
                                 }
                                 SocialDestination.FACEBOOK_PAGE -> when {
-                                    metaPages.isNotEmpty() -> pageFromMeta = account
-                                    SocialMetaAuth.currentUserToken() != null -> consultMetaPages(account)
-                                    SocialMetaAuth.isConfigured -> connectMeta(false, account)
-                                    else -> pageToBind = account
+                                    account.remotePageId.isBlank() -> "Página não vinculada"
+                                    SocialMetaAuth.pageToken(account.remotePageId) != null -> "Postagem autorizada nesta sessão"
+                                    SocialMetaAuth.currentUserToken() != null &&
+                                        metaPages.any { it.id == account.remotePageId } -> "Página identificada"
+                                    else -> "Página cadastrada"
                                 }
-                                else -> Unit
+                                else -> "Compartilhamento manual"
                             }
-                        },
-                        onDelete = { deletingAccount = account }
-                    )
+                            SocialAccountCard(
+                                account = account,
+                                status = status,
+                                actionLabel = when (account.destination) {
+                                    SocialDestination.YOUTUBE ->
+                                        if (account.remoteChannelId.isBlank()) "Vincular canal" else "Verificar conta"
+                                    SocialDestination.FACEBOOK_PAGE -> "Vincular Página"
+                                    else -> null
+                                },
+                                busy = youtubeBusy || metaBusy,
+                                onAction = {
+                                    when (account.destination) {
+                                        SocialDestination.YOUTUBE -> {
+                                            youtubeBusy = true
+                                            authorizeYouTube(true) { token ->
+                                                scope.launch {
+                                                    runCatching { YouTubeSocialApi.channel(token) }
+                                                        .onSuccess { channel ->
+                                                            if (account.remoteChannelId.isBlank())
+                                                                channelToBind = account to channel
+                                                            else if (channel.id == account.remoteChannelId) {
+                                                                verifiedYouTubeIds = verifiedYouTubeIds + channel.id
+                                                                failure = "Canal ${channel.title} verificado nesta sessão."
+                                                            } else failure = "O Google retornou ${channel.title} (${channel.id}), diferente deste destino. Use Adicionar para salvar outro canal."
+                                                        }.onFailure { failure = it.message ?: "Falha ao consultar canal." }
+                                                    youtubeBusy = false
+                                                }
+                                            }
+                                        }
+                                        SocialDestination.FACEBOOK_PAGE -> when {
+                                            metaPages.isNotEmpty() -> pageFromMeta = account
+                                            SocialMetaAuth.currentUserToken() != null -> consultMetaPages(account)
+                                            SocialMetaAuth.isConfigured -> connectMeta(false, account)
+                                            else -> pageToBind = account
+                                        }
+                                        else -> Unit
+                                    }
+                                },
+                                onDelete = { deletingAccount = account },
+                                modifier = Modifier.weight(1f),
+                                compact = true
+                            )
+                        }
+                        if (rowAccounts.size < 2) Spacer(Modifier.weight(1f))
+                    }
                 }
                 SocialYouTubeLibraryUi(
                     accounts = state.accounts,
                     busy = youtubeLibraryBusy || youtubeBusy,
-                    videos = youtubeLibraryVideos,
-                    nextPageToken = youtubeLibraryNextPage,
-                    loadedChannelId = youtubeLibraryChannelId,
+                    videosByChannel = youtubeLibraryVideosByChannel,
+                    nextPageTokensByChannel = youtubeLibraryNextPages,
                     error = youtubeLibraryError,
                     onLoad = ::fetchOldYouTubeVideos,
                     onAccountSelected = { youtubeLibraryError = "" }

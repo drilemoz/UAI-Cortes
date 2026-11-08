@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.235 — Redes compactas e biblioteca YouTube unificada
+
+- **Minhas contas em grade:** canais e destinos aparecem em quadrinhos lado a lado, ocupando menos espaço na aba Redes.
+- **Vídeos antigos com visualizações:** a consulta do YouTube agora mostra a quantidade de visualizações em cada vídeo retornado pela API, quando disponível.
+- **Lista agregada:** os vídeos já carregados de múltiplos canais ficam reunidos numa só lista, com resumo de canais carregados, vídeos e visualizações somadas.
+- **Escopo preservado:** sem importação para o histórico local, sem armazenamento de token OAuth e sem consulta automática de todos os canais. Build Android e teste físico ainda pendentes.
+
 # Uai Cortes · versão 0.1.234 — Escuta sem nomes e avaliação coerente de timbres Gemini
 
 - Nova opção **Teste cego** no comparador da Central de Vozes: escolher duas amostras já salvas, ouvir como 1/2 e revelar os nomes após avaliar Parecidas/Diferentes ou pedir para revelar.

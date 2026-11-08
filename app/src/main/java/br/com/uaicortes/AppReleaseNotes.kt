@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.234"
-    const val VERSION_CODE = 235
+    const val VERSION_NAME = "0.1.235"
+    const val VERSION_CODE = 236
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.235", listOf(
+            ReleaseFeature("social-grid-235", "Contas em grade para economizar espaço",
+                "Na aba Redes, os canais e destinos aparecem em quadrinhos lado a lado quando possível, mantendo as ações de verificar, vincular e remover dentro do próprio cartão.", "check"),
+            ReleaseFeature("youtube-library-views-235", "Vídeos antigos com visualizações e soma entre canais",
+                "A consulta de vídeos do YouTube agora mostra visualizações por vídeo e reúne, em uma lista única, os vídeos já carregados de todos os canais consultados na sessão.", "film")
+        )),
         ReleaseSummary("0.1.234", listOf(
             ReleaseFeature("gemini-voice-blind-234", "Escuta de vozes sem mostrar os nomes",
                 "Compare duas prévias já salvas, com a mesma frase, modelo e estilo, sem chamadas automáticas à API. Os nomes aparecem após avaliar ou pedir para revelar.", "music"),

@@ -1,3 +1,10 @@
+# v0.1.235 — Redes compactas e biblioteca YouTube agregada
+
+- Evoluir a tela Redes para economizar espaço, exibindo contas em grade com dois cartões por linha quando viável, mantendo ações de verificar/vincular/remover dentro do próprio cartão.
+- A biblioteca de vídeos antigos do YouTube deve mostrar visualizações por vídeo quando a API retornar estatísticas e agregar, numa única lista e resumo, os vídeos já carregados de todos os canais consultados na sessão.
+- Carregar mais páginas continua por canal selecionado; não fazer busca automática em massa nem persistir tokens OAuth. Não confundir vídeos consultados com envios do aplicativo.
+- Sincronizar versionName 0.1.235/versionCode 236, Novidades, README, release e metadados. Validar sintaxe e testes locais; build Android real permanece obrigatório para comprovar APK.
+
 # v0.1.234 — Comparação sem nomes e agrupamento coerente de vozes Gemini
 
 - Evoluir a Central 0.1.233 com teste de escuta sem nomes somente sobre duas prévias offline existentes para a mesma frase, estilo e modelo; não iniciar síntese automaticamente nem exibir nome antes da avaliação/revelação voluntária.
