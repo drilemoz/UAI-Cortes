@@ -13,7 +13,8 @@ dash = (base/'SocialScreens.kt').read_text(encoding='utf-8')
 history = (base/'SocialPublicationHistoryUi.kt').read_text(encoding='utf-8')
 auth = (base/'YouTubeAuthorizationUi.kt').read_text(encoding='utf-8')
 store = (base/'SocialStore.kt').read_text(encoding='utf-8')
-assert check(root) == ('0.1.228', 229)
+version, code = check(root)
+assert int(version.rsplit('.', 1)[-1]) >= 228 and code >= 229
 assert 'suspend fun previousVideos(' in api
 assert 'part=id%2CcontentDetails&mine=true' in api
 assert 'playlistItems?part=snippet%2CcontentDetails' in api

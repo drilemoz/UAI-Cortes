@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.228"
-    const val VERSION_CODE = 229
+    const val VERSION_NAME = "0.1.229"
+    const val VERSION_CODE = 230
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.229", listOf(
+            ReleaseFeature("standalone-text-tts-229", "Texto para Voz independente",
+                "Nova ferramenta na Início para digitar texto, escolher voz na Central Gemini, selecionar estilo e modelo, gerar WAV com confirmação, ouvir e exportar. Não depende do editor de vídeos.", "music"),
+            ReleaseFeature("tts-local-library-229", "Biblioteca de áudios e contadores",
+                "Arquivos ficam guardados no aplicativo até exclusão voluntária. Contagem de caracteres, estimativa não oficial de tokens e consumo real da API quando informado; sem chamadas automáticas.", "check")
+        )),
         ReleaseSummary("0.1.228", listOf(
             ReleaseFeature("youtube-old-videos-228", "Vídeos antigos do canal no YouTube",
                 "Redes permite consultar manualmente a playlist de uploads do canal autorizado, com páginas anteriores e filtro por título. Vídeos existentes na plataforma não são confundidos com envios feitos pelo app.", "film"),

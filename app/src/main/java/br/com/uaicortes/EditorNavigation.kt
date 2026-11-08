@@ -3,7 +3,7 @@ package br.com.uaicortes
 /** Rotas e regras de recuperação em um único lugar para todas as ferramentas. */
 internal object EditorNavigation {
     private val routes = setOf(
-        "home", "quick_split", "quick_audio", "projects", "social", "social_publish", "api_center", "settings", "gemini_settings", "voice_center", "general", "backup_settings", "appearance", "about", "whats_new", "diagnostics", "speech_model",
+        "home", "quick_split", "quick_audio", "projects", "social", "social_publish", "api_center", "settings", "gemini_settings", "voice_center", "text_to_voice", "general", "backup_settings", "appearance", "about", "whats_new", "diagnostics", "speech_model",
         "editor", "media_repair", "media", "animate", "flow_workspace", "pip", "audio", "voices", "clip_audio", "trim", "transition", "subtitles",
         "watermark", "publication", "flow_prompt", "export", "autosubtitle"
     )
@@ -31,8 +31,9 @@ internal object EditorNavigation {
         "quick_split", "quick_audio" -> "home"
         "flow_workspace" -> "home"
         "voice_center" -> if (previous == "settings") "settings" else "home"
+        "text_to_voice" -> "home"
         "animate" -> if (animationDestination == "append") "editor" else "home"
-        "gemini_settings" -> if (previous == "audio" || previous == "voices" || previous == "api_center") previous else "settings"
+        "gemini_settings" -> if (previous == "audio" || previous == "voices" || previous == "api_center" || previous == "text_to_voice") previous else "settings"
         "general", "backup_settings", "appearance", "about", "diagnostics" -> "settings"
         "whats_new" -> if (previous == "settings" || previous == "about") previous else "home"
         "speech_model" -> if (previous == "autosubtitle") "autosubtitle" else "settings"

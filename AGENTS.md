@@ -1,3 +1,10 @@
+# v0.1.229 — Texto para Voz Gemini independente
+
+- Adicionar a ferramenta Home > Texto para Voz fora do editor, sem usar VideoProject, schemaVersion, faixas ou timeline. Reutilizar Central de Vozes, GeminiTtsClient, GeminiNarrationStyling, chave Gemini e GeminiUsageLedger já existentes.
+- Apenas a confirmação explícita gera TTS. A abertura, digitação, seleção de voz e reprodução local não consomem API; seleção da voz pode consultar o catálogo somente após toque/opt-in existente. Contagem de caracteres (máximo suportado de 4.000 unidades UTF-16) e tokens estimados não são cota real; mostrar tokens reais somente se informados pela resposta.
+- WAVs em armazenamento interno exclusivo do módulo, com exportação por SAF, reprodução e exclusão confirmada. Não inserir no editor automaticamente, não transmitir tokens em logs, não repetir chamadas de rede após cancelamento/incerteza. Rascunho apenas em memória para preservar a privacidade.
+- Continuar 0.1.229 / versionCode 230, cinco APKs, assinatura, catálogo Gemini, schema 4 e segurança anteriores. Validar regressões, Kotlin PSI, compilação Android e áudio real quando possível.
+
 # v0.1.228 — Biblioteca remota do YouTube e Redes compactas
 
 - A tela **Vídeos do YouTube** consulta `channels.list(mine=true, part=contentDetails)` e a playlist `relatedPlaylists.uploads` via `playlistItems.list` (20 por página), só sob ação explícita e com conferência exata do canal previamente cadastrado. Não usar `search.list` para tentar importar todo o histórico; paginação limitada a 300 itens por sessão e busca por título somente nos itens carregados.

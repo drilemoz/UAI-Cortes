@@ -110,6 +110,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     val projects = projectSession.projects
     val project = projectSession.project
     val narrationDraft = remember(project?.id) { GeminiNarrationDraft() }
+    val standaloneVoiceDraft = remember { StandaloneVoiceDraft() }
     var resumeVideoPreview by remember { mutableStateOf(false) }
     var protectingMedia by remember { mutableStateOf(false) }
     ProjectBackupLifecycle(backupStore, if (projectSession.isEditingDraft) "" else activeProjectId, screen)
@@ -459,6 +460,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     onTab = { if (it == "settings") previous = "home"; screen = it },
                     onFlow = { navTo("flow_workspace") },
                     onVoiceCenter = { navTo("voice_center") },
+                    onTextToVoice = { navTo("text_to_voice") },
                     onQuickSplit = { navTo("quick_split") },
                     onQuickAudio = { navTo("quick_audio") })
                 "quick_split" -> QuickVideoToolsScreen(QuickToolMode.SPLIT_VIDEO, ::back)
@@ -510,6 +512,9 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 "speech_model" -> SpeechModelSettingsScreen(::back)
                 "gemini_settings" -> GeminiSettingsScreen(::back)
                 "voice_center" -> GeminiVoiceCenterScreen(onBack = ::back)
+                "text_to_voice" -> StandaloneTextToVoiceScreen(onBack = ::back,
+                    onOpenGeminiSettings = { previous = "text_to_voice"; screen = "gemini_settings" },
+                    draft = standaloneVoiceDraft)
                 "appearance" -> AppearanceScreen(theme, { theme = it; store.setTheme(it) }, ::back)
                 "about" -> AboutScreen(::back,
                     onUpdates = { previous = "about"; screen = "updates" })

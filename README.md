@@ -1,3 +1,9 @@
+# Uai Cortes · v0.1.229 — Texto para Voz Gemini independente
+
+A Home agora tem **Texto para Voz**: uma tela separada do editor para digitar/colar texto, selecionar voz na Central de Vozes Gemini, escolher modelo e interpretação, confirmar geração, ouvir, guardar e exportar WAV via Storage Access Framework. Os áudios persistem em armazenamento interno até serem excluídos; cópias exportadas ficam no destino escolhido.
+
+Exibe caracteres, **estimativa aproximada** de tokens do texto (não representa cota/cobrança) e o total efetivamente informado pela API quando disponível. Nenhuma chamada é iniciada pela digitação ou abertura da tela. A chave Gemini configurada no app é reutilizada. Rascunho em memória, sem salvar automaticamente conteúdo de texto. Não integra narrações ao projeto ou ao editor.
+
 # Uai Cortes · v0.1.228 — Consulta de vídeos antigos e Redes compactas
 
 - A aba **Redes** separa **Vídeos do YouTube** (biblioteca remota consultada manualmente) de **Envios pelo Uai Cortes** (histórico local existente). A consulta usa somente o canal selecionado e exige OAuth Google com `youtube.readonly` e confirmação do ID.

@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.229 — Texto para Voz independente (versionCode 230)
+
+- **Início → Texto para Voz:** inserir texto e selecionar na Central Gemini uma das vozes salvas ou consultadas manualmente; definir modelo e estilo sem abrir um projeto.
+- **Gerar com confirmação:** enviar o texto somente após autorizar o consumo de cota; não há retry automático.
+- **Ouvir/Salvar WAV:** áudio mantido no armazenamento interno do módulo, exportação via seletor de destino do Android, exclusão individual confirmada.
+- **Contadores:** caracteres do texto, estimativa não oficial de tokens e consumo real da API apenas quando retornado.
+- Não mistura o áudio com vídeos automaticamente e não altera schema de projetos ou credenciais.
+
 # Uai Cortes · versão 0.1.228 — Vídeos antigos no YouTube (versionCode 229)
 
 - **Redes → Vídeos do YouTube → Explorar:** selecionar canal, buscar os vídeos antigos, carregar páginas e filtrar títulos já consultados. Os vídeos não são importados ao histórico de envios do app.

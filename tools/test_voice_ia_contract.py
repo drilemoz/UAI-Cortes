@@ -8,7 +8,7 @@ assert 'Triple("Vozes IA", Icons.Default.RecordVoiceOver, "voices")' in editor
 assert 'resolved.filter { it.kind==VoiceIaPolicy.KIND }' in (src/'UnifiedEditorTimeline.kt').read_text()
 assert 'UnifiedEditorTimeline(p,currentMs' in editor and 'onOpenVoice={onEdit("voices")}' in editor
 nav=(src/'EditorNavigation.kt').read_text()
-assert '"voices"' in nav and '"gemini_settings" -> if (previous == "audio" || previous == "voices" || previous == "api_center")' in nav
+assert '"voices"' in nav and '"gemini_settings" -> if (previous == "audio" || previous == "voices" || previous == "api_center"' in nav
 screen=(src/'VoiceIaScreen.kt').read_text()
 assert 'project.subtitles.filter' in screen and 'editable = false' in screen
 assert 'GeminiVoiceCenterScreen(' in screen

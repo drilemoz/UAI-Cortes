@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.229 (2026-11-07)
+
+- Nova ferramenta **Texto para Voz** na Home, independente do editor e de projetos. Reutiliza seleção da Central de Vozes, modelos Gemini e presets de interpretação, chave e controle de consumo já existentes.
+- Campo de texto com limite compatível com o cliente, caracteres e tokens estimados rotulados como aproximação; confirmação explícita antes de enviar ao Google, sem geração automática. Exibe tokens efetivamente informados na resposta quando disponíveis.
+- Biblioteca local isolada de WAVs, reprodução, exportação pelo seletor de arquivos do Android e exclusão com confirmação. Rascunho mantido em memória ao abrir as configurações, sem armazenar texto em disco.
+- Projeto 4, editor de vídeo, social/OAuth e assinatura inalterados. Testes estáticos/JVM e Android completo devem ser validados separadamente.
+
 # Uai Cortes 0.1.228 (2026-11-07)
 
 - Redes Sociais: seção recolhível **Vídeos do YouTube**, busca manual dos uploads antigos por canal com OAuth, paginação de 20 vídeos e filtro local de títulos. O usuário pode abrir o vídeo no YouTube.

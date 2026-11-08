@@ -140,7 +140,7 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
     onOpen: (VideoProject)->Unit, onDelete: (VideoProject)->Unit, onDeleteAll: ()->Unit,
     onSettings: ()->Unit, onTab:(String)->Unit, onFlow: () -> Unit = {},
     onVoiceCenter: () -> Unit = {}, onQuickSplit: () -> Unit = {},
-    onQuickAudio: () -> Unit = {}) {
+    onQuickAudio: () -> Unit = {}, onTextToVoice: () -> Unit = {}) {
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically) {
@@ -159,6 +159,10 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
             ItemCard(Icons.Default.RecordVoiceOver, "Vozes Google",
                 "Central de Vozes · catálogo salvo e prévias reutilizáveis",
                 onClick = onVoiceCenter)
+            Spacer(Modifier.height(8.dp))
+            ItemCard(Icons.Default.GraphicEq, "Texto para Voz",
+                "Gerar e salvar WAV com Gemini · sem projeto de vídeo",
+                onClick = onTextToVoice)
             Spacer(Modifier.height(12.dp))
             HomeQuickMediaActions(onQuickSplit, onQuickAudio)
             Spacer(Modifier.height(20.dp))
