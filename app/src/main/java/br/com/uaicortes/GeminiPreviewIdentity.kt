@@ -10,7 +10,19 @@ internal object GeminiPreviewIdentity {
     const val TEXT = "Olá! Este é o Uai Cortes. Aqui você corta vídeos, edita cenas e cria novas histórias. Fácil, não é? Agora... vamos ouvir esta voz!"
     @Suppress("UNUSED_PARAMETER")
     fun id(apiKey: String, model: String, voiceId: String, styleInstruction: String): String {
-        val input = listOf("gemini-sample-v2", model, voiceId, styleInstruction, TEXT)
+        return digest(model, voiceId, styleInstruction, TEXT)
+    }
+
+    /** Não invalida os arquivos antigos de frase padrão. Novos textos usam hash independente. */
+    @Suppress("UNUSED_PARAMETER")
+    fun idForText(apiKey: String, model: String, voiceId: String,
+                  styleInstruction: String, text: String): String {
+        require(text.length in 3..250 && text.none(Char::isISOControl)) { "Prévia inválida." }
+        return digest(model, voiceId, styleInstruction, text)
+    }
+
+    private fun digest(model: String, voiceId: String, styleInstruction: String, text: String): String {
+        val input = listOf("gemini-sample-v2", model, voiceId, styleInstruction, text)
         val md = MessageDigest.getInstance("SHA-256")
         input.forEach { item ->
             val bytes = item.toByteArray(Charsets.UTF_8)

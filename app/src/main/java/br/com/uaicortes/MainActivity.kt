@@ -501,7 +501,9 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 "social_publish" -> SocialPublishScreen(pendingSocialVideoUri.takeIf(String::isNotBlank)?.let(Uri::parse),
                     pendingSocialVideoName, VideoPublicationDraft(pendingSocialDescription, pendingSocialHashtags), { screen = "social" })
                 "settings" -> SettingsScreen(::back, { previous = "settings"; screen = it }, { screen = it })
-                "api_center" -> SocialApiCenterScreen(::back, { previous = "api_center"; screen = "gemini_settings" }, { screen = "social" })
+                "api_center" -> SocialApiCenterScreen(::back,
+                    { previous = "api_center"; screen = "gemini_settings" }, { screen = "social" },
+                    { previous = "api_center"; screen = "polly_settings" })
                 "updates" -> GitHubUpdatesScreen(githubUpdates, ::back)
                 "whats_new" -> WhatsNewScreen(::back)
                 "diagnostics" -> DiagnosticScreen(::back, onEnabledChanged = { diagnosticsEnabled = it })
@@ -511,6 +513,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                         .getOrElse { DiagnosticRecorder.exception("project_restore_failure", it); false } }, back = ::back)
                 "speech_model" -> SpeechModelSettingsScreen(::back)
                 "gemini_settings" -> GeminiSettingsScreen(::back)
+                "polly_settings" -> PollySettingsScreen(::back)
                 "voice_center" -> GeminiVoiceCenterScreen(onBack = ::back)
                 "text_to_voice" -> StandaloneTextToVoiceScreen(onBack = ::back,
                     onOpenGeminiSettings = { previous = "text_to_voice"; screen = "gemini_settings" },

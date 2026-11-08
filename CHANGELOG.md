@@ -1,3 +1,18 @@
+# Uai Cortes 0.1.232 (2026-11-08)
+
+- Amazon Polly em Central de APIs e Contas: credenciais AWS protegidas, região e token de sessão opcional, importação/exportação confirmadas, copiar/colar/mostrar, teste DescribeVoices pt-BR, teste SynthesizeSpeech MP3, reprodução e exportação de áudio.
+- Assinatura AWS SigV4 sem chave no APK, host fixo por região, HTTPS sem redirects, respostas com limite e nenhum retry automático após falha.
+- Registro isolado da Gemini: x-amzn-RequestCharacters quando disponível, tarifa bruta estimada em USD e limites locais opcionais diário/mensal, CSV sem texto ou segredos. Fracassos não são contados como custo zero nem cobrança real.
+- Versão 0.1.232/versionCode 233, CI e metadados sincronizados. Compilação Android e teste AWS real ainda pendentes.
+
+# Uai Cortes 0.1.231 (2026-11-08)
+
+- Central de Vozes com topo respeitando status bar, cabeçalho compacto e opções de armazenamento/modelo/prévia em janela dedicada.
+- Filtros dinâmicos de idioma, sotaque, finalidade e personalidade por valores reais da API, além de gênero, altura, favoritas e prévias offline. Lista carregada progressivamente (30 vozes por lote, sem chamada de rede).
+- Apelidos locais por voz, preservando nome original e `voice.id` para TTS; pesquisa por apelidos e uso do apelido no módulo independente Texto para Voz.
+- Comparador manual A/B sem inferência automática de timbre; dois botões para ouvir o mesmo texto/modelo/estilo. Amostras curta, padrão e personalizada com cache separado por texto e compatibilidade com WAVs padrão já salvos.
+- Sem alteração do schema de projetos (4), da API de publicação social, da assinatura Android e dos cinco APKs. A geração Gemini segue sempre com confirmação explícita do consumo; build Android e teste de som reais pendentes.
+
 # Uai Cortes 0.1.230 (2026-11-07)
 
 - Correção CI191: import do `BackHandler` no módulo independente Texto para Voz agora usa `androidx.activity.compose.BackHandler` (o pacote exigido pela versão do AndroidX utilizada), resolvendo a referência indefinida encontrada em Debug e Release.

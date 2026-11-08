@@ -1,3 +1,18 @@
+# Uai Cortes · versão 0.1.232 — Amazon Polly e custos estimados
+
+- Nova configuração Amazon Polly em Gerenciar APIs, com chaves AWS locais protegidas, ver/colar/copiar, importação e exportação sob confirmação.
+- Consulta manual das vozes pt-BR e geração de MP3 com autorização explícita e preservação de prévias no dispositivo.
+- Painel independente de Gemini: caracteres confirmados pela AWS, custo bruto estimado, limites locais de uso e exportação de relatório CSV.
+- Sem confirmação de APK Android ou de chamada real à AWS nesta entrega.
+
+# Uai Cortes · versão 0.1.231 — Central de Vozes e comparação A/B (versionCode 232)
+
+- Central de Vozes mais limpa, cabeçalho afastado da barra de status, filtros recolhidos e ajustes em pop-up seguindo o tema do aplicativo.
+- Filtros por atributos reais do catálogo e nomes personalizados apenas no aparelho, sem alterar IDs da API.
+- Comparação A/B entre duas vozes com prévia padronizada; opção de frase curta, padrão ou personalizada, com geração somente após confirmação e cache por frase/modelo/voz/estilo.
+- A lista é exibida em lotes locais de 30 vozes; a coleta do catálogo remoto e o limite de 500 registros permanecem inalterados.
+- Testes locais executados não equivalem à compilação Android; validar pelo GitHub Actions e ouvir no aparelho.
+
 # Uai Cortes · versão 0.1.230 — Correção CI191 da tela Texto para Voz (versionCode 231)
 
 - Corrigida a importação AndroidX do `BackHandler` que impedia compilar a tela Texto para Voz nas variantes Debug e Release.

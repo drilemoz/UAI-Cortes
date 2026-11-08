@@ -1,3 +1,11 @@
+# Uai Cortes · v0.1.232 — Amazon Polly e controle de consumo
+
+Em **Central de APIs e Contas > Amazon Polly**, cadastrar credenciais próprias AWS IAM com permissões `polly:DescribeVoices` e `polly:SynthesizeSpeech`, região da chave e token temporário opcional. O segredo é criptografado no Android Keystore, sem chaves no repositório, e pode ser importado/exportado somente por solicitação, com alerta de risco. Consultar vozes brasileiras não gera áudio; síntese MP3 exige confirmação e não tem retry automático. Limites locais diários e mensais opcionais, histórico CSV somente dos caracteres informados pela AWS e preços públicos estimados, não faturamento real nem saldo AWS. Gemini, Redes e editor permanecem independentes.
+
+# Uai Cortes · v0.1.231 — Central de Vozes organizada e comparação A/B
+
+A Central de Vozes foi compactada para corrigir a área superior em Android edge-to-edge, esconder ajustes infrequentes e expor filtros reais do catálogo Gemini (idioma, sotaque, contexto e persona), sem inferir identidade ou timbre a partir do nome. Apelidos são locais e preservam os IDs. A/B compara duas vozes usando a mesma frase, estilo e modelo, com prévias curtas, padrão ou personalizadas. Só gera uma amostra após confirmação explícita e mantém as anteriores. A seleção segue compartilhada pela Home, Texto para Voz e editor, sem gerar áudio ao selecionar. Compilação Android e teste real com vozes ainda pendentes.
+
 # Uai Cortes · v0.1.230 — Correção de compilação do Texto para Voz
 
 A versão 0.1.230 (versionCode 231) corrige o import `BackHandler` do novo módulo independente Texto para Voz, que ocasionava falha Kotlin no workflow 191. Não altera as chamadas Gemini, a integração do editor, a assinatura Android, a navegação ou o armazenamento de WAV. A compilação Android e o teste real no celular devem ser validados no GitHub Actions e no aparelho.

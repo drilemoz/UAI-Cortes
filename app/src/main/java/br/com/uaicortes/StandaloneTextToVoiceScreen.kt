@@ -60,6 +60,10 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
     var modelMenu by remember { mutableStateOf(false) }
     var voice by draft.voice
     var chooseVoice by remember { mutableStateOf(false) }
+    var localVoiceAliases by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    LaunchedEffect(chooseVoice, voice?.id) {
+        if (!chooseVoice) localVoiceAliases = withContext(Dispatchers.IO) { GeminiVoiceAliases(ctx).load() }
+    }
     var style by draft.style
     var styleMenu by remember { mutableStateOf(false) }
     var confirm by remember { mutableStateOf(false) }
@@ -162,7 +166,8 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
                         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), shape = UaiShapes.button) {
                         Icon(Icons.Default.RecordVoiceOver, null)
                         Spacer(Modifier.width(8.dp))
-                        Text(voice?.let(GeminiVoicePresentation::label) ?: "Selecionar na Central de Vozes",
+                        Text(voice?.let { GeminiVoiceAliases.title(it, localVoiceAliases) }
+                                ?: "Selecionar na Central de Vozes",
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp),

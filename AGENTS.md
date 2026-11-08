@@ -1,3 +1,17 @@
+# v0.1.232 — Amazon Polly em Serviços e APIs
+
+- Integrar Amazon Polly em tela própria, separado de Gemini e sem chave embutida no APK. AES-GCM/Keystore, credenciais AWS importáveis/exportáveis somente mediante confirmação explícita, sem registrar segredos no log ou projeto. Não criar credenciais reais nos arquivos.
+- AWS Signature V4 para polly.<região>.amazonaws.com; somente DescribeVoices sob toque e SynthesizeSpeech após confirmação; nenhuma repetição automática de POST incerto. Prévia local MP3 apenas após resposta confirmada.
+- Contabilizar caracteres x-amzn-RequestCharacters de respostas bem-sucedidas e preços brutos AWS de referência, sem fingir medição de saldo Free Tier/fatura. Limites locais opcionais, histórico em armazenamento privado sem texto/chaves, CSV sanitizado.
+- Não mudar Gemini, projetos schema 4, Redes, histórico ou cinco APKs; versão 0.1.232/versionCode 233, novidades e metadados sincronizados. Sintaxe Kotlin e testes estruturais não equivalem a compilação Gradle nem teste real de AWS.
+
+# v0.1.231 — Central de Vozes, filtros e comparação de timbres
+
+- Preservar os `voice.id` do Gemini, o snapshot público do catálogo schema 1, favoritos, WAVs anteriores e VideoProject schema 4. Apelidos são somente locais e não devem afetar chamadas HTTP nem a classificação acústica.
+- UI edge-to-edge respeita status bar, filtros de metadados exibem exclusivamente valores de idioma, sotaque, persona e contexto fornecidos pela API; nenhuma classificação automática sem evidências. Lista local paginada visualmente de 30 em 30, sem varreduras ou gasto de cota.
+- Comparador A/B reproduz duas vozes com o mesmo texto, modelo e estilo; só gera nova prévia após consentimento. Identificador SHA-256 do texto padrão permanece idêntico ao legado, novas frases recebem IDs distintos e não removem WAVs antigos.
+- Sincronizar 0.1.231/versionCode 232, Novidades, CI, ZIP e docs. Testar regressões Kotlin/Python; não afirmar build Android antes do GitHub Actions e validação real de áudio. Cinco APKs, assinatura e login social preservados.
+
 # v0.1.230 — Correção CI191 da tela Texto para Voz
 
 - O workflow 191 falhou em `:app:compileDebugKotlin` e `:app:compileReleaseKotlin` porque `StandaloneTextToVoiceScreen.kt` importava `androidx.activity.BackHandler`, em vez de `androidx.activity.compose.BackHandler`. Corrigir somente a origem do import, preservar os dois handlers, a navegação e a ferramenta Gemini.

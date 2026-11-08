@@ -16,11 +16,23 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.230"
-    const val VERSION_CODE = 231
+    const val VERSION_NAME = "0.1.232"
+    const val VERSION_CODE = 233
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.232", listOf(
+            ReleaseFeature("polly-api-232", "Amazon Polly em Serviços e APIs",
+                "Credenciais AWS protegidas por Android Keystore, importação/exportação com confirmação, consulta manual de vozes pt-BR, teste de síntese MP3 e consumo separado da Gemini.", "music"),
+            ReleaseFeature("polly-usage-232", "Caracteres e gasto bruto estimado",
+                "Histórico local de caracteres confirmados pela API, taxas públicas de referência, limites locais por dia e mês e exportação CSV sem texto nem credenciais.", "check")
+        )),
+        ReleaseSummary("0.1.231", listOf(
+            ReleaseFeature("gemini-voice-center-filters-231", "Central de Vozes mais compacta",
+                "Filtros de sotaque, idioma, personalidade e finalidade somente quando presentes nos metadados da API. Pesquisa por apelido, filtros recolhidos e lista progressiva.", "check"),
+            ReleaseFeature("gemini-voice-compare-231", "Comparar timbres e personalizar vozes",
+                "Comparação A/B com frase e modelo iguais, apelidos locais, prévias curta/padrão/personalizada e configurações reunidas em janela. O Gemini só é chamado após confirmação.", "music")
+        )),
         ReleaseSummary("0.1.230", listOf(
             ReleaseFeature("ci191-tts-backhandler-230", "Correção de compilação do Texto para Voz",
                 "Corrige a importação do BackHandler de Compose na ferramenta independente Texto para Voz. Mantém Gemini, vozes, contadores, WAV, biblioteca e editor inalterados.", "check")
