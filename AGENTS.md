@@ -1,3 +1,9 @@
+# v0.1.228 — Biblioteca remota do YouTube e Redes compactas
+
+- A tela **Vídeos do YouTube** consulta `channels.list(mine=true, part=contentDetails)` e a playlist `relatedPlaylists.uploads` via `playlistItems.list` (20 por página), só sob ação explícita e com conferência exata do canal previamente cadastrado. Não usar `search.list` para tentar importar todo o histórico; paginação limitada a 300 itens por sessão e busca por título somente nos itens carregados.
+- A consulta remota não altera `SocialStore`, nenhuma credencial OAuth é persistida, nenhum envio/retry automático é acionado. Histórico local permanece diferenciado como **Envios pelo Uai Cortes**.
+- Continuar versionamento sequencial 0.1.228/versionCode 229, sem alterar `schemaVersion=4`, cinco APKs, SHA-1 de assinatura ou a regra de não repetir uploads incertos. Validar testes locais e Android real.
+
 # v0.1.227 — Refatoração do módulo social e adequação visual
 
 - Separar Redes, Publicar, diálogos, cartões e backup público em arquivos dedicados. Não alterar rotas da MainActivity, contratos OAuth, tokens temporários, SocialStore schema 1, VideoProject schemaVersion 4 ou regras de publicação.

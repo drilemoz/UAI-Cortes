@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.228 — Vídeos antigos no YouTube (versionCode 229)
+
+- **Redes → Vídeos do YouTube → Explorar:** selecionar canal, buscar os vídeos antigos, carregar páginas e filtrar títulos já consultados. Os vídeos não são importados ao histórico de envios do app.
+- **Envios pelo Uai Cortes:** histórico local preservado, filtros numa linha e cartões com informações prioritárias.
+- OAuth por ação do usuário, ID do canal conferido, tokens apenas em memória, sem tarefas periódicas ou migração de armazenamento. Build Gradle e teste real em celular pendentes.
+
 # Uai Cortes · versão 0.1.227 — Redes e publicação organizadas (versionCode 228)
 
 - **Redes:** cartões de conta compactos, com ações Vincular/Verificar/Remover recolhidas e status fiel ao vínculo OAuth temporário.

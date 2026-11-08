@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.228 (2026-11-07)
+
+- Redes Sociais: seção recolhível **Vídeos do YouTube**, busca manual dos uploads antigos por canal com OAuth, paginação de 20 vídeos e filtro local de títulos. O usuário pode abrir o vídeo no YouTube.
+- Confere o ID do canal autenticado antes de cada busca e página posterior; URLs são montadas apenas com IDs validados, sem salvar tokens nem misturar vídeos remotos ao histórico local de publicações.
+- Histórico de envios do aplicativo renomeado para diferenciá-lo da biblioteca do YouTube; filtros compactos em uma linha rolável e informações de processamento não consultadas não ocupam todos os cartões.
+- VersionName 0.1.228/versionCode 229, documentação e metadados sincronizados; schema do projeto e do catálogo preservados. Build Android e verificação remota real pendentes.
+
 # Uai Cortes 0.1.227 (2026-11-07)
 - Refatoração sem mudança de schema: telas Redes e Publicar, diálogos e exportação pública das contas em arquivos separados, mantendo os mesmos pontos de navegação e regras OAuth.
 - Cards de contas compactos com ações recolhidas, vínculos verificados somente quando realmente consultados. Histórico com detalhes e operações secundárias recolhidos; alertas sobre resultado incerto permanecem visíveis.

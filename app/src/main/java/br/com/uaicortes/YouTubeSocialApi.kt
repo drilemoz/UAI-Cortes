@@ -103,6 +103,62 @@ internal object YouTubeSocialApi {
         } finally { conn.disconnect() }
     }
 
+    /** Página de vídeos já presentes no canal: consulta manual, sem download ou importação local. */
+    internal data class PreviousVideo(val id: String, val title: String, val publishedAt: String)
+    internal data class PreviousPage(val videos: List<PreviousVideo>, val nextPageToken: String)
+
+    /** Não usa search.list: a playlist de uploads permite paginação barata e inclui uploads antigos. */
+    suspend fun previousVideos(
+        token: String, expectedChannelId: String, pageToken: String = ""
+    ): PreviousPage = withContext(Dispatchers.IO) {
+        require(SocialPublicationPolicy.validChannel(expectedChannelId) && expectedChannelId.isNotBlank())
+        require(pageToken.length <= 1024 && pageToken.none { it.isISOControl() })
+        // Conferir o proprietário a CADA busca, inclusive em páginas posteriores.
+        val channelConnection = connect("$API/channels?part=id%2CcontentDetails&mine=true" +
+            "&fields=items(id%2CcontentDetails%2FrelatedPlaylists%2Fuploads)", token, "GET")
+        val uploadsId = try {
+            ensureOk(channelConnection, "Canal YouTube")
+            val current = JSONObject(readLimited(channelConnection)).optJSONArray("items")
+                ?.optJSONObject(0) ?: throw IOException("Nenhum canal encontrado para esta conta Google.")
+            if (current.optString("id") != expectedChannelId)
+                throw IOException("Conta Google diferente do canal selecionado. Escolha a conta correta.")
+            current.optJSONObject("contentDetails")?.optJSONObject("relatedPlaylists")
+                ?.optString("uploads").orEmpty().takeIf { it.isNotBlank() }
+                ?: throw IOException("A playlist de envios do canal não está disponível.")
+        } finally { channelConnection.disconnect() }
+
+        val idParam = java.net.URLEncoder.encode(uploadsId, "UTF-8")
+        val pageParam = if (pageToken.isBlank()) "" else
+            "&pageToken=" + java.net.URLEncoder.encode(pageToken, "UTF-8")
+        val playlistConnection = connect(
+            "$API/playlistItems?part=snippet%2CcontentDetails&playlistId=$idParam&maxResults=20$pageParam" +
+                "&fields=nextPageToken%2Citems(contentDetails(videoId%2CvideoPublishedAt)%2C" +
+                "snippet(title%2CpublishedAt%2CresourceId%2FvideoId))",
+            token, "GET")
+        try {
+            ensureOk(playlistConnection, "Vídeos anteriores do YouTube")
+            val body = JSONObject(readLimited(playlistConnection))
+            val items = body.optJSONArray("items")
+            val videos = buildList {
+                for (index in 0 until (items?.length() ?: 0)) {
+                    val entry = items?.optJSONObject(index) ?: continue
+                    val snippet = entry.optJSONObject("snippet")
+                    val details = entry.optJSONObject("contentDetails")
+                    val id = details?.optString("videoId").orEmpty().ifBlank {
+                        snippet?.optJSONObject("resourceId")?.optString("videoId").orEmpty()
+                    }
+                    if (!SocialPublicationPolicy.validVideoId(id) || id.isBlank()) continue
+                    val title = snippet?.optString("title").orEmpty().trim().take(160)
+                        .ifBlank { "Vídeo sem título" }
+                    val date = details?.optString("videoPublishedAt").orEmpty()
+                        .ifBlank { snippet?.optString("publishedAt").orEmpty() }
+                    add(PreviousVideo(id, title, date.take(40)))
+                }
+            }.distinctBy { it.id }
+            PreviousPage(videos, body.optString("nextPageToken").take(1024))
+        } finally { playlistConnection.disconnect() }
+    }
+
     suspend fun metrics(token: String, videoId: String): SocialMetrics = withContext(Dispatchers.IO) {
         require(SocialPublicationPolicy.validVideoId(videoId) && videoId.isNotBlank())
         val conn = connect("$API/videos?part=statistics&id=$videoId", token, "GET")

@@ -1,3 +1,11 @@
+# Uai Cortes · v0.1.228 — Consulta de vídeos antigos e Redes compactas
+
+- A aba **Redes** separa **Vídeos do YouTube** (biblioteca remota consultada manualmente) de **Envios pelo Uai Cortes** (histórico local existente). A consulta usa somente o canal selecionado e exige OAuth Google com `youtube.readonly` e confirmação do ID.
+- Botão **Buscar vídeos anteriores** carrega 20 itens por página da playlist de uploads do canal; **Carregar mais vídeos antigos** traz páginas adicionais, até 300 itens por consulta de sessão, e o campo Filtrar pesquisa apenas títulos das páginas já carregadas.
+- Nada é sincronizado em segundo plano. Resultados remotos são mantidos somente em memória, sem gravar tokens, dados de vídeos de terceiros ou alterar publicações e projetos existentes.
+- Filtros do histórico local passaram a caber numa linha rolável. Erros de rede ou acesso não são apresentados como ausência de vídeos.
+- A verificação real com dois canais e o build Android completo dependem dos testes GitHub Actions/em aparelho.
+
 # Uai Cortes · v0.1.227 — Redes e publicação compactas
 
 - Redes agora apresenta cada conta em uma linha compacta com nome e tipo; verificar, vincular ou remover aparecem ao expandir. O status de cadastro não afirma login permanente.

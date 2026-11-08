@@ -6,6 +6,8 @@ import java.util.Date
 import java.util.Locale
 import android.net.Uri
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -49,22 +51,19 @@ internal fun SocialPublicationHistoryUi(
         .sortedByDescending { it.updatedAt }.take(80)
 
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text("Publicações (${data.publications.size})", modifier = Modifier.weight(1f),
+        Text("Envios pelo Uai Cortes (${data.publications.size})", modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.titleMedium)
         TextButton(onClick = onRefresh, enabled = !busy) {
             Icon(Icons.Default.Refresh, contentDescription = null)
             Text("Atualizar lista")
         }
     }
-    // Duas linhas evitam chips cortados em telas pequenas ou fonte ampliada.
-    SocialHistoryFilter.entries.chunked(2).forEach { pair ->
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            pair.forEach { choice ->
-                FilterChip(selected = choice == filter,
-                    onClick = { filterName = choice.name },
-                    label = { Text(choice.label) },
-                    modifier = Modifier.weight(1f))
-            }
+    // Filtros compactos e roláveis em uma linha: não ocupam duas fileiras de cartões.
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        SocialHistoryFilter.entries.forEach { choice ->
+            FilterChip(selected = choice == filter,
+                onClick = { filterName = choice.name }, label = { Text(choice.label) })
         }
     }
     if (posts.isEmpty()) {
@@ -90,9 +89,9 @@ internal fun SocialPublicationHistoryUi(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error)
                     SocialPublicationStatus.CONFIRMED_BY_API -> {
-                        Text(publication.youtubeState.summary(),
-                            style = MaterialTheme.typography.bodySmall)
                         if (publication.youtubeState.checkedAt > 0L) {
+                            Text(publication.youtubeState.summary(),
+                                style = MaterialTheme.typography.bodySmall)
                             Text("Última consulta: " + SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("pt", "BR"))
                                 .format(Date(publication.youtubeState.checkedAt)),
                                 style = MaterialTheme.typography.labelSmall,

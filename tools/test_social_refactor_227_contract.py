@@ -17,7 +17,7 @@ dialogs = parts['SocialAccountDialogs.kt']
 account = parts['SocialAccountCard.kt']
 history = parts['SocialPublicationHistoryUi.kt']
 config = parts['SocialPublicConfig.kt']
-assert check(root) == ('0.1.227', 228)
+assert check(root) == ('0.1.228', 229)
 assert 'internal fun SocialDashboardScreen(' in dash and 'internal fun SocialPublishScreen(' not in dash
 assert 'internal fun SocialPublishScreen(' in publish and 'internal fun SocialDashboardScreen(' not in publish
 assert 'internal object SocialPublicConfig' in config and 'uai-social-public-v1' in config

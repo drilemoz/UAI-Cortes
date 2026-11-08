@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.227"
-    const val VERSION_CODE = 228
+    const val VERSION_NAME = "0.1.228"
+    const val VERSION_CODE = 229
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.228", listOf(
+            ReleaseFeature("youtube-old-videos-228", "Vídeos antigos do canal no YouTube",
+                "Redes permite consultar manualmente a playlist de uploads do canal autorizado, com páginas anteriores e filtro por título. Vídeos existentes na plataforma não são confundidos com envios feitos pelo app.", "film"),
+            ReleaseFeature("social-ui-228", "Redes mais organizada",
+                "Filtros de publicações em uma linha e consulta de vídeos do YouTube em cartão próprio. Sem varredura automática, importação de dados pessoais ou armazenamento de tokens.", "check")
+        )),
         ReleaseSummary("0.1.227", listOf(
             ReleaseFeature("social-layout-227", "Redes com ações sob demanda",
                 "Contas mostram nome e vínculo de forma compacta; toque para verificar ou remover. Publicações recolhem as ações secundárias e mantêm os alertas importantes visíveis.", "check"),

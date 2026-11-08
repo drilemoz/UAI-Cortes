@@ -62,6 +62,12 @@ internal fun SocialDashboardScreen(
     var failure by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     var youtubeBusy by remember { mutableStateOf(false) }
+    var youtubeLibraryBusy by remember { mutableStateOf(false) }
+    var youtubeLibraryError by remember { mutableStateOf("") }
+    var youtubeLibraryChannelId by remember { mutableStateOf("") }
+    var youtubeLibraryVideos by remember { mutableStateOf<List<YouTubeSocialApi.PreviousVideo>>(emptyList()) }
+    var youtubeLibraryNextPage by remember { mutableStateOf("") }
+
     var channelToBind by remember { mutableStateOf<Pair<SocialAccount, YouTubeSocialApi.Channel>?>(null) }
     var pageToBind by remember { mutableStateOf<SocialAccount?>(null) }
     var metaBusy by remember { mutableStateOf(false) }
@@ -101,7 +107,36 @@ internal fun SocialDashboardScreen(
     }
     val authorizeYouTube = rememberYouTubeAuthorization { error ->
         youtubeBusy = false
-        failure = error
+        if (youtubeLibraryBusy) {
+            youtubeLibraryBusy = false
+            youtubeLibraryError = error
+        } else failure = error
+    }
+    fun fetchOldYouTubeVideos(account: SocialAccount, page: String) {
+        if (youtubeLibraryBusy || youtubeBusy || account.remoteChannelId.isBlank()) return
+        val isNextPage = page.isNotBlank() && youtubeLibraryChannelId == account.remoteChannelId
+        youtubeLibraryBusy = true
+        youtubeBusy = true
+        youtubeLibraryError = ""
+        // Sempre confirma a conta na API, inclusive ao carregar mais páginas.
+        authorizeYouTube(true) { token ->
+            scope.launch {
+                runCatching {
+                    YouTubeSocialApi.previousVideos(token, account.remoteChannelId,
+                        if (isNextPage) page else "")
+                }.onSuccess { result ->
+                    youtubeLibraryChannelId = account.remoteChannelId
+                    youtubeLibraryVideos = (if (isNextPage) youtubeLibraryVideos else emptyList()).plus(result.videos)
+                        .distinctBy { it.id }.take(300)
+                    youtubeLibraryNextPage = if (youtubeLibraryVideos.size >= 300) "" else result.nextPageToken
+                    youtubeLibraryError = ""
+                }.onFailure { error ->
+                    youtubeLibraryError = error.message ?: "Não foi possível consultar os vídeos do canal."
+                }
+                youtubeLibraryBusy = false
+                youtubeBusy = false
+            }
+        }
     }
     fun refresh() {
         runCatching { store.load() }.onSuccess { data = it; failure = "" }
@@ -289,6 +324,16 @@ internal fun SocialDashboardScreen(
                         onDelete = { deletingAccount = account }
                     )
                 }
+                SocialYouTubeLibraryUi(
+                    accounts = state.accounts,
+                    busy = youtubeLibraryBusy || youtubeBusy,
+                    videos = youtubeLibraryVideos,
+                    nextPageToken = youtubeLibraryNextPage,
+                    loadedChannelId = youtubeLibraryChannelId,
+                    error = youtubeLibraryError,
+                    onLoad = ::fetchOldYouTubeVideos,
+                    onAccountSelected = { youtubeLibraryError = "" }
+                )
                 SocialPublicationHistoryUi(
                     data = state,
                     busy = youtubeBusy,
