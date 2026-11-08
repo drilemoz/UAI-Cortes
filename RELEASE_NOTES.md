@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.236 — Correção do teste YouTube CI196
+
+- Corrigida a regressão antiga de "Vídeos do YouTube" que interrompia o workflow 196 antes da compilação ao exigir os controles da tela anterior.
+- Os testes agora conferem a biblioteca com visualizações e paginação por canal, preservando a lista unificada e a grade compacta introduzidas em 0.1.235.
+- Nenhuma alteração de OAuth, credenciais, upload ou histórico social. A compilação Android completa ainda deve ser validada no GitHub Actions.
+
 # Uai Cortes · versão 0.1.235 — Redes compactas e biblioteca YouTube unificada
 
 - **Minhas contas em grade:** canais e destinos aparecem em quadrinhos lado a lado, ocupando menos espaço na aba Redes.

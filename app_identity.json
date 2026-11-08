@@ -1,9 +1,9 @@
 {
   "displayName": "Uai Cortes",
-  "version": "0.1.235",
+  "version": "0.1.236",
   "android": {
     "applicationId": "br.com.uaicortes",
-    "versionName": "0.1.235",
-    "versionCode": 236
+    "versionName": "0.1.236",
+    "versionCode": 237
   }
 }

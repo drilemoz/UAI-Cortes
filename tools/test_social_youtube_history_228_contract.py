@@ -32,13 +32,31 @@ assert 'YouTubeSocialApi.previousVideos(token, account.remoteChannelId' in dash
 assert 'authorizeYouTube(true)' in dash
 assert '.distinctBy { it.id }.take(300)' in dash
 assert 'LaunchedEffect' not in ui and 'SocialStore(' not in ui
-assert 'onAccountSelected()' in ui and 'Carregar mais vídeos antigos' in ui
-assert 'Carregar mais vídeos antigos' in ui and 'Buscar vídeos anteriores' in ui
-assert 'Filtrar títulos carregados' in ui and 'loadedChannelId == selected?.remoteChannelId' in ui
+# Desde a v0.1.235, os carregamentos são separados por canal, com lista agregada.
+# A verificação antiga exigia rótulos/estado descartados, impedindo o CI antes do Gradle.
+assert 'onAccountSelected()' in ui
+assert 'Filtrar títulos carregados' in ui
+if int(version.rsplit('.', 1)[-1]) >= 235:
+    assert 'Carregar mais do canal selecionado' in ui
+    assert 'Buscar vídeos do canal selecionado' in ui
+    assert 'nextPageTokensByChannel[selected?.remoteChannelId]' in ui
+    assert 'videosByChannel[selected?.remoteChannelId]' in ui
+    assert 'SocialYouTubeLibraryAggregate.merge(videosByChannel)' in ui
+    assert 'socialFormatCount(totalViews)' in ui and 'video.viewCount' in ui
+    assert 'youtubeLibraryVideosByChannel' in dash and 'youtubeLibraryNextPages' in dash
+    assert 'val previous = if (isNextPage)' in dash
+    assert '(account.remoteChannelId to merged)' in dash
+    assert '(account.remoteChannelId to if (merged.size >= 300)' in dash
+    assert 'enrichPreviousVideos(token, videos)' in api
+    assert 'videos?part=snippet%2Cstatistics&id=' in api
+    assert 'viewCount' in api
+else:
+    assert 'Carregar mais vídeos antigos' in ui and 'Buscar vídeos anteriores' in ui
+    assert 'loadedChannelId == selected?.remoteChannelId' in ui
 assert 'https://www.youtube.com/watch?v=${video.id}' in ui
 assert 'Envios pelo Uai Cortes' in history
 assert 'horizontalScroll(rememberScrollState())' in history
 assert 'youtube.readonly' in auth and 'requestOfflineAccess' not in auth
 assert 'accessToken' not in store and 'refreshToken' not in store
 assert 'SocialPublicationHistoryUi(' in dash
-print('OK: v228 paginação, OAuth de canal certo, 300 vídeos por sessão, histórico isolado e UI compacta.')
+print('OK: biblioteca de vídeos YouTube, OAuth por canal, paginação, métricas e histórico separado.')

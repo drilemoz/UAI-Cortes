@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.235"
-    const val VERSION_CODE = 236
+    const val VERSION_NAME = "0.1.236"
+    const val VERSION_CODE = 237
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.236", listOf(
+            ReleaseFeature("ci196-social-contract-236", "Correção do workflow 196",
+                "Atualiza o teste de regressão do YouTube para a biblioteca que reúne canais e mostra visualizações. Preserva a grade de contas e não altera o envio de vídeos.", "check")
+        )),
         ReleaseSummary("0.1.235", listOf(
             ReleaseFeature("social-grid-235", "Contas em grade para economizar espaço",
                 "Na aba Redes, os canais e destinos aparecem em quadrinhos lado a lado quando possível, mantendo as ações de verificar, vincular e remover dentro do próprio cartão.", "check"),

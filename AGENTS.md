@@ -1,3 +1,9 @@
+# v0.1.236 — Correção de regressão CI196
+
+- O workflow 196 falhou antes do Gradle porque `test_social_youtube_history_228_contract.py` exigia rótulos e estado de canal único descartados na v0.1.235. Atualizar o teste para a arquitetura agregada, preservando checagens de OAuth, paginação individual, limite de 300 vídeos por canal e separação do histórico local.
+- Não reverter a grade de contas nem as visualizações; preservar o catálogo social schema 1, tokens temporários, cinco APKs e assinatura.
+- Sincronizar 0.1.236/versionCode 237 em CI, metadados e Novidades. Validar regressões e ZIP; somente build Android real confirma compilação.
+
 # v0.1.235 — Redes compactas e biblioteca YouTube agregada
 
 - Evoluir a tela Redes para economizar espaço, exibindo contas em grade com dois cartões por linha quando viável, mantendo ações de verificar/vincular/remover dentro do próprio cartão.

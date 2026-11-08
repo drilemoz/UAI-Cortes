@@ -1,3 +1,7 @@
+# Uai Cortes · v0.1.236 — Correção CI196 do teste da biblioteca YouTube
+
+A versão 0.1.236 (versionCode 237) atualiza o contrato de regressão `test_social_youtube_history_228_contract.py` para a UI da biblioteca YouTube existente desde 0.1.235: visualizações nos vídeos e agregação dos canais consultados, com paginação individual. O workflow 196 parava na etapa Python antes do build. O comportamento de publicação e as credenciais permanecem preservados. É necessário confirmar a compilação completa pelo GitHub Actions.
+
 # Uai Cortes · v0.1.235 — Redes mais compacta e biblioteca YouTube agregada
 
 A versão 0.1.235 (versionCode 236) reorganiza a aba **Redes Sociais** para economizar espaço, exibindo as contas em grade com dois quadrinhos por linha quando possível. A área **Vídeos do YouTube** agora mostra as visualizações de cada vídeo e junta, em uma única lista e resumo, os dados já carregados de todos os canais consultados na sessão. A consulta continua manual, sem importar vídeos ao histórico do app e sem persistir tokens OAuth. Build Android e teste real no aparelho seguem pendentes.

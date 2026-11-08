@@ -1,3 +1,9 @@
+# Uai Cortes 0.1.236 (2026-11-08)
+
+- Corrigido o teste de regressão do YouTube que interrompia o workflow 196 por exigir o antigo texto "Carregar mais vídeos antigos" após a UI passar a ter paginação por canal.
+- O contrato agora verifica a lista agregada de múltiplos canais, visualizações dos vídeos, OAuth por canal, histórico local separado e limite de 300 itens por canal, sem alterar a funcionalidade existente.
+- Sincronizados versionName 0.1.236, versionCode 237, CI, metadados, Novidades e pacote-fonte. Build Android permanece pendente até nova execução do workflow.
+
 # Uai Cortes 0.1.235 (2026-11-08)
 
 - Redes Sociais agora mostra as contas em quadrinhos lado a lado para economizar espaço, preservando verificar/vincular/remover dentro do cartão expandível.
