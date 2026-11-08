@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.234 (2026-11-08)
+
+- Central de Vozes: **Teste cego** escolhe voluntariamente duas prévias WAV já armazenadas com o texto/modelo/estilo atual. Reproduz como 1 e 2 sem mostrar nomes; a identidade é revelada quando o usuário avalia ou escolhe revelar. Sem geração ou consumo de API no teste.
+- Prioriza pares de vozes ainda não avaliados e evita repetir o último quando houver alternativas; depois da avaliação, mantém os recursos já existentes de apelido, favoritos e seleção A/B manual.
+- Corrigida a regra de agrupamento de vozes **Parecidas**: avaliações explícitas **Diferentes** impedem ocultações contraditórias, mesmo transitivamente. É opinião auditiva, nunca prova de identidade acústica.
+- Versão 0.1.234/versionCode 235 e documentação/CI sincronizados. Compilação Android e escuta real permanecem pendentes.
+
 # Uai Cortes 0.1.233 (2026-11-08)
 
 - Central Gemini: botões A/B diretos nos cartões e avaliação local subjetiva **Parecidas/Diferentes** por par, com opção de ocultar similares manuais mantendo favoritas quando possível. Não há reconhecimento de voz nem deduplicação automática de áudio.

@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.233"
-    const val VERSION_CODE = 234
+    const val VERSION_NAME = "0.1.234"
+    const val VERSION_CODE = 235
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.234", listOf(
+            ReleaseFeature("gemini-voice-blind-234", "Escuta de vozes sem mostrar os nomes",
+                "Compare duas prévias já salvas, com a mesma frase, modelo e estilo, sem chamadas automáticas à API. Os nomes aparecem após avaliar ou pedir para revelar.", "music"),
+            ReleaseFeature("gemini-voice-conflicts-234", "Avaliações de timbre mais consistentes",
+                "Prioriza pares ainda não avaliados e evita ocultar vozes em grupos de semelhantes quando você marcou explicitamente um par como diferente.", "check")
+        )),
         ReleaseSummary("0.1.233", listOf(
             ReleaseFeature("gemini-manual-similarity-233", "Timbres comparados sem vozes repetidas",
                 "A/B direto nos cartões, avaliação local Parecidas ou Diferentes e filtro opcional para ocultar opções que você marcou semelhantes. Sem identificação biométrica nem chamadas extras de áudio.", "music"),

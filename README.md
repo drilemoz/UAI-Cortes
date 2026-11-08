@@ -1,3 +1,9 @@
+# Uai Cortes · v0.1.234 — Teste cego para comparar timbres no Gemini
+
+Na Central de Vozes, abra **A/B** e toque em **Teste cego**. Com pelo menos duas prévias já salvas para a **mesma frase, modelo e estilo**, o app seleciona um par ainda não avaliado quando possível. Toque em 1 e 2 para ouvir offline; os nomes permanecem ocultos até marcar **Parecidas** ou **Diferentes**, ou optar por revelá-los. **Outro par** repete sem custo de API se houver amostras locais. O teste nunca gera áudio automaticamente; novas prévias exigem a confirmação já existente.
+
+As avaliações continuam apenas no dispositivo e são subjetivas. O filtro de ocultar vozes parecidas foi corrigido para respeitar pares marcados explicitamente como diferentes, mesmo em cadeias de similaridade. Vozes de outros idiomas mantêm aviso de pronúncia não garantida em português. Amazon Polly, Gemini, cinco APKs e projetos anteriores permanecem preservados.
+
 # Uai Cortes · v0.1.233 — Comparação A/B e descoberta de vozes Gemini
 
 Na Central de Vozes, selecione A/B diretamente em cada cartão, reproduza o mesmo texto e registre localmente sua impressão de vozes parecidas ou diferentes. Em Filtros, a opção **Ocultar vozes que marquei como parecidas** mantém ao menos uma voz de cada grupo, priorizando favoritas. Isso não é prova de identidade acústica nem aplica classificação automática.

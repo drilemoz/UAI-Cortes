@@ -1,3 +1,11 @@
+# v0.1.234 — Comparação sem nomes e agrupamento coerente de vozes Gemini
+
+- Evoluir a Central 0.1.233 com teste de escuta sem nomes somente sobre duas prévias offline existentes para a mesma frase, estilo e modelo; não iniciar síntese automaticamente nem exibir nome antes da avaliação/revelação voluntária.
+- Priorização de pares não avaliados, sem repetir imediatamente quando houver alternativa; avaliações subjetivas continuam locais e privadas. Comparação de uma voz com ela mesma inválida.
+- A regra de ocultar vozes marcadas como similares não deve contrariar nenhum par explicitamente marcado como **Diferentes**, inclusive por transitividade. Favoritos e prévias continuam intactos.
+- Preservar Gemini (chaves/tokens), Amazon Polly (credenciais/consumo), projetos schema 4, OAuth, cinco APKs, assinatura e catálogo de vozes schema 1. Sem biometria/identificação real de locutores.
+- Sincronizar 0.1.234/versionCode 235, CI, metadados, Novidades, README e release; testar lógica Kotlin/JVM, sintaxe e regressões. Build Android real continua requisito para comprovar APK.
+
 # v0.1.233 — Descoberta e comparação criteriosa de vozes Gemini
 
 - Prosseguir a Central Gemini da 0.1.232 com seleção A/B diretamente nos cartões, avaliação **subjetiva** de vozes parecidas/diferentes persistida localmente, filtro opcional que mantém ao menos uma voz por conjunto marcado similar; não usar fingerprint/biometria nem sugerir que o app comprovou igualdade acústica.

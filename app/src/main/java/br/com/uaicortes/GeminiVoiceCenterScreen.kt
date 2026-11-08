@@ -90,6 +90,9 @@ internal fun GeminiVoiceCenterScreen(
     var compareOpen by remember { mutableStateOf(false) }
     var compareA by remember { mutableStateOf<String?>(null) }
     var compareB by remember { mutableStateOf<String?>(null) }
+    var blindComparison by remember { mutableStateOf(false) }
+    var blindRevealed by remember { mutableStateOf(false) }
+    var lastBlindPair by remember { mutableStateOf<String?>(null) }
     var detailsVoice by remember { mutableStateOf<GeminiVoice?>(null) }
     var editVoice by remember { mutableStateOf<GeminiVoice?>(null) }
     var aliasDraft by remember { mutableStateOf("") }
@@ -221,6 +224,7 @@ internal fun GeminiVoiceCenterScreen(
         .sortedWith(compareByDescending<GeminiVoice> { it.id in favoriteIds }
             .thenBy { GeminiVoiceAliases.title(it, aliases) })
     val visible = displayed.take(visibleCount)
+    val offlineCandidates = displayed.map { it.id }.filter { it in previewIds }
     val chosenA = voices.firstOrNull { it.id == compareA }
     val chosenB = voices.firstOrNull { it.id == compareB }
     val comparisonKey = compareA?.let { a -> compareB?.let { b -> GeminiVoiceDiscovery.pairKey(a, b) } }
@@ -230,6 +234,22 @@ internal fun GeminiVoiceCenterScreen(
         (if (onlySaved) 1 else 0) + (if (onlyPortuguese) 1 else 0) +
         (if (hideReviewedSimilar) 1 else 0)
 
+    fun startBlindComparison() {
+        val pair = GeminiVoiceDiscovery.nextOfflinePair(
+            offlineCandidates.shuffled(), previewIds, manualReviews, lastBlindPair)
+        if (pair == null) {
+            status = "Salve prévias de duas vozes com a mesma frase, modelo e estilo para comparar sem gastar API."
+            return
+        }
+        compareA = pair.first
+        compareB = pair.second
+        lastBlindPair = GeminiVoiceDiscovery.pairKey(pair.first, pair.second)
+        blindComparison = true
+        blindRevealed = false
+        compareOpen = true
+        status = "Duas prévias locais prontas. Ouça 1 e 2; os nomes ficam ocultos até avaliar ou revelar."
+    }
+
     fun recordReview(value: String?) {
         val a = compareA ?: return
         val b = compareB ?: return
@@ -238,13 +258,14 @@ internal fun GeminiVoiceCenterScreen(
             if (saved == null) status = "Não foi possível salvar a comparação local."
             else {
                 manualReviews = saved
+                if (blindComparison && value != null) blindRevealed = true
                 status = if (value == null) "Comparação removida." else
                     "Avaliação salva apenas neste aparelho; não é diagnóstico acústico."
             }
         }
     }
 
-    fun listen(voice: GeminiVoice) {
+    fun listen(voice: GeminiVoice, blindLabel: String? = null) {
         scope.launch {
             working = true
             try {
@@ -253,7 +274,10 @@ internal fun GeminiVoiceCenterScreen(
                 if (local != null) {
                     player.setMediaItem(MediaItem.fromUri(Uri.fromFile(local)))
                     player.prepare(); player.play()
-                    status = "Reproduzindo ${title(voice)} sem chamada Gemini."
+                    status = if (blindLabel != null) "Reproduzindo $blindLabel sem chamada Gemini."
+                        else "Reproduzindo ${title(voice)} sem chamada Gemini."
+                } else if (blindLabel != null) {
+                    status = "Prévia offline indisponível. Reconfigure o teste; nada foi enviado ao Gemini."
                 } else pendingSample = voice
             } catch (e: CancellationException) { throw e }
             catch (_: Exception) { status = "Falha ao ler prévia. Tente gerar uma nova." }
@@ -300,7 +324,10 @@ internal fun GeminiVoiceCenterScreen(
                 Text("${favoriteIds.size}")
             }
             Spacer(Modifier.weight(1f))
-            TextButton(onClick = { compareOpen = !compareOpen }) {
+            TextButton(onClick = {
+                compareOpen = !compareOpen
+                if (!compareOpen) { blindComparison = false; blindRevealed = false }
+            }) {
                 Icon(Icons.Default.CompareArrows, null, Modifier.size(18.dp))
                 Text("A/B")
             }
@@ -308,16 +335,38 @@ internal fun GeminiVoiceCenterScreen(
         if (compareOpen) {
             Surface(shape = UaiShapes.card, color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .6f)) {
                 Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Comparar timbres", fontWeight = FontWeight.SemiBold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (blindComparison && !blindRevealed) "Escuta sem nomes"
+                            else "Comparar timbres", fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f))
+                        TextButton(onClick = { startBlindComparison() },
+                            enabled = !working && offlineCandidates.size >= 2) {
+                            Text(if (blindComparison) "Outro par" else "Teste cego", fontSize = 12.sp)
+                        }
+                    }
+                    if (offlineCandidates.size < 2) Text(
+                        "Teste cego: requer duas prévias salvas com esta frase, modelo e estilo.",
+                        fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("Use a mesma frase e modelo. Se a prévia não existir, o app pedirá confirmação.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        CompareVoiceButton("A", chosenA?.let(::title), !working, Modifier.weight(1f)) {
-                            chosenA?.let(::listen) ?: run { status = "Escolha a voz A nos detalhes da lista." }
+                        CompareVoiceButton(if (blindComparison && !blindRevealed) "1" else "A",
+                            if (blindComparison && !blindRevealed) "Voz oculta" else chosenA?.let(::title),
+                            !working, Modifier.weight(1f)) {
+                            chosenA?.let { listen(it, if (blindComparison && !blindRevealed) "prévia 1" else null) }
+                                ?: run { status = "Escolha a voz A nos cartões abaixo." }
                         }
-                        CompareVoiceButton("B", chosenB?.let(::title), !working, Modifier.weight(1f)) {
-                            chosenB?.let(::listen) ?: run { status = "Escolha a voz B nos cartões abaixo." }
+                        CompareVoiceButton(if (blindComparison && !blindRevealed) "2" else "B",
+                            if (blindComparison && !blindRevealed) "Voz oculta" else chosenB?.let(::title),
+                            !working, Modifier.weight(1f)) {
+                            chosenB?.let { listen(it, if (blindComparison && !blindRevealed) "prévia 2" else null) }
+                                ?: run { status = "Escolha a voz B nos cartões abaixo." }
                         }
+                    }
+                    if (blindComparison && !blindRevealed) {
+                        Text("Sem nomes para reduzir a influência da escolha. Sua avaliação será revelada ao salvar.",
+                            fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        TextButton(onClick = { blindRevealed = true }) { Text("Revelar nomes sem avaliar") }
                     }
                     if (comparisonKey != null) {
                         Text("Sua avaliação: " + when (currentReview) {
@@ -404,13 +453,21 @@ internal fun GeminiVoiceCenterScreen(
                                 Icon(if (saved) Icons.Default.PlayCircle else Icons.Default.AutoAwesome,
                                     if (saved) "Ouvir prévia local" else "Gerar prévia (pode consumir cota)")
                             }
-                            if (compareOpen) {
+                            if (compareOpen && !(blindComparison && !blindRevealed)) {
                                 Column {
-                                    TextButton(onClick = { compareA = voice.id },
+                                    TextButton(onClick = {
+                                        blindComparison = false
+                                        compareA = voice.id
+                                        if (compareB == voice.id) compareB = null
+                                    },
                                         modifier = Modifier.heightIn(min = 40.dp), contentPadding = PaddingValues(0.dp)) {
                                         Text(if (compareA == voice.id) "A ✓" else "A", fontSize = 12.sp)
                                     }
-                                    TextButton(onClick = { compareB = voice.id },
+                                    TextButton(onClick = {
+                                        blindComparison = false
+                                        compareB = voice.id
+                                        if (compareA == voice.id) compareA = null
+                                    },
                                         modifier = Modifier.heightIn(min = 40.dp), contentPadding = PaddingValues(0.dp)) {
                                         Text(if (compareB == voice.id) "B ✓" else "B", fontSize = 12.sp)
                                     }
@@ -610,9 +667,17 @@ internal fun GeminiVoiceCenterScreen(
                         Icon(Icons.Default.Edit, null); Text("Apelido local")
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { compareA = voice.id; compareOpen = true; detailsVoice = null },
+                        OutlinedButton(onClick = {
+                            blindComparison = false; compareA = voice.id
+                            if (compareB == voice.id) compareB = null
+                            compareOpen = true; detailsVoice = null
+                        },
                             modifier = Modifier.weight(1f), shape = UaiShapes.button) { Text("Escolher A") }
-                        OutlinedButton(onClick = { compareB = voice.id; compareOpen = true; detailsVoice = null },
+                        OutlinedButton(onClick = {
+                            blindComparison = false; compareB = voice.id
+                            if (compareA == voice.id) compareA = null
+                            compareOpen = true; detailsVoice = null
+                        },
                             modifier = Modifier.weight(1f), shape = UaiShapes.button) { Text("Escolher B") }
                     }
                 }

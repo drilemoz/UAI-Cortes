@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.234 — Escuta sem nomes e avaliação coerente de timbres Gemini
+
+- Nova opção **Teste cego** no comparador da Central de Vozes: escolher duas amostras já salvas, ouvir como 1/2 e revelar os nomes após avaliar Parecidas/Diferentes ou pedir para revelar.
+- Funciona offline com a mesma frase, modelo e estilo; não chama a API Gemini nem cria despesas sozinho.
+- A seleção do próximo par favorece vozes ainda não comparadas; o filtro de similares respeita explicitamente as marcações de vozes Diferentes.
+- Mantidos o fluxo manual de prévias, todas as vozes e apelidos locais, favoritos, projeto/editor, Central de APIs e consumo Amazon Polly. Build Android e teste físico pendentes.
+
 # Uai Cortes · versão 0.1.233 — Comparar timbres e descobrir outras vozes Google
 
 - No comparador A/B, escolher vozes diretamente nos cartões; ouvir com a mesma frase/modelo e registrar se parecem iguais ou diferentes (opinião privada, sem análise biométrica).

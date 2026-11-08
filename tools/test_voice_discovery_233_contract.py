@@ -11,7 +11,8 @@ catalog=(b/'GeminiVoiceCatalog.kt').read_text()
 for expected in [
     'manualReviews = storedReviews', 'recordReview(GeminiVoiceDiscovery.SIMILAR)',
     'recordReview(GeminiVoiceDiscovery.DIFFERENT)', 'Ocultar vozes que marquei como parecidas',
-    'GeminiVoiceDiscovery.hiddenFromReview(', 'CompareVoiceButton("A"', 'CompareVoiceButton("B"',
+    'GeminiVoiceDiscovery.hiddenFromReview(', 'CompareVoiceButton(if (blindComparison && !blindRevealed) "1" else "A"',
+    'CompareVoiceButton(if (blindComparison && !blindRevealed) "2" else "B"',
     'compareA = voice.id', 'compareB = voice.id',
     'Consultar todos os idiomas', 'scope.launch { fetchAllLanguages() }',
     'client.voicesAllLanguages(key)', 'GeminiVoiceDiscovery.merge(voices, fetched.voices)',
