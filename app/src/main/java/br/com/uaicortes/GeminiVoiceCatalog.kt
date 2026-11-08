@@ -45,6 +45,14 @@ internal object GeminiVoiceCatalog {
         return GeminiVoiceCatalogResult(general, report)
     }
 
+    /** Consulta geral voluntária, separada do filtro pt-BR; sem synthesize nem alterar o catálogo por si só. */
+    suspend fun fetchAllLanguages(fetch: suspend (String) -> JSONObject): GeminiVoiceCatalogResult {
+        val all = try { fetchPages(false, fetch) }
+        catch (e: CancellationException) { throw e }
+        catch (e: Exception) { throw GeminiVoiceCatalogFailure("Catálogo de idiomas", e, emptyList()) }
+        return GeminiVoiceCatalogResult(all, listOf("Consulta geral: ${all.size} voz(es)."))
+    }
+
     private suspend fun fetchPages(ptBrOnly: Boolean, fetch: suspend (String) -> JSONObject): List<GeminiVoice> {
         val voices = mutableListOf<GeminiVoice>()
         val visited = mutableSetOf<String>()

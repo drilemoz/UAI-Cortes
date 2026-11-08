@@ -1,3 +1,9 @@
+# Uai Cortes · v0.1.233 — Comparação A/B e descoberta de vozes Gemini
+
+Na Central de Vozes, selecione A/B diretamente em cada cartão, reproduza o mesmo texto e registre localmente sua impressão de vozes parecidas ou diferentes. Em Filtros, a opção **Ocultar vozes que marquei como parecidas** mantém ao menos uma voz de cada grupo, priorizando favoritas. Isso não é prova de identidade acústica nem aplica classificação automática.
+
+Em Configurações da Central, **Consultar todos os idiomas** busca o catálogo geral Gemini mediante toque, combina novas entradas com o catálogo atual até o limite local de 500 e preserva favoritos, apelidos e prévias; vozes catalogadas em outro idioma podem pronunciar português incorretamente. Só a geração de nova prévia envia texto e requer confirmação. A integração Amazon Polly, seu controle de caracteres e o editor permanecem independentes.
+
 # Uai Cortes · v0.1.232 — Amazon Polly e controle de consumo
 
 Em **Central de APIs e Contas > Amazon Polly**, cadastrar credenciais próprias AWS IAM com permissões `polly:DescribeVoices` e `polly:SynthesizeSpeech`, região da chave e token temporário opcional. O segredo é criptografado no Android Keystore, sem chaves no repositório, e pode ser importado/exportado somente por solicitação, com alerta de risco. Consultar vozes brasileiras não gera áudio; síntese MP3 exige confirmação e não tem retry automático. Limites locais diários e mensais opcionais, histórico CSV somente dos caracteres informados pela AWS e preços públicos estimados, não faturamento real nem saldo AWS. Gemini, Redes e editor permanecem independentes.

@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.232"
-    const val VERSION_CODE = 233
+    const val VERSION_NAME = "0.1.233"
+    const val VERSION_CODE = 234
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.233", listOf(
+            ReleaseFeature("gemini-manual-similarity-233", "Timbres comparados sem vozes repetidas",
+                "A/B direto nos cartões, avaliação local Parecidas ou Diferentes e filtro opcional para ocultar opções que você marcou semelhantes. Sem identificação biométrica nem chamadas extras de áudio.", "music"),
+            ReleaseFeature("gemini-multilingual-discovery-233", "Descobrir vozes de outros idiomas",
+                "Consulta manual ao catálogo geral do Gemini, preservando as vozes já armazenadas, favoritas, apelidos e prévias. Idioma da voz não garante pronúncia correta em português; uma prévia só é gerada após confirmação.", "check")
+        )),
         ReleaseSummary("0.1.232", listOf(
             ReleaseFeature("polly-api-232", "Amazon Polly em Serviços e APIs",
                 "Credenciais AWS protegidas por Android Keystore, importação/exportação com confirmação, consulta manual de vozes pt-BR, teste de síntese MP3 e consumo separado da Gemini.", "music"),

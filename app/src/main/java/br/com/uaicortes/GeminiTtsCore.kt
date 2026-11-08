@@ -189,6 +189,10 @@ internal class GeminiTtsClient(context: Context? = null) {
     suspend fun voicesWithDiagnosis(key: String): GeminiVoiceCatalogResult =
         GeminiVoiceCatalog.fetchCatalog { path -> request(path, key) }
 
+    /** Só chamar após toque explícito: retorna idiomas variados, sem prometer pt-BR em todas as vozes. */
+    suspend fun voicesAllLanguages(key: String): GeminiVoiceCatalogResult =
+        GeminiVoiceCatalog.fetchAllLanguages { path -> request(path, key) }
+
     suspend fun voices(key: String): List<GeminiVoice> = voicesWithDiagnosis(key).voices
     suspend fun synthesize(key: String, model: String, voice: String, style: String, text: String): GeminiWave {
         GeminiModels.requireSupported(model)

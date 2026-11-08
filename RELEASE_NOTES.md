@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.233 — Comparar timbres e descobrir outras vozes Google
+
+- No comparador A/B, escolher vozes diretamente nos cartões; ouvir com a mesma frase/modelo e registrar se parecem iguais ou diferentes (opinião privada, sem análise biométrica).
+- Ocultar opcionalmente as vozes marcadas como similares, preservando uma voz de cada conjunto, com prioridade para favoritas.
+- Consulta manual de vozes em outros idiomas pelo catálogo oficial Gemini, mantendo a lista anterior e até 500 entradas locais. Voz catalogada em inglês não é garantia de boa pronúncia do português.
+- Sem síntese automática, alteração de chaves, consumo Polly, projetos ou exportação de vídeos. Compilação Android e teste real com Gemini pendentes.
+
 # Uai Cortes · versão 0.1.232 — Amazon Polly e custos estimados
 
 - Nova configuração Amazon Polly em Gerenciar APIs, com chaves AWS locais protegidas, ver/colar/copiar, importação e exportação sob confirmação.

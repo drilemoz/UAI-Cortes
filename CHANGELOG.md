@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.233 (2026-11-08)
+
+- Central Gemini: botões A/B diretos nos cartões e avaliação local subjetiva **Parecidas/Diferentes** por par, com opção de ocultar similares manuais mantendo favoritas quando possível. Não há reconhecimento de voz nem deduplicação automática de áudio.
+- Nova consulta voluntária do catálogo geral de vozes (`GET /v1beta/voices` sem filtro `pt-BR`) para explorar outros idiomas. Combina entradas sem eliminar as já salvas, até o limite local de 500; favoritos, apelidos, prévias e IDs originais preservados.
+- Filtro por `pt-BR` catalogado e avisos de idioma não garantido; geração de WAV continua exigindo confirmação e permite repetir a mesma frase/modelo no comparador.
+- Versão 0.1.233/versionCode 234, cinco APKs e documentação sincronizados. Testes estáticos/JVM não substituem build Android nem validação de pronúncia real.
+
 # Uai Cortes 0.1.232 (2026-11-08)
 
 - Amazon Polly em Central de APIs e Contas: credenciais AWS protegidas, região e token de sessão opcional, importação/exportação confirmadas, copiar/colar/mostrar, teste DescribeVoices pt-BR, teste SynthesizeSpeech MP3, reprodução e exportação de áudio.

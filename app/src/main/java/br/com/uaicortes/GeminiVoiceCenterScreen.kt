@@ -45,6 +45,7 @@ internal fun GeminiVoiceCenterScreen(
     val cache = remember(ctx) { GeminiVoicePreviewCache(ctx) }
     val favorites = remember(ctx) { GeminiVoiceFavorites(ctx) }
     val aliasStore = remember(ctx) { GeminiVoiceAliases(ctx) }
+    val reviewStore = remember(ctx) { GeminiVoiceReviewStore(ctx) }
     val samplePrefs = remember(ctx) { GeminiVoiceSamplePrefs(ctx) }
     val credentials = remember(ctx) { GeminiCredentialStore(ctx) }
     val pacing = remember(ctx) { GeminiLocalPacing(ctx) }
@@ -63,6 +64,9 @@ internal fun GeminiVoiceCenterScreen(
     var favoriteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var previewIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var aliases by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var manualReviews by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var hideReviewedSimilar by remember { mutableStateOf(false) }
+    var onlyPortuguese by remember { mutableStateOf(false) }
     var sampleMode by remember { mutableStateOf(GeminiVoiceSampleText.STANDARD) }
     var customText by remember { mutableStateOf("") }
     var sampleDraftMode by remember { mutableStateOf(GeminiVoiceSampleText.STANDARD) }
@@ -106,6 +110,38 @@ internal fun GeminiVoiceCenterScreen(
         previewIds = state.first
         occupiedBytes = state.second
     }
+    suspend fun fetchAllLanguages() {
+        if (working) return
+        working = true
+        try {
+            val key = withContext(Dispatchers.IO) { credentials.read() }
+                ?: throw IllegalStateException("Configure uma chave Gemini em Serviços e APIs.")
+            val fetched = client.voicesAllLanguages(key)
+            if (fetched.voices.isEmpty()) {
+                status = "O Google não retornou outras vozes. Seu catálogo salvo foi preservado."
+            } else {
+                val oldIds = voices.map { it.id }.toSet()
+                val saved = withContext(Dispatchers.IO) {
+                    val merged = GeminiVoiceDiscovery.merge(voices, fetched.voices)
+                    val snapshot = library.save(merged)
+                    favorites.saveNames(snapshot.voices.associate { it.id to GeminiVoicePresentation.label(it) })
+                    snapshot
+                }
+                voices = saved.voices
+                updatedAt = saved.updatedAt
+                onlyPortuguese = false
+                updatePreviewIndicators()
+                status = "${saved.voices.count { it.id !in oldIds }} vozes adicionais salvas; " +
+                    "${saved.voices.size} no catálogo local (limite ${GeminiVoiceLibrary.MAX_VOICES}). " +
+                    "Idioma informado não garante pronúncia correta em português."
+            }
+        } catch (e: CancellationException) { throw e }
+        catch (e: Exception) {
+            status = "Consulta de outros idiomas falhou: ${GeminiVoiceCatalog.safeMessage(e)} " +
+                "Nenhuma voz salva foi apagada."
+        } finally { working = false }
+    }
+
     suspend fun fetchFromGoogle() {
         if (working) return
         working = true
@@ -117,7 +153,7 @@ internal fun GeminiVoiceCenterScreen(
                 status = "O Google retornou uma lista vazia. Seu catálogo anterior foi preservado."
             } else {
                 val saved = withContext(Dispatchers.IO) {
-                    val snapshot = library.save(fetched.voices)
+                    val snapshot = library.save(GeminiVoiceDiscovery.merge(voices, fetched.voices))
                     favorites.saveNames(snapshot.voices.associate {
                         it.id to GeminiVoicePresentation.label(it)
                     })
@@ -143,6 +179,7 @@ internal fun GeminiVoiceCenterScreen(
         val personal = withContext(Dispatchers.IO) {
             Triple(aliasStore.load(), samplePrefs.mode(), samplePrefs.custom())
         }
+        val storedReviews = withContext(Dispatchers.IO) { reviewStore.load() }
         voices = snapshot.first.voices
         updatedAt = snapshot.first.updatedAt
         favoriteIds = snapshot.second
@@ -150,6 +187,7 @@ internal fun GeminiVoiceCenterScreen(
         storageLimit = snapshot.third.second
         occupiedBytes = snapshot.third.third
         aliases = personal.first
+        manualReviews = storedReviews
         sampleMode = personal.second
         customText = personal.third
         sampleDraftMode = personal.second
@@ -164,27 +202,47 @@ internal fun GeminiVoiceCenterScreen(
     LaunchedEffect(sampleModel, styleInstruction, voices, sampleMode, customText) {
         if (loaded) updatePreviewIndicators()
     }
-    LaunchedEffect(query, gender, pitch, accent, contextFilter, persona, language, onlyFavorites, onlySaved) {
+    LaunchedEffect(query, gender, pitch, accent, contextFilter, persona, language, onlyFavorites, onlySaved, onlyPortuguese, hideReviewedSimilar) {
         visibleCount = 30
     }
 
     val matching = (GeminiVoiceSearch.byGender(GeminiVoiceSearch.filter(voices, query), gender) +
         GeminiVoiceSearch.byGender(GeminiVoiceSearch.filterWithAliases(voices, query, aliases), gender))
         .distinctBy { it.id }
+    val reviewedHidden = if (hideReviewedSimilar) GeminiVoiceDiscovery.hiddenFromReview(
+        voices, manualReviews, favoriteIds, previewIds) else emptySet()
     val displayed = GeminiVoiceSearch.byPitch(matching, pitch)
         .let { GeminiVoiceSearch.byMetadata(it, "accent", accent) }
         .let { GeminiVoiceSearch.byMetadata(it, "context", contextFilter) }
         .let { GeminiVoiceSearch.byMetadata(it, "persona", persona) }
         .let { GeminiVoiceSearch.byMetadata(it, "language", language) }
-        .filter { (!onlyFavorites || it.id in favoriteIds) && (!onlySaved || it.id in previewIds) }
+        .filter { (!onlyFavorites || it.id in favoriteIds) && (!onlySaved || it.id in previewIds) &&
+            (!onlyPortuguese || GeminiVoiceDiscovery.isPortuguese(it)) && it.id !in reviewedHidden }
         .sortedWith(compareByDescending<GeminiVoice> { it.id in favoriteIds }
             .thenBy { GeminiVoiceAliases.title(it, aliases) })
     val visible = displayed.take(visibleCount)
     val chosenA = voices.firstOrNull { it.id == compareA }
     val chosenB = voices.firstOrNull { it.id == compareB }
+    val comparisonKey = compareA?.let { a -> compareB?.let { b -> GeminiVoiceDiscovery.pairKey(a, b) } }
+    val currentReview = comparisonKey?.let { manualReviews[it] }
     val advancedCount = listOf(accent, contextFilter, persona, language).count { it.isNotBlank() } +
         (if (gender != "Todas") 1 else 0) + (if (pitch != "Todos") 1 else 0) +
-        (if (onlySaved) 1 else 0)
+        (if (onlySaved) 1 else 0) + (if (onlyPortuguese) 1 else 0) +
+        (if (hideReviewedSimilar) 1 else 0)
+
+    fun recordReview(value: String?) {
+        val a = compareA ?: return
+        val b = compareB ?: return
+        scope.launch {
+            val saved = withContext(Dispatchers.IO) { reviewStore.save(a, b, value) }
+            if (saved == null) status = "Não foi possível salvar a comparação local."
+            else {
+                manualReviews = saved
+                status = if (value == null) "Comparação removida." else
+                    "Avaliação salva apenas neste aparelho; não é diagnóstico acústico."
+            }
+        }
+    }
 
     fun listen(voice: GeminiVoice) {
         scope.launch {
@@ -258,15 +316,39 @@ internal fun GeminiVoiceCenterScreen(
                             chosenA?.let(::listen) ?: run { status = "Escolha a voz A nos detalhes da lista." }
                         }
                         CompareVoiceButton("B", chosenB?.let(::title), !working, Modifier.weight(1f)) {
-                            chosenB?.let(::listen) ?: run { status = "Escolha a voz B nos detalhes da lista." }
+                            chosenB?.let(::listen) ?: run { status = "Escolha a voz B nos cartões abaixo." }
                         }
                     }
+                    if (comparisonKey != null) {
+                        Text("Sua avaliação: " + when (currentReview) {
+                            GeminiVoiceDiscovery.SIMILAR -> "Parecidas"
+                            GeminiVoiceDiscovery.DIFFERENT -> "Diferentes"
+                            else -> "Ainda não avaliadas"
+                        }, fontSize = 11.sp)
+                        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            FilterChip(selected = currentReview == GeminiVoiceDiscovery.SIMILAR,
+                                onClick = { recordReview(GeminiVoiceDiscovery.SIMILAR) },
+                                label = { Text("Parecidas") })
+                            FilterChip(selected = currentReview == GeminiVoiceDiscovery.DIFFERENT,
+                                onClick = { recordReview(GeminiVoiceDiscovery.DIFFERENT) },
+                                label = { Text("Diferentes") })
+                            TextButton(onClick = { recordReview(null) }, enabled = currentReview != null) {
+                                Text("Limpar")
+                            }
+                        }
+                        Text("Avaliação subjetiva; não identifica pessoas ou vozes iguais.",
+                            fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else Text("Toque em A ou B nos cartões para escolher. Não gera áudio automaticamente.",
+                        fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("${displayed.size} de ${voices.size} vozes", fontSize = 12.sp,
                 modifier = Modifier.weight(1f))
+            if (hideReviewedSimilar) Text("Sem similares · ", fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.primary)
             if (onlySaved) Text("Com prévia · ", fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.primary)
             Text("${occupiedBytes / (1024 * 1024)} MB em prévias", fontSize = 11.sp,
@@ -322,6 +404,18 @@ internal fun GeminiVoiceCenterScreen(
                                 Icon(if (saved) Icons.Default.PlayCircle else Icons.Default.AutoAwesome,
                                     if (saved) "Ouvir prévia local" else "Gerar prévia (pode consumir cota)")
                             }
+                            if (compareOpen) {
+                                Column {
+                                    TextButton(onClick = { compareA = voice.id },
+                                        modifier = Modifier.heightIn(min = 40.dp), contentPadding = PaddingValues(0.dp)) {
+                                        Text(if (compareA == voice.id) "A ✓" else "A", fontSize = 12.sp)
+                                    }
+                                    TextButton(onClick = { compareB = voice.id },
+                                        modifier = Modifier.heightIn(min = 40.dp), contentPadding = PaddingValues(0.dp)) {
+                                        Text(if (compareB == voice.id) "B ✓" else "B", fontSize = 12.sp)
+                                    }
+                                }
+                            }
                             IconButton(onClick = { detailsVoice = voice }, modifier = Modifier.size(40.dp)) {
                                 Icon(Icons.Default.MoreVert, "Detalhes, apelido e comparação")
                             }
@@ -369,6 +463,17 @@ internal fun GeminiVoiceCenterScreen(
                 MetadataFilter("Finalidade", contextFilter, GeminiVoiceSearch.values(voices, "context")) { contextFilter = it }
                 MetadataFilter("Personalidade", persona, GeminiVoiceSearch.values(voices, "persona")) { persona = it }
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = onlyPortuguese, onCheckedChange = { onlyPortuguese = it })
+                    Text("Somente vozes catalogadas como português BR")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = hideReviewedSimilar, onCheckedChange = { hideReviewedSimilar = it })
+                    Text("Ocultar vozes que marquei como parecidas")
+                }
+                Text("${manualReviews.values.count { it == GeminiVoiceDiscovery.SIMILAR }} pares marcados parecidos. " +
+                    "A classificação é sua e permanece apenas neste aparelho.", fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = onlySaved, onCheckedChange = { onlySaved = it })
                     Text("Somente prévias salvas neste perfil")
                 }
@@ -379,7 +484,7 @@ internal fun GeminiVoiceCenterScreen(
         confirmButton = { TextButton(onClick = { filtersOpen = false }) { Text("Ver resultados") } },
         dismissButton = { TextButton(onClick = {
             gender = "Todas"; pitch = "Todos"; accent = ""; persona = ""; contextFilter = ""
-            language = ""; onlySaved = false
+            language = ""; onlySaved = false; onlyPortuguese = false; hideReviewedSimilar = false
         }) { Text("Limpar filtros") } })
 
     if (settingsOpen) AlertDialog(onDismissRequest = { settingsOpen = false },
@@ -433,6 +538,20 @@ internal fun GeminiVoiceCenterScreen(
                         }
                     }
                 }
+                HorizontalDivider()
+                Text("Descobrir vozes de outros idiomas", fontWeight = FontWeight.Medium)
+                Text("Consulta manual do catálogo geral do Google. Mantém vozes já salvas, " +
+                    "com limite de ${GeminiVoiceLibrary.MAX_VOICES} registros. Uma voz inglesa pode " +
+                    "não pronunciar português corretamente. Não gera áudio.", fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedButton(onClick = {
+                    settingsOpen = false
+                    scope.launch { fetchAllLanguages() }
+                }, enabled = !working, modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
+                    Icon(Icons.Default.Language, null)
+                    Text("Consultar todos os idiomas")
+                }
+                HorizontalDivider()
                 Text("Frase para comparar vozes", fontWeight = FontWeight.Medium)
                 Row(Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -479,6 +598,10 @@ internal fun GeminiVoiceCenterScreen(
                     Text("Nome original: ${GeminiVoicePresentation.label(voice)}", fontSize = 12.sp)
                     Text(GeminiVoicePresentation.details(voice).ifBlank { "Sem metadados adicionais." }, fontSize = 12.sp)
                     if (voice.description.isNotBlank()) Text(voice.description, fontSize = 12.sp)
+                    if (!GeminiVoiceDiscovery.isPortuguese(voice)) Text(
+                        "Essa voz não está catalogada como pt-BR. O suporte e a pronúncia em português " +
+                        "precisam ser verificados por uma prévia real.", fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("ID: ${voice.id}", fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     OutlinedButton(onClick = {
@@ -522,7 +645,9 @@ internal fun GeminiVoiceCenterScreen(
             title = { Text("Gerar prévia de ${title(voice)}?") },
             text = { Text("Será gerada uma amostra com a frase escolhida. Isso envia texto ao Google " +
                 "e pode consumir cota ou gerar cobrança. Depois a reprodução será local até você apagar o arquivo. " +
-                "Não será inserida no vídeo.") },
+                "Não será inserida no vídeo." +
+                (if (GeminiVoiceDiscovery.isPortuguese(voice)) "" else
+                    " Esta voz não está catalogada como português BR; a pronúncia pode variar.")) },
             confirmButton = { TextButton(onClick = {
                 pendingSample = null
                 scope.launch {

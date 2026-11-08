@@ -25,8 +25,8 @@ assert 'PollyApi.synthesize' in ui and 'usage.allows(sample)' in ui
 assert 'CreateDocument("application/json")' in ui and 'OpenDocument()' in ui
 assert 'polly_usage_local' in ledger and 'GeminiUsage' not in ledger
 assert 'secretAccessKey' not in ledger and 'Text", text' not in ledger
-assert 'versionCode = 233' in (ROOT/'app/build.gradle.kts').read_text()
-assert '0.1.232' in (ROOT/'VERSION').read_text()
+assert 'polly-api-232' in (ROOT/'app/src/main/java/br/com/uaicortes/AppReleaseNotes.kt').read_text()
+assert '0.1.232' in (ROOT/'CHANGELOG.md').read_text()
 assert 'Polly232Test' in (ROOT/'app/src/test/java/br/com/uaicortes/Polly232Test.kt').read_text()
 assert not re.search(r'(?m)^\s*val\s+\w+\s*=\s*"AKIA[A-Z0-9]{16}"', creds)
 print('OK: Polly 0.1.232, rota, SigV4, confidencialidade, consumo e testes presentes')

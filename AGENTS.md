@@ -1,3 +1,10 @@
+# v0.1.233 — Descoberta e comparação criteriosa de vozes Gemini
+
+- Prosseguir a Central Gemini da 0.1.232 com seleção A/B diretamente nos cartões, avaliação **subjetiva** de vozes parecidas/diferentes persistida localmente, filtro opcional que mantém ao menos uma voz por conjunto marcado similar; não usar fingerprint/biometria nem sugerir que o app comprovou igualdade acústica.
+- Consultar vozes de outros idiomas somente após ação explícita, preservar catálogo, favoritos, apelidos e prévias existentes e limitar a 500 entradas do formato local schema 1; en-US não comprova fala adequada em português.
+- Nada gera áudio sem confirmação, não repetir síntese em caso de incerteza; preservar a integração Polly, credenciais e custo por caracteres. Não alterar schema de projetos 4, OAuth, cinco APKs ou assinatura.
+- Sincronizar versionName 0.1.233/versionCode 234, CI, metadados e Novidades; rodar regressões, sintaxe Kotlin e build Android quando possível, sem alegar compilação completa a partir de validação estática.
+
 # v0.1.232 — Amazon Polly em Serviços e APIs
 
 - Integrar Amazon Polly em tela própria, separado de Gemini e sem chave embutida no APK. AES-GCM/Keystore, credenciais AWS importáveis/exportáveis somente mediante confirmação explícita, sem registrar segredos no log ou projeto. Não criar credenciais reais nos arquivos.
