@@ -1,3 +1,9 @@
+# Uai Cortes 0.1.230 (2026-11-07)
+
+- Correção CI191: import do `BackHandler` no módulo independente Texto para Voz agora usa `androidx.activity.compose.BackHandler` (o pacote exigido pela versão do AndroidX utilizada), resolvendo a referência indefinida encontrada em Debug e Release.
+- Novo contrato de regressão impede importações incorretas do `BackHandler` em telas Compose. Sem alterações de API Gemini, contagem de tokens, reprodução WAV, autenticação, projetos ou outros módulos.
+- VersionName 0.1.230, versionCode 231, cinco APKs do workflow e documentação sincronizados. Compilação Android integral e teste real de voz pendentes de execução no CI e aparelho.
+
 # Uai Cortes 0.1.229 (2026-11-07)
 
 - Nova ferramenta **Texto para Voz** na Home, independente do editor e de projetos. Reutiliza seleção da Central de Vozes, modelos Gemini e presets de interpretação, chave e controle de consumo já existentes.

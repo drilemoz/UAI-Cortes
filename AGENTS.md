@@ -1,3 +1,8 @@
+# v0.1.230 — Correção CI191 da tela Texto para Voz
+
+- O workflow 191 falhou em `:app:compileDebugKotlin` e `:app:compileReleaseKotlin` porque `StandaloneTextToVoiceScreen.kt` importava `androidx.activity.BackHandler`, em vez de `androidx.activity.compose.BackHandler`. Corrigir somente a origem do import, preservar os dois handlers, a navegação e a ferramenta Gemini.
+- Adicionar regressão estática do namespace Compose; manter testes de texto/vozes, schema 4, assinatura e os cinco APKs Release. Sincronizar 0.1.230/versionCode 231, metadados, Novidades e documentação. Não alegar build Android aprovado sem execução real no GitHub Actions.
+
 # v0.1.229 — Texto para Voz Gemini independente
 
 - Adicionar a ferramenta Home > Texto para Voz fora do editor, sem usar VideoProject, schemaVersion, faixas ou timeline. Reutilizar Central de Vozes, GeminiTtsClient, GeminiNarrationStyling, chave Gemini e GeminiUsageLedger já existentes.

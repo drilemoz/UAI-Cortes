@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.229"
-    const val VERSION_CODE = 230
+    const val VERSION_NAME = "0.1.230"
+    const val VERSION_CODE = 231
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.230", listOf(
+            ReleaseFeature("ci191-tts-backhandler-230", "Correção de compilação do Texto para Voz",
+                "Corrige a importação do BackHandler de Compose na ferramenta independente Texto para Voz. Mantém Gemini, vozes, contadores, WAV, biblioteca e editor inalterados.", "check")
+        )),
         ReleaseSummary("0.1.229", listOf(
             ReleaseFeature("standalone-text-tts-229", "Texto para Voz independente",
                 "Nova ferramenta na Início para digitar texto, escolher voz na Central Gemini, selecionar estilo e modelo, gerar WAV com confirmação, ouvir e exportar. Não depende do editor de vídeos.", "music"),

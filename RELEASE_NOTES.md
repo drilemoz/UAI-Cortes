@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.230 — Correção CI191 da tela Texto para Voz (versionCode 231)
+
+- Corrigida a importação AndroidX do `BackHandler` que impedia compilar a tela Texto para Voz nas variantes Debug e Release.
+- Comportamento da tela, geração Gemini, vozes, biblioteca WAV e todos os módulos existentes preservados.
+- Testes estáticos e regressões locais não substituem o build Android. Executar novamente GitHub Actions e testar um áudio no aparelho.
+
 # Uai Cortes · versão 0.1.229 — Texto para Voz independente (versionCode 230)
 
 - **Início → Texto para Voz:** inserir texto e selecionar na Central Gemini uma das vozes salvas ou consultadas manualmente; definir modelo e estilo sem abrir um projeto.

@@ -1,3 +1,7 @@
+# Uai Cortes · v0.1.230 — Correção de compilação do Texto para Voz
+
+A versão 0.1.230 (versionCode 231) corrige o import `BackHandler` do novo módulo independente Texto para Voz, que ocasionava falha Kotlin no workflow 191. Não altera as chamadas Gemini, a integração do editor, a assinatura Android, a navegação ou o armazenamento de WAV. A compilação Android e o teste real no celular devem ser validados no GitHub Actions e no aparelho.
+
 # Uai Cortes · v0.1.229 — Texto para Voz Gemini independente
 
 A Home agora tem **Texto para Voz**: uma tela separada do editor para digitar/colar texto, selecionar voz na Central de Vozes Gemini, escolher modelo e interpretação, confirmar geração, ouvir, guardar e exportar WAV via Storage Access Framework. Os áudios persistem em armazenamento interno até serem excluídos; cópias exportadas ficam no destino escolhido.
