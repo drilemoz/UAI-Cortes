@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.237 — Prévia do editor termina e pausa em segundo plano
+
+- A reprodução na edição para ao chegar ao fim do último clipe, sem voltar automaticamente para o começo.
+- Ao minimizar, trocar de aplicativo ou bloquear a tela, o editor pausa a reprodução e preserva a posição; voltar ao Uai Cortes não reinicia sozinho.
+- Se a reprodução já terminou, o botão Play começa novamente pelo início do projeto.
+- Compatibilidade mantida com projetos, Gemini, Polly, YouTube, cinco APKs e assinatura. Build Android e teste real ainda pendentes.
+
 # Uai Cortes · versão 0.1.236 — Correção do teste YouTube CI196
 
 - Corrigida a regressão antiga de "Vídeos do YouTube" que interrompia o workflow 196 antes da compilação ao exigir os controles da tela anterior.

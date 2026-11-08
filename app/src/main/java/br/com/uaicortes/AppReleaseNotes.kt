@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.236"
-    const val VERSION_CODE = 237
+    const val VERSION_NAME = "0.1.237"
+    const val VERSION_CODE = 238
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.237", listOf(
+            ReleaseFeature("editor-preview-stop-237", "Prévia termina com o projeto",
+                "A reprodução do editor para ao concluir o último clipe em vez de reiniciar continuamente. Tocar em Reproduzir após o fim volta ao início do projeto.", "film"),
+            ReleaseFeature("editor-preview-background-237", "Pausa ao minimizar o Uai Cortes",
+                "A prévia é pausada quando o aplicativo perde o primeiro plano, não continua tocando em outro aplicativo e só volta com ação manual.", "check")
+        )),
         ReleaseSummary("0.1.236", listOf(
             ReleaseFeature("ci196-social-contract-236", "Correção do workflow 196",
                 "Atualiza o teste de regressão do YouTube para a biblioteca que reúne canais e mostra visualizações. Preserva a grade de contas e não altera o envio de vídeos.", "check")

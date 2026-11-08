@@ -1,3 +1,10 @@
+# v0.1.237 — Reprodução da prévia do editor sem loop e sem áudio em segundo plano
+
+- Na tela EditorScreen, usar `Player.REPEAT_MODE_OFF` para encerrar a reprodução ao fim do último clipe em vez de repetir o projeto continuamente.
+- Observar ON_PAUSE/ON_STOP do ciclo de vida Android e pausar imediatamente o ExoPlayer do editor; não retomar automaticamente ao voltar do segundo plano. Manter posição do cursor e manter a liberação no onDispose.
+- Após STATE_ENDED, tocar em Play retorna ao início do projeto; retorno de navegação interna com autoPlayOnReturn só reproduz se a Activity estiver RESUMED.
+- Preservar sequência de clipes, volume, velocidade, faixas, projetos schema 4, YouTube/OAuth, Gemini e Polly. Versão 0.1.237/versionCode 238 e testes/CI sincronizados. Compilação Android completa e teste físico pendentes.
+
 # v0.1.236 — Correção de regressão CI196
 
 - O workflow 196 falhou antes do Gradle porque `test_social_youtube_history_228_contract.py` exigia rótulos e estado de canal único descartados na v0.1.235. Atualizar o teste para a arquitetura agregada, preservando checagens de OAuth, paginação individual, limite de 300 vídeos por canal e separação do histórico local.

@@ -74,7 +74,7 @@ assert 'TimeDigitsField(' in trim_screen and 'NumericTimeMask' in ui
 assert 'TrimRemoveRange.apply(p, clip.id, start, end)' in trim_screen
 assert 'TrimSaveLogic.applyPending(p, clip.id, start, end)' in trim_screen
 assert 'undo = remember(p.id)' in trim_screen and 'redo = remember(p.id)' in trim_screen
-assert 'repeatMode = Player.REPEAT_MODE_OFF' in trim_screen and 'repeatMode = Player.REPEAT_MODE_ALL' in ui
+assert 'repeatMode = Player.REPEAT_MODE_OFF' in trim_screen and 'repeatMode = Player.REPEAT_MODE_OFF' in (root/'app/src/main/java/br/com/uaicortes/EditorScreen.kt').read_text()
 assert 'setPlaybackParameters(PlaybackParameters(speed))' in trim_screen
 assert 'onDone = { saved -> if (write(saved)) screen = "editor" }' in ui
 assert 'schemaVersion", 4' in model

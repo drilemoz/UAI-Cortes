@@ -1,3 +1,7 @@
+# Uai Cortes · v0.1.237 — Correção da reprodução no editor
+
+A prévia do editor agora **para ao concluir o último clipe**, em vez de repetir o projeto sem fim. Ao minimizar o aplicativo, bloquear a tela ou abrir outro app, a prévia é **pausada pelo ciclo de vida Android** e não retoma automaticamente quando o usuário volta. Se tocar em Play após o fim, a reprodução começa do início do projeto. Essas mudanças não alteram o vídeo exportado, os áudios originais, nem o posicionamento do projeto. Versão 0.1.237/versionCode 238. APK e teste em aparelho pendentes.
+
 # Uai Cortes · v0.1.236 — Correção CI196 do teste da biblioteca YouTube
 
 A versão 0.1.236 (versionCode 237) atualiza o contrato de regressão `test_social_youtube_history_228_contract.py` para a UI da biblioteca YouTube existente desde 0.1.235: visualizações nos vídeos e agregação dos canais consultados, com paginação individual. O workflow 196 parava na etapa Python antes do build. O comportamento de publicação e as credenciais permanecem preservados. É necessário confirmar a compilação completa pelo GitHub Actions.

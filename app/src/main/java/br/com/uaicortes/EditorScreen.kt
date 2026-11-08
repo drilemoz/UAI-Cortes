@@ -27,6 +27,9 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.PlaybackParameters
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.delay
@@ -70,7 +73,9 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             withContext(Dispatchers.IO) { VideoFrameRate.read(context, uri) }
         }
     }
-    val player=remember(p.id) { diagnosticPlayer(context).apply { repeatMode = Player.REPEAT_MODE_ALL } }
+    // Prévia do editor não é reprodutor contínuo: termina ao concluir o último clipe.
+    val player=remember(p.id) { diagnosticPlayer(context).apply { repeatMode = Player.REPEAT_MODE_OFF } }
+    val lifecycleOwner = LocalLifecycleOwner.current
     var isPlaying by remember(player) { mutableStateOf(player.isPlaying) }
     var restoringMedia by remember(player) { mutableStateOf(true) }
     var scrubbing by remember(player) { mutableStateOf(false) }
@@ -114,12 +119,25 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         }
     }
     LaunchedEffect(player, playbackSpeed) { player.setPlaybackParameters(PlaybackParameters(playbackSpeed)) }
-    DisposableEffect(player) {
+    DisposableEffect(player, lifecycleOwner) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) { isPlaying = playing }
         }
+        // Minimizar, abrir outro aplicativo ou bloquear a tela não deve manter áudio/vídeo tocando.
+        // ON_PAUSE chega antes do ON_STOP; não retomar automaticamente em ON_RESUME.
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                player.pause()
+            }
+        }
         player.addListener(listener)
-        onDispose { player.removeListener(listener); player.release() }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            player.removeListener(listener)
+            player.pause()
+            player.release()
+        }
     }
     LaunchedEffect(player, p.clips.map { Triple(it.uri, it.startMs, it.endMs) },
         p.clips.map { Triple(it.id, it.isImage, it.durationMs) }) {
@@ -131,8 +149,10 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         seekProjectPosition(player, p.clips, latestPosition)
         restoringMedia = false
         if (autoPlayOnReturn) {
-            // Só reinicia a prévia após carregar a mídia e restaurar o cursor.
-            if (p.clips.isNotEmpty()) player.play()
+            // Só retoma após navegação interna quando a Activity estiver em primeiro plano.
+            // Nunca inicia reprodução enquanto o aparelho estiver em outro aplicativo.
+            if (p.clips.isNotEmpty() &&
+                lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) player.play()
             onReturnPlaybackConsumed()
         }
     }
@@ -320,7 +340,12 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             }, enabled = p.durationMs > 0, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Default.SkipPrevious, "Voltar aproximadamente um quadro")
             }
-            IconButton(onClick={if(isPlaying)player.pause() else player.play()},
+            IconButton(onClick={
+                if (isPlaying) player.pause() else {
+                    if (player.playbackState == Player.STATE_ENDED) seekGlobal(0L)
+                    player.play()
+                }
+            },
                 modifier = Modifier.size(40.dp)) {
                 Icon(if(isPlaying) Icons.Default.PauseCircle else Icons.Default.PlayCircle, "Reproduzir / pausar",
                     modifier=Modifier.size(35.dp))

@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.237 (2026-11-08)
+
+- Editor: removida repetição automática de todos os clipes ao chegar ao final da prévia.
+- Player do editor pausa nos eventos ON_PAUSE/ON_STOP, evitando som em segundo plano ao minimizar ou trocar de app; ao retornar, a reprodução permanece pausada.
+- Botão Play, após o fim do último clipe, busca o início do projeto antes de reproduzir; retorno interno automático agora respeita Activity no estado RESUMED.
+- Versão 0.1.237/versionCode 238, CI, metadados e Novidades sincronizados. Compilação Android/validação em aparelho pendentes.
+
 # Uai Cortes 0.1.236 (2026-11-08)
 
 - Corrigido o teste de regressão do YouTube que interrompia o workflow 196 por exigir o antigo texto "Carregar mais vídeos antigos" após a UI passar a ter paginação por canal.
