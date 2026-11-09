@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.265 — fotografia de quadros em melhor qualidade
+
+- Captura de quadros passa a gerar PNG a partir de composição renderizada com Media3, sem tirar print da interface. Isso elimina as bordas da janela e preserva mais detalhe quando a fonte tem resolução superior à prévia.
+- PiP, legendas e marca d’água continuam no quadro. Quando o instante exigir composição de transição entre dois vídeos, o aplicativo informa a limitação e evita salvar fotografia errada.
+- O processamento é local; não envia vídeo a servidor e remove o arquivo intermediário. Manter os testes no aparelho para confirmar codificadores e fidelidade da imagem.
+
 # Uai Cortes · versão 0.1.264 — CI 221 corrigido
 
 - Corrigido o import de `Surface` usado pelos diálogos de recuperação de projeto, que causava falha de compilação Kotlin no workflow 221.

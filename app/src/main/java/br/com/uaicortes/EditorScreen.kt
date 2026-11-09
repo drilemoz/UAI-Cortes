@@ -61,7 +61,6 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     val captureScope = rememberCoroutineScope()
     var savingFrame by remember { mutableStateOf(false) }
     var captureAtMs by remember { mutableLongStateOf(0L) }
-    var previewBounds by remember { mutableStateOf<Rect?>(null) }
     val playbackVm: EditorPlaybackViewModel = viewModel()
     LaunchedEffect(p.id) { playbackVm.selectProject(p.id) }
     val playbackSpeed = playbackVm.speed
@@ -232,12 +231,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             val fit=AdaptiveVideoLayout.fit(maxWidth.value,maxHeight.value,displayedAspect)
             val videoW=fit.width.dp
             val videoH=fit.height.dp
-            Box(Modifier.width(videoW).height(videoH).clipToBounds()
-                .onGloballyPositioned { coordinates ->
-                    val bounds = coordinates.boundsInWindow()
-                    previewBounds = Rect(bounds.left.roundToInt(), bounds.top.roundToInt(),
-                        bounds.right.roundToInt(), bounds.bottom.roundToInt())
-                }) {
+            Box(Modifier.width(videoW).height(videoH).clipToBounds()) {
                 val index = activeIndex
                 val clip = p.clips.getOrNull(index)
                 val before = p.clips.take(index.coerceAtLeast(0)).sumOf { it.durationMs }
@@ -390,58 +384,49 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 }
             }
             PlaybackSpeedButton(playbackSpeed, onSelect = playbackVm::updateSpeed)
-            // Captura a área composta da PRÉVIA, incluindo PiP, textos e efeitos visíveis.
+            // Renderização do quadro no mesmo compositor do MP4, sem PixelCopy da tela.
             IconButton(onClick = {
                 if (savingFrame) return@IconButton
-                val activity = VisibleFrameCapture.findActivity(context)
-                val bounds = previewBounds
-                if (activity == null || bounds == null) {
-                    Toast.makeText(context, "Prévia indisponível para captura.", Toast.LENGTH_SHORT).show()
-                    return@IconButton
-                }
-                player.pause()
                 val frozenMs = projectPosition(player, p.clips, p.durationMs)
                     .coerceIn(0L, p.durationMs.coerceAtLeast(0L))
+                player.pause()
                 onPosition(frozenMs)
-                val selection = FrameCapturePlan.locate(p.clips.map {
-                    FrameCaptureClip(it.uri, it.startMs, it.endMs)
-                }, frozenMs)
-                if (selection == null) {
-                    Toast.makeText(context, "Nenhum quadro disponível para capturar.", Toast.LENGTH_SHORT).show()
-                } else {
-                    val title = p.title
-                    captureAtMs = frozenMs
-                    savingFrame = true
-                    captureScope.launch {
-                        try {
-                            // Atualiza as camadas Compose depois de congelar o quadro do player.
-                            delay(90L)
-                            val bitmap = VisibleFrameCapture.copy(activity, bounds)
-                            val name = FrameCapturePlan.filename(title, System.currentTimeMillis(), selection.sourceTimeMs)
-                            withContext(Dispatchers.IO) {
-                                VideoFrameSaver.saveBitmap(context.applicationContext, bitmap, name)
-                            }
-                            Toast.makeText(context,
-                                "Prévia capturada em Imagens/UaiCortes (resolução exibida na tela)",
-                                Toast.LENGTH_LONG).show()
-                            DiagnosticRecorder.action("editor", "visible_frame_saved")
-                        } catch (e: Exception) {
-                            Toast.makeText(context,
-                                "Não foi possível capturar a prévia: ${e.message ?: "tente novamente"}",
-                                Toast.LENGTH_LONG).show()
-                            DiagnosticRecorder.exception("visible_frame_capture", e)
-                        } finally {
-                            savingFrame = false
+                val title = p.title
+                captureAtMs = frozenMs
+                savingFrame = true
+                captureScope.launch {
+                    try {
+                        val target = FrameCapturePlan.locate(p.clips.map {
+                            FrameCaptureClip(it.uri, it.startMs, it.endMs)
+                        }, frozenMs) ?: error("Quadro indisponível neste instante.")
+                        val shortSide = withContext(Dispatchers.IO) {
+                            VideoFrameSaver.sourceShortSide(context, target.uri)
                         }
+                        val job = FrameSnapshotProject.prepare(p, frozenMs, shortSide)
+                            ?: error("Não foi possível renderizar este quadro. Se estiver numa transição, avance alguns quadros e tente novamente.")
+                        val name = FrameCapturePlan.filename(title,
+                            System.currentTimeMillis(), target.sourceTimeMs)
+                        FrameSnapshotRenderer.save(context.applicationContext, job, name)
+                        Toast.makeText(context,
+                            "Quadro renderizado em Imagens/UaiCortes (sem bordas do editor)",
+                            Toast.LENGTH_LONG).show()
+                        DiagnosticRecorder.action("editor", "rendered_frame_saved")
+                    } catch (e: Exception) {
+                        Toast.makeText(context,
+                            "Não foi possível renderizar o quadro: ${e.message ?: "tente novamente"}",
+                            Toast.LENGTH_LONG).show()
+                        DiagnosticRecorder.exception("rendered_frame_capture", e)
+                    } finally {
+                        savingFrame = false
                     }
                 }
             }, enabled = p.clips.getOrNull(activeFrameIndex)?.isImage == false && !savingFrame,
                 modifier = Modifier.size(42.dp)) {
                 if (savingFrame) CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
-                else Icon(Icons.Default.PhotoCamera, "Capturar quadro e salvar na galeria")
+                else Icon(Icons.Default.PhotoCamera, "Renderizar quadro e salvar PNG na galeria")
             }
         }
-        if (savingFrame) Text("Salvando prévia em ${formatPipMs(captureAtMs)}… Vídeo pausado.",
+        if (savingFrame) Text("Renderizando quadro em ${formatPipMs(captureAtMs)}… Aguarde; o vídeo está pausado.",
             modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp),
             style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary)
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp),

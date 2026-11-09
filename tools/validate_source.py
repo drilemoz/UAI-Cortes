@@ -847,7 +847,7 @@ editor = (app_files/'EditorScreen.kt').read_text()
 speed = (app_files/'PreviewPlayback.kt').read_text()
 assert all(v in speed for v in ['0.1f', '2.5f', '3f', '4f', '5f', '6f'])
 assert 'PreviewPlayback.SPEEDS.chunked(3)' in (app_files/'EditorTimelineUi.kt').read_text()
-assert 'FrameCapturePlan.locate' in editor and 'VideoFrameSaver.save' in editor
+assert 'FrameCapturePlan.locate' in editor and 'FrameSnapshotRenderer.save' in editor
 assert 'Dispatchers.IO' in editor and 'savingFrame' in editor and 'PhotoCamera' in editor
 assert 'MediaMetadataRetriever.OPTION_CLOSEST' in frame_saver
 assert 'MediaStore.Images.Media.IS_PENDING' in frame_saver and 'resolver.delete(uri' in frame_saver
@@ -980,8 +980,8 @@ assert 'Opacidade do PiP' in full_ui
 assert 'Rodapé · 8%' in full_ui and 'SubtitleAutoFit.factor(' in full_ui
 assert 'SubtitleAutoFit.factor(' in (root/'app/src/main/java/br/com/uaicortes/SubtitleExportSizing.kt').read_text()
 assert 'val frozenMs = projectPosition(player, p.clips, p.durationMs)' in full_ui
-assert 'player.pause()\n                val frozenMs' in full_ui
-assert 'Salvando prévia em' in full_ui and 'VisibleFrameCapture.copy' in full_ui
+assert 'player.pause()' in full_ui and 'val frozenMs = projectPosition' in full_ui
+assert 'Renderizando quadro em' in full_ui and 'FrameSnapshotProject.prepare' in full_ui
 timeline_source = (app_files/'UnifiedEditorTimeline.kt').read_text()
 assert 'UnifiedTimelinePolicy.mainSpans(project.clips,false)' in timeline_source
 assert 'UnifiedTimelinePolicy.mainSpans(project.clips,true)' in timeline_source

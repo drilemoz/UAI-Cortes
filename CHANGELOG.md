@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.265 (2026-11-09)
+
+- Captura de quadro reformulada: renderização curta pelo ExportEngine/Media3, evitando bordas, a faixa inferior da interface e a perda de nitidez causada pelo tamanho do preview.
+- Extração da imagem final do MP4 temporário na resolução da fonte (limitada a 1080 no lado menor), com PiP, legendas, animações de texto e marca d’água recalculadas no instante escolhido.
+- Sem criar MP4 público intermediário; grava somente PNG em Imagens/UaiCortes, com cleanup e erro explícito em transição cruzada. Funciona offline.
+- Testes direcionados da linha de tempo, recorte e pacote; necessidade de build Android e teste com vídeos 9:16 e PiP continua registrada.
+
 # Uai Cortes 0.1.264 (2026-11-09)
 
 - CI 221: corrigida referência não resolvida de `Surface` no arquivo `ProjectDraftUi.kt` importando o componente Material 3 necessário.

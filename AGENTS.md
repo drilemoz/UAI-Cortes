@@ -1,3 +1,11 @@
+# v0.1.265 — captura de quadro via renderização Media3
+
+- Base 0.1.264/versionCode 265; nova 0.1.265/versionCode 266. Preservar módulos, projeto schema 4, assinatura, cinco APKs, permissões e mídias.
+- Ao fotografar, não usar PixelCopy da janela. Renderizar trecho curto da fonte com efeitos de exportação, PiP, legendas e marca d’água, sem bordas/GUI e sem salvar MP4 de intermediário na galeria.
+- Posicionar clipes, PiPs e legendas segundo o tempo congelado; recusar de forma explícita instantes dentro de transições incompatíveis com a renderização isolada de um clipe.
+- Extrair bitmap do MP4 temporário na resolução da mídia (lado menor limitado a 1080px), publicar PNG no MediaStore com IS_PENDING e remover temporários sempre que possível. Nunca alterar fonte/projeto.
+- Atualizar os contratos legados de captura v218; validar versão, Kotlin PSI/compilação do helper, suíte Python e ZIP oficial com .github. Build Android e teste físico ainda obrigatórios.
+
 # v0.1.264 — correção CI 221: import Compose Material 3 Surface
 
 - Base v0.1.263/versionCode 264; nova v0.1.264/versionCode 265. Preservar cinco APKs, assinatura, todos os recursos do Editor de Áudio e dados de projetos.

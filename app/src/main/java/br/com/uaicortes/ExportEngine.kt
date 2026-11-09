@@ -204,7 +204,8 @@ class ExportEngine(private val context: Context) {
               destination: ExportDestination = ExportDestination.ORIGINAL,
               frameMode: VerticalFrameMode = VerticalFrameMode.FIT,
               onSaving: () -> Unit = {},
-              onSuccess: (Uri, ExportQualityReport) -> Unit, onError: (String) -> Unit) {
+              onSuccess: (Uri, ExportQualityReport) -> Unit, onError: (String) -> Unit,
+              onRenderedFrame: ((File) -> Unit)? = null) {
         require(!isSavingToGallery) { "Aguarde a conclusão do salvamento anterior." }
         require(project.clips.isNotEmpty()) { "Projeto sem vídeos" }
         val bitrateBps = VideoExportQuality.videoBitrateBps(height, preset)
@@ -383,6 +384,31 @@ class ExportEngine(private val context: Context) {
             .setEncoderFactory(encoderFactory)
             .addListener(object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                    // Captura de quadro: a própria saída MP4 temporária fornece a composição
+                    // de vídeo, PiP e textos na resolução renderizada. Não entra na galeria.
+                    if (onRenderedFrame != null) {
+                        isSavingToGallery = true
+                        Thread {
+                            var renderError: Exception? = null
+                            try {
+                                onRenderedFrame(target)
+                            } catch (e: Exception) {
+                                DiagnosticRecorder.exception("frame_snapshot_render", e)
+                                renderError = e
+                            } finally {
+                                target.delete()
+                                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                    tempFile = null
+                                    transformer = null
+                                    isSavingToGallery = false
+                                    renderError?.let { error ->
+                                        onError(error.message ?: "Não foi possível salvar o quadro renderizado.")
+                                    }
+                                }
+                            }
+                        }.start()
+                        return
+                    }
                     val encodeElapsedMs = (SystemClock.elapsedRealtime() - encodeStartedAtMs)
                         .coerceAtLeast(0L)
                     Log.i("UaiCortesExport", "MP4: ${exportResult.width}x${exportResult.height}, " +

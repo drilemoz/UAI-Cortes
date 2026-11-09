@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.264"
-    const val VERSION_CODE = 265
+    const val VERSION_NAME = "0.1.265"
+    const val VERSION_CODE = 266
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.265", listOf(
+            ReleaseFeature("frame-render-mp4-265", "Quadro em alta qualidade, sem bordas do editor",
+                "O botão de câmera renderiza um trecho curto pelo compositor Media3 em vez de capturar a tela. O PNG não inclui margens da interface, usando a resolução da fonte até 1080 pixels no lado menor.", "check"),
+            ReleaseFeature("frame-render-overlays-265", "PiP e legendas permanecem na fotografia",
+                "As camadas visuais e suas posições temporais são aplicadas ao quadro pelo mesmo caminho usado para exportar vídeo. Trechos em transição não são fotografados incorretamente: o app orienta a avançar alguns quadros.", "check"),
+            ReleaseFeature("frame-render-temp-cleanup-265", "Captura offline com arquivo temporário protegido",
+                "A renderização ocorre localmente, gera apenas o PNG final em Imagens/UaiCortes e remove o vídeo intermediário, preservando o projeto e os arquivos originais.", "check")
+        )),
         ReleaseSummary("0.1.264", listOf(
             ReleaseFeature("ci221-surface-import-264", "CI 221: correção da compilação dos diálogos",
                 "Adicionado o import Material 3 Surface em ProjectDraftUi, eliminando referências não resolvidas que interromperam a compilação Debug e Release.", "check"),

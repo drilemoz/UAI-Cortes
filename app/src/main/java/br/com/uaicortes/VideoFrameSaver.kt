@@ -27,7 +27,38 @@ internal object VideoFrameSaver {
         return saveBitmap(context, bitmap, displayName)
     }
 
-    /** Salva o bitmap já composto pela prévia: vídeo, PiP, textos e efeitos visíveis. */
+    /** Lado menor da mídia real. Não inventar 1080p para uma origem 480p. */
+    fun sourceShortSide(context: Context, uri: String): Int {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(context, Uri.parse(uri))
+            val w = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
+                ?.toIntOrNull() ?: return 720
+            val h = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
+                ?.toIntOrNull() ?: return 720
+            minOf(w, h).takeIf { it > 0 }?.coerceIn(360, 1080) ?: 720
+        } finally {
+            retriever.release()
+        }
+    }
+
+    /** Quadro do MP4 temporário produzido pelo MESMO compositor de exportação:
+     * inclui PiP, legendas, marca d'água e resolução final sem margens de UI.
+     */
+    fun saveRenderedFrame(context: Context, file: File, frameMs: Long, name: String): Uri {
+        val retriever = MediaMetadataRetriever()
+        val bitmap = try {
+            retriever.setDataSource(file.absolutePath)
+            retriever.getFrameAtTime(frameMs.coerceAtLeast(0L) * 1000L,
+                MediaMetadataRetriever.OPTION_CLOSEST)
+                ?: error("O vídeo temporário não contém um quadro decodificável.")
+        } finally {
+            retriever.release()
+        }
+        return saveBitmap(context, bitmap, name)
+    }
+
+    /** Salva um bitmap renderizado. A origem nunca é ampliada a partir da tela. */
     fun saveBitmap(context: Context, bitmap: Bitmap, displayName: String): Uri {
         require(displayName.endsWith(".png", ignoreCase = true)) { "Nome PNG inválido" }
         try {

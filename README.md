@@ -1,3 +1,10 @@
+# Uai Cortes · v0.1.265 — quadro renderizado sem bordas da prévia
+
+- O botão de câmera deixa de copiar os pixels da janela com PixelCopy; cria um trecho temporário de vídeo pelo compositor Media3 e extrai o quadro já composto em resolução de origem até 1080p (lado menor).
+- Captura camadas de PiP, legendas e marca d’água com seus tempos relativos, sem incluir margens pretas ou barras da interface; não é um simples upscale da prévia.
+- Para transições que exigem dois clipes simultâneos, mostra aviso e pede avançar alguns quadros em vez de criar imagem incoerente. Saída PNG local na galeria; o MP4 temporário é removido.
+- Projetos, originais, editor de áudio, TTS e integrações preservados. Compilação Android e comparação visual no aparelho ainda são necessárias.
+
 # Uai Cortes · v0.1.264 — CI 221: correção de compilação dos pop-ups
 
 - Corrigida a ausência de `import androidx.compose.material3.Surface` em `ProjectDraftUi.kt`, que fazia o workflow 221 falhar em `:app:compileDebugKotlin`.
