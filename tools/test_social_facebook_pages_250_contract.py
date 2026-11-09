@@ -9,7 +9,10 @@ api=(s/'SocialFacebookPagePosts.kt').read_text()
 auth=(s/'SocialMetaAuth.kt').read_text()
 dash=(s/'SocialScreens.kt').read_text()
 store=(s/'SocialStore.kt').read_text()
-assert check(r) == ('0.1.250',251)
+version, version_code = check(r)
+# A funcionalidade introduzida na 250 deve persistir nas versões posteriores.
+assert tuple(int(part) for part in version.split('.')) >= (0, 1, 250)
+assert version_code >= 251
 assert 'activePlatform == "youtube"' in dash and 'activePlatform == "facebook"' in dash
 assert 'SocialFacebookPageLibraryUi(' in dash and 'SocialYouTubeLibraryUi(' in dash
 assert 'fun fetchFacebookPosts(' in dash and 'onLoad = ::fetchFacebookPosts' in dash

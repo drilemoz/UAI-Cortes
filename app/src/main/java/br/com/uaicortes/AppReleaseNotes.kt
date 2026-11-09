@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.250"
-    const val VERSION_CODE = 251
+    const val VERSION_NAME = "0.1.251"
+    const val VERSION_CODE = 252
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.251", listOf(
+            ReleaseFeature("ci208-whatsnew-contract-251", "CI 208: testes da tela Novidades corrigidos",
+                "O contrato de regressão reconhece que a tela Novidades abre após atualização e não possui mais entrada duplicada em Configurações ou botão de histórico na apresentação.", "check"),
+            ReleaseFeature("ci208-preserve-social-251", "Redes Sociais e publicações preservadas",
+                "Mantém as bibliotecas YouTube e Facebook · Páginas, vozes, exportação e projetos existentes sem alterar os dados ou permissões.", "check")
+        )),
         ReleaseSummary("0.1.250", listOf(
             ReleaseFeature("meta-page-posts-250", "Redes Sociais: vídeos das Páginas Facebook",
                 "Consulte manualmente posts de Páginas autorizadas que contenham anexos de vídeo; filtros e pesquisa local, sem prometer acesso a todos os Reels.", "film"),

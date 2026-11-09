@@ -1,3 +1,7 @@
+# Uai Cortes · v0.1.251 — Correção do CI 208
+
+O workflow 208 parou na validação Python porque um teste antigo ainda esperava o botão **Novidades** dentro das Configurações e histórico na tela pós-atualização. Esses itens foram intencionalmente removidos na v0.1.248. A versão 0.1.251 ajusta os testes ao comportamento atual sem regredir a interface, conservando o catálogo interno de histórico e a abertura automática de Novidades após atualizações. Mantém as funcionalidades anteriores de publicação, redes, vozes e exportação. Build Android e testes no aparelho seguem pendentes.
+
 # Uai Cortes · v0.1.250 — Redes com consulta de publicações Facebook
 
 - Redes Sociais passa a alternar entre vídeos do YouTube e publicações Facebook de Páginas autorizadas. A leitura Facebook acontece apenas quando o usuário solicita; filtros por Página e pesquisa local sobre o que foi carregado.

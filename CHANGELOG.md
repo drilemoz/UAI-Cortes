@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.251 (2026-11-09)
+
+- Corrigido teste obsoleto `test_about_whatsnew_207_contract.py` que bloqueou o workflow 208 antes do Gradle; passa a validar a remoção intencional do item Novidades e do histórico na tela pós-atualização, preservando a abertura após update.
+- Testes Meta 250 e Atualizações 201 deixam de exigir versões e elementos de interface removidos, preservando segurança e controles de atualização.
+- Mantidos código de produção, esquemas de projetos, assinatura, cinco APKs e integrações anteriores.
+- Validações locais não equivalem a build Android ou teste de comportamento real.
+
 # Uai Cortes 0.1.250 (2026-11-09)
 
 - Página Redes: alternância entre YouTube e Facebook · Páginas, mantendo a grade de vídeos do YouTube intacta.

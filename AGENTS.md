@@ -1,3 +1,10 @@
+# v0.1.251 — Correção do CI 208 sem restaurar navegação antiga
+
+- Base 0.1.250/versionCode 251, nova 0.1.251/versionCode 252. Preservar cinco APKs, assinatura, SocialStore schema 1, projetos schema 4, YouTube/Facebook Páginas, Gemini e Coqui/Chatterbox.
+- Workflow 208 parou antes do Gradle em `tools/test_about_whatsnew_207_contract.py`: o contrato procurava o item Novidades e o histórico antigos, removidos intencionalmente na 0.1.248. Atualizar teste de acordo com comportamento atual: sobre compacto; Novidades só após update e apenas versão atual; catálogo histórico retido em `AppReleaseNotes` sem aparecer nessa tela; Configurações sem item Novidades.
+- O contrato de Facebook 0.1.250 deve aceitar versões posteriores sem exigir código 251, mantendo verificações de segurança Meta. O contrato de Atualizações 201 não deve exigir showHistory na tela pós-atualização, removido intencionalmente em 0.1.248. Nada de alterar OAuth, publicar sem confirmação ou inserir tokens em arquivos.
+- Executar validação estática, testes de contratos, versionamento e integridade ZIP. Compilação Android real e testes físicos não podem ser presumidos a partir do parser Kotlin.
+
 # v0.1.250 — Consulta limitada de publicações com vídeo em Páginas Facebook
 
 - Base 0.1.249/versionCode 250, nova 0.1.250/versionCode 251; preservar SocialStore schema 1, projetos schema 4, cinco APKs e publicações existentes.

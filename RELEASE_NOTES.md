@@ -1,4 +1,12 @@
-# Uai Cortes · v0.1.250 — Vídeos de Páginas Facebook sob consulta
+# Uai Cortes · versão 0.1.251 — Correção da validação do workflow 208
+
+- O pipeline 208 falhou antes da compilação Kotlin porque um contrato legado esperava a opção Novidades em Configurações e a lista histórica na tela pós-atualização.
+- Atualizada a regressão para conferir Novidades somente na primeira abertura após atualização, sem botão redundante, preservando catálogo interno e página Sobre.
+- Contratos antigos de consulta Facebook e de Novidades/Atualizações corrigidos sem alterar os limites de segurança.
+- Versionamento sincronizado em 0.1.251/versionCode 252; sem mudanças no modelo de projetos, áudio, redes, permissões ou assinatura.
+- Compilação Android completa e uso no aparelho ainda precisam ser validados no GitHub Actions.
+
+# Uai Cortes · versão 0.1.250 — Vídeos de Páginas Facebook sob consulta
 
 - Abas YouTube e Facebook · Páginas em Redes Sociais, preservando filtros e estatísticas reais do YouTube.
 - Facebook: consulta explícita de publicações de Página contendo anexos de vídeo, grade de dois cartões, busca local e paginação. Reels ausentes na API não são inventados.

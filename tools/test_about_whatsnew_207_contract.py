@@ -11,10 +11,13 @@ assert 'fun forAbout(): List<ReleaseSummary> = listOf(current.copy(features = cu
 assert 'Adriedson Lemos' in home and 'drilemoz@gmail.com' in home
 assert 'Copiar chave Pix' in home and 'context.startActivity(intent)' in home
 assert 'BuildConfig.GITHUB_RELEASE_REPOSITORY' in home and 'github.com/$repository' in home
-assert home.index('"Novidades","Mudanças da versão atual e histórico"') < home.index('"Geral","Qualidade e armazenamento"')
+# A partir de 0.1.248 o item duplicado de Novidades saiu de Configurações.
+assert '"Novidades","Mudanças' not in home
+assert '"Geral","Qualidade e armazenamento"' in home
 assert 'showOlderReleases' not in home
 assert 'whatsNewSeen.shouldOpen()' in main and 'whatsNewSeen.markViewed()' in main
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
-assert 'ReleaseHighlights(AppReleaseNotes.forHistory())' in news
+assert 'ReleaseHighlights(AppReleaseNotes.forHistory())' not in news
+assert 'fun forHistory(): List<ReleaseSummary>' in notes
 assert 'Button(onClick = onContinue' in news
-print('OK: Sobre compacto + Pix/GitHub, Novidades no topo, histórico e abertura pós-update preservados')
+print('OK: Sobre compacto, Novidades apenas após atualização, histórico retido em dados e sem entrada duplicada em Ajustes')
