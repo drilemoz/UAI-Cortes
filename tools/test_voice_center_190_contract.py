@@ -56,7 +56,7 @@ class VoiceCenter190Contract(unittest.TestCase):
 
     def test_voice_and_tone_are_separate(self):
         voice_ui = source('VoiceIaScreen.kt')
-        self.assertIn('label = "Vozes"', voice_ui)
+        self.assertIn('label = if (project.subtitleSpeakers.isEmpty()) "Vozes" else "Personagens"', voice_ui)
         self.assertIn('Icons.Default.Mood, "Alterar tom da fala', voice_ui)
         self.assertIn('voicePickerSpeakerId', voice_ui)
         self.assertIn('speakerVoiceOverrides', voice_ui)

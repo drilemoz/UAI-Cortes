@@ -1,3 +1,10 @@
+# v0.1.240 — Voz fixa por personagem, humor individual e áudio externo
+
+- Personagem com voz definida prevalece sobre escolhas legadas por fala. Novas escolhas de voz individual só para falas sem personagem; estilos/humor continuam por fala com herança do personagem. Ao fixar voz, remover apenas metadados de voz legados desse personagem, preservando WAVs e legendas.
+- O botão Gerar respeita voz/personagem/humor específicos e não regenera faixas externas já inseridas. Toque curto na fala abre ações, incluindo importar áudio externo privado (SAF, formatos aceitos, limite e duração verificados) com confirmação, sem enviar áudio para Gemini.
+- O lembrete inicial de pendências tem X explícito, com decisão restrita à sessão. Preservar filas e resultados de chamada incerta sem retry automático, schema de projeto 4, Gemini/Polly, integrações e cinco APKs.
+- Versão 0.1.240/versionCode 241, Novidades e metadados sincronizados. Validar testes e build Android no CI; PSI estático não é compilação.
+
 # v0.1.239 — Cópias privadas de projeto e regressão CI199
 
 - Em `ProjectMediaCopies.kt`, novas cópias de VIDEO/AUDIO/IMAGE em qualquer Android suportado ficam no armazenamento privado `filesDir/project_media_v1/<projectId>/<kind>/`, acessíveis pelo FileProvider já configurado; não chamar MediaStore.insert nem tornar backups visíveis na galeria. Finalização atômica via `.partial`, checar tamanho/bytes e assegurar cancelamento/rollback.

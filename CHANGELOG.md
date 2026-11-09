@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.240 (2026-11-08)
+
+- Personagem com voz definida agora prevalece na geração por fala; ajustes de humor continuam individuais. Escolhas antigas de voz por fala são limpas somente ao definir uma voz fixa para aquele personagem, sem apagar arquivos.
+- Barra principal usa Personagens quando existem personagens; com personagens, a lista de falas oferece humor e menu de ações, não troca individual de voz.
+- Toque simples abre menu por fala com opção de importar áudio externo WAV/MP3/M4A/AAC/OGG até 64 MiB, validado e copiado para pasta privada antes de vincular à timeline, sem chamadas Gemini. Os áudios externos inseridos são excluídos de gerações em lote por padrão.
+- Lembrete de faltas ganha X e continua mostrando progresso independente. Atualizados 0.1.240/versionCode 241, CI, documentação e testes; build Android real pendente.
+
 # Uai Cortes 0.1.239 (2026-11-08)
 
 - Importação de vídeo, áudio e imagem passa a criar cópia protegida somente no armazenamento privado (`filesDir/project_media_v1/<projeto>/`), com FileProvider, arquivo `.partial`, verificação de tamanho, sincronização e finalização atômica. Não indexa novas mídias do projeto no MediaStore/Galeria.

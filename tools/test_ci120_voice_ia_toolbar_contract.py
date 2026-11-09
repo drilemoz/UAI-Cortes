@@ -6,9 +6,10 @@ ui = (root/'app/src/main/java/br/com/uaicortes/VoiceIaScreen.kt').read_text()
 center = (root/'app/src/main/java/br/com/uaicortes/GeminiVoiceCenterScreen.kt').read_text()
 bar = ui[ui.index('// Visão principal: apenas progresso, três ações e lista de falas.'):ui.index('if (status.isNotBlank())')]
 assert bar.count('VoiceIaToolbarAction(') == 3
-for action in ('label = "Vozes"', 'label = "Gerar $pending"', 'label = "Inserir $preparedCount"'):
+for action in ('label = if (project.subtitleSpeakers.isEmpty()) "Vozes" else "Personagens"', 'label = "Gerar $pending"', 'label = "Inserir $preparedCount"'):
     assert action in bar
-assert 'voicePickerForAll = true' in bar
+assert 'if (project.subtitleSpeakers.isEmpty()) voicePickerForAll = true' in bar
+assert 'showSpeakerSettings = !showSpeakerSettings' in bar
 assert 'stylePickerCueId = cue.id' in ui
 assert 'OutlinedButton(' not in bar
 assert 'Surface(onClick = onClick, enabled = enabled' in ui

@@ -80,7 +80,7 @@ data class VoiceIaVoiceAssignments(
     }
 }
 
-/** Precedência: fala específica > personagem conhecido > voz geral > legado. Nunca chama IA. */
+/** Voz fixa do personagem prevalece; legados por fala só valem sem essa definição. */
 internal object VoiceIaSpeakerVoicePolicy {
     const val MAX_CUE_OVERRIDES = 1000
     fun validVoice(id: String?): Boolean = id != null && id.isNotBlank() && !id.equals("null", true) &&
@@ -91,9 +91,11 @@ internal object VoiceIaSpeakerVoicePolicy {
 
     fun preferred(cue: SubtitleCue, speakers: List<SubtitleSpeaker>,
         saved: VoiceIaVoiceAssignments): String? {
-        saved.cueVoices[cue.id]?.let { if (validVoice(it)) return it }
         val speaker = cue.speakerId?.takeIf { id -> speakers.any { it.id == id } }
         speaker?.let { saved.speakerVoices[it] }?.let { if (validVoice(it)) return it }
+        // Compatibilidade: escolhas por fala anteriores só continuam efetivas
+        // enquanto o personagem não tiver uma voz própria definida.
+        saved.cueVoices[cue.id]?.let { if (validVoice(it)) return it }
         return saved.defaultVoiceId?.takeIf(::validVoice)
     }
 
@@ -103,12 +105,19 @@ internal object VoiceIaSpeakerVoicePolicy {
         val updated = project.voiceIaVoices.speakerVoices.toMutableMap().apply {
             if (voice == null) remove(id) else put(id, voice)
         }
-        return project.copy(voiceIaVoices = project.voiceIaVoices.copy(speakerVoices = updated))
+        val legacy = project.voiceIaVoices.cueVoices.filterKeys { cueId ->
+            project.subtitles.none { it.id == cueId && it.speakerId == id }
+        }
+        return project.copy(voiceIaVoices = project.voiceIaVoices.copy(
+            speakerVoices = updated, cueVoices = if (voice == null)
+                project.voiceIaVoices.cueVoices else legacy))
     }
 
     fun cueVoice(project: VideoProject, id: String, voice: String?): VideoProject? {
-        if (project.subtitles.none { it.id == id } ||
-            (voice != null && !validVoice(voice))) return null
+        val cue = project.subtitles.firstOrNull { it.id == id } ?: return null
+        // Com personagem definido, só o controle do personagem altera a voz.
+        if (cue.speakerId != null && project.subtitleSpeakers.any { it.id == cue.speakerId }) return null
+        if (voice != null && !validVoice(voice)) return null
         val updated = project.voiceIaVoices.cueVoices.toMutableMap().apply {
             if (voice == null) remove(id) else put(id, voice)
         }

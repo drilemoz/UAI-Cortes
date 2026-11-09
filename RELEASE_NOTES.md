@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.240 — Voz de personagem fixa, humor por fala e importação
+
+- Vozes IA: cada personagem mantém a voz definida na geração de todas as suas falas, enquanto cada fala pode ter um humor diferente.
+- Lista: ao tocar numa fala abre-se menu com humor, geração/refazer, inserção, sincronização e importação de áudio externo; com personagem, a voz não é editável por fala.
+- Áudio externo: arquivos WAV, MP3, M4A, AAC ou OGG selecionados no Android são copiados para armazenamento privado e vinculados à fala após confirmação. Não há consumo da API Gemini nem substituição silenciosa de outras falas.
+- Aviso de pendentes: botão X explícito que fecha a mensagem na sessão; o progresso e pendências permanecem acessíveis.
+- Project schema 4 e filas/recursos existentes preservados. Build Android e teste real de importação ainda pendentes.
+
 # Uai Cortes · versão 0.1.239 — Cópias privadas e correção CI199
 
 - Vídeos, áudios e imagens importados deixam de gerar novas cópias visíveis na Galeria: proteção em armazenamento privado do app por projeto, com arquivo temporário e conclusão verificada.

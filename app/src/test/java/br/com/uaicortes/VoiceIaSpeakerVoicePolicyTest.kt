@@ -29,21 +29,25 @@ class VoiceIaSpeakerVoicePolicyTest {
         assertEquals(sample().subtitles, both.subtitles)
     }
 
-    @Test fun cueOverridesSpeakerWithoutChangingOtherCues() {
-        val character = VoiceIaSpeakerVoicePolicy.speakerVoice(sample(), "cliente", "voz1")!!
-        val changed = VoiceIaSpeakerVoicePolicy.cueVoice(character, "a", "voz-especial")!!
-        assertEquals("voz-especial", VoiceIaSpeakerVoicePolicy.preferred(changed.subtitles[0],
-            changed.subtitleSpeakers, changed.voiceIaVoices))
-        assertEquals("voz1", VoiceIaSpeakerVoicePolicy.preferred(changed.subtitles[2],
-            changed.subtitleSpeakers, changed.voiceIaVoices))
-        val inherited = VoiceIaSpeakerVoicePolicy.cueVoice(changed, "a", null)!!
-        assertEquals("voz1", VoiceIaSpeakerVoicePolicy.preferred(inherited.subtitles[0],
-            inherited.subtitleSpeakers, inherited.voiceIaVoices))
+    @Test fun speakerVoiceOverridesLegacyIndividualAndBlocksNewCueVoice() {
+        val legacy = sample().copy(voiceIaVoices = VoiceIaVoiceAssignments(
+            cueVoices = mapOf("a" to "voz-especial")))
+        assertEquals("voz-especial", VoiceIaSpeakerVoicePolicy.preferred(legacy.subtitles[0],
+            legacy.subtitleSpeakers, legacy.voiceIaVoices))
+        val fixed = VoiceIaSpeakerVoicePolicy.speakerVoice(legacy, "cliente", "voz1")!!
+        assertEquals("voz1", VoiceIaSpeakerVoicePolicy.preferred(fixed.subtitles[0],
+            fixed.subtitleSpeakers, fixed.voiceIaVoices))
+        assertEquals("voz1", VoiceIaSpeakerVoicePolicy.preferred(fixed.subtitles[2],
+            fixed.subtitleSpeakers, fixed.voiceIaVoices))
+        assertFalse("a" in fixed.voiceIaVoices.cueVoices)
+        assertNull(VoiceIaSpeakerVoicePolicy.cueVoice(fixed, "a", "outra-voz"))
+        assertEquals(sample().subtitles, fixed.subtitles)
     }
 
     @Test fun voicePreferencesSurviveJsonAndLegacyRemainCompatible() {
-        val linked = VoiceIaSpeakerVoicePolicy.cueVoice(
-            VoiceIaSpeakerVoicePolicy.speakerVoice(sample(), "agiota", "GEMINI_A")!!, "b", "GEMINI_B")!!
+        val withLegacy = sample().copy(voiceIaVoices = VoiceIaVoiceAssignments(
+            cueVoices = mapOf("a" to "GEMINI_B")))
+        val linked = VoiceIaSpeakerVoicePolicy.speakerVoice(withLegacy, "agiota", "GEMINI_A")!!
         val restored = VideoProject.read(linked.json())
         assertEquals(linked.voiceIaVoices, restored.voiceIaVoices)
         assertEquals(linked.subtitles, restored.subtitles)
@@ -53,8 +57,9 @@ class VoiceIaSpeakerVoicePolicyTest {
     }
 
     @Test fun generalVoiceOnlyAppliesAfterConfirmationAndClearsOverrides() {
-        val base = VoiceIaSpeakerVoicePolicy.cueVoice(
-            VoiceIaSpeakerVoicePolicy.speakerVoice(sample(), "cliente", "custom")!!, "a", "solo")!!
+        val legacy = sample().copy(voiceIaVoices = VoiceIaVoiceAssignments(
+            cueVoices = mapOf("a" to "solo")))
+        val base = VoiceIaSpeakerVoicePolicy.speakerVoice(legacy, "cliente", "custom")!!
         val general = VoiceIaSpeakerVoicePolicy.all(base, "general")!!
         assertTrue(general.voiceIaVoices.cueVoices.isEmpty())
         assertTrue(general.voiceIaVoices.speakerVoices.isEmpty())

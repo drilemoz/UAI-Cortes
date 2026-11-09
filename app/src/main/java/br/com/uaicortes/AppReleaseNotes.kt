@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.239"
-    const val VERSION_CODE = 240
+    const val VERSION_NAME = "0.1.240"
+    const val VERSION_CODE = 241
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.240", listOf(
+            ReleaseFeature("voice-speaker-lock-240", "Voz fixa por personagem e humor em cada fala",
+                "A voz do personagem prevalece sobre escolhas antigas por fala, enquanto o humor individual continua independente. O lote respeita ambas as configurações.", "music"),
+            ReleaseFeature("voice-external-audio-240", "Importar áudio externo em uma fala",
+                "Toque em uma fala para abrir ações e importar áudio de forma privada, sem chamada Gemini. O aviso de pendências tem botão de fechar.", "check")
+        )),
         ReleaseSummary("0.1.239", listOf(
             ReleaseFeature("media-private-copies-239", "Cópias protegidas fora da galeria",
                 "Vídeos, áudios e imagens novos são protegidos em armazenamento privado por projeto, sem criar duplicatas visíveis na Galeria. As mídias exportadas continuam públicas e as cópias anteriores são preservadas.", "check"),

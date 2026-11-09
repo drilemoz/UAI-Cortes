@@ -1,3 +1,7 @@
+# Uai Cortes · v0.1.240 — Vozes IA: personagens, humor e importação externa
+
+A tela **Vozes IA** respeita agora a voz fixa de cada personagem nas gerações em lote; os humores individuais continuam independentes. Com personagens definidos, a barra principal mostra Personagens e a lista de falas não permite trocar a voz individualmente. Toque numa fala para abrir ações, incluindo escolher humor ou importar áudio externo (WAV, MP3, M4A, AAC e OGG até 64 MiB). O áudio importado é guardado privadamente, validado e associado apenas à fala escolhida, sem gastar cota Gemini; o WAV anterior não é apagado automaticamente. Lembretes de pendência têm X e progresso separado. Dados de projeto schemaVersion 4, integração Gemini, Polly, Redes e cinco APKs preservados. Compilação Gradle Android e testes físicos continuam pendentes.
+
 # Uai Cortes · v0.1.239 — Backups privados na importação e correção CI199
 
 As cópias de segurança de vídeos, áudios e imagens importados para projetos agora ficam em `filesDir/project_media_v1/<ID>/` e são acessadas por FileProvider, sem registrar novos itens no MediaStore e sem duplicar vídeos na Galeria. A cópia permanece integral, verificada e atômica. Os vídeos finais exportados continuam sendo salvos normalmente na galeria.
