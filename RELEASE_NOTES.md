@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.261 — CI 218 e prévias corretas
+
+- Corrigido o contrato de teste da navegação após inclusão do Editor de Áudio, sem retirar ferramentas anteriores.
+- Foto do quadro passa a refletir as camadas visíveis da prévia no momento da captura: vídeo, PiP, legendas e efeitos. Resolução limitada à prévia da tela.
+- O trecho selecionado em Cortar vídeo para quando termina. Reproduzir novamente reinicia de forma explícita.
+- Necessário validar compilação Android e comparar PNG com a prévia real no celular.
+
 # Uai Cortes · versão 0.1.260 — Editor de Áudio
 
 - Ferramenta Editar áudio na Home: escolha uma faixa, selecione o trecho e ouça antes de exportar.

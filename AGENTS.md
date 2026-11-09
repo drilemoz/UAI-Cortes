@@ -1,3 +1,11 @@
+# v0.1.261 — CI 218, captura visível e corte sem loop
+
+- Base 0.1.260/versionCode 261; nova 0.1.261/versionCode 262. Preservar os cinco APKs, novos módulos, assinatura, mídia existente e esquema de projeto.
+- O contrato `test_quick_split_196_contract.py` deve reconhecer a inclusão de edit_audio sem exigir a sequência anterior literal de rotas.
+- Câmera no editor deve capturar a prévia visível via PixelCopy no retângulo do conteúdo, com PiP/legendas/efeitos; não afirmar ser a resolução da fonte. Se falhar, informar ao usuário sem criar PNG incorreto.
+- TrimScreen toca o intervalo só uma vez. No fim, pausar e deixar cursor no fim; próximo toque de play permite reiniciar.
+- Validar teste Kotlin/JVM do limite, contrato Python e ZIP oficial com workflow; compilar Android e testar PixelCopy em aparelho/CI.
+
 # v0.1.260 — Editor de Áudio independente
 
 - Base 0.1.259/versionCode 260; nova 0.1.260/versionCode 261. Preservar esquema de projeto, cinco APKs, autenticação Google/Meta, Gemini e ferramentas anteriores.

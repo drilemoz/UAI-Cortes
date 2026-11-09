@@ -981,7 +981,7 @@ assert 'Rodapé · 8%' in full_ui and 'SubtitleAutoFit.factor(' in full_ui
 assert 'SubtitleAutoFit.factor(' in (root/'app/src/main/java/br/com/uaicortes/SubtitleExportSizing.kt').read_text()
 assert 'val frozenMs = projectPosition(player, p.clips, p.durationMs)' in full_ui
 assert 'player.pause()\n                val frozenMs' in full_ui
-assert 'Capturando quadro em' in full_ui
+assert 'Salvando prévia em' in full_ui and 'VisibleFrameCapture.copy' in full_ui
 timeline_source = (app_files/'UnifiedEditorTimeline.kt').read_text()
 assert 'UnifiedTimelinePolicy.mainSpans(project.clips,false)' in timeline_source
 assert 'UnifiedTimelinePolicy.mainSpans(project.clips,true)' in timeline_source

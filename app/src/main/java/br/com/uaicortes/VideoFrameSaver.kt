@@ -2,6 +2,7 @@ package br.com.uaicortes
 
 import android.content.ContentValues
 import android.content.Context
+import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.media.MediaScannerConnection
 import android.net.Uri
@@ -23,6 +24,12 @@ internal object VideoFrameSaver {
         } finally {
             retriever.release()
         }
+        return saveBitmap(context, bitmap, displayName)
+    }
+
+    /** Salva o bitmap já composto pela prévia: vídeo, PiP, textos e efeitos visíveis. */
+    fun saveBitmap(context: Context, bitmap: Bitmap, displayName: String): Uri {
+        require(displayName.endsWith(".png", ignoreCase = true)) { "Nome PNG inválido" }
         try {
             // Android 10+: escrita segura e imediata na galeria; nenhuma permissão adicional.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

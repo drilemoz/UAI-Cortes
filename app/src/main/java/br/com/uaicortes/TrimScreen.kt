@@ -185,12 +185,17 @@ internal fun TrimScreen(
             // A prévia respeita os limites do trecho que restou após os cortes.
             while (true) {
                 isPlaying = player.isPlaying
-                if (player.isPlaying) {
-                    val at = player.currentPosition
-                    if (at >= clip.endMs) {
-                        player.seekTo(clip.startMs)
-                        cursorMs = clip.startMs
-                    } else cursorMs = at.coerceIn(clip.startMs, clip.endMs)
+                val reachedEnd = TrimPreviewEndPolicy.reachedEnd(
+                    player.currentPosition, clip.endMs,
+                    player.playbackState == Player.STATE_ENDED
+                )
+                if (reachedEnd) {
+                    // Uma seleção toca uma vez. Recomeçar requer novo toque em Reproduzir.
+                    player.pause()
+                    cursorMs = clip.endMs
+                    isPlaying = false
+                } else if (player.isPlaying) {
+                    cursorMs = player.currentPosition.coerceIn(clip.startMs, clip.endMs)
                 }
                 delay(100L)
             }

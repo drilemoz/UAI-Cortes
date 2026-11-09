@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.261 (2026-11-09)
+
+- CI 218: contrato da navegação para ferramentas rápidas atualizado após inclusão do Editor de Áudio, preservando as rotas anteriores.
+- Fotografia do quadro agora usa captura da prévia renderizada com PixelCopy, evitando salvar apenas o frame bruto enquanto legendas e PiP aparecem no editor. A resolução será a da prévia, e requer validação visual no Android.
+- Cortar vídeo: interrupção no final do trecho, sem reiniciar automaticamente; novo toque em reproduzir pode reiniciar a seleção.
+- Testes do helper de fim de reprodução, validação de captura e contrato de CI; Gradle Android completo permanece pendente.
+
 # Uai Cortes 0.1.260 (2026-11-09)
 
 - Novo módulo Editar áudio independente em Home, mantendo Extrair áudio e Dividir vídeo.

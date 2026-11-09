@@ -21,7 +21,9 @@ assert 'onProgress(index + 1' in engine and 'nextPart(index + 1)' in engine
 assert 'QuickVideoToolsScreen(QuickToolMode.SPLIT_VIDEO' in main
 assert 'QuickVideoToolsScreen(QuickToolMode.EXTRACT_AUDIO' in main
 assert 'onQuickAudio = onQuickAudio, onQuickSplit = onQuickSplit' in home
-assert '"quick_split", "quick_audio" -> "home"' in nav
+assert '"quick_split", "quick_audio", "edit_audio"' in nav
+assert '"quick_split" -> QuickVideoToolsScreen' in main
+assert '"quick_audio" -> QuickVideoToolsScreen' in main
 assert 'AudioExtractionEngine(context.applicationContext)' in ui
 assert 'ActivityResultContracts.CreateDocument("audio/mp4")' in ui
 assert 'Não foi possível ler a duração' in ui

@@ -1,3 +1,10 @@
+# Uai Cortes · v0.1.261 — CI 218, quadro visível e reprodução única
+
+- Atualizado o contrato de navegação para reconhecer o novo Editar áudio sem perder Dividir vídeo/Extrair áudio.
+- Botão de câmera salva a composição visível no editor via PixelCopy: vídeo, legendas, PiP e efeitos da prévia. A imagem reflete a resolução exibida na tela, não necessariamente a origem.
+- Em Cortar vídeo, a reprodução para ao fim do trecho selecionado e só recomeça após novo toque. Fonte original, recortes e exportação permanecem intactos.
+- CI e workflow ainda devem comprovar build Android; PixelCopy e saída PNG precisam de teste no aparelho.
+
 # Uai Cortes · v0.1.260 — Editor de Áudio independente
 
 - Novo cartão Editar áudio na faixa de atalhos da Home, com seleção de arquivo via Android, forma de onda real em segundo plano quando suportada e recorte com duas alças.

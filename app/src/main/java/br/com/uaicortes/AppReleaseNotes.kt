@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.260"
-    const val VERSION_CODE = 261
+    const val VERSION_NAME = "0.1.261"
+    const val VERSION_CODE = 262
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.261", listOf(
+            ReleaseFeature("ci218-route-contract-261", "CI 218: validação de navegação atualizada",
+                "O contrato da ferramenta Dividir vídeo passa a reconhecer Editar áudio sem remover as rotas anteriores.", "check"),
+            ReleaseFeature("visible-frame-capture-261", "Fotografia do quadro visível no editor",
+                "O botão de câmera captura a prévia renderizada, incluindo PiP, legendas e efeitos, em vez de apenas o quadro bruto. A resolução da imagem segue a prévia da tela.", "check"),
+            ReleaseFeature("trim-preview-once-261", "Cortar vídeo reproduz o trecho uma vez",
+                "A prévia para no fim do trecho; o vídeo só reinicia após novo toque em Reproduzir.", "check")
+        )),
         ReleaseSummary("0.1.260", listOf(
             ReleaseFeature("audio-editor-home-260", "Editor de Áudio independente na Home",
                 "Novo atalho Editar áudio abre arquivo local sem criar projeto. Uma faixa por vez, com onda sonora em segundo plano e seleção por duas alças.", "check"),
