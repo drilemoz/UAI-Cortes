@@ -1,3 +1,10 @@
+# v0.1.262 — pop-ups refinados e ações de atualização responsivas
+
+- Base 0.1.261/versionCode 262; nova 0.1.262/versionCode 263. Preservar cinco APKs, assinatura, projetos, editor de áudio, redes sociais, Gemini e Media3.
+- Melhorar visualmente os diálogos da Home e de Atualizações mostrados pelo usuário: Recuperar edição interrompida, Atualização disponível e Nome do novo projeto. Usar melhor hierarquia visual, apoio textual e formas já existentes do app, sem criar fluxos novos ou salvar dados extras.
+- Na tela Atualizações, impedir que o botão de reiniciar download quebre em telas estreitas. Adotar layout responsivo (empilhado quando necessário) em vez de três botões comprimidos na mesma linha.
+- Sincronizar versionName/versionCode, README, CHANGELOG, RELEASE_NOTES, AppReleaseNotes, workflow e metadados. Validar fonte com tools/validate_source.py e empacotar somente com tools/package_source.py.
+
 # v0.1.261 — CI 218, captura visível e corte sem loop
 
 - Base 0.1.260/versionCode 261; nova 0.1.261/versionCode 262. Preservar os cinco APKs, novos módulos, assinatura, mídia existente e esquema de projeto.

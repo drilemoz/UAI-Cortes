@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.261"
-    const val VERSION_CODE = 262
+    const val VERSION_NAME = "0.1.262"
+    const val VERSION_CODE = 263
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.262", listOf(
+            ReleaseFeature("dialogs-visual-refresh-262", "Pop-ups da Home e Atualizações redesenhados",
+                "Os diálogos de novo projeto, recuperar rascunho e atualização disponível ganharam hierarquia visual melhor, textos mais claros e destaque para o que é seguro ou temporário.", "check"),
+            ReleaseFeature("update-controls-responsive-262", "Controles de download sem botões quebrados",
+                "Na tela Atualizações, os botões de pausar, parar e reiniciar agora se reorganizam em telas estreitas para evitar cortes e quebra do texto.", "check"),
+            ReleaseFeature("update-restart-label-262", "Recomeçar ficou mais claro",
+                "O comando de baixar de novo passou a aparecer como Reiniciar download quando necessário, mantendo a ação manual e sem prometer retomada de bytes antigos.", "check")
+        )),
         ReleaseSummary("0.1.261", listOf(
             ReleaseFeature("ci218-route-contract-261", "CI 218: validação de navegação atualizada",
                 "O contrato da ferramenta Dividir vídeo passa a reconhecer Editar áudio sem remover as rotas anteriores.", "check"),

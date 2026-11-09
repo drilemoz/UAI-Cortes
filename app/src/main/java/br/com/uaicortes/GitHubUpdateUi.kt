@@ -1,34 +1,99 @@
 package br.com.uaicortes
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.ui.Alignment
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PauseCircle
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
 /** A notificação é automática; baixar e instalar continuam sempre manuais. */
 @Composable internal fun GitHubUpdatePrompt(manager: GitHubUpdateManager, onOpenUpdates: () -> Unit) {
     val pending = manager.promptRelease ?: return
+    val colors = MaterialTheme.colorScheme
     AlertDialog(
         onDismissRequest = manager::dismissPrompt,
         shape = UaiShapes.dialog,
-        icon = { Icon(Icons.Default.SystemUpdate, null) },
-        title = { Text("Atualização disponível: v${pending.version}") },
-        text = { Text("Há uma versão mais recente do Uai Cortes. O download e a instalação precisam da sua autorização.") },
-        confirmButton = { TextButton(onClick = {
-            manager.dismissPrompt()
-            onOpenUpdates()
-        }, shape = UaiShapes.button) { Text("Ver atualização") } },
-        dismissButton = { TextButton(onClick = manager::dismissPrompt, shape = UaiShapes.button) { Text("Agora não") } }
+        icon = {
+            Surface(color = colors.primaryContainer, shape = UaiShapes.card) {
+                Icon(Icons.Default.SystemUpdate, null,
+                    tint = colors.primary,
+                    modifier = Modifier.padding(12.dp).size(22.dp))
+            }
+        },
+        title = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Surface(color = colors.secondaryContainer, shape = UaiShapes.item) {
+                    Text("Versão nova pronta para baixar", modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelLarge, color = colors.onSecondaryContainer)
+                }
+                Text("Atualização disponível", style = MaterialTheme.typography.headlineSmall)
+                Text("v${pending.version}", style = MaterialTheme.typography.titleLarge,
+                    color = colors.primary)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Há uma versão mais recente do Uai Cortes. O download e a instalação continuam dependendo da sua autorização.")
+                Surface(color = colors.surfaceVariant.copy(alpha = 0.7f), shape = UaiShapes.card) {
+                    Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Info, contentDescription = null,
+                            tint = colors.primary, modifier = Modifier.size(18.dp))
+                        Text("Seus projetos não são alterados até você baixar e instalar o APK.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colors.onSurfaceVariant)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                manager.dismissPrompt()
+                onOpenUpdates()
+            }, shape = UaiShapes.button) {
+                Text("Ver atualização")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = manager::dismissPrompt, shape = UaiShapes.button) { Text("Agora não") }
+        }
     )
+}
+
+@Composable private fun GitHubUpdateActionButton(
+    label: String,
+    icon: ImageVector,
+    primary: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val content: @Composable () -> Unit = {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+            Text(label, maxLines = 1)
+        }
+    }
+    if (primary) {
+        Button(onClick = onClick, enabled = enabled, shape = UaiShapes.button,
+            modifier = modifier.heightIn(min = 48.dp)) { content() }
+    } else {
+        OutlinedButton(onClick = onClick, enabled = enabled, shape = UaiShapes.button,
+            modifier = modifier.heightIn(min = 48.dp)) { content() }
+    }
 }
 
 @Composable internal fun GitHubUpdatesScreen(manager: GitHubUpdateManager, back: () -> Unit) {
@@ -111,23 +176,62 @@ import kotlinx.coroutines.launch
                             style = MaterialTheme.typography.bodySmall)
                     }
                     val release = (check as? GitHubUpdateResult.Available)?.release
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = {
-                            if (manager.paused && release != null) scope.launch { manager.resumeDownload(release) }
-                            else manager.pauseDownload()
-                        }, enabled = manager.paused && release != null || manager.downloading,
-                            shape=UaiShapes.button, modifier=Modifier.weight(1f)) {
-                            Text(if (manager.paused) "Retomar" else "Pausar")
-                        }
-                        OutlinedButton(onClick = { confirmStop = true },
-                            shape=UaiShapes.button, modifier=Modifier.weight(1f)) {
-                            Text("Parar")
-                        }
-                        OutlinedButton(onClick = {
-                            if (release != null) scope.launch { manager.restartDownload(release) }
-                        }, enabled=release != null,
-                            shape=UaiShapes.button, modifier=Modifier.weight(1f)) {
-                            Text("Recomeçar")
+                    BoxWithConstraints(Modifier.fillMaxWidth()) {
+                        val stacked = maxWidth < 430.dp
+                        if (stacked) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                GitHubUpdateActionButton(
+                                    label = if (manager.paused) "Retomar" else "Pausar",
+                                    icon = if (manager.paused) Icons.Default.PlayArrow else Icons.Default.PauseCircle,
+                                    primary = true,
+                                    enabled = (manager.paused && release != null) || manager.downloading,
+                                    onClick = {
+                                        if (manager.paused && release != null) scope.launch { manager.resumeDownload(release) }
+                                        else manager.pauseDownload()
+                                    },
+                                    modifier = Modifier.fillMaxWidth())
+                                GitHubUpdateActionButton(
+                                    label = "Parar",
+                                    icon = Icons.Default.SystemUpdate,
+                                    primary = false,
+                                    enabled = true,
+                                    onClick = { confirmStop = true },
+                                    modifier = Modifier.fillMaxWidth())
+                                GitHubUpdateActionButton(
+                                    label = "Reiniciar download",
+                                    icon = Icons.Default.RestartAlt,
+                                    primary = false,
+                                    enabled = release != null,
+                                    onClick = { if (release != null) scope.launch { manager.restartDownload(release) } },
+                                    modifier = Modifier.fillMaxWidth())
+                            }
+                        } else {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                GitHubUpdateActionButton(
+                                    label = if (manager.paused) "Retomar" else "Pausar",
+                                    icon = if (manager.paused) Icons.Default.PlayArrow else Icons.Default.PauseCircle,
+                                    primary = true,
+                                    enabled = (manager.paused && release != null) || manager.downloading,
+                                    onClick = {
+                                        if (manager.paused && release != null) scope.launch { manager.resumeDownload(release) }
+                                        else manager.pauseDownload()
+                                    },
+                                    modifier = Modifier.weight(1f))
+                                GitHubUpdateActionButton(
+                                    label = "Parar",
+                                    icon = Icons.Default.SystemUpdate,
+                                    primary = false,
+                                    enabled = true,
+                                    onClick = { confirmStop = true },
+                                    modifier = Modifier.weight(1f))
+                                GitHubUpdateActionButton(
+                                    label = "Reiniciar",
+                                    icon = Icons.Default.RestartAlt,
+                                    primary = false,
+                                    enabled = release != null,
+                                    onClick = { if (release != null) scope.launch { manager.restartDownload(release) } },
+                                    modifier = Modifier.weight(1f))
+                            }
                         }
                     }
                     if (manager.paused) Text("O download parcial será verificado antes da instalação. " +
@@ -159,8 +263,19 @@ import kotlinx.coroutines.launch
         Spacer(Modifier.height(20.dp))
     }
     if (confirmStop) AlertDialog(onDismissRequest = { confirmStop = false },
+        shape = UaiShapes.dialog,
+        icon = { Icon(Icons.Default.PauseCircle, contentDescription = null) },
         title = { Text("Interromper download?") },
-        text = { Text("Parar remove o APK incompleto. Para apenas suspender, use Pausar.") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Parar remove o APK incompleto. Para apenas suspender, use Pausar.")
+                Surface(color = MaterialTheme.colorScheme.errorContainer, shape = UaiShapes.card) {
+                    Text("O arquivo parcial será apagado.", modifier = Modifier.padding(12.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer)
+                }
+            }
+        },
         confirmButton = { TextButton(onClick = {
             confirmStop = false
             manager.stopDownload()
@@ -168,9 +283,19 @@ import kotlinx.coroutines.launch
         dismissButton = { TextButton(onClick = { confirmStop = false }) { Text("Continuar") } })
     confirmDownload?.let { release ->
         AlertDialog(onDismissRequest = { confirmDownload = null }, shape = UaiShapes.dialog,
+            icon = { Icon(Icons.Default.Download, contentDescription = null) },
             title = { Text("Baixar versão ${release.version}?") },
-            text = { Text("O APK será baixado do GitHub e verificado por SHA-256. A instalação dependerá da sua autorização no Android. Seus projetos não serão modificados pelo download.") },
-            confirmButton = { TextButton(onClick = {
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("O APK será baixado do GitHub e verificado por SHA-256. A instalação dependerá da sua autorização no Android.")
+                    Surface(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f), shape = UaiShapes.card) {
+                        Text("Seus projetos não serão modificados pelo download.", modifier = Modifier.padding(12.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            },
+            confirmButton = { Button(onClick = {
                 confirmDownload = null
                 scope.launch { manager.download(release) }
             }, shape = UaiShapes.button) { Text("Baixar") } },

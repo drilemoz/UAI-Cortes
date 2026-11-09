@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.262 (2026-11-09)
+
+- Melhorado o design dos pop-ups de atualização disponível, recuperação de edição interrompida e criação de novo projeto, com melhor hierarquia visual e apoio textual.
+- Tela Atualizações: os botões de ação do download agora usam layout responsivo em telas estreitas, evitando que o texto de reiniciar ultrapasse o contorno do botão.
+- Ajustado o rótulo para “Reiniciar download” ou “Reiniciar”, conforme o espaço, preservando o comportamento manual do download.
+- Versionamento, workflow, notas e metadados sincronizados para 0.1.262/versionCode 263.
+
 # Uai Cortes 0.1.261 (2026-11-09)
 
 - CI 218: contrato da navegação para ferramentas rápidas atualizado após inclusão do Editor de Áudio, preservando as rotas anteriores.

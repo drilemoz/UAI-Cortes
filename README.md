@@ -1,3 +1,10 @@
+# Uai Cortes · v0.1.262 — diálogos mais claros e atualização sem botão quebrado
+
+- Pop-ups principais da Home e de Atualizações receberam hierarquia visual melhor, com ícones, mensagens de apoio e destaque para informações temporárias ou seguras.
+- O diálogo de Novo projeto ficou mais direto, com explicação curta e campo com orientação; Recuperar edição e Atualização disponível também foram reorganizados.
+- Na tela Atualizações, os controles de Pausar, Parar e Reiniciar download se adaptam a telas estreitas para impedir que o texto invada o retângulo do botão.
+- Alteração visual e de layout validada localmente; compilação Android completa e teste físico ainda precisam ser confirmados no CI/aparelho.
+
 # Uai Cortes · v0.1.261 — CI 218, quadro visível e reprodução única
 
 - Atualizado o contrato de navegação para reconhecer o novo Editar áudio sem perder Dividir vídeo/Extrair áudio.

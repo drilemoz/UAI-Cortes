@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.262 — pop-ups mais bonitos e atualização ajustada
+
+- Pop-ups de Novo projeto, Recuperar edição interrompida e Atualização disponível receberam novo acabamento visual, com melhor organização do título, ícones e mensagens auxiliares.
+- O fluxo de atualização preserva o comportamento manual, mas os botões de Pausar, Parar e Reiniciar download agora se adaptam melhor a telas estreitas.
+- Corrigido o caso em que o texto de Recomeçar quebrava o retângulo do botão na tela Atualizações.
+- Requer validação em GitHub Actions e teste físico no aparelho para confirmar compilação Android e aparência final.
+
 # Uai Cortes · versão 0.1.261 — CI 218 e prévias corretas
 
 - Corrigido o contrato de teste da navegação após inclusão do Editor de Áudio, sem retirar ferramentas anteriores.

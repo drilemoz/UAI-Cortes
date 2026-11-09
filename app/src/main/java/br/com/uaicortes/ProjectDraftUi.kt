@@ -5,6 +5,8 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Alignment
@@ -92,19 +94,54 @@ internal fun ConfirmEditorExit(hasSavedOriginal: Boolean, onDecision: (String) -
 
 @Composable
 internal fun ConfirmRecoverDraft(onRecover: () -> Unit, onDiscard: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
     AlertDialog(onDismissRequest = {}, shape = UaiShapes.dialog,
-        title = { Text("Recuperar edição interrompida?") },
-        text = { Text("Há uma sessão temporária que não foi salva como projeto. Deseja continuar de onde parou? Os arquivos originais não foram copiados.") },
-        confirmButton = { TextButton(onClick = onRecover) { Text("Recuperar edição") } },
-        dismissButton = { TextButton(onClick = onDiscard) { Text("Descartar rascunho") } })
+        icon = {
+            Surface(color = colors.primaryContainer, shape = UaiShapes.card) {
+                Icon(Icons.Default.History, contentDescription = null,
+                    tint = colors.primary,
+                    modifier = Modifier.padding(10.dp).size(22.dp))
+            }
+        },
+        title = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Recuperar edição interrompida?", style = MaterialTheme.typography.headlineSmall)
+                Text("Rascunho temporário encontrado", style = MaterialTheme.typography.labelLarge,
+                    color = colors.primary)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Há uma sessão temporária que não foi salva como projeto. Deseja continuar exatamente de onde parou?")
+                Surface(color = colors.surfaceVariant.copy(alpha = 0.75f), shape = UaiShapes.card) {
+                    Text("Os arquivos originais não foram copiados nem substituídos.",
+                        modifier = Modifier.padding(12.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.onSurfaceVariant)
+                }
+            }
+        },
+        confirmButton = { Button(onClick = onRecover, shape = UaiShapes.button) { Text("Recuperar edição") } },
+        dismissButton = { TextButton(onClick = onDiscard, shape = UaiShapes.button) { Text("Descartar rascunho") } })
 }
 
 @Composable
 internal fun InvalidEditorDraft(onClear: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
     AlertDialog(onDismissRequest = {}, shape = UaiShapes.dialog,
+        icon = { Icon(Icons.Default.WarningAmber, contentDescription = null, tint = colors.error) },
         title = { Text("Rascunho não recuperável") },
-        text = { Text("A sessão temporária está incompleta ou o projeto original foi modificado. Nenhum projeto salvo será substituído.") },
-        confirmButton = { TextButton(onClick = onClear) { Text("Limpar rascunho inválido") } })
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("A sessão temporária está incompleta ou o projeto original foi modificado.")
+                Surface(color = colors.errorContainer, shape = UaiShapes.card) {
+                    Text("Nenhum projeto salvo será substituído.", modifier = Modifier.padding(12.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.onErrorContainer)
+                }
+            }
+        },
+        confirmButton = { Button(onClick = onClear, shape = UaiShapes.button) { Text("Limpar rascunho inválido") } })
 }
 
 /** Grava rascunho só em área privada; não toca no ProjectStore nem no histórico. */
