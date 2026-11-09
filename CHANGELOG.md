@@ -1,3 +1,12 @@
+# Uai Cortes 0.1.257 (2026-11-09)
+
+- Central de Vozes: 50 resultados por página, controles anterior/próxima no alto e após os cartões; pesquisa, classificação e filtros continuam sobre o catálogo inteiro.
+- Adicionados filtros rápidos de favoritas, português BR, masculino/feminino e vozes com prévia histórica; diálogo avançado permanece.
+- Botões Renomear, Favoritar, Ouvir/Gerar prévia e Detalhes alinhados na mesma linha, com comparação A/B preservada.
+- Pesquisa normalizada em índice lembrado, debounce de 180 ms e filtro/ordenação memorizados para reduzir trabalho durante recomposições.
+- Diagnóstico opt-in agregado da Central: abertura, leitura do cache, cálculo de filtros, troca de página e uma amostragem curta de intervalos entre callbacks de quadro, sem coletar nome/áudio/pesquisa ou alegar ANR.
+- Nenhuma modificação nas APIs, no armazenamento de tokens, na importação de projetos, no cache WAV ou na cobrança/geração de voz Gemini. Testes Android ainda necessários.
+
 # Uai Cortes 0.1.256 (2026-11-09)
 
 - Correção do CI 213: `horizontalScroll` agora tem o import correto do Compose em Texto para Voz.

@@ -1,3 +1,12 @@
+# Validação v0.1.257 / versionCode 258 — Central Gemini
+
+- Confirmar 50 vozes por página para 500 entradas, navegação de 10 páginas, última página parcial, vazios e busca em todo catálogo.
+- Testar filtros rápidos e avançados combinados; ver que renomear, favoritos, comparação A/B, prévias e projetos existentes são preservados.
+- Validar política de áudio: mudar página/filtrar não invoca API nem gera voz automaticamente.
+- Verificar contrato do novo layout e helper Kotlin/JVM de paginação; `tools/validate_source.py`, check de versionamento e ZIP extraído.
+- Medições opt-in: abertura, filtro, cache, troca de página e amostra curta de intervalos entre quadros (não é medição de ANR).
+- Pendentes: compilação Gradle Android, teste instrumentado e comparação de fluidez no aparelho real.
+
 # Validação da v0.1.255 / versionCode 256 (Vozes Google)
 
 - Testar renomeação direta do catálogo e persistência dos apelidos sem alterar voiceId.

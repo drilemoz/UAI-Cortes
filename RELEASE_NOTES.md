@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.257 — Central de Vozes mais rápida e organizada
+
+- Navegue pelas 500 vozes salvas em páginas de até 50, usando Anterior/Próxima sem chamadas extras ao Google.
+- Filtre rapidamente vozes favoritas, em português BR, masculinas, femininas e com prévia; a busca continua global.
+- Lápis de renomeação, favorito, prévia e detalhes ficam na mesma linha de ações.
+- Pesquisa otimizada e diagnóstico de desempenho opcional; nenhuma voz, prévia histórica ou projeto foi apagado.
+- Compilação Android e teste físico de fluidez dependem do GitHub Actions e do celular.
+
 # Uai Cortes · versão 0.1.256 — YouTube e compilação CI 213
 
 - Na primeira atualização de um canal antigo, escolha a conta Google correspondente. O app verifica o canal e guarda apenas o e-mail autorizado para futuras consultas, evitando associação manual recorrente.

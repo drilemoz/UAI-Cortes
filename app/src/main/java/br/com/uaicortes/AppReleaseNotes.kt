@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.256"
-    const val VERSION_CODE = 257
+    const val VERSION_NAME = "0.1.257"
+    const val VERSION_CODE = 258
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.257", listOf(
+            ReleaseFeature("gemini-voices-pages-257", "Biblioteca de vozes com páginas de 50",
+                "Veja até 50 vozes por página, com navegação anterior e próxima. Pesquisa, favoritos e filtros continuam cobrindo todo o catálogo local de 500.", "check"),
+            ReleaseFeature("gemini-voices-filters-257", "Filtros rápidos e ações alinhadas",
+                "Favoritas, português, gênero e prévias ficam à mão. Renomear, favoritar, ouvir e detalhes agora aparecem alinhados nos cartões.", "check"),
+            ReleaseFeature("gemini-voices-performance-257", "Pesquisa e indicadores mais eficientes",
+                "Busca com intervalo curto, índice local normalizado, resultados memorizados e diagnóstico opcional de tempos e quadros. Sem geração automática de áudio.", "check")
+        )),
         ReleaseSummary("0.1.256", listOf(
             ReleaseFeature("youtube-auto-account-256", "YouTube sem associar manualmente toda vez",
                 "Na primeira atualização de canais antigos, escolha a conta Google. Depois de confirmar o ID do canal e o e-mail verificado, a associação fica salva para futuras consultas.", "check"),

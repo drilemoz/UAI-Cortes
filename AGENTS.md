@@ -1,3 +1,12 @@
+# v0.1.257 — Paginação e desempenho da Central de Vozes Google
+
+- Base v0.1.256/versionCode 257; nova v0.1.257/versionCode 258. Preservar os cinco APKs, assinatura, schema de projetos, SocialStore, contas Google/Meta, prévias offline, apelidos e favoritos.
+- Paginar a visualização local em blocos de 50 vozes, com controles anterior/próxima no topo e rodapé; pesquisa e filtros continuam sobre TODAS as até 500 vozes. `LazyColumn` virtualiza somente a página atual. Não consultar API ao trocar página.
+- Filtros rápidos: Favoritas, português BR (apenas se catalogado), Masculinas/Femininas e prévias históricas; filtros detalhados continuam no diálogo.
+- Quatro ações Renomear/Favoritar/Prévia/Detalhes na mesma linha, sem quebrar nome/metadados. Comparação A/B e seleção de voz existentes preservadas.
+- Otimizar índice local normalizado e lembrar filtros; debounce da pesquisa (180 ms). Prévia nunca sintetiza sem confirmação explícita. Métricas opcionais sem dados privados, amostra curta de intervalos de quadros e durações de abertura, filtro, página e leitura de cache; NÃO chamar amostra de ANR.
+- Validar limites de paginação, contratos antigos, sincronização, Kotlin isolado e ZIP oficial com `.github`; compilação Android e fluidez física ainda precisam de CI/aparelho.
+
 # v0.1.256 — Contas Google automáticas e correção CI 213
 
 - Partir da 0.1.255/versionCode 256, nova 0.1.256/versionCode 257; preservar projetos, SocialStore schema 1, módulos, 5 APKs e workflow.

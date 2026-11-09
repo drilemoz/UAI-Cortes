@@ -25,6 +25,7 @@ object DiagnosticRecorder {
     private val active = AtomicBoolean(false)
     private val lastSaveLogMs = AtomicLong(0L)
     private val lastTapLogMs = AtomicLong(0L)
+    private val lastVoicePerfMs = AtomicLong(0L)
     @Volatile private var app: Context? = null
     private var installedHandler = false
 
@@ -103,6 +104,28 @@ object DiagnosticRecorder {
         val safe = event.takeIf { it in allowed } ?: "unknown"
         val mib = bytes?.takeIf { it >= 0L }?.div(1024L * 1024L)
         log("UPDATE", "state=$safe${mib?.let { " size_mib=$it" }.orEmpty()}")
+    }
+
+    /** Métricas agregadas da Central de Vozes; sem consulta, nome, ID ou conteúdo de fala. */
+    fun voiceCenterPerformance(stage: String, elapsedMs: Long, count: Int) {
+        if (!active.get()) return
+        if (stage !in setOf("open", "cache", "filter", "page")) return
+        val now = System.currentTimeMillis()
+        if (stage == "filter" || stage == "cache") {
+            val previous = lastVoicePerfMs.get()
+            if (now - previous < 10_000L || !lastVoicePerfMs.compareAndSet(previous, now)) return
+        }
+        val usedHeapMiB = ((Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) /
+            (1024L * 1024L)).coerceAtLeast(0L)
+        log("PERF", "screen=voice_center stage=$stage elapsed_ms=${elapsedMs.coerceIn(0L, 60_000L)} " +
+            "count=${count.coerceIn(0, 500)} heap_mib=$usedHeapMiB")
+    }
+
+    /** Apenas amostragem curta de intervalos entre callbacks; não equivalem a frames renderizados nem ANR. */
+    fun voiceCenterFrames(sampled: Int, slow: Int, long: Int) {
+        if (!active.get() || sampled < 2) return
+        log("PERF", "screen=voice_center stage=frame_sample sampled=${sampled.coerceIn(0, 90)} " +
+            "slow_intervals=${slow.coerceIn(0, 90)} long_intervals=${long.coerceIn(0, 90)}")
     }
 
     /** Somente quantidade agregada de fontes indisponíveis, sem URI ou títulos. */

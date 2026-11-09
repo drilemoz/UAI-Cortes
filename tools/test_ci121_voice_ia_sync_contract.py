@@ -17,7 +17,7 @@ assert 'api.synthesize(key, usedModel, voiceId, requestStyle, cue.text)' in ui
 assert 'promptGenerate = listOf(cue.id)' in ui and 'GeminiUsageHint("narração"' in ui
 center = (base/'GeminiVoiceCenterScreen.kt').read_text()
 assert 'GeminiVoiceSearch.byGender(' in center and 'GeminiVoiceSearch.byPitch(' in center
-assert 'GeminiVoiceSearch.filter(' in center
+assert 'val target = GeminiVoicePresentation.fold(debouncedQuery.trim())' in center
 assert 'val displayed = ' in center
 for label in ('Femininas', 'Masculinas', 'Graves', 'Médias', 'Agudas'):
     assert label in center and label in search, label

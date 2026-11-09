@@ -12,7 +12,7 @@ for item in ('statusBarsPadding()', 'GeminiVoiceAliases.title', 'GeminiVoiceSear
              'MetadataFilter("Sotaque"', 'MetadataFilter("Finalidade"',
              'MetadataFilter("Personalidade"', 'compareA', 'compareB', 'Escolher A', 'Escolher B',
              'Gerar prévia', 'pode consumir cota ou gerar cobrança',
-             'GeminiPreviewIdentity.idForText', 'visibleCount += 30'):
+             'GeminiPreviewIdentity.idForText', 'GeminiVoicePaging.slice(displayed, currentPage)'):
     assert item in ui, item
 assert 'voice.id' in ui and 'cache.find(sampleId(voice))' in ui
 assert 'filterWithAliases' in search and 'fieldValue' in search

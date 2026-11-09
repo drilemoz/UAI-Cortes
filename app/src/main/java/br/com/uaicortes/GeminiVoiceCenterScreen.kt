@@ -1,11 +1,13 @@
 package br.com.uaicortes
 
 import android.net.Uri
+import android.os.SystemClock
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -24,11 +26,14 @@ import androidx.compose.ui.unit.sp
 import androidx.media3.common.MediaItem
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.text.DateFormat
 import java.util.Date
+
+private data class VoiceCenterFilterResult(val voices: List<GeminiVoice>, val elapsedMs: Long)
 
 /** Central compartilhada: a seleção não gera áudio; catálogo/identificadores jamais são reescritos.
  * Toda síntese é voluntária, com confirmação de possível consumo da API.
@@ -55,6 +60,11 @@ internal fun GeminiVoiceCenterScreen(
     val pacing = remember(ctx) { GeminiLocalPacing(ctx) }
     val client = remember(ctx) { GeminiTtsClient(ctx) }
     val player = remember(ctx) { diagnosticPlayer(ctx) }
+    val frameProbe = remember { VoiceCenterFrameProbe() }
+    DisposableEffect(frameProbe) {
+        frameProbe.start()
+        onDispose { frameProbe.finish() }
+    }
     DisposableEffect(client, player) {
         onDispose { client.cancel(); player.release() }
     }
@@ -110,7 +120,17 @@ internal fun GeminiVoiceCenterScreen(
     var aliasDraft by remember { mutableStateOf("") }
     var pendingSample by remember { mutableStateOf<GeminiVoice?>(null) }
     var pendingDelete by remember { mutableStateOf(false) }
-    var visibleCount by remember { mutableIntStateOf(30) }
+    // A paginação é local: as 500 vozes continuam pesquisáveis, sem chamadas adicionais à API.
+    var page by rememberSaveable { mutableIntStateOf(0) }
+    var debouncedQuery by remember { mutableStateOf("") }
+    var pageRequestedAtMs by remember { mutableLongStateOf(0L) }
+    val voiceListState = rememberLazyListState()
+    val openingAtMs = remember { SystemClock.elapsedRealtime() }
+    LaunchedEffect(query) {
+        if (query.isNotBlank()) delay(180L)
+        debouncedQuery = query
+    }
+
 
     val wavPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("audio/wav")) { uri ->
         val hash = pendingHistoryExport
@@ -137,6 +157,7 @@ internal fun GeminiVoiceCenterScreen(
         "", sampleModel, voice.id, GeminiSpeechLanguage.style(styleInstruction, sampleLanguage), sampleText())
 
     suspend fun updatePreviewIndicators() {
+        val startedAtMs = SystemClock.elapsedRealtime()
         val keys = voices.map { it.id to sampleId(it) }
         val state = withContext(Dispatchers.IO) {
             Triple(keys.mapNotNull { (id, hash) -> id.takeIf { cache.exists(hash) } }.toSet(),
@@ -145,6 +166,7 @@ internal fun GeminiVoiceCenterScreen(
         previewIds = state.first
         occupiedBytes = state.second
         historyCounts = state.third
+        DiagnosticRecorder.voiceCenterPerformance("cache", SystemClock.elapsedRealtime() - startedAtMs, keys.size)
     }
     suspend fun fetchAllLanguages() {
         if (working) return
@@ -232,6 +254,7 @@ internal fun GeminiVoiceCenterScreen(
         sampleDraftLanguage = personal.second.third
         loaded = true
         updatePreviewIndicators()
+        DiagnosticRecorder.voiceCenterPerformance("open", SystemClock.elapsedRealtime() - openingAtMs, voices.size)
     }
     LaunchedEffect(historyVoice) {
         historyItems = historyVoice?.let { selected ->
@@ -251,27 +274,58 @@ internal fun GeminiVoiceCenterScreen(
     LaunchedEffect(sampleModel, styleInstruction, voices, sampleMode, customText, sampleLanguage) {
         if (loaded) updatePreviewIndicators()
     }
-    LaunchedEffect(query, gender, pitch, accent, contextFilter, persona, language, onlyFavorites, onlySaved, onlyWithHistory, onlyPortuguese, hideReviewedSimilar) {
-        visibleCount = 30
+    LaunchedEffect(debouncedQuery, gender, pitch, accent, contextFilter, persona, language,
+        onlyFavorites, onlySaved, onlyWithHistory, onlyPortuguese, hideReviewedSimilar) {
+        page = 0
     }
-
-    val matching = (GeminiVoiceSearch.byGender(GeminiVoiceSearch.filter(voices, query), gender) +
-        GeminiVoiceSearch.byGender(GeminiVoiceSearch.filterWithAliases(voices, query, aliases), gender))
-        .distinctBy { it.id }
-    val reviewedHidden = if (hideReviewedSimilar) GeminiVoiceDiscovery.hiddenFromReview(
-        voices, manualReviews, favoriteIds, previewIds) else emptySet()
-    val displayed = GeminiVoiceSearch.byPitch(matching, pitch)
-        .let { GeminiVoiceSearch.byMetadata(it, "accent", accent) }
-        .let { GeminiVoiceSearch.byMetadata(it, "context", contextFilter) }
-        .let { GeminiVoiceSearch.byMetadata(it, "persona", persona) }
-        .let { GeminiVoiceSearch.byMetadata(it, "language", language) }
-        .filter { (!onlyFavorites || it.id in favoriteIds) && (!onlySaved || it.id in previewIds) &&
-            (!onlyWithHistory || historyCounts.getOrDefault(it.id, 0) > 0) &&
-            (!onlyPortuguese || GeminiVoiceDiscovery.isPortuguese(it)) && it.id !in reviewedHidden }
-        .sortedWith(compareByDescending<GeminiVoice> { it.id in favoriteIds }
-            .thenBy { GeminiVoiceAliases.title(it, aliases) })
-    val visible = displayed.take(visibleCount)
-    val offlineCandidates = displayed.map { it.id }.filter { it in previewIds }
+    // Indexa uma vez os textos normalizados; não recalcula 500 strings para cada recomposição.
+    val searchIndex = remember(voices, aliases) {
+        voices.associate { voice -> voice.id to GeminiVoicePresentation.fold(
+            GeminiVoicePresentation.searchableText(voice) + " " + aliases[voice.id].orEmpty()) }
+    }
+    val reviewedHidden = remember(voices, manualReviews, favoriteIds, previewIds, hideReviewedSimilar) {
+        if (hideReviewedSimilar) GeminiVoiceDiscovery.hiddenFromReview(
+            voices, manualReviews, favoriteIds, previewIds) else emptySet()
+    }
+    val filteredResult = remember(voices, debouncedQuery, searchIndex, gender, pitch, accent,
+        contextFilter, persona, language, onlyFavorites, onlySaved, onlyWithHistory,
+        onlyPortuguese, favoriteIds, previewIds, historyCounts, reviewedHidden, aliases) {
+        val startNs = SystemClock.elapsedRealtimeNanos()
+        val target = GeminiVoicePresentation.fold(debouncedQuery.trim())
+        val matching = GeminiVoiceSearch.byGender(voices.filter { voice ->
+            target.isEmpty() || searchIndex[voice.id]?.contains(target) == true
+        }, gender)
+        val result = GeminiVoiceSearch.byPitch(matching, pitch)
+            .let { GeminiVoiceSearch.byMetadata(it, "accent", accent) }
+            .let { GeminiVoiceSearch.byMetadata(it, "context", contextFilter) }
+            .let { GeminiVoiceSearch.byMetadata(it, "persona", persona) }
+            .let { GeminiVoiceSearch.byMetadata(it, "language", language) }
+            .filter { (!onlyFavorites || it.id in favoriteIds) && (!onlySaved || it.id in previewIds) &&
+                (!onlyWithHistory || historyCounts.getOrDefault(it.id, 0) > 0) &&
+                (!onlyPortuguese || GeminiVoiceDiscovery.isPortuguese(it)) && it.id !in reviewedHidden }
+            .sortedWith(compareByDescending<GeminiVoice> { it.id in favoriteIds }
+                .thenBy { GeminiVoiceAliases.title(it, aliases) })
+        VoiceCenterFilterResult(result, (SystemClock.elapsedRealtimeNanos() - startNs) / 1_000_000L)
+    }
+    val displayed = filteredResult.voices
+    LaunchedEffect(filteredResult) {
+        DiagnosticRecorder.voiceCenterPerformance("filter", filteredResult.elapsedMs, displayed.size)
+    }
+    val totalPages = GeminiVoicePaging.totalPages(displayed.size)
+    val currentPage = page.coerceIn(0, (totalPages - 1).coerceAtLeast(0))
+    val visible = GeminiVoicePaging.slice(displayed, currentPage)
+    val pageRange = GeminiVoicePaging.range(displayed.size, currentPage)
+    LaunchedEffect(currentPage, displayed) {
+        voiceListState.scrollToItem(0)
+        if (pageRequestedAtMs > 0L) {
+            withFrameNanos { }
+            DiagnosticRecorder.voiceCenterPerformance("page", SystemClock.elapsedRealtime() - pageRequestedAtMs, visible.size)
+            pageRequestedAtMs = 0L
+        }
+    }
+    val offlineCandidates = remember(displayed, previewIds) {
+        displayed.asSequence().map { it.id }.filter { it in previewIds }.toList()
+    }
     val chosenA = voices.firstOrNull { it.id == compareA }
     val chosenB = voices.firstOrNull { it.id == compareB }
     val comparisonKey = compareA?.let { a -> compareB?.let { b -> GeminiVoiceDiscovery.pairKey(a, b) } }
@@ -359,17 +413,37 @@ internal fun GeminiVoiceCenterScreen(
             leadingIcon = { Icon(Icons.Default.Search, null) },
             placeholder = { Text("Buscar nome, apelido ou característica") },
             textStyle = MaterialTheme.typography.bodyMedium)
+        // Filtros mais utilizados ficam na tela; os filtros detalhados continuam no diálogo.
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            FilterChip(selected = !onlyFavorites && !onlyPortuguese && !onlyWithHistory && gender == "Todas" &&
+                    pitch == "Todos" && accent.isBlank() && contextFilter.isBlank() &&
+                    persona.isBlank() && language.isBlank() && !onlySaved && !hideReviewedSimilar,
+                onClick = {
+                    onlyFavorites = false; onlyPortuguese = false; onlyWithHistory = false
+                    gender = "Todas"; pitch = "Todos"; accent = ""; contextFilter = ""
+                    persona = ""; language = ""; onlySaved = false; hideReviewedSimilar = false
+                }, label = { Text("Todas") })
+            FilterChip(selected = onlyFavorites, onClick = { onlyFavorites = !onlyFavorites },
+                label = { Text("★ Favoritas (${favoriteIds.size})") })
+            FilterChip(selected = onlyPortuguese, onClick = { onlyPortuguese = !onlyPortuguese },
+                label = { Text("Português BR") })
+            FilterChip(selected = gender == "Masculinas", onClick = {
+                gender = if (gender == "Masculinas") "Todas" else "Masculinas"
+            }, label = { Text("Masculinas") })
+            FilterChip(selected = gender == "Femininas", onClick = {
+                gender = if (gender == "Femininas") "Todas" else "Femininas"
+            }, label = { Text("Femininas") })
+            FilterChip(selected = onlyWithHistory, onClick = { onlyWithHistory = !onlyWithHistory },
+                label = { Text("Com prévia") })
+        }
         Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { filtersOpen = true }, shape = UaiShapes.button) {
                 Icon(Icons.Default.Tune, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(5.dp))
                 Text(if (advancedCount == 0) "Filtros" else "Filtros ($advancedCount)")
-            }
-            TextButton(onClick = { onlyFavorites = !onlyFavorites }) {
-                Icon(if (onlyFavorites) Icons.Default.Star else Icons.Default.StarBorder,
-                    "Filtrar favoritas", Modifier.size(18.dp))
-                Text("${favoriteIds.size}")
             }
             Spacer(Modifier.weight(1f))
             TextButton(onClick = {
@@ -442,7 +516,7 @@ internal fun GeminiVoiceCenterScreen(
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("${displayed.size} de ${voices.size} vozes", fontSize = 12.sp,
+            Text("${displayed.size} de ${voices.size} vozes · ${pageRange.first}–${pageRange.last}", fontSize = 12.sp,
                 modifier = Modifier.weight(1f))
             if (hideReviewedSimilar) Text("Sem similares · ", fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.primary)
@@ -450,6 +524,25 @@ internal fun GeminiVoiceCenterScreen(
                 color = MaterialTheme.colorScheme.primary)
             Text("${occupiedBytes / (1024 * 1024)} MB em prévias", fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (totalPages > 1 && loaded) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween) {
+                IconButton(onClick = {
+                    pageRequestedAtMs = SystemClock.elapsedRealtime()
+                    page = (currentPage - 1).coerceAtLeast(0)
+                }, enabled = currentPage > 0) {
+                    Icon(Icons.Default.ChevronLeft, "Página anterior")
+                }
+                Text("Página ${currentPage + 1} de $totalPages", fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                IconButton(onClick = {
+                    pageRequestedAtMs = SystemClock.elapsedRealtime()
+                    page = (currentPage + 1).coerceAtMost(totalPages - 1)
+                }, enabled = currentPage < totalPages - 1) {
+                    Icon(Icons.Default.ChevronRight, "Próxima página")
+                }
+            }
         }
         if (working) LinearProgressIndicator(Modifier.fillMaxWidth())
         if (status.isNotBlank()) Text(status, fontSize = 11.sp, maxLines = 3,
@@ -464,7 +557,8 @@ internal fun GeminiVoiceCenterScreen(
                     else "Nenhuma voz corresponde ao filtro.", fontSize = 13.sp)
             }
         } else {
-            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp),
+            LazyColumn(Modifier.weight(1f), state = voiceListState,
+                verticalArrangement = Arrangement.spacedBy(5.dp),
                 contentPadding = PaddingValues(bottom = 14.dp)) {
                 items(visible, key = { it.id }) { voice ->
                     val saved = voice.id in previewIds
@@ -472,79 +566,92 @@ internal fun GeminiVoiceCenterScreen(
                         modifier = Modifier.fillMaxWidth(), shape = UaiShapes.card,
                         color = if (voice.id == selectedVoiceId) MaterialTheme.colorScheme.primaryContainer
                         else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .55f)) {
-                        Row(Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.GraphicEq, null, Modifier.size(23.dp),
-                                tint = MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.width(8.dp))
-                            Column(Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(title(voice), modifier = Modifier.weight(1f), maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
-                                    IconButton(onClick = {
-                                        aliasDraft = aliases[voice.id].orEmpty()
-                                        editVoice = voice
-                                    }, modifier = Modifier.size(32.dp)) {
-                                        Icon(Icons.Default.Edit, "Renomear ${title(voice)}", Modifier.size(17.dp))
-                                    }
+                        Column(Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.GraphicEq, null, Modifier.size(23.dp),
+                                    tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(8.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(title(voice), maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                        fontWeight = FontWeight.Medium)
+                                    if (voice.id in aliases) Text(GeminiVoicePresentation.label(voice),
+                                        fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(GeminiVoicePresentation.shortDetails(voice), fontSize = 11.sp,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    val historyCount = historyCounts[voice.id] ?: 0
+                                    if (saved) Text("Prévia desta frase/modelo", fontSize = 10.sp,
+                                        color = MaterialTheme.colorScheme.primary)
+                                    if (historyCount > 0) Text("$historyCount prévia(s) no histórico local",
+                                        fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
-                                if (voice.id in aliases) Text(GeminiVoicePresentation.label(voice),
-                                    fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text(GeminiVoicePresentation.shortDetails(voice), fontSize = 11.sp,
-                                    maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                if (saved) Text("Prévia desta frase/modelo", fontSize = 10.sp,
-                                    color = MaterialTheme.colorScheme.primary)
-                                val historyCount = historyCounts[voice.id] ?: 0
-                                if (historyCount > 0) Text("$historyCount prévia(s) no histórico local",
-                                    fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                if (voice.id == selectedVoiceId) Icon(Icons.Default.CheckCircle,
+                                    "Selecionada", Modifier.size(17.dp))
                             }
-                            IconButton(onClick = {
-                                val next = GeminiVoiceFavorites.toggle(favoriteIds, voice.id)
-                                if (favorites.save(next)) favoriteIds = next
-                            }, modifier = Modifier.size(40.dp)) {
-                                Icon(if (voice.id in favoriteIds) Icons.Default.Star else Icons.Default.StarBorder,
-                                    if (voice.id in favoriteIds) "Desfavoritar" else "Favoritar")
-                            }
-                            IconButton(enabled = !working, onClick = { listen(voice) },
-                                modifier = Modifier.size(40.dp)) {
-                                Icon(if (saved) Icons.Default.PlayCircle else Icons.Default.AutoAwesome,
-                                    if (saved) "Ouvir prévia local" else "Gerar prévia (pode consumir cota)")
-                            }
-                            if (compareOpen && !(blindComparison && !blindRevealed)) {
-                                Column {
+                            // As quatro ações ficam na MESMA linha, sem disputar a largura do nome.
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End,
+                                verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = {
+                                    aliasDraft = aliases[voice.id].orEmpty()
+                                    editVoice = voice
+                                }, modifier = Modifier.size(40.dp)) {
+                                    Icon(Icons.Default.Edit, "Renomear ${title(voice)}", Modifier.size(20.dp))
+                                }
+                                IconButton(onClick = {
+                                    val next = GeminiVoiceFavorites.toggle(favoriteIds, voice.id)
+                                    if (favorites.save(next)) favoriteIds = next
+                                }, modifier = Modifier.size(40.dp)) {
+                                    Icon(if (voice.id in favoriteIds) Icons.Default.Star else Icons.Default.StarBorder,
+                                        if (voice.id in favoriteIds) "Desfavoritar" else "Favoritar")
+                                }
+                                IconButton(enabled = !working, onClick = { listen(voice) },
+                                    modifier = Modifier.size(40.dp)) {
+                                    Icon(if (saved) Icons.Default.PlayCircle else Icons.Default.AutoAwesome,
+                                        if (saved) "Ouvir prévia local" else "Gerar prévia (pode consumir cota)")
+                                }
+                                if (compareOpen && !(blindComparison && !blindRevealed)) {
                                     TextButton(onClick = {
-                                        blindComparison = false
-                                        compareA = voice.id
+                                        blindComparison = false; compareA = voice.id
                                         if (compareB == voice.id) compareB = null
-                                    },
-                                        modifier = Modifier.heightIn(min = 40.dp), contentPadding = PaddingValues(0.dp)) {
+                                    }, contentPadding = PaddingValues(0.dp), modifier = Modifier.width(36.dp)) {
                                         Text(if (compareA == voice.id) "A ✓" else "A", fontSize = 12.sp)
                                     }
                                     TextButton(onClick = {
-                                        blindComparison = false
-                                        compareB = voice.id
+                                        blindComparison = false; compareB = voice.id
                                         if (compareA == voice.id) compareA = null
-                                    },
-                                        modifier = Modifier.heightIn(min = 40.dp), contentPadding = PaddingValues(0.dp)) {
+                                    }, contentPadding = PaddingValues(0.dp), modifier = Modifier.width(36.dp)) {
                                         Text(if (compareB == voice.id) "B ✓" else "B", fontSize = 12.sp)
                                     }
                                 }
+                                IconButton(onClick = { detailsVoice = voice }, modifier = Modifier.size(40.dp)) {
+                                    Icon(Icons.Default.MoreVert, "Detalhes e comparação")
+                                }
                             }
-                            IconButton(onClick = { detailsVoice = voice }, modifier = Modifier.size(40.dp)) {
-                                Icon(Icons.Default.MoreVert, "Detalhes e comparação")
-                            }
-                            if (voice.id == selectedVoiceId) Icon(Icons.Default.CheckCircle,
-                                "Selecionada", Modifier.size(17.dp))
                         }
                     }
                 }
-                if (displayed.size > visible.size) {
-                    item {
-                        OutlinedButton(onClick = { visibleCount += 30 }, modifier = Modifier.fillMaxWidth(),
-                            shape = UaiShapes.button) {
-                            Text("Mostrar mais · ${displayed.size - visible.size} restantes")
+                if (totalPages > 1) {
+                    item(key = "voice_page_controls") {
+                        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween) {
+                            OutlinedButton(onClick = {
+                                pageRequestedAtMs = SystemClock.elapsedRealtime()
+                                page = (currentPage - 1).coerceAtLeast(0)
+                            }, enabled = currentPage > 0, shape = UaiShapes.button) {
+                                Icon(Icons.Default.ChevronLeft, null, Modifier.size(18.dp))
+                                Text("Anterior")
+                            }
+                            Text("${currentPage + 1} de $totalPages", fontSize = 12.sp)
+                            OutlinedButton(onClick = {
+                                pageRequestedAtMs = SystemClock.elapsedRealtime()
+                                page = (currentPage + 1).coerceAtMost(totalPages - 1)
+                            }, enabled = currentPage < totalPages - 1, shape = UaiShapes.button) {
+                                Text("Próxima")
+                                Icon(Icons.Default.ChevronRight, null, Modifier.size(18.dp))
+                            }
                         }
                     }
                 }

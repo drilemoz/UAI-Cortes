@@ -1,3 +1,11 @@
+# Uai Cortes · v0.1.257 — Central de Vozes paginada
+
+- O catálogo Gemini pode salvar até 500 vozes. Exibição: 50 por página, mantendo busca e filtros globais sem rede por página.
+- Filtros rápidos visíveis; ações de renomeação, favoritos, prévia e detalhes alinhadas; comparação A/B mantida.
+- Índice de pesquisa e resultados memorizados, digitação com debounce de 180 ms, métricas de desempenho locais opcionais sem registrar textos ou conteúdo de áudio.
+- O cache WAV e as vozes salvas não são removidos. Síntese de novas prévias continua sujeita à confirmação e cotas da API.
+- A compilação Android completa ainda precisa ser validada pelo CI; o ZIP traz `.github/workflows/android-apk.yml`.
+
 # Uai Cortes · v0.1.256 — Conexão YouTube simplificada
 
 - Ao atualizar vídeos do YouTube de um canal antigo, o aplicativo identifica a conta Google escolhida e a associa ao canal apenas após verificar o ID pela API. Na atualização seguinte, tenta recuperar a autorização sem repetir a escolha.
