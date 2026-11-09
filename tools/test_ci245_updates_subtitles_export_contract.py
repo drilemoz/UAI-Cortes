@@ -12,7 +12,9 @@ assert 'java.io.FileOutputStream(partial, offset > 0L)' in manager
 assert 'if (!pauseRequested || stopRequested) partial.delete()' in manager
 assert 'if (!digest.equals(release.sha256' in manager
 assert 'fun matchingContentRange(' in core and 'last < total' in core
-assert all(('"'+label+'"') in updates for label in ('Pausar','Retomar','Parar','Recomeçar'))
+assert all(('"'+label+'"') in updates for label in ('Pausar','Retomar','Parar'))
+# v0.1.262 passou a usar o rótulo responsivo Reiniciar download/Reiniciar.
+assert any(('"'+label+'"') in updates for label in ('Recomeçar','Reiniciar download','Reiniciar'))
 assert 'manager.pauseDownload()' in updates and 'manager.stopDownload()' in updates
 assert 'manager.restartDownload(release)' in updates
 assert 'manager.resumeDownload(release)' in updates

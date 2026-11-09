@@ -1,3 +1,11 @@
+# Uai Cortes 0.1.263 (2026-11-09)
+
+- Atualizado contrato legado de atualização para aceitar o rótulo responsivo “Reiniciar download” da versão anterior, mantendo as verificações de pausa, retomada e parada.
+- Editor de Áudio com linha de reprodução desenhada sobre a onda e atualizada pela posição real do ExoPlayer.
+- Toque na onda permite buscar dentro dos limites da seleção, preservando o ajuste independente das alças de início/fim.
+- Nova opção de carregar um vídeo e editar diretamente a faixa de áudio. Player não decodifica vídeo na ferramenta e exportador continua removendo vídeo e produzindo apenas M4A/AAC.
+- Tratamento específico de vídeo sem áudio compatível e testes de limites de cursor/seek; versões Android e workflow sincronizados (0.1.263/264).
+
 # Uai Cortes 0.1.262 (2026-11-09)
 
 - Melhorado o design dos pop-ups de atualização disponível, recuperação de edição interrompida e criação de novo projeto, com melhor hierarquia visual e apoio textual.

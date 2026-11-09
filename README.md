@@ -1,3 +1,11 @@
+# Uai Cortes · v0.1.263 — cursor na onda sonora e edição direta do áudio de vídeo
+
+- Teste legado do atualizador sincronizado com “Reiniciar download”, preservando o controle de pausa e a validação SHA-256.
+- Editor de Áudio: cursor de reprodução se desloca visualmente na onda sonora usando posição real do player, com busca por toque respeitando o intervalo escolhido e alças independentes.
+- Nova entrada **De vídeo** permite escolher um vídeo pelo seletor Android e editar diretamente sua faixa sonora, sem gerar arquivo temporário adicional; a saída continua M4A/AAC com somente áudio.
+- Vídeos sem áudio compatível apresentam mensagem própria. MP3, WAV e M4A já aceitos continuam funcionando; fontes originais são preservadas.
+- Compatibilidade dos codecs e fidelidade de cursores/corte dependem de validação com APK e testes reais no Android; sintaxe e testes locais não substituem a compilação completa.
+
 # Uai Cortes · v0.1.262 — diálogos mais claros e atualização sem botão quebrado
 
 - Pop-ups principais da Home e de Atualizações receberam hierarquia visual melhor, com ícones, mensagens de apoio e destaque para informações temporárias ou seguras.

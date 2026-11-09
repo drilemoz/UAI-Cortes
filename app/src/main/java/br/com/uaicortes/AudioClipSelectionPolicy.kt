@@ -1,5 +1,7 @@
 package br.com.uaicortes
 
+import kotlin.math.roundToLong
+
 /** Regras puras, sem Media3 ou Compose; o áudio original nunca é modificado. */
 internal object AudioClipSelectionPolicy {
     const val MIN_SELECTION_MS = 100L
@@ -15,6 +17,18 @@ internal object AudioClipSelectionPolicy {
 
     fun end(durationMs: Long, startMs: Long, requested: Long): Long =
         requested.coerceIn((startMs + MIN_SELECTION_MS).coerceAtMost(durationMs), durationMs)
+
+    /** Posição do cursor na onda, com limites seguros mesmo quando a duração não está pronta. */
+    fun playheadFraction(durationMs: Long, currentMs: Long): Float =
+        if (durationMs <= 0L) 0f
+        else (currentMs.coerceIn(0L, durationMs).toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+
+    /** Tocar na onda posiciona o cursor somente dentro do trecho recortado. */
+    fun seekFromFraction(durationMs: Long, startMs: Long, endMs: Long, fraction: Float): Long {
+        if (!valid(durationMs, startMs, endMs)) return 0L
+        val safe = fraction.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: 0f
+        return (safe * durationMs).roundToLong().coerceIn(startMs, endMs)
+    }
 
     fun time(ms: Long): String {
         val safe = ms.coerceAtLeast(0L)

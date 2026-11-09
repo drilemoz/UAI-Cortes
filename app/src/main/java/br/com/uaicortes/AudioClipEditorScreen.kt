@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
+import androidx.media3.common.C
 import androidx.media3.exoplayer.ExoPlayer
 import kotlinx.coroutines.delay
 import kotlin.math.abs
@@ -40,6 +42,7 @@ internal fun AudioClipEditorScreen(onBack: () -> Unit) {
     val exporter = remember(context) { AudioClipExportEngine(context.applicationContext) }
     var source by remember { mutableStateOf<Uri?>(null) }
     var sourceName by remember { mutableStateOf("") }
+    var sourceIsVideo by remember { mutableStateOf(false) }
     var durationMs by remember { mutableLongStateOf(0L) }
     var startMs by remember { mutableLongStateOf(0L) }
     var endMs by remember { mutableLongStateOf(0L) }
@@ -70,17 +73,21 @@ internal fun AudioClipEditorScreen(onBack: () -> Unit) {
     }
     BackHandler { exit() }
 
-    fun changeSource(uri: Uri) {
+    fun changeSource(uri: Uri, fromVideo: Boolean) {
         if (processing) return
         stop(); player.clearMediaItems()
         source = uri
-        sourceName = runCatching { mediaName(context, uri) }.getOrDefault("Áudio")
+        sourceIsVideo = fromVideo
+        sourceName = runCatching { mediaName(context, uri) }.getOrDefault(if (fromVideo) "Vídeo" else "Áudio")
         durationMs = 0L; startMs = 0L; endMs = 0L
         currentMs = 0L; waveform = emptyList(); waveHint = ""
         errorMessage = ""; savedUri = null
+        // Um vídeo entra pelo mesmo fluxo de edição, mas o player não decodifica imagens.
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true).build()
         player.setMediaItem(MediaItem.fromUri(uri))
         player.prepare()
-        DiagnosticRecorder.action("audio_editor", "source_selected")
+        DiagnosticRecorder.action("audio_editor", if (fromVideo) "video_audio_selected" else "source_selected")
     }
 
     val pickAudio = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -88,7 +95,16 @@ internal fun AudioClipEditorScreen(onBack: () -> Unit) {
             runCatching {
                 context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            changeSource(uri)
+            changeSource(uri, fromVideo = false)
+        }
+    }
+    val pickVideo = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            // O MediaExtractor verifica se o vídeo possui uma trilha de áudio utilizável.
+            changeSource(uri, fromVideo = true)
         }
     }
     val saveAudio = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("audio/mp4")) { destination ->
@@ -134,7 +150,9 @@ internal fun AudioClipEditorScreen(onBack: () -> Unit) {
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
-            errorMessage = "Não foi possível abrir esta faixa de áudio."
+            errorMessage = if (sourceIsVideo)
+                "Este vídeo não contém áudio compatível para edição ou excede o limite de duração."
+            else "Não foi possível abrir esta faixa de áudio."
             player.clearMediaItems()
             durationMs = 0L
             DiagnosticRecorder.exception("audio_editor_probe", e)
@@ -144,11 +162,14 @@ internal fun AudioClipEditorScreen(onBack: () -> Unit) {
     LaunchedEffect(playing, endMs, startMs, repeatSelection) {
         while (playing) {
             val position = player.currentPosition.coerceAtLeast(0L)
-            currentMs = position
+            currentMs = position.coerceIn(startMs, endMs)
             if (position >= endMs - 15L || !player.isPlaying && player.playbackState == androidx.media3.common.Player.STATE_ENDED) {
                 if (repeatSelection) {
                     player.seekTo(startMs); player.play(); currentMs = startMs
-                } else stop()
+                } else {
+                    currentMs = endMs
+                    stop()
+                }
             }
             delay(45L)
         }
@@ -159,7 +180,7 @@ internal fun AudioClipEditorScreen(onBack: () -> Unit) {
         Heading("Editor de Áudio", ::exit)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text("Corte e ouça o trecho antes de salvar. Funciona offline.",
+            Text("Corte um áudio ou extraia a trilha sonora de um vídeo. Funciona offline.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Surface(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .55f),
                 shape = RoundedCornerShape(20.dp)) {
@@ -173,16 +194,35 @@ internal fun AudioClipEditorScreen(onBack: () -> Unit) {
                                 style = MaterialTheme.typography.bodySmall)
                         }
                         if (source != null && !processing) {
-                            IconButton(onClick = { stop(); source = null; waveform = emptyList(); durationMs=0L; player.clearMediaItems() }) {
-                                Icon(Icons.Default.Close, "Remover áudio")
+                            IconButton(onClick = {
+                                stop(); source = null; sourceIsVideo = false
+                                currentMs = 0L; waveform = emptyList(); durationMs = 0L
+                                player.clearMediaItems()
+                            }) {
+                                Icon(Icons.Default.Close, "Remover arquivo")
                             }
                         }
                     }
-                    OutlinedButton(onClick = { pickAudio.launch(arrayOf("audio/*")) },
-                        enabled = !processing, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.FolderOpen, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(if (source == null) "Escolher áudio" else "Trocar arquivo")
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { pickAudio.launch(arrayOf("audio/*")) },
+                            enabled = !processing, modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 8.dp)) {
+                            Icon(Icons.Default.AudioFile, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Áudio", maxLines = 1)
+                        }
+                        OutlinedButton(onClick = { pickVideo.launch(arrayOf("video/*")) },
+                            enabled = !processing, modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 8.dp)) {
+                            Icon(Icons.Default.Movie, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("De vídeo", maxLines = 1)
+                        }
+                    }
+                    if (sourceIsVideo && source != null) {
+                        Text("Trilha sonora do vídeo selecionada para edição. A exportação gera somente áudio M4A; o vídeo original permanece intacto.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -192,12 +232,23 @@ internal fun AudioClipEditorScreen(onBack: () -> Unit) {
             }
             if (ready) {
                 Text("Selecionar trecho", style=MaterialTheme.typography.titleMedium, fontWeight=FontWeight.SemiBold)
-                Text("Arraste as extremidades azuis da onda ou ajuste o tempo pelos controles.",
+                Text("Arraste as extremidades azuis. Toque na onda para posicionar o cursor e ouça o trecho.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                AudioClipWaveformSelection(waveform, durationMs, startMs, endMs,
-                    onStartChange = { stop(); startMs = AudioClipSelectionPolicy.start(durationMs, it, endMs); currentMs=startMs },
-                    onEndChange = { stop(); endMs = AudioClipSelectionPolicy.end(durationMs, startMs, it); currentMs=startMs })
+                AudioClipWaveformSelection(waveform, durationMs, startMs, endMs, currentMs,
+                    onStartChange = {
+                        stop(); startMs = AudioClipSelectionPolicy.start(durationMs, it, endMs)
+                        currentMs = startMs; player.seekTo(startMs)
+                    },
+                    onEndChange = {
+                        stop(); endMs = AudioClipSelectionPolicy.end(durationMs, startMs, it)
+                        currentMs = currentMs.coerceIn(startMs, endMs); player.seekTo(currentMs)
+                    },
+                    onSeek = { position ->
+                        val target = position.coerceIn(startMs, endMs)
+                        player.seekTo(target); currentMs = target
+                        DiagnosticRecorder.action("audio_editor", "waveform_seek")
+                    })
                 if (scanning) {
                     LinearProgressIndicator(Modifier.fillMaxWidth())
                     Text("Calculando onda sonora…", style=MaterialTheme.typography.bodySmall)
@@ -209,11 +260,11 @@ internal fun AudioClipEditorScreen(onBack: () -> Unit) {
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     AudioClipEdgeField("Início", startMs, Modifier.weight(1f),
-                        onMinus = { stop(); startMs = AudioClipSelectionPolicy.start(durationMs,startMs-100L,endMs) },
-                        onPlus = { stop(); startMs = AudioClipSelectionPolicy.start(durationMs,startMs+100L,endMs) })
+                        onMinus = { stop(); startMs = AudioClipSelectionPolicy.start(durationMs,startMs-100L,endMs); currentMs=startMs; player.seekTo(startMs) },
+                        onPlus = { stop(); startMs = AudioClipSelectionPolicy.start(durationMs,startMs+100L,endMs); currentMs=startMs; player.seekTo(startMs) })
                     AudioClipEdgeField("Fim", endMs, Modifier.weight(1f),
-                        onMinus = { stop(); endMs = AudioClipSelectionPolicy.end(durationMs,startMs,endMs-100L) },
-                        onPlus = { stop(); endMs = AudioClipSelectionPolicy.end(durationMs,startMs,endMs+100L) })
+                        onMinus = { stop(); endMs = AudioClipSelectionPolicy.end(durationMs,startMs,endMs-100L); currentMs=currentMs.coerceIn(startMs,endMs); player.seekTo(currentMs) },
+                        onPlus = { stop(); endMs = AudioClipSelectionPolicy.end(durationMs,startMs,endMs+100L); currentMs=currentMs.coerceIn(startMs,endMs); player.seekTo(currentMs) })
                 }
                 Text("Trecho selecionado: ${AudioClipSelectionPolicy.time(endMs-startMs)}",
                     fontWeight = FontWeight.Medium)
@@ -224,7 +275,9 @@ internal fun AudioClipEditorScreen(onBack: () -> Unit) {
                     }
                     FilledIconButton(onClick = {
                         if (playing) stop() else {
-                            player.seekTo(startMs)
+                            val playAt = if (currentMs in startMs until endMs) currentMs else startMs
+                            player.seekTo(playAt)
+                            currentMs = playAt
                             player.play(); playing = true
                             DiagnosticRecorder.action("audio_editor", "preview_selection")
                         }
@@ -237,7 +290,7 @@ internal fun AudioClipEditorScreen(onBack: () -> Unit) {
                             tint = if (repeatSelection) Blue else MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                Text("Posição: ${AudioClipSelectionPolicy.time(currentMs)}",
+                Text("Cursor: ${AudioClipSelectionPolicy.time(currentMs)}",
                     style=MaterialTheme.typography.labelSmall,
                     modifier=Modifier.align(Alignment.CenterHorizontally))
             }
@@ -322,14 +375,23 @@ private fun AudioClipEdgeField(label: String, timeMs: Long, modifier: Modifier,
 /** Alças sobre a onda real; a seleção pode ser usada mesmo sem amplitudes decodificáveis. */
 @Composable
 private fun AudioClipWaveformSelection(peaks: List<Float>, durationMs: Long, startMs: Long,
-    endMs: Long, onStartChange: (Long)->Unit, onEndChange: (Long)->Unit) {
+    endMs: Long, currentMs: Long, onStartChange: (Long)->Unit,
+    onEndChange: (Long)->Unit, onSeek: (Long)->Unit) {
     val selected = Blue
     val muted = MaterialTheme.colorScheme.outlineVariant
+    val playheadColor = MaterialTheme.colorScheme.onSurface
     val startState by rememberUpdatedState(startMs)
     val endState by rememberUpdatedState(endMs)
+    val onSeekState by rememberUpdatedState(onSeek)
     var dragStart by remember { mutableStateOf(true) }
     Canvas(Modifier.fillMaxWidth().height(125.dp)
         .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(15.dp))
+        .pointerInput(durationMs) {
+            detectTapGestures(onTap = { position ->
+                val fraction = position.x / size.width.coerceAtLeast(1).toFloat()
+                onSeekState(AudioClipSelectionPolicy.seekFromFraction(durationMs, startState, endState, fraction))
+            })
+        }
         .pointerInput(durationMs) {
             detectDragGestures(onDragStart={ position ->
                 val begin = size.width * startState.toFloat()/durationMs.coerceAtLeast(1L)
@@ -346,6 +408,7 @@ private fun AudioClipWaveformSelection(peaks: List<Float>, durationMs: Long, sta
         val height = size.height
         val left = width * startMs.toFloat() / durationMs.coerceAtLeast(1L).toFloat()
         val right = width * endMs.toFloat() / durationMs.coerceAtLeast(1L).toFloat()
+        val head = width * AudioClipSelectionPolicy.playheadFraction(durationMs, currentMs.coerceIn(startMs,endMs))
         drawRect(selected.copy(alpha=.10f), Offset(left,0f), Size((right-left).coerceAtLeast(0f),height))
         if (peaks.isNotEmpty()) {
             val step=width / peaks.size
@@ -362,5 +425,8 @@ private fun AudioClipWaveformSelection(peaks: List<Float>, durationMs: Long, sta
         drawLine(selected,Offset(right,0f),Offset(right,height),strokeWidth=4.dp.toPx())
         drawCircle(selected,radius=7.dp.toPx(),center=Offset(left,height/2f))
         drawCircle(selected,radius=7.dp.toPx(),center=Offset(right,height/2f))
+        // Cursor de reprodução, distinto das alças; segue o relógio real do player.
+        drawLine(playheadColor, Offset(head, 0f), Offset(head, height), strokeWidth=2.dp.toPx())
+        drawCircle(playheadColor, radius=4.dp.toPx(), center=Offset(head, 8.dp.toPx()))
     }
 }

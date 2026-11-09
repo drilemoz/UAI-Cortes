@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.263 — cursor de áudio e extração de som de vídeo
+
+- Atualizado contrato legado de atualização para aceitar o rótulo responsivo “Reiniciar download” da versão anterior, mantendo as verificações de pausa, retomada e parada.
+- O cursor acompanha visualmente a reprodução na onda sonora do Editor de Áudio.
+- Toque na onda para mover a reprodução dentro do trecho definido pelas duas alças.
+- Agora é possível selecionar um vídeo e editar sua faixa de áudio na mesma ferramenta. Exportar gera só áudio AAC/M4A; o vídeo original não é modificado.
+- A compatibilidade depende do áudio presente e dos codecs disponíveis no aparelho. O novo fluxo exige compilação e teste no Android após a validação do código-fonte.
+
 # Uai Cortes · versão 0.1.262 — pop-ups mais bonitos e atualização ajustada
 
 - Pop-ups de Novo projeto, Recuperar edição interrompida e Atualização disponível receberam novo acabamento visual, com melhor organização do título, ícones e mensagens auxiliares.

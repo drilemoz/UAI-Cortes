@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.262"
-    const val VERSION_CODE = 263
+    const val VERSION_NAME = "0.1.263"
+    const val VERSION_CODE = 264
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.263", listOf(
+            ReleaseFeature("audio-editor-playhead-263", "Cursor acompanha a onda sonora",
+                "A linha de reprodução agora se move sobre a onda, acompanha a posição real do player e permite tocar na onda para escutar a partir de outro ponto do trecho selecionado.", "check"),
+            ReleaseFeature("audio-editor-video-source-263", "Extrair áudio de vídeo e editar em seguida",
+                "No Editor de Áudio, escolha diretamente um vídeo. A faixa sonora é aberta para cortar e ouvir, sem gerar arquivo intermediário; a exportação salva somente áudio M4A.", "check"),
+            ReleaseFeature("audio-editor-audio-only-263", "Recorte protegido e offline",
+                "Mantém MP3/WAV/M4A compatíveis, seleção por alças, repetição opcional, cancelamento e exportação AAC/M4A sem modificar vídeos nem áudios originais.", "check")
+        )),
         ReleaseSummary("0.1.262", listOf(
             ReleaseFeature("dialogs-visual-refresh-262", "Pop-ups da Home e Atualizações redesenhados",
                 "Os diálogos de novo projeto, recuperar rascunho e atualização disponível ganharam hierarquia visual melhor, textos mais claros e destaque para o que é seguro ou temporário.", "check"),

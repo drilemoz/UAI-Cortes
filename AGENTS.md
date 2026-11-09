@@ -1,3 +1,11 @@
+# v0.1.263 — Cursor de áudio e extração de vídeo na mesma tela
+
+- Base 0.1.262/versionCode 263; nova 0.1.263/versionCode 264. Preservar os cinco APKs, assinaturas, projetos, editor, Media3, vozes, redes sociais e UI das atualizações.
+- No Editor de Áudio, atualizar o cursor visual da onda em sincronia com ExoPlayer e permitir busca com toque limitada à seleção, sem confundir o cursor com as duas alças de corte. Ao pausar, manter posição; no fim, parar sem loop, salvo se a opção Repetir estiver ativada.
+- Expor seletor de vídeo por OpenDocument; selecionar a faixa audio/* no MediaExtractor e desativar o renderer de vídeo na prévia. A exportação Media3 continua setRemoveVideo(true), produzindo somente AAC/M4A, sem criar arquivos de extração intermediários nem alterar as fontes.
+- Quando vídeo não possuir áudio válido ou formato/duração suportados, mostrar falha clara. Não prometer compatibilidade universal de codecs; validar em Android após CI.
+- Atualizar regressões, versão sequencial, notas, workflow e metadados; gerar ZIP somente pelo tools/package_source.py.
+
 # v0.1.262 — pop-ups refinados e ações de atualização responsivas
 
 - Base 0.1.261/versionCode 262; nova 0.1.262/versionCode 263. Preservar cinco APKs, assinatura, projetos, editor de áudio, redes sociais, Gemini e Media3.
