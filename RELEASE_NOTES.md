@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.255 — Renomear vozes e falar português BR
+
+- Renomeie as vozes Google diretamente pelo ícone de lápis. Nome original e ID técnico são preservados.
+- Oriente narrações Gemini para português brasileiro; nas prévias e em Texto para Voz, alterne entre pt-BR e detecção automática.
+- As prévias antigas ficam no histórico local. A geração de áudio usa API Google e pode consumir cota.
+- Qualidade de pronúncia depende da voz/modelo. Compilação e teste real de síntese ainda pendentes.
+
 # Uai Cortes · versão 0.1.254 — Conta Google por canal
 
 - Contas de canais YouTube agora têm associação explícita e validada pela API com e-mail Google; tokens ficam só na RAM.

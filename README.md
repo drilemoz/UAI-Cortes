@@ -1,3 +1,9 @@
+# Uai Cortes · v0.1.255 — Vozes Google com renomeação e português BR
+
+- Central de Vozes: toque no lápis ao lado de uma voz para renomeá-la localmente; o identificador da voz Google não muda.
+- A geração Gemini TTS recebe orientação de fala pt-BR por padrão. Prévia e Texto para Voz permitem selecionar detecção automática. Testar pronúncia e sotaque em cada voz; não há garantia de sotaque brasileiro perfeito.
+- As prévias históricas sem orientação explícita permanecem acessíveis offline; novas amostras usam versão nova de cache.
+
 # Uai Cortes · v0.1.254 — Canais Google com conta associada
 
 A atualização dos vídeos do YouTube usa a conta Google vinculada ao ID do canal, sem escolher novamente cada conta toda vez. Em Ajustes → Minhas contas e canais → Conta Google, informe uma vez o e-mail, confirme a autorização e o app valida o canal pela API antes de gravar a associação. Não persiste tokens OAuth. A leitura usa youtube.readonly, e o upload pede youtube.upload apenas durante publicação confirmada. Sem vínculo, não consulta a conta errada. Consentimento Google pode aparecer se necessário.

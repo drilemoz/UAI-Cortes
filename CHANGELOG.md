@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.255 (2026-11-09)
+
+- Central de Vozes: botão Renomear junto de cada voz; nomes locais persistentes, sem alterar IDs ou histórico.
+- Text-to-speech: orientação padrão de português brasileiro em chamadas Gemini, com seleção automática opcional nas prévias e em Texto para Voz.
+- Cache de prévias versionado para preservar comparação fiel ao idioma; arquivos antigos continuam no histórico offline.
+- Sem servidor adicional, novas chamadas automáticas ou mudanças nos projetos. Testes completos do Android e áudio real ainda pendentes.
+
 # Uai Cortes 0.1.254 (2026-11-09)
 
 - Contas de canais YouTube agora têm associação explícita e validada pela API com e-mail Google; tokens ficam só na RAM.

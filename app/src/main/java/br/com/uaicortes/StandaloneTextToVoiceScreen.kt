@@ -35,6 +35,7 @@ internal class StandaloneVoiceDraft {
     val model = mutableStateOf(GeminiModels.LITE)
     val voice = mutableStateOf<GeminiVoice?>(null)
     val style = mutableStateOf("Neutra")
+    val language = mutableStateOf(GeminiSpeechLanguage.PORTUGUESE_BR)
     val generated = mutableStateOf<File?>(null)
     val feedback = mutableStateOf("")
     val apiUsage = mutableStateOf("")
@@ -65,6 +66,7 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
         if (!chooseVoice) localVoiceAliases = withContext(Dispatchers.IO) { GeminiVoiceAliases(ctx).load() }
     }
     var style by draft.style
+    var language by draft.language
     var styleMenu by remember { mutableStateOf(false) }
     var confirm by remember { mutableStateOf(false) }
     var confirmExit by remember { mutableStateOf(false) }
@@ -170,6 +172,18 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
                                 ?: "Selecionar na Central de Vozes",
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
+                    Text("Idioma da fala", style = MaterialTheme.typography.labelMedium)
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        GeminiSpeechLanguage.choices.forEach { mode ->
+                            FilterChip(selected = language == mode, enabled = !busy,
+                                onClick = { language = mode },
+                                label = { Text(GeminiSpeechLanguage.label(mode)) })
+                        }
+                    }
+                    Text("A orientação pt-BR ajuda na pronúncia, mas não garante sotaque brasileiro " +
+                        "em todas as vozes.", style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.weight(1f)) {
@@ -292,6 +306,7 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
             val requestedVoice = voice!!.id
             val requestedModel = model
             val requestedStyle = GeminiNarrationStyling.instruction(style)
+            val requestedLanguage = language
             busy = true
             feedback = "Gerando áudio..."
             apiUsage = ""
@@ -304,7 +319,7 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
                     }
                     val started = System.currentTimeMillis()
                     val wave = client.synthesize(key, requestedModel, requestedVoice,
-                        requestedStyle, requestedText)
+                        requestedStyle, requestedText, requestedLanguage)
                     val file = withContext(Dispatchers.IO) { library.save(wave) }
                     savedFiles = withContext(Dispatchers.IO) { library.list() }
                     generated = file

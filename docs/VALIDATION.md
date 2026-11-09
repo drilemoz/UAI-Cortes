@@ -1,3 +1,10 @@
+# Validação da v0.1.255 / versionCode 256 (Vozes Google)
+
+- Testar renomeação direta do catálogo e persistência dos apelidos sem alterar voiceId.
+- Testar synthesize com pt-BR e modo auto; confirmar que cache não reutiliza prévia antiga sob novo idioma.
+- Testar Texto para Voz com seleção de idioma, favoritos, comparação A/B, histórico offline.
+- Verificar sintaxe Kotlin e contratos; compilação Android real e sotaque pt-BR no aparelho pendentes.
+
 # Validação da v0.1.254 / versionCode 255 (Google por canal)
 
 - Base: ZIP oficial v0.1.253, incluindo `.github/workflows/android-apk.yml`.

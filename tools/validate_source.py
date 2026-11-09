@@ -1220,7 +1220,7 @@ assert 'fun instruction(label: String, pace: Int = 2, expressiveness: Int = 2, p
 assert 'GeminiNarrationStyling.instruction(style, pace, expressiveness, pitch)' in narration
 assert narration.count('GeminiPreviewIdentity.id(') >= 2
 assert 'val instruction = styleInstruction' in narration
-assert 'speech_metadata' in voice_core and 'put("style", style)' in voice_core
+assert 'speech_metadata' in voice_core and 'GeminiSpeechLanguage.style(style, languageMode)' in voice_core
 assert (root/'app/src/test/java/br/com/uaicortes/GeminiNarrationStylingTest.kt').exists()
 assert (root/'docs/VALIDATION_0.1.96.md').exists()
 assert 'ReleaseSummary("0.1.96", listOf(' in notes

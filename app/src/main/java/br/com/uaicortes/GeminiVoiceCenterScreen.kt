@@ -76,6 +76,8 @@ internal fun GeminiVoiceCenterScreen(
     var customText by remember { mutableStateOf("") }
     var sampleDraftMode by remember { mutableStateOf(GeminiVoiceSampleText.STANDARD) }
     var sampleDraftText by remember { mutableStateOf("") }
+    var sampleLanguage by remember { mutableStateOf(GeminiSpeechLanguage.PORTUGUESE_BR) }
+    var sampleDraftLanguage by remember { mutableStateOf(GeminiSpeechLanguage.PORTUGUESE_BR) }
     var working by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("") }
     var query by remember { mutableStateOf("") }
@@ -132,7 +134,7 @@ internal fun GeminiVoiceCenterScreen(
     fun title(voice: GeminiVoice) = GeminiVoiceAliases.title(voice, aliases)
     fun sampleText(): String = GeminiVoiceSampleText.content(sampleMode, customText)
     fun sampleId(voice: GeminiVoice): String = GeminiPreviewIdentity.idForText(
-        "", sampleModel, voice.id, styleInstruction, sampleText())
+        "", sampleModel, voice.id, GeminiSpeechLanguage.style(styleInstruction, sampleLanguage), sampleText())
 
     suspend fun updatePreviewIndicators() {
         val keys = voices.map { it.id to sampleId(it) }
@@ -211,7 +213,7 @@ internal fun GeminiVoiceCenterScreen(
                 Triple(library.autoRefresh(), library.limitMb(), cache.usageBytes()))
         }
         val personal = withContext(Dispatchers.IO) {
-            Triple(aliasStore.load(), samplePrefs.mode(), samplePrefs.custom())
+            Pair(aliasStore.load(), Triple(samplePrefs.mode(), samplePrefs.custom(), samplePrefs.language()))
         }
         val storedReviews = withContext(Dispatchers.IO) { reviewStore.load() }
         voices = snapshot.first.voices
@@ -222,10 +224,12 @@ internal fun GeminiVoiceCenterScreen(
         occupiedBytes = snapshot.third.third
         aliases = personal.first
         manualReviews = storedReviews
-        sampleMode = personal.second
-        customText = personal.third
-        sampleDraftMode = personal.second
-        sampleDraftText = personal.third
+        sampleMode = personal.second.first
+        customText = personal.second.second
+        sampleLanguage = personal.second.third
+        sampleDraftMode = personal.second.first
+        sampleDraftText = personal.second.second
+        sampleDraftLanguage = personal.second.third
         loaded = true
         updatePreviewIndicators()
     }
@@ -244,7 +248,7 @@ internal fun GeminiVoiceCenterScreen(
     LaunchedEffect(loaded, autoRefresh) {
         if (loaded && autoRefresh) fetchFromGoogle()
     }
-    LaunchedEffect(sampleModel, styleInstruction, voices, sampleMode, customText) {
+    LaunchedEffect(sampleModel, styleInstruction, voices, sampleMode, customText, sampleLanguage) {
         if (loaded) updatePreviewIndicators()
     }
     LaunchedEffect(query, gender, pitch, accent, contextFilter, persona, language, onlyFavorites, onlySaved, onlyWithHistory, onlyPortuguese, hideReviewedSimilar) {
@@ -341,7 +345,8 @@ internal fun GeminiVoiceCenterScreen(
             IconButton(enabled = !working, onClick = { scope.launch { fetchFromGoogle() } }) {
                 Icon(Icons.Default.Refresh, "Atualizar catálogo manualmente")
             }
-            IconButton(onClick = { sampleDraftMode = sampleMode; sampleDraftText = customText; settingsOpen = true }) {
+            IconButton(onClick = { sampleDraftMode = sampleMode; sampleDraftText = customText;
+                sampleDraftLanguage = sampleLanguage; settingsOpen = true }) {
                 Icon(Icons.Default.Settings, "Configurações de prévia e armazenamento")
             }
         }
@@ -473,8 +478,16 @@ internal fun GeminiVoiceCenterScreen(
                                 tint = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.width(8.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(title(voice), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    fontWeight = FontWeight.Medium)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(title(voice), modifier = Modifier.weight(1f), maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
+                                    IconButton(onClick = {
+                                        aliasDraft = aliases[voice.id].orEmpty()
+                                        editVoice = voice
+                                    }, modifier = Modifier.size(32.dp)) {
+                                        Icon(Icons.Default.Edit, "Renomear ${title(voice)}", Modifier.size(17.dp))
+                                    }
+                                }
                                 if (voice.id in aliases) Text(GeminiVoicePresentation.label(voice),
                                     fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -520,7 +533,7 @@ internal fun GeminiVoiceCenterScreen(
                                 }
                             }
                             IconButton(onClick = { detailsVoice = voice }, modifier = Modifier.size(40.dp)) {
-                                Icon(Icons.Default.MoreVert, "Detalhes, apelido e comparação")
+                                Icon(Icons.Default.MoreVert, "Detalhes e comparação")
                             }
                             if (voice.id == selectedVoiceId) Icon(Icons.Default.CheckCircle,
                                 "Selecionada", Modifier.size(17.dp))
@@ -659,6 +672,19 @@ internal fun GeminiVoiceCenterScreen(
                     Text("Consultar todos os idiomas")
                 }
                 HorizontalDivider()
+                Text("Idioma da prévia", fontWeight = FontWeight.Medium)
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    GeminiSpeechLanguage.choices.forEach { choice ->
+                        FilterChip(selected = sampleDraftLanguage == choice,
+                            onClick = { sampleDraftLanguage = choice },
+                            label = { Text(GeminiSpeechLanguage.label(choice)) })
+                    }
+                }
+                Text("Português (Brasil) orienta a fala, inclusive de vozes de outros idiomas; " +
+                    "o sotaque e a pronúncia podem variar. Gerar nova prévia pode consumir cota.",
+                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                HorizontalDivider()
                 Text("Frase para comparar vozes", fontWeight = FontWeight.Medium)
                 Row(Modifier.horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -690,8 +716,8 @@ internal fun GeminiVoiceCenterScreen(
             if (sampleDraftMode == GeminiVoiceSampleText.CUSTOM &&
                 !GeminiVoiceSampleText.customValid(sampleDraftText)) {
                 status = "Escreva de 3 a 180 caracteres para a prévia personalizada."
-            } else if (samplePrefs.save(sampleDraftMode, sampleDraftText)) {
-                sampleMode = sampleDraftMode; customText = sampleDraftText
+            } else if (samplePrefs.save(sampleDraftMode, sampleDraftText, sampleDraftLanguage)) {
+                sampleMode = sampleDraftMode; customText = sampleDraftText; sampleLanguage = sampleDraftLanguage
                 settingsOpen = false
             } else status = "Não foi possível salvar as configurações da prévia."
         }) { Text("Aplicar") } },
@@ -714,7 +740,7 @@ internal fun GeminiVoiceCenterScreen(
                     OutlinedButton(onClick = {
                         detailsVoice = null; aliasDraft = aliases[voice.id].orEmpty(); editVoice = voice
                     }, modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
-                        Icon(Icons.Default.Edit, null); Text("Apelido local")
+                        Icon(Icons.Default.Edit, null); Text("Renomear voz")
                     }
                     OutlinedButton(onClick = {
                         detailsVoice = null; historyVoice = voice
@@ -819,23 +845,31 @@ internal fun GeminiVoiceCenterScreen(
     }
     editVoice?.let { voice ->
         AlertDialog(onDismissRequest = { editVoice = null },
-            title = { Text("Apelido da voz") },
+            title = { Text("Renomear voz Google") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     Text("Nome original: ${GeminiVoicePresentation.label(voice)}", fontSize = 12.sp)
                     OutlinedTextField(value = aliasDraft,
                         onValueChange = { if (it.length <= GeminiVoiceAliases.MAX_ALIAS_CHARS) aliasDraft = it },
-                        label = { Text("Como você quer chamá-la?") }, singleLine = true)
-                    Text("O apelido é privado e não altera a voz nem o ID do Gemini.", fontSize = 11.sp)
+                        label = { Text("Nome personalizado") }, singleLine = true)
+                    Text("O nome fica salvo apenas neste aparelho. Ele não muda a voz, " +
+                        "a pronúncia ou o ID usado pela API Google.", fontSize = 11.sp)
+                    if (voice.id in aliases) TextButton(onClick = { aliasDraft = "" }) {
+                        Text("Restaurar nome original")
+                    }
                 }
             },
             confirmButton = { TextButton(onClick = {
                 scope.launch {
                     val saved = withContext(Dispatchers.IO) { aliasStore.save(voice.id, aliasDraft) }
-                    if (saved != null) { aliases = saved; editVoice = null }
-                    else status = "Não foi possível salvar o apelido."
+                    if (saved != null) {
+                        aliases = saved; editVoice = null
+                        status = if (aliasDraft.isBlank()) "Nome original restaurado." else "Nome da voz salvo."
+                    } else status = "Não foi possível salvar o nome da voz."
                 }
-            }) { Text("Salvar") } },
+            }, enabled = aliasDraft.isBlank() || GeminiVoiceAliases.validAlias(aliasDraft.trim())) {
+                Text("Salvar nome")
+            } },
             dismissButton = { TextButton(onClick = { editVoice = null }) { Text("Cancelar") } })
     }
     pendingSample?.let { voice ->
@@ -845,7 +879,7 @@ internal fun GeminiVoiceCenterScreen(
                 "e pode consumir cota ou gerar cobrança. Depois a reprodução será local até você apagar o arquivo. " +
                 "Não será inserida no vídeo." +
                 (if (GeminiVoiceDiscovery.isPortuguese(voice)) "" else
-                    " Esta voz não está catalogada como português BR; a pronúncia pode variar.")) },
+                    " A narração tentará português brasileiro, mas o sotaque pode variar.")) },
             confirmButton = { TextButton(onClick = {
                 pendingSample = null
                 scope.launch {
@@ -856,15 +890,16 @@ internal fun GeminiVoiceCenterScreen(
                         val requestedModel = sampleModel
                         val requestedText = sampleText()
                         val requestedStyle = styleInstruction
+                        val requestedLanguage = sampleLanguage
                         val id = GeminiPreviewIdentity.idForText("", requestedModel,
-                            voice.id, requestedStyle, requestedText)
+                            voice.id, GeminiSpeechLanguage.style(requestedStyle, requestedLanguage), requestedText)
                         val existing = withContext(Dispatchers.IO) { cache.find(id) }
                         val file = if (existing != null) existing else {
                             val key = withContext(Dispatchers.IO) { credentials.read() }
                                 ?: error("Chave Gemini ausente.")
                             withContext(Dispatchers.IO) { pacing.beforeRequest(requestedModel) { } }
                             val wave = client.synthesize(key, requestedModel, voice.id,
-                                requestedStyle, requestedText)
+                                requestedStyle, requestedText, requestedLanguage)
                             withContext(Dispatchers.IO) { cache.save(id, wave.bytes, voice.id) }
                         }
                         player.setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))

@@ -22,7 +22,7 @@ internal object GeminiPreviewIdentity {
     }
 
     private fun digest(model: String, voiceId: String, styleInstruction: String, text: String): String {
-        val input = listOf("gemini-sample-v2", model, voiceId, styleInstruction, text)
+        val input = listOf("gemini-sample-v3", model, voiceId, styleInstruction, text)
         val md = MessageDigest.getInstance("SHA-256")
         input.forEach { item ->
             val bytes = item.toByteArray(Charsets.UTF_8)

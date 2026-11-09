@@ -1,3 +1,12 @@
+# v0.1.255 — Nomes personalizados e português brasileiro nas vozes Gemini
+
+- Base 0.1.254/versionCode 255; nova 0.1.255/versionCode 256. Preservar todos os módulos, projetos, schemas, cinco APKs, APIs e credenciais.
+- Exibir Renomear diretamente no catálogo de vozes Google; manter SharedPreferences de apelidos, ID real da API, favoritos, voz usada em projetos e prévias. O nome é apenas local.
+- Gemini 3.8 TTS aceita português, mas não garante sotaque natural em todas as vozes. Orientar pt-BR explicitamente no speech_metadata.style por padrão; opção de detecção automática na Central de Vozes (prévias) e em Texto para Voz. Não traduzir nem modificar a fala do usuário.
+- Cache de prévias novo usa v3 para evitar confundir gravações antigas sem orientação pt-BR; histórico offline preservado.
+- Sem novas APIs, sem servidor, sem chamadas automáticas ao Gemini. Requer testes Android e síntese real antes de prometer pronúncia perfeita.
+- Compilar e validar CI, versão, ZIP oficial com .github.
+
 # v0.1.254 — Autorização YouTube por canal sem seleção repetitiva
 
 - Base 0.1.253/versionCode 254; nova 0.1.254/versionCode 255. Preservar os cinco APKs, assinatura, Media3, schemaVersion de projetos 4 e schema do SocialStore 1.

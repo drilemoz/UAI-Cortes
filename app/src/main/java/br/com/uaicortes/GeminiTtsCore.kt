@@ -194,12 +194,14 @@ internal class GeminiTtsClient(context: Context? = null) {
         GeminiVoiceCatalog.fetchAllLanguages { path -> request(path, key) }
 
     suspend fun voices(key: String): List<GeminiVoice> = voicesWithDiagnosis(key).voices
-    suspend fun synthesize(key: String, model: String, voice: String, style: String, text: String): GeminiWave {
+    suspend fun synthesize(key: String, model: String, voice: String, style: String, text: String,
+                           languageMode: String = GeminiSpeechLanguage.PORTUGUESE_BR): GeminiWave {
         GeminiModels.requireSupported(model)
         require(voice.isNotBlank() && voice.length <= 150) { "Selecione uma voz disponível." }
         require(text.isNotBlank() && text.length <= 4000) { "Digite entre 1 e 4.000 caracteres." }
         val content = JSONObject().put("type", "text").put("text", text)
-            .put("annotations", JSONArray().put(JSONObject().put("type", "speech_metadata").put("style", style)))
+            .put("annotations", JSONArray().put(JSONObject().put("type", "speech_metadata")
+                .put("style", GeminiSpeechLanguage.style(style, languageMode))))
         val body = JSONObject().put("model", model)
             .put("input", JSONArray().put(JSONObject().put("type", "user_input")
                 .put("content", JSONArray().put(content))))

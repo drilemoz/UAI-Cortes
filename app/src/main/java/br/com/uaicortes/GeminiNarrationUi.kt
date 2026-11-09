@@ -90,6 +90,8 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
     val api = remember(ctx) { GeminiTtsClient(ctx) }
     val previewCache = remember(ctx) { GeminiVoicePreviewCache(ctx) }
     val voiceLibrary = remember(ctx) { GeminiVoiceLibrary(ctx) }
+    val aliasStore = remember(ctx) { GeminiVoiceAliases(ctx) }
+    var voiceAliases by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     val scope = rememberCoroutineScope()
     var expanded by remember(project.id) { mutableStateOf(false) }
     var reuseDialogOpen by remember(project.id) { mutableStateOf(false) }
@@ -107,6 +109,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
     var model by currentDraft.model
     var selectedVoice by currentDraft.selectedVoice
     var voices by currentDraft.voices
+    LaunchedEffect(aliasStore) { voiceAliases = withContext(Dispatchers.IO) { aliasStore.load() } }
     LaunchedEffect(currentDraft.recovered.value) {
         if (currentDraft.recovered.value) {
             val local = withContext(Dispatchers.IO) { voiceLibrary.load().voices }
@@ -202,6 +205,9 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
     val latestTimelinePosition by rememberUpdatedState(timelinePositionMs)
     var confirmation by remember { mutableStateOf("") }
     var voicePicker by remember { mutableStateOf(false) }
+    LaunchedEffect(voicePicker) {
+        if (!voicePicker) voiceAliases = withContext(Dispatchers.IO) { aliasStore.load() }
+    }
     var draftVoiceId by remember { mutableStateOf<String?>(null) }
     var pendingSampleVoiceId by remember { mutableStateOf<String?>(null) }
     var voiceSampleStatus by remember { mutableStateOf("") }
@@ -543,7 +549,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                                 enabled = !working && !loading && voices.isNotEmpty()) {
                                 Icon(Icons.Default.RecordVoiceOver, null, Modifier.size(18.dp))
                                 Spacer(Modifier.width(8.dp))
-                                Text(selectedVoice?.let(GeminiVoicePresentation::label) ?: "Nenhuma voz disponível",
+                                Text(selectedVoice?.let { GeminiVoiceAliases.title(it, voiceAliases) } ?: "Nenhuma voz disponível",
                                     modifier = Modifier.weight(1f), maxLines = 1,
                                     overflow = TextOverflow.Ellipsis)
                                 Icon(Icons.Default.ArrowDropDown, null)

@@ -26,10 +26,14 @@ internal class GeminiVoiceSamplePrefs(context: Context) {
     fun mode(): String = prefs.getString("mode", GeminiVoiceSampleText.STANDARD)
         ?.takeIf { it in GeminiVoiceSampleText.modes } ?: GeminiVoiceSampleText.STANDARD
     fun custom(): String = prefs.getString("custom", "").orEmpty().take(GeminiVoiceSampleText.MAX_CUSTOM)
-    fun save(mode: String, custom: String): Boolean {
-        if (mode !in GeminiVoiceSampleText.modes || custom.length > GeminiVoiceSampleText.MAX_CUSTOM ||
+    fun language(): String = prefs.getString("language", GeminiSpeechLanguage.PORTUGUESE_BR)
+        ?.takeIf { it in GeminiSpeechLanguage.choices } ?: GeminiSpeechLanguage.PORTUGUESE_BR
+    fun save(mode: String, custom: String, language: String = GeminiSpeechLanguage.PORTUGUESE_BR): Boolean {
+        if (mode !in GeminiVoiceSampleText.modes || language !in GeminiSpeechLanguage.choices ||
+            custom.length > GeminiVoiceSampleText.MAX_CUSTOM ||
             custom.any(Char::isISOControl)) return false
         if (mode == GeminiVoiceSampleText.CUSTOM && !GeminiVoiceSampleText.customValid(custom)) return false
-        return prefs.edit().putString("mode", mode).putString("custom", custom.trim()).commit()
+        return prefs.edit().putString("mode", mode).putString("custom", custom.trim())
+            .putString("language", language).commit()
     }
 }

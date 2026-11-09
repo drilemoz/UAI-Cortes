@@ -50,9 +50,9 @@ class VoiceCenter190Contract(unittest.TestCase):
         self.assertIn('Este é o Uai Cortes.', identity)
         self.assertIn('Fácil, não é?', identity)
         self.assertIn('Agora... vamos ouvir', identity)
-        self.assertIn('"gemini-sample-v2"', identity)
+        self.assertIn('"gemini-sample-v3"', identity)
         self.assertIn('model, voiceId, styleInstruction, TEXT', identity)
-        self.assertNotIn('listOf("gemini-sample-v2", apiKey', identity)
+        self.assertNotIn('listOf("gemini-sample-v3", apiKey', identity)
 
     def test_voice_and_tone_are_separate(self):
         voice_ui = source('VoiceIaScreen.kt')

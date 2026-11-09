@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.254"
-    const val VERSION_CODE = 255
+    const val VERSION_NAME = "0.1.255"
+    const val VERSION_CODE = 256
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.255", listOf(
+            ReleaseFeature("google-voice-rename-255", "Renomear vozes Google com um toque",
+                "Ícone de lápis diretamente no catálogo, com nomes personalizados locais, sem mudar o ID da voz ou afetar os projetos.", "check"),
+            ReleaseFeature("gemini-tts-ptbr-255", "Fala em português brasileiro",
+                "As novas narrações Gemini recebem orientação explícita pt-BR. As prévias e a ferramenta Texto para Voz permitem optar pela detecção automática; o sotaque ainda depende do modelo e da voz.", "check"),
+            ReleaseFeature("gemini-tts-preview-255", "Prévias coerentes com idioma",
+                "Prévia nova usa identidade de cache diferente da geração anterior, enquanto amostras antigas continuam acessíveis no histórico offline.", "check")
+        )),
         ReleaseSummary("0.1.254", listOf(
             ReleaseFeature("yt-channel-account-link-254", "Conta Google associada a cada canal",
                 "Associe uma vez a conta Google de cada canal YouTube em Ajustes → Minhas contas e canais. A API confirma o ID antes de salvar o vínculo local, sem guardar tokens.", "check"),

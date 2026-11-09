@@ -60,6 +60,8 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
     val favoritesStore = remember(context) { GeminiVoiceFavorites(context) }
     var favoriteVoiceIds by remember(context) { mutableStateOf(favoritesStore.load()) }
     var cachedVoiceNames by remember(context) { mutableStateOf(favoritesStore.names()) }
+    val aliasStore = remember(context) { GeminiVoiceAliases(context) }
+    var voiceAliases by remember(context) { mutableStateOf<Map<String, String>>(emptyMap()) }
     val latestProject by rememberUpdatedState(project)
     val cues = remember(project.subtitles) {
         project.subtitles.filter { it.text.isNotBlank() && it.startMs >= 0L &&
@@ -113,6 +115,11 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
     var cueSearch by remember(project.id) { mutableStateOf("") }
     var searchExpanded by remember { mutableStateOf(false) }
     var voicePickerForAll by remember { mutableStateOf(false) }
+    LaunchedEffect(voicePickerCueId, voicePickerForAll, voicePickerSpeakerId) {
+        if (voicePickerCueId == null && !voicePickerForAll && voicePickerSpeakerId == null) {
+            voiceAliases = withContext(Dispatchers.IO) { aliasStore.load() }
+        }
+    }
     var pendingVoiceForAll by remember { mutableStateOf<String?>(null) }
     var pendingStyleForAll by remember { mutableStateOf<String?>(null) }
     var promptGenerate by remember { mutableStateOf<List<String>?>(null) }
@@ -228,9 +235,10 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
         }
     }
     fun displayVoiceName(id: String?): String = if (id.isNullOrBlank()) "Escolher voz" else {
+        val custom = voiceAliases[id]?.takeIf { GeminiVoiceAliases.validAlias(it) }
         val current = catalog.firstOrNull { it.id == id }
-        if (current != null) VoiceIaShortLabels.voice(current, id)
-        else cachedVoiceNames[id] ?: VoiceIaShortLabels.voice(null, id)
+        custom ?: if (current != null) VoiceIaShortLabels.voice(current, id)
+            else cachedVoiceNames[id] ?: VoiceIaShortLabels.voice(null, id)
     }
     fun speakerFor(cue: SubtitleCue): SubtitleSpeaker? =
         project.subtitleSpeakers.firstOrNull { it.id == cue.speakerId }
