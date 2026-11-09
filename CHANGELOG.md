@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.258 (2026-11-09)
+
+- CI 215: corrigida a referência `.last` no `Pair<Int, Int>` da paginação da Central de Vozes. A interface usa `.second`, como definido por `GeminiVoicePaging.range()`.
+- Regressão para verificar o contrato da tela e as faixas da paginação em Kotlin/JVM sem dependências Android.
+- Versionamento e workflow sincronizados em v0.1.258/versionCode 259; preservados catálogo Gemini, filtros, vozes renomeadas, prévias offline, cinco APKs e os demais recursos.
+- Compilação Gradle/Android e testes no aparelho ainda pendentes de execução no GitHub Actions.
+
 # Uai Cortes 0.1.257 (2026-11-09)
 
 - Central de Vozes: 50 resultados por página, controles anterior/próxima no alto e após os cartões; pesquisa, classificação e filtros continuam sobre o catálogo inteiro.

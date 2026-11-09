@@ -1,3 +1,10 @@
+# Uai Cortes · v0.1.258 — Correção de compilação da Central de Vozes
+
+- Corrige o CI 215: `GeminiVoicePaging.range()` retorna `Pair<Int, Int>`; a Central agora mostra o último índice usando `second`, não `last`.
+- Mantidas as 500 vozes salvas, paginação por 50, filtros, favoritos, históricos WAV, autorizações e todo o sistema de edição e redes sociais.
+- Teste Kotlin isolado e contrato da tela acrescentados; build completo e geração dos cinco APKs ainda precisam de confirmação pelo GitHub Actions.
+- ZIP de fonte oficial contém `.github/workflows/android-apk.yml` sincronizado.
+
 # Uai Cortes · v0.1.257 — Central de Vozes paginada
 
 - O catálogo Gemini pode salvar até 500 vozes. Exibição: 50 por página, mantendo busca e filtros globais sem rede por página.

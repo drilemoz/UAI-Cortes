@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.257"
-    const val VERSION_CODE = 258
+    const val VERSION_NAME = "0.1.258"
+    const val VERSION_CODE = 259
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.258", listOf(
+            ReleaseFeature("ci215-voice-range-258", "Correção do CI 215: páginas da Central de Vozes",
+                "Corrigida a exibição do intervalo de 50 vozes: a tela agora usa o segundo valor do Pair retornado pelo paginador. Os dados e filtros existentes são preservados.", "check"),
+            ReleaseFeature("ci215-compile-contract-258", "Teste Kotlin para prevenir nova falha",
+                "Adicionado teste para impedir o retorno da referência last em Pair e validar os limites das páginas em Kotlin. Ainda requer compilação Android no GitHub Actions.", "check")
+        )),
         ReleaseSummary("0.1.257", listOf(
             ReleaseFeature("gemini-voices-pages-257", "Biblioteca de vozes com páginas de 50",
                 "Veja até 50 vozes por página, com navegação anterior e próxima. Pesquisa, favoritos e filtros continuam cobrindo todo o catálogo local de 500.", "check"),

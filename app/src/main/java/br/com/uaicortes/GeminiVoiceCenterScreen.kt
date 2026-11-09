@@ -516,7 +516,7 @@ internal fun GeminiVoiceCenterScreen(
             }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("${displayed.size} de ${voices.size} vozes · ${pageRange.first}–${pageRange.last}", fontSize = 12.sp,
+            Text("${displayed.size} de ${voices.size} vozes · ${pageRange.first}–${pageRange.second}", fontSize = 12.sp,
                 modifier = Modifier.weight(1f))
             if (hideReviewedSimilar) Text("Sem similares · ", fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.primary)

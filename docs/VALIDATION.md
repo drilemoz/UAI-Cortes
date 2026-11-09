@@ -1,3 +1,10 @@
+# Validação v0.1.258 / versionCode 259 — CI 215
+
+- Causa comprovada: Kotlin `Unresolved reference 'last'` em `GeminiVoiceCenterScreen.kt:519:94`, compilação Release e Debug do workflow 215.
+- `GeminiVoicePaging.range()` retorna `Pair<Int, Int>`, então a UI deve exibir `${pageRange.first}–${pageRange.second}`; nenhuma mudança nos limites da paginação ou no armazenamento.
+- Verificações: contrato de propriedade `.second` e rejeição de `.last`, teste Kotlin/JVM do helper real com 0, 1, 50, 51 e 500 entradas; validação estrutural, sincronização, integridade ZIP extraído.
+- Não afirmar que o Android compilou até o GitHub Actions passar. Sem alteração na lógica de OAuth, APIs ou uso de áudio.
+
 # Validação v0.1.257 / versionCode 258 — Central Gemini
 
 - Confirmar 50 vozes por página para 500 entradas, navegação de 10 páginas, última página parcial, vazios e busca em todo catálogo.

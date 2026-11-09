@@ -1,3 +1,11 @@
+# v0.1.258 — CI 215: correção de compilação da Central de Vozes
+
+- Base 0.1.257/versionCode 258; nova 0.1.258/versionCode 259. Preservar catálogo de 500 vozes, paginação 50/pg, favoritos, apelidos, cache de prévias, 5 APKs, assinatura e workflow.
+- Workflow 215: `GeminiVoiceCenterScreen.kt:519:94 Unresolved reference 'last'` em Kotlin Debug e Release. `GeminiVoicePaging.range()` retorna `Pair<Int, Int>` e a tela acessava `.last`, inexistente em Pair. Corrigir para `.second` sem modificar o helper.
+- Adicionar teste de contrato que rejeita `.last` no intervalo e compile helper real com validação de faixas e índices. Não substituir compilação Android real por validação de sintaxe.
+- Versionamento sincronizado incluindo workflow `.github/workflows/android-apk.yml`; pacote apenas pelo `tools/package_source.py`.
+- CI Android e teste visual no celular ainda são necessários.
+
 # v0.1.257 — Paginação e desempenho da Central de Vozes Google
 
 - Base v0.1.256/versionCode 257; nova v0.1.257/versionCode 258. Preservar os cinco APKs, assinatura, schema de projetos, SocialStore, contas Google/Meta, prévias offline, apelidos e favoritos.

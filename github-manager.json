@@ -2,15 +2,15 @@
   "product": "Uai Cortes",
   "name": "uai_cortes",
   "displayName": "Uai Cortes",
-  "version": "0.1.257",
+  "version": "0.1.258",
   "packageFormat": 2,
   "projectType": "android",
   "framework": "Jetpack Compose",
   "language": "Kotlin",
   "android": {
     "applicationId": "br.com.uaicortes",
-    "versionName": "0.1.257",
-    "versionCode": 258,
+    "versionName": "0.1.258",
+    "versionCode": 259,
     "compileSdk": 36,
     "targetSdk": 36
   }

@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.258 — Correção do CI 215
+
+- Corrigida a falha de compilação Kotlin na Central de Vozes: o fim do intervalo de paginação usa a propriedade correta do Pair (`second`).
+- A lista de 50 vozes por página, filtros, favoritos e prévias permanecem como na versão anterior.
+- Incluído teste de regressão para o tipo do intervalo e casos de paginação em Kotlin. A compilação Android deve ser validada no próximo workflow.
+
 # Uai Cortes · versão 0.1.257 — Central de Vozes mais rápida e organizada
 
 - Navegue pelas 500 vozes salvas em páginas de até 50, usando Anterior/Próxima sem chamadas extras ao Google.
