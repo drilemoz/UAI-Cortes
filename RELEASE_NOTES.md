@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.264 — CI 221 corrigido
+
+- Corrigido o import de `Surface` usado pelos diálogos de recuperação de projeto, que causava falha de compilação Kotlin no workflow 221.
+- Incluído teste de contrato específico do import para evitar regressão em versões futuras.
+- Mantidos os recursos da versão 0.1.263, incluindo Editor de Áudio com cursor sincronizado e extração direta da faixa sonora de vídeos.
+- A correção do erro identificado foi feita; a compilação Android completa e os cinco APKs ainda precisam ser confirmados no GitHub Actions.
+
 # Uai Cortes · versão 0.1.263 — cursor de áudio e extração de som de vídeo
 
 - Atualizado contrato legado de atualização para aceitar o rótulo responsivo “Reiniciar download” da versão anterior, mantendo as verificações de pausa, retomada e parada.

@@ -1,3 +1,10 @@
+# Uai Cortes · v0.1.264 — CI 221: correção de compilação dos pop-ups
+
+- Corrigida a ausência de `import androidx.compose.material3.Surface` em `ProjectDraftUi.kt`, que fazia o workflow 221 falhar em `:app:compileDebugKotlin`.
+- Adicionado teste de regressão para impedir que os diálogos usem `Surface` sem o import do Compose Material 3.
+- Preservados Editor de Áudio, importação de som de vídeos, cursor na onda sonora, recuperação de rascunhos, dados, assinatura e workflow de cinco APKs.
+- Testes estáticos e código-fonte precisam de confirmação pela compilação Android do próximo GitHub Actions.
+
 # Uai Cortes · v0.1.263 — cursor na onda sonora e edição direta do áudio de vídeo
 
 - Teste legado do atualizador sincronizado com “Reiniciar download”, preservando o controle de pausa e a validação SHA-256.

@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.263"
-    const val VERSION_CODE = 264
+    const val VERSION_NAME = "0.1.264"
+    const val VERSION_CODE = 265
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.264", listOf(
+            ReleaseFeature("ci221-surface-import-264", "CI 221: correção da compilação dos diálogos",
+                "Adicionado o import Material 3 Surface em ProjectDraftUi, eliminando referências não resolvidas que interromperam a compilação Debug e Release.", "check"),
+            ReleaseFeature("ci221-draft-regression-264", "Teste de regressão para o diálogo de recuperação",
+                "Novo contrato verifica o import do componente Surface e preserva os diálogos de recuperação, sem alterar o rascunho ou os projetos salvos.", "check")
+        )),
         ReleaseSummary("0.1.263", listOf(
             ReleaseFeature("audio-editor-playhead-263", "Cursor acompanha a onda sonora",
                 "A linha de reprodução agora se move sobre a onda, acompanha a posição real do player e permite tocar na onda para escutar a partir de outro ponto do trecho selecionado.", "check"),

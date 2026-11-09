@@ -1,3 +1,10 @@
+# v0.1.264 — correção CI 221: import Compose Material 3 Surface
+
+- Base v0.1.263/versionCode 264; nova v0.1.264/versionCode 265. Preservar cinco APKs, assinatura, todos os recursos do Editor de Áudio e dados de projetos.
+- Workflow 221 passou validação Python, mas falhou em `:app:compileDebugKotlin` porque `ProjectDraftUi.kt` usa `Surface` sem `import androidx.compose.material3.Surface`. Os erros de invocação `@Composable` são consequência.
+- Adicionar somente o import Material 3 necessário, sem reverter o design dos diálogos nem alterar o funcionamento de recuperação e persistência dos projetos.
+- Acrescentar contrato Python para prevenir ausência do import e executar verificação estrutural, versionamento, ZIP oficial com `.github` e testes direcionados. O teste estático não substitui compilação Android.
+
 # v0.1.263 — Cursor de áudio e extração de vídeo na mesma tela
 
 - Base 0.1.262/versionCode 263; nova 0.1.263/versionCode 264. Preservar os cinco APKs, assinaturas, projetos, editor, Media3, vozes, redes sociais e UI das atualizações.

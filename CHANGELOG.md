@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.264 (2026-11-09)
+
+- CI 221: corrigida referência não resolvida de `Surface` no arquivo `ProjectDraftUi.kt` importando o componente Material 3 necessário.
+- Evitados erros Kotlin secundários de chamadas `@Composable` fora de contexto decorrentes do componente não resolvido.
+- Novo contrato automatizado para garantir que os diálogos de recuperação e limpeza de rascunho importem `Surface` corretamente.
+- Versão 0.1.264/versionCode 265 sincronizada em Gradle, workflow, app identity, notas e empacotador; funcionalidades anteriores preservadas.
+
 # Uai Cortes 0.1.263 (2026-11-09)
 
 - Atualizado contrato legado de atualização para aceitar o rótulo responsivo “Reiniciar download” da versão anterior, mantendo as verificações de pausa, retomada e parada.
