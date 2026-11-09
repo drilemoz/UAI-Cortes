@@ -47,6 +47,34 @@ class ProjectOperationsTest {
         assertEquals(1, repo.projects.size)
     }
 
+    @Test fun renamePreservesProjectContentAndId() {
+        val repo = FakeRepository()
+        val first = VideoProject(id = "one", title = "Antigo", updated = 1L,
+            clips = listOf(Clip(id="clip", uri="content://video", title="Original", sourceDurationMs=5000)))
+        val other = VideoProject(id = "two", title = "Outro")
+        repo.save(first)
+        repo.save(other)
+        val result = ProjectController(repo).rename("one", "  Novo    nome  ", "one")
+        assertEquals("Novo nome", result.active?.title)
+        assertEquals("one", result.activeId)
+        assertEquals(first.clips, result.active?.clips)
+        assertEquals(first.id, result.active?.id)
+        assertEquals(other, repo.projects["two"])
+        assertTrue(result.active!!.updated >= first.updated)
+    }
+
+    @Test fun invalidMissingAndFailedRenameKeepOriginalUntouched() {
+        val repo = FakeRepository()
+        val original = VideoProject(id = "p", title = "Mantido")
+        repo.save(original)
+        val controller = ProjectController(repo)
+        assertThrows(IllegalArgumentException::class.java) { controller.rename("p", "  ", "p") }
+        assertThrows(NoSuchElementException::class.java) { controller.rename("missing", "Novo", "p") }
+        repo.failSave = true
+        assertThrows(IllegalStateException::class.java) { controller.rename("p", "Outro", "p") }
+        assertEquals(original, repo.projects["p"])
+    }
+
     @Test fun appendDoesNotModifyThePreviousProject() {
         val controller = ProjectController(FakeRepository())
         val original = VideoProject(id="base", clips=listOf(Clip(id="a", uri="a", title="A", sourceDurationMs=5000)))

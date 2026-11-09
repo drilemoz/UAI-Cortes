@@ -69,6 +69,20 @@ class ProjectSessionCoordinatorTest {
         assertEquals(listOf("a"), session.snapshot.projects.map { it.id })
     }
 
+    @Test fun renamePersistsAndRefreshesSessionWithoutChangingTheId() {
+        val repo = FakeRepository()
+        repo.data["a"] = VideoProject(id = "a", title = "Antigo")
+        val session = ProjectSessionCoordinator(ProjectController(repo), "a")
+        session.rename("a", "Título novo")
+        assertEquals("a", session.snapshot.activeId)
+        assertEquals("Título novo", session.snapshot.active?.title)
+        assertEquals("Título novo", repo.data["a"]?.title)
+        repo.failSave = true
+        val before = session.snapshot
+        assertThrows(IllegalStateException::class.java) { session.rename("a", "Falha") }
+        assertEquals(before, session.snapshot)
+    }
+
     @Test fun openSameIdReloadsLatestFromStorage() {
         val repo = FakeRepository()
         repo.data["a"] = VideoProject(id = "a", title = "Anterior")

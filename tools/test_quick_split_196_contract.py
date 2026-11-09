@@ -20,7 +20,7 @@ assert 'setRemoveAudio(audioMode == "mute")' in engine
 assert 'onProgress(index + 1' in engine and 'nextPart(index + 1)' in engine
 assert 'QuickVideoToolsScreen(QuickToolMode.SPLIT_VIDEO' in main
 assert 'QuickVideoToolsScreen(QuickToolMode.EXTRACT_AUDIO' in main
-assert 'HomeQuickMediaActions(onQuickSplit, onQuickAudio)' in home
+assert 'onQuickAudio = onQuickAudio, onQuickSplit = onQuickSplit' in home
 assert '"quick_split", "quick_audio" -> "home"' in nav
 assert 'AudioExtractionEngine(context.applicationContext)' in ui
 assert 'ActivityResultContracts.CreateDocument("audio/mp4")' in ui

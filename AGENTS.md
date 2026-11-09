@@ -1,3 +1,10 @@
+# v0.1.243 — Faixa horizontal com sete atalhos e renomeação segura de projetos
+
+- Tela inicial: os atalhos Novo projeto, Animar fotos, Estúdio de Cenas, Vozes Google, Texto para Voz, Extrair áudio e Dividir vídeo aparecem como cartões azuis de largura fixa em uma `Row.horizontalScroll`, com alvos individuais e texto de orientação. Remover cartões grandes e botões duplicados, preservando navegação, mídia original e serviços externos.
+- Listas Edições recentes e Projetos: botão de lápis para renomear, ao lado de Excluir. Diálogo valida nome não vazio com limite de 80 caracteres e não confirma nome idêntico. A persistência de renomeação altera apenas título e data de atualização no snapshot atual, preservando ID, clipes, trilhas, legendas, projeto schema 4 e outros metadados. Se falhar, manter todos os dados e o diálogo aberto.
+- ViewModel impede renomeação enquanto houver edição não salva; reidratar sessão ativa depois do commit. Preservar exclusão existente, recuperação de rascunho e backups.
+- Versão 0.1.243/versionCode 244 em Gradle, CI, GitHub Manager, pacote, Sobre/Novidades, README, CHANGELOG e notas. Testes Kotlin/JUnit, contratos Python, PSI e build Android quando disponível; não confundir testes estáticos com APK validado.
+
 # v0.1.242 — Destaque rosa por palavra do vídeo de referência
 
 - Novo preset em primeiro lugar: **Karaokê rosa do vídeo**, com texto branco em maiúsculas, contorno preto de 4 dp, sombra, tarja rosa arredondada na palavra ativa e sem tarja de fundo na frase.

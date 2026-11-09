@@ -4,12 +4,22 @@ package br.com.uaicortes
 internal interface ProjectRepository {
     fun load(): List<VideoProject>
     fun save(project: VideoProject)
+    /** Implementação padrão para repositórios em memória usados em testes. */
+    fun rename(id: String, title: String): VideoProject {
+        require(ProjectNaming.validTitle(title)) { "Nome inválido" }
+        val existing = load().firstOrNull { it.id == id }
+            ?: throw NoSuchElementException("Projeto não encontrado")
+        val normalized = ProjectNaming.title(title)
+        if (normalized == existing.title) return existing
+        return existing.copy(title = normalized, updated = System.currentTimeMillis()).also(::save)
+    }
     fun delete(id: String)
 }
 
 internal class StoredProjectRepository(private val store: ProjectStore) : ProjectRepository {
     override fun load(): List<VideoProject> = store.load()
     override fun save(project: VideoProject) = store.save(project)
+    override fun rename(id: String, title: String): VideoProject = store.rename(id, title)
     override fun delete(id: String) = store.delete(id)
 }
 
@@ -33,6 +43,11 @@ internal class ProjectController(private val repository: ProjectRepository) {
         val all = repository.load()
         // Preserva os valores de edição em memória, assim como a tela antiga fazia.
         return ProjectSnapshot(all, project)
+    }
+
+    fun rename(id: String, title: String, activeId: String): ProjectSnapshot {
+        repository.rename(id, title) // falha de gravação mantém o snapshot anterior
+        return load(activeId)
     }
 
     fun delete(id: String, activeId: String): ProjectSnapshot {

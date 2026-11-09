@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.243 — Atalhos compactos e renomeação de projetos
+
+- Sete cartões azuis lado a lado com rolagem horizontal no topo da Home. Não há cópia das opções de voz, extração de áudio ou divisão de vídeo no espaço inferior.
+- Botão de lápis para renomear tanto nas edições recentes quanto na aba Projetos; diálogo de confirmação com validação e limite de 80 caracteres.
+- Escrita atualiza o título somente no projeto encontrado no armazenamento, mantendo ID e demais campos, sem sobrescrever mídias com um snapshot antigo. Renomeação recusada se há alterações não salvas no editor.
+- Mantém a versão 0.1.242 do karaoke rosa, Coqui/Chatterbox e os cinco APKs previstos em CI. Novo código 244, projeto schema 4. Compilação Gradle e teste de interface em Android pendentes no ambiente local.
+
 # Uai Cortes · versão 0.1.242 — Legenda karaokê rosa do vídeo
 
 - Letras brancas em maiúsculas com contorno preto e sombra; palavra ativa com fundo rosa arredondado, sem cobrir a frase inteira.

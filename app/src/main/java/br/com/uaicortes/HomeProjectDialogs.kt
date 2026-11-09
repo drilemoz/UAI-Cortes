@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 
 /** Diálogos da Home independentes da tela e do repositório de projetos. */
 @Composable
@@ -20,6 +21,30 @@ internal fun CreateProjectNameDialog(name: String, onNameChange: (String)->Unit,
             Text("Escolher vídeos")
         }},
         dismissButton={TextButton(onClick=onCancel) { Text("Cancelar") }})
+}
+
+
+/** Renomeia somente o título. Nome, clipes e mídias são gravados pelo repositório. */
+@Composable
+internal fun RenameProjectDialog(currentTitle: String, name: String,
+    onNameChange: (String) -> Unit, onConfirm: () -> Unit, onCancel: () -> Unit) {
+    val normalized = ProjectNaming.title(name)
+    AlertDialog(onDismissRequest = onCancel, shape = UaiShapes.dialog,
+        title = { Text("Renomear projeto") },
+        text = {
+            OutlinedTextField(value = name, onValueChange = { onNameChange(it.take(80)) },
+                modifier = Modifier.fillMaxWidth().testTag("rename_project_input"),
+                label = { Text("Novo nome") }, singleLine = true,
+                isError = !ProjectNaming.validTitle(name),
+                supportingText = { Text("Até 80 caracteres. O conteúdo do projeto não será alterado.") })
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm,
+                enabled = ProjectNaming.validTitle(name) && normalized != currentTitle) {
+                Text("Salvar nome")
+            }
+        },
+        dismissButton = { TextButton(onClick = onCancel) { Text("Cancelar") } })
 }
 
 @Composable

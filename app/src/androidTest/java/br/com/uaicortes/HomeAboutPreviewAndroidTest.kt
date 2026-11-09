@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
 import org.junit.Test
@@ -26,7 +27,7 @@ class HomeAboutPreviewAndroidTest {
             MaterialTheme {
                 if (route == "home") {
                     MainHome(emptyList(), onCreate = { createCalls++ }, onAnimate = { animateCalls++ },
-                        onOpen = {}, onDelete = {}, onDeleteAll = {},
+                        onOpen = {}, onRename = {}, onDelete = {}, onDeleteAll = {},
                         onSettings = { route = "about" }, onTab = {},
                         onFlow = { flowCalls++ })
                 } else {
@@ -52,23 +53,24 @@ class HomeAboutPreviewAndroidTest {
         }
     }
 
-    @Test fun eachHomeShortcutKeepsItsOriginalNavigation() {
-        var createCalls = 0
-        var animateCalls = 0
-        var flowCalls = 0
+    @Test fun sevenHomeShortcutsScrollAndKeepIndividualNavigation() {
+        val calls = IntArray(7)
         rule.setContent {
             MaterialTheme {
-                HomePrimaryActions(onCreate = { createCalls++ },
-                    onAnimate = { animateCalls++ }, onFlow = { flowCalls++ })
+                HomePrimaryActions(
+                    onCreate = { calls[0]++ },
+                    onAnimate = { calls[1]++ },
+                    onFlow = { calls[2]++ },
+                    onVoiceCenter = { calls[3]++ },
+                    onTextToVoice = { calls[4]++ },
+                    onQuickAudio = { calls[5]++ },
+                    onQuickSplit = { calls[6]++ })
             }
         }
-        rule.onNodeWithText("Novo projeto").performClick()
-        rule.onNodeWithText("Animar fotos").performClick()
-        rule.onNodeWithText("Estúdio de Cenas").performClick()
-        rule.runOnIdle {
-            org.junit.Assert.assertEquals(1, createCalls)
-            org.junit.Assert.assertEquals(1, animateCalls)
-            org.junit.Assert.assertEquals(1, flowCalls)
+        listOf("Novo projeto", "Animar fotos", "Estúdio de Cenas", "Vozes Google",
+            "Texto para Voz", "Extrair áudio", "Dividir vídeo").forEach { label ->
+            rule.onNodeWithText(label).performScrollTo().performClick()
         }
+        rule.runOnIdle { org.junit.Assert.assertArrayEquals(IntArray(7) { 1 }, calls) }
     }
 }

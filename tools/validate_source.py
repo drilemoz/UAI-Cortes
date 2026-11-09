@@ -1264,7 +1264,7 @@ from check_version_sync import check
 assert check(root) == (current_version, current_code)
 home = (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
 assert 'internal fun HomePrimaryActions(' in home
-assert 'HomePrimaryActions(onCreate, onAnimate, onFlow = onFlow)' in home
+assert 'HomePrimaryActions(onCreate, onAnimate, onFlow = onFlow,' in home
 assert 'OutlinedButton(onClick = onUpdates' in home
 assert 'AppVersionLabel()' in home and home.count('AppVersionLabel()') >= 3
 assert 'Testar visual da Home' not in home

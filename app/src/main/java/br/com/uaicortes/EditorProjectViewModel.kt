@@ -138,6 +138,17 @@ internal class EditorProjectViewModel(
         hasPendingChanges = false
     }
 
+    /** Renomeia projeto salvo sem comitar ou descartar alterações de um editor ativo. */
+    fun rename(id: String, title: String) {
+        check(!hasPendingChanges) { "Há uma edição não salva; conclua-a antes de renomear." }
+        publish(session.rename(id, title))
+        if (draft.current?.id == id) {
+            // A sessão aberta também passa a refletir o nome persistido.
+            project?.let { draft.begin(it, it) }
+            hasPendingChanges = false
+        }
+    }
+
     fun delete(id: String) {
         if (draft.current?.id == id) draft.discard()
         isEditingDraft = false

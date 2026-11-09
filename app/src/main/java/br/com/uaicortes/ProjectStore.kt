@@ -414,6 +414,19 @@ class ProjectStore(private val context: Context) {
         persist(readForMutation().filterNot { it.id == project.id } + updated)
     }
 
+    /** Atualiza somente o nome no registro mais recente, sem alterar mídias nem estrutura. */
+    fun rename(id: String, title: String): VideoProject {
+        val normalized = ProjectNaming.title(title)
+        require(ProjectNaming.validTitle(title)) { "Informe um nome de projeto válido" }
+        val current = readForMutation()
+        val original = current.firstOrNull { it.id == id }
+            ?: throw NoSuchElementException("Projeto não encontrado")
+        if (original.title == normalized) return original
+        val renamed = original.copy(title = normalized, updated = System.currentTimeMillis())
+        persist(current.map { if (it.id == id) renamed else it })
+        return renamed
+    }
+
     fun delete(id: String) {
         persist(readForMutation().filterNot { it.id == id })
     }

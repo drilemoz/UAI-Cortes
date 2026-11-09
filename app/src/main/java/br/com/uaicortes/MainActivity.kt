@@ -149,6 +149,8 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     var pendingOverlap by remember { mutableStateOf<OverlapConfirmation?>(null) }
     var pendingSequential by remember { mutableStateOf<SequentialConfirmation?>(null) }
     var pendingProjectDelete by remember { mutableStateOf<VideoProject?>(null) }
+    var pendingProjectRename by remember { mutableStateOf<VideoProject?>(null) }
+    var projectRenameInput by rememberSaveable { mutableStateOf("") }
     var pendingDeleteAll by remember { mutableStateOf(false) }
     var pendingExitEditor by remember { mutableStateOf(false) }
     var pendingNewProjectName by remember { mutableStateOf(false) }
@@ -454,6 +456,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                         screen = "animate"
                     },
                     onOpen = { openProject(it.id) },
+                    onRename = { pendingProjectRename = it; projectRenameInput = it.title },
                     onDelete = { pendingProjectDelete = it },
                     onDeleteAll = { pendingDeleteAll = true },
                     onSettings = { previous = "home"; screen = "settings" },
@@ -496,6 +499,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                         }
                     })
                 "projects" -> ProjectsScreen(projects, { back() }, { openProject(it.id) },
+                    { pendingProjectRename = it; projectRenameInput = it.title },
                     { pendingProjectDelete = it }, onTab = { screen = it })
                 "social" -> SocialDashboardScreen({ screen = it }, { openSocialPublish(null) }, { previous = "social"; screen = "api_center" })
                 "social_publish" -> SocialPublishScreen(pendingSocialVideoUri.takeIf(String::isNotBlank)?.let(Uri::parse),
@@ -726,6 +730,21 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 pendingNewProjectName = false
                 pendingPicker = "new"; selectedClip = ""; openGallery("home", "new")
             }, onCancel = { pendingNewProjectName = false })
+        pendingProjectRename?.let { target ->
+            RenameProjectDialog(target.title, projectRenameInput,
+                onNameChange = { projectRenameInput = it },
+                onConfirm = {
+                    try {
+                        projectSession.rename(target.id, projectRenameInput)
+                        pendingProjectRename = null
+                    } catch (failure: Exception) {
+                        DiagnosticRecorder.exception("project_rename_failure", failure)
+                        android.widget.Toast.makeText(context,
+                            "Não foi possível renomear o projeto. Os dados foram preservados.",
+                            android.widget.Toast.LENGTH_LONG).show()
+                    }
+                }, onCancel = { pendingProjectRename = null })
+        }
         if (pendingDeleteAll) DeleteAllProjectsDialog(projects.size, onConfirm = {
             try {
                 projectSession.deleteAll()

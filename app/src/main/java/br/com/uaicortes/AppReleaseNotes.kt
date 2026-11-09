@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.242"
-    const val VERSION_CODE = 243
+    const val VERSION_NAME = "0.1.243"
+    const val VERSION_CODE = 244
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.243", listOf(
+            ReleaseFeature("home-tools-scroll-243", "Sete ferramentas na faixa superior",
+                "Novo projeto, Animar fotos, Estúdio de Cenas, Vozes Google, Texto para Voz, Extrair áudio e Dividir vídeo agora aparecem em cartões azuis com rolagem horizontal, sem duplicatas abaixo.", "film"),
+            ReleaseFeature("home-project-rename-243", "Renomear projetos sem abrir o editor",
+                "Um botão de lápis aparece nas edições recentes e na aba Projetos. O novo nome é validado e salvo sem modificar clipes, áudio, legendas ou o ID do projeto.", "check")
+        )),
         ReleaseSummary("0.1.242", listOf(
             ReleaseFeature("subtitle-pink-karaoke-242", "Karaokê rosa do vídeo",
                 "Legendas brancas em maiúsculas com contorno preto; cada palavra recebe uma tarja rosa arredondada sincronizada, também no MP4 exportado.", "film"),

@@ -1,3 +1,11 @@
+# Uai Cortes · v0.1.243 — Sete atalhos roláveis e renomeação de projetos
+
+A página inicial reúne **Novo projeto**, **Animar fotos**, **Estúdio de Cenas**, **Vozes Google**, **Texto para Voz**, **Extrair áudio** e **Dividir vídeo** em uma única faixa de cartões azuis com rolagem horizontal. Os cartões grandes e botões independentes que ocupavam espaço abaixo foram removidos. Cada atalho mantém seu destino original.
+
+Em **Edições recentes** e na aba **Projetos**, toque no **lápis** ao lado da lixeira para renomear. O nome é validado, limitado a 80 caracteres e confirmado em diálogo. Renomear altera somente o título e a data de atualização no cadastro mais recente; não recria o projeto, não move nem apaga mídias e não altera faixas ou legendas. Falhas de persistência são informadas sem descartar o conteúdo original. Não é possível renomear durante edição com alterações ainda não salvas.
+
+A novidade mantém as legendas karaokê rosa, a biblioteca Coqui/Chatterbox, a exportação e o schema de projetos anterior. Regresso e sintaxe podem ser verificados localmente; compile no GitHub Actions e teste a interface em Android antes de publicar como validada.
+
 # Uai Cortes · v0.1.242 — Karaokê rosa igual ao estilo do vídeo
 
 A galeria **Legendas > Estilo** agora destaca **Karaokê rosa do vídeo** como primeira opção. As letras são brancas e maiúsculas, com contorno preto e a palavra falada destacada por um retângulo rosa arredondado. O fundo do restante da frase permanece transparente. A prévia, a miniatura do estilo e a exportação Media3 usam o mesmo efeito `karaoke_badge`.

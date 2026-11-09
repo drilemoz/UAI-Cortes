@@ -104,40 +104,34 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
     }
 }
 
-/** Três atalhos lado a lado, sem mudar os fluxos originais de criação/Flow. */
+/** Sete ferramentas independentes em uma faixa horizontal, inclusive em telas estreitas. */
 @Composable internal fun HomePrimaryActions(onCreate: () -> Unit, onAnimate: () -> Unit,
-    preview: Boolean = false, onFlow: () -> Unit = {}) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
+    preview: Boolean = false, onFlow: () -> Unit = {}, onVoiceCenter: () -> Unit = {},
+    onTextToVoice: () -> Unit = {}, onQuickAudio: () -> Unit = {},
+    onQuickSplit: () -> Unit = {}) {
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.Top) {
         HomeActionTile("Novo projeto", Icons.Default.AddCircleOutline, onCreate,
-            enabled = !preview, modifier = Modifier.weight(1f))
+            enabled = !preview, modifier = Modifier.width(126.dp))
         HomeActionTile("Animar fotos", Icons.Default.AutoAwesomeMotion, onAnimate,
-            enabled = !preview, modifier = Modifier.weight(1f))
+            enabled = !preview, modifier = Modifier.width(126.dp))
         HomeActionTile("Estúdio de Cenas", Icons.Default.MovieFilter, onFlow,
-            enabled = !preview, modifier = Modifier.weight(1f))
-    }
-}
-
-/** Acesso rápido às ferramentas sem abrir o editor e sem tocar em projetos. */
-@Composable internal fun HomeQuickMediaActions(onSplit: () -> Unit, onExtract: () -> Unit) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(onClick = onSplit, modifier = Modifier.weight(1f).heightIn(min = 56.dp),
-            shape = UaiShapes.button) {
-            Icon(Icons.Default.ContentCut, null)
-            Spacer(Modifier.width(6.dp))
-            Text("Dividir vídeo", maxLines = 2)
-        }
-        OutlinedButton(onClick = onExtract, modifier = Modifier.weight(1f).heightIn(min = 56.dp),
-            shape = UaiShapes.button) {
-            Icon(Icons.Default.AudioFile, null)
-            Spacer(Modifier.width(6.dp))
-            Text("Extrair áudio", maxLines = 2)
-        }
+            enabled = !preview, modifier = Modifier.width(126.dp))
+        HomeActionTile("Vozes Google", Icons.Default.RecordVoiceOver, onVoiceCenter,
+            enabled = !preview, modifier = Modifier.width(126.dp))
+        HomeActionTile("Texto para Voz", Icons.Default.GraphicEq, onTextToVoice,
+            enabled = !preview, modifier = Modifier.width(126.dp))
+        HomeActionTile("Extrair áudio", Icons.Default.AudioFile, onQuickAudio,
+            enabled = !preview, modifier = Modifier.width(126.dp))
+        HomeActionTile("Dividir vídeo", Icons.Default.ContentCut, onQuickSplit,
+            enabled = !preview, modifier = Modifier.width(126.dp))
     }
 }
 
 @Composable internal fun MainHome(projects: List<VideoProject>, onCreate: () -> Unit, onAnimate: () -> Unit,
-    onOpen: (VideoProject)->Unit, onDelete: (VideoProject)->Unit, onDeleteAll: ()->Unit,
+    onOpen: (VideoProject)->Unit, onRename: (VideoProject)->Unit,
+    onDelete: (VideoProject)->Unit, onDeleteAll: ()->Unit,
     onSettings: ()->Unit, onTab:(String)->Unit, onFlow: () -> Unit = {},
     onVoiceCenter: () -> Unit = {}, onQuickSplit: () -> Unit = {},
     onQuickAudio: () -> Unit = {}, onTextToVoice: () -> Unit = {}) {
@@ -154,18 +148,14 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal=20.dp)) {
             Spacer(Modifier.height(8.dp))
-            HomePrimaryActions(onCreate, onAnimate, onFlow = onFlow)
-            Spacer(Modifier.height(10.dp))
-            ItemCard(Icons.Default.RecordVoiceOver, "Vozes Google",
-                "Central de Vozes · catálogo salvo e prévias reutilizáveis",
-                onClick = onVoiceCenter)
-            Spacer(Modifier.height(8.dp))
-            ItemCard(Icons.Default.GraphicEq, "Texto para Voz",
-                "Gerar e salvar WAV com Gemini · sem projeto de vídeo",
-                onClick = onTextToVoice)
-            Spacer(Modifier.height(12.dp))
-            HomeQuickMediaActions(onQuickSplit, onQuickAudio)
-            Spacer(Modifier.height(20.dp))
+            HomePrimaryActions(onCreate, onAnimate, onFlow = onFlow,
+                onVoiceCenter = onVoiceCenter, onTextToVoice = onTextToVoice,
+                onQuickAudio = onQuickAudio, onQuickSplit = onQuickSplit)
+            Spacer(Modifier.height(6.dp))
+            Text("Deslize para o lado para ver todas as ferramentas",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(16.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("Edições recentes",fontSize=19.sp, fontWeight=FontWeight.SemiBold,
                     modifier=Modifier.weight(1f))
@@ -192,7 +182,7 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
                     }
                 }
             }
-            projects.take(5).forEach { ProjectItem(it,onOpen,onDelete) }
+            projects.take(5).forEach { ProjectItem(it,onOpen,onRename,onDelete) }
         }
         MainNav("home", onTab)
     }
@@ -213,7 +203,8 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
     }
 }
 
-@Composable internal fun ProjectItem(p:VideoProject,onOpen:(VideoProject)->Unit,onDelete:(VideoProject)->Unit){
+@Composable internal fun ProjectItem(p:VideoProject,onOpen:(VideoProject)->Unit,
+    onRename:(VideoProject)->Unit,onDelete:(VideoProject)->Unit){
     Row(Modifier.fillMaxWidth().clickable {onOpen(p)}.padding(vertical=12.dp), verticalAlignment=Alignment.CenterVertically) {
         val context = LocalContext.current
         val first = p.clips.firstOrNull()
@@ -263,6 +254,9 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
             Text("Rascunho salvo · ${formatMs(p.durationMs)}",style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        IconButton(onClick={onRename(p)}) {
+            Icon(Icons.Default.Edit, "Renomear ${p.title}")
+        }
         IconButton(onClick={onDelete(p)}) {
             Icon(Icons.Default.DeleteOutline, "Excluir ${p.title}")
         }
@@ -271,12 +265,12 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
 }
 
 @Composable internal fun ProjectsScreen(projects: List<VideoProject>,back:()->Unit,open:(VideoProject)->Unit,
-    delete:(VideoProject)->Unit, onTab:(String)->Unit) {
+    rename:(VideoProject)->Unit, delete:(VideoProject)->Unit, onTab:(String)->Unit) {
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Column(Modifier.weight(1f).padding(horizontal=18.dp)) {
             Heading("Projetos",back)
             if (projects.isEmpty()) Text("Nenhum projeto salvo.",modifier=Modifier.padding(24.dp))
-            LazyColumn { items(projects,key={it.id}) { ProjectItem(it,open,delete) } }
+            LazyColumn { items(projects,key={it.id}) { ProjectItem(it,open,rename,delete) } }
         }
         MainNav("projects",onTab)
     }

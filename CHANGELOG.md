@@ -1,3 +1,9 @@
+# Uai Cortes 0.1.243 (2026-11-09)
+
+- Home: sete ações em uma única faixa azul rolável; removidas as seções de Vozes Google, Texto para Voz, Dividir vídeo e Extrair áudio abaixo da faixa. Os destinos foram preservados.
+- Edições recentes e Projetos: adicionada ação Renomear com diálogo, validação de nome não vazio e máximo de 80 caracteres. Gravação por ID diretamente sobre o cadastro persistido, sem modificar clipes, legendas, áudios nem demais atributos; tratamento de falhas sem perda de dados.
+- Testes e contratos atualizados para a nova estrutura, com regressões para título isolado, ID e falhas na renomeação. Sincronização v0.1.243/versionCode 244 em CI, identidade, documentação, notas de release e Novidades. Compilação Android e UI reais requerem execução no workflow/aparelho.
+
 # Uai Cortes 0.1.242 (2026-11-08)
 
 - Novo destaque rosa arredondado atrás da palavra falada, com texto branco maiúsculo, contorno preto e sombra, baseado no vídeo de referência do usuário.

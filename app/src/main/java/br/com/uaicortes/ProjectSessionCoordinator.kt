@@ -22,6 +22,8 @@ internal class ProjectSessionCoordinator(
 
     fun reload(activeId: String = ""): ProjectSnapshot = accept(controller.load(activeId))
     fun save(project: VideoProject): ProjectSnapshot = accept(controller.save(project))
+    fun rename(id: String, title: String): ProjectSnapshot =
+        accept(controller.rename(id, title, snapshot.activeId))
     fun open(id: String): ProjectSnapshot = accept(controller.open(id))
     fun delete(id: String): ProjectSnapshot = accept(controller.delete(id, snapshot.activeId))
     fun append(base: VideoProject?, clips: List<Clip>, createNew: Boolean): VideoProject =

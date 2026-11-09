@@ -13,7 +13,7 @@ assert '"Animar imagens"' not in bar and '"Prompt Flow"' not in bar
 assert all(f'Triple("{label}"' in bar for label in (
     'Cortar', 'Transição', 'Legendas', 'Áudio', "Marca d'água", 'Vozes IA', 'Descrição'))
 # Permanecem na página inicial como funcionalidades independentes.
-assert 'HomePrimaryActions(onCreate, onAnimate, onFlow = onFlow)' in home
+assert 'HomePrimaryActions(onCreate, onAnimate, onFlow = onFlow,' in home
 assert '"flow_workspace" -> FlowWorkspaceScreen(::back)' in main
 assert '"animate" -> AnimateImagesScreen(' in main
 assert 'onFlow = { navTo("flow_workspace") }' in main
