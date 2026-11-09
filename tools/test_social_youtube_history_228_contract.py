@@ -33,7 +33,12 @@ if int(version.rsplit('.', 1)[-1]) >= 238:
     if int(version.rsplit('.', 1)[-1]) >= 254:
         assert 'authorizeYouTube.forChannel(email)' in dash
         assert 'withVerifiedToken(token)' in dash
-        assert 'youtubeLibraryError = "Associe uma conta Google' in dash
+        if int(version.rsplit('.', 1)[-1]) >= 256:
+            assert 'authorizeYouTube.forUnlinkedChannel' in dash
+            assert 'withVerifiedToken(token, needsAssociation = true)' in dash
+            assert 'YouTubeGoogleProfileApi.verifiedEmail(token)' in dash
+        else:
+            assert 'youtubeLibraryError = "Associe uma conta Google' in dash
     else:
         assert 'authorizeYouTube(false)' in dash
         assert 'withVerifiedToken(token, true)' in dash

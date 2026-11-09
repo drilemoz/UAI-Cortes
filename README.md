@@ -1,3 +1,10 @@
+# Uai Cortes · v0.1.256 — Conexão YouTube simplificada
+
+- Ao atualizar vídeos do YouTube de um canal antigo, o aplicativo identifica a conta Google escolhida e a associa ao canal apenas após verificar o ID pela API. Na atualização seguinte, tenta recuperar a autorização sem repetir a escolha.
+- Novos canais vinculados guardam automaticamente o e-mail verificado, mas nunca tokens OAuth. Você não precisa digitar seu e-mail para cada canal.
+- Se o Google revogar ou não conceder uma permissão, será necessário autorizar novamente. Consultas são explícitas; publicação ainda exige confirmação e escopo adicional.
+- Corrigido `horizontalScroll` em Texto para Voz, responsável pelo erro de compilação do workflow 213.
+
 # Uai Cortes · v0.1.255 — Vozes Google com renomeação e português BR
 
 - Central de Vozes: toque no lápis ao lado de uma voz para renomeá-la localmente; o identificador da voz Google não muda.

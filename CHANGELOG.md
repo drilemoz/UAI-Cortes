@@ -1,3 +1,11 @@
+# Uai Cortes 0.1.256 (2026-11-09)
+
+- Correção do CI 213: `horizontalScroll` agora tem o import correto do Compose em Texto para Voz.
+- Ao atualizar canal do YouTube sem conta associada, solicitar escolha inicial de conta e salvar automaticamente o e-mail validado após confirmar o ID do canal pela API.
+- Novos vínculos YouTube persistem a conta verificada no cadastro, dispensando digitação manual. Canais associados utilizam `setAccount` e somente youtube.readonly na consulta normal.
+- Não altera token em disco, esquema do SocialStore, projetos, Meta, vozes ou mecanismo de upload. Sem garantia de ausência de consentimento Google após revogação.
+- Testes estáticos e regressões; CI Android real e confirmação OAuth em duas contas ainda pendentes.
+
 # Uai Cortes 0.1.255 (2026-11-09)
 
 - Central de Vozes: botão Renomear junto de cada voz; nomes locais persistentes, sem alterar IDs ou histórico.

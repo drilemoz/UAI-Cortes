@@ -1,3 +1,12 @@
+# v0.1.256 — Contas Google automáticas e correção CI 213
+
+- Partir da 0.1.255/versionCode 256, nova 0.1.256/versionCode 257; preservar projetos, SocialStore schema 1, módulos, 5 APKs e workflow.
+- Corrigir import androidx.compose.foundation.horizontalScroll em StandaloneTextToVoiceScreen (CI 213, Kotlin Debug/Release).
+- Ao atualizar canal antigo sem e-mail, solicitar escolha da conta UMA VEZ sob ação explícita; solicitar userinfo.email somente no fluxo de identificação. Verificar pela API YouTube o ID exato do canal e ler e-mail verificado no userinfo Google; persistir apenas a associação no SocialStore. Não persistir access_token, refresh_token nem conteúdo de conta no diagnóstico.
+- Canais já associados usam setAccount com escopo youtube.readonly; não forçar seletor. Credenciais expiram e Google poderá pedir novo consentimento, não prometer ausência absoluta de UI. Sem reautorização automática de segundo plano.
+- Ao criar/vincular canal sob escolha explícita, gravar o e-mail depois de confirmar conta, canal e API. Em divergência, falhar sem alterar associação anterior. Não usar perfil de conta como prova de propriedade de outro canal.
+- Regressões: import Compose, vinculação em refresh, ID exato, scopes, publicação confirmada e schema; pacote pelo empacotador oficial incluindo .github. Testes Kotlin PSI e Android CI, sem confundir com compile real.
+
 # v0.1.255 — Nomes personalizados e português brasileiro nas vozes Gemini
 
 - Base 0.1.254/versionCode 255; nova 0.1.255/versionCode 256. Preservar todos os módulos, projetos, schemas, cinco APKs, APIs e credenciais.

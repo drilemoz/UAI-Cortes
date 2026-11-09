@@ -13,7 +13,7 @@ import com.google.android.gms.common.api.Scope
 
 /** Apenas metadado de associação local, nunca token. O Google pode exigir consentimento novamente. */
 
-internal enum class YouTubePermission { READ, PUBLISH }
+internal enum class YouTubePermission { READ, PUBLISH, IDENTIFY }
 
 /** O callback recebe um token que deve existir somente em RAM. */
 internal class YouTubeAuthorizationAction(
@@ -22,6 +22,12 @@ internal class YouTubeAuthorizationAction(
     /** Escolha explícita para cadastro de outro canal; leitura não pede youtube.upload. */
     operator fun invoke(chooseAccount: Boolean, onToken: (String) -> Unit) =
         start(chooseAccount, YouTubePermission.READ, null, onToken)
+
+    /** Primeiro vínculo de um canal já salvo: usuário escolhe a conta apenas uma vez.
+     * Solicita e-mail somente para associar a conta ao ID verificado da API.
+     */
+    fun forUnlinkedChannel(onToken: (String) -> Unit) =
+        start(true, YouTubePermission.IDENTIFY, null, onToken)
 
     /** Canal já associado: tenta silenciosamente a conta indicada. */
     fun forChannel(accountEmail: String, onToken: (String) -> Unit) =
@@ -67,9 +73,11 @@ internal fun rememberYouTubeAuthorization(onError: (String) -> Unit): YouTubeAut
             } else {
                 callback.value = next
                 val scopes = listOf(Scope("https://www.googleapis.com/auth/youtube.readonly")) +
-                    (if (permission == YouTubePermission.PUBLISH)
-                        listOf(Scope("https://www.googleapis.com/auth/youtube.upload"))
-                    else emptyList())
+                    when (permission) {
+                        YouTubePermission.PUBLISH -> listOf(Scope("https://www.googleapis.com/auth/youtube.upload"))
+                        YouTubePermission.IDENTIFY -> listOf(Scope("https://www.googleapis.com/auth/userinfo.email"))
+                        YouTubePermission.READ -> emptyList()
+                    }
                 val builder = AuthorizationRequest.builder().setRequestedScopes(scopes)
                 // setAccount escolhe a conta correta, quando previamente autorizada.
                 // SELECT_ACCOUNT substitui setAccount: os dois nunca devem ser usados juntos.

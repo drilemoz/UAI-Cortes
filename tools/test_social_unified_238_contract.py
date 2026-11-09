@@ -20,7 +20,8 @@ assert 'Icons.Default.HelpOutline' in screen and 'Sobre o painel Redes' in scree
 assert 'Text("Desempenho"' not in screen
 assert 'if (accountsOnly && manageAccounts)' in screen and 'if (showHistory)' in screen
 assert 'pendingChannelQueue' in screen and 'LaunchedEffect(youtubeBusy, pendingChannelQueue)' in screen
-assert ('authorizeYouTube(false)' in screen or 'authorizeYouTube.forChannel(email)' in screen) and 'authorizeYouTube(true)' in screen
+assert ('authorizeYouTube(false)' in screen or 'authorizeYouTube.forChannel(email)' in screen)
+assert ('authorizeYouTube(true)' in screen or 'authorizeYouTube.forUnlinkedChannel' in screen)
 assert 'youtubeSessionTokens[channelId] = token' in screen
 assert 'youtubeSessionTokens.clear()' in screen
 assert 'channel.id != channelId' in screen

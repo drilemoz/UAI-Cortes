@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.256 — YouTube e compilação CI 213
+
+- Na primeira atualização de um canal antigo, escolha a conta Google correspondente. O app verifica o canal e guarda apenas o e-mail autorizado para futuras consultas, evitando associação manual recorrente.
+- Ao conectar canal novo, vínculo de conta e canal é salvo de uma vez. Google poderá pedir nova permissão quando necessário.
+- Corrigido `Unresolved reference horizontalScroll` em Texto para Voz no workflow 213.
+- As funções anteriores e a assinatura foram preservadas. É necessário validar OAuth em aparelho e compilar os APKs no CI.
+
 # Uai Cortes · versão 0.1.255 — Renomear vozes e falar português BR
 
 - Renomeie as vozes Google diretamente pelo ícone de lápis. Nome original e ID técnico são preservados.

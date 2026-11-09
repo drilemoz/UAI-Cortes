@@ -19,7 +19,7 @@ assert 'https://www.googleapis.com/auth/youtube.readonly' in a
 assert 'https://www.googleapis.com/auth/youtube.upload' in a
 assert 'forChannel(accountEmail: String' in a
 assert 'forUpload(accountEmail: String?' in a
-assert 'if (permission == YouTubePermission.PUBLISH)' in a
+assert 'YouTubePermission.PUBLISH ->' in a
 assert 'getAuthorizationResultFromIntent' in a
 assert 'requestOfflineAccess' not in a
 assert 'googleAccountEmail' in store and 'schema") == 1' in store

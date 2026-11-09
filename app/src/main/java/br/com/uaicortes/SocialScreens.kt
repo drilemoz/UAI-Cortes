@@ -107,6 +107,9 @@ internal fun SocialDashboardScreen(
     var showMetaPagePicker by remember { mutableStateOf(false) }
     var newPageToAdd by remember { mutableStateOf<SocialExternalApis.FacebookPage?>(null) }
     var newChannelToAdd by remember { mutableStateOf<YouTubeSocialApi.Channel?>(null) }
+    // Identificado pela API Google com token apenas em RAM, antes de associar ao canal.
+    var newChannelGoogleEmail by remember { mutableStateOf("") }
+    var bindChannelGoogleEmail by remember { mutableStateOf("") }
     var verifiedYouTubeIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var pageFromMeta by remember { mutableStateOf<SocialAccount?>(null) }
     fun consultMetaPages(accountToLink: SocialAccount? = null) {
@@ -151,7 +154,7 @@ internal fun SocialDashboardScreen(
         youtubeLibraryBusy = true
         youtubeBusy = true
         youtubeLibraryError = ""
-        fun withVerifiedToken(token: String) {
+        fun withVerifiedToken(token: String, needsAssociation: Boolean = false) {
             scope.launch {
                 val channelResult = runCatching { YouTubeSocialApi.channel(token) }
                 val channel = channelResult.getOrNull()
@@ -170,6 +173,41 @@ internal fun SocialDashboardScreen(
                     youtubeBusy = false; youtubeLibraryBusy = false
                     pendingChannelQueue = emptyList()
                     return@launch
+                }
+                if (needsAssociation) {
+                    // Nunca supor que a conta selecionada corresponde ao canal salvo.
+                    // O ID foi confirmado acima; só então identificar e salvar o e-mail.
+                    val emailResult = runCatching { YouTubeGoogleProfileApi.verifiedEmail(token) }
+                    val discoveredEmail = emailResult.getOrNull()
+                    if (discoveredEmail == null) {
+                        youtubeLibraryError = "Não foi possível identificar a conta Google. " +
+                            "Autorize o acesso ao e-mail ou vincule a conta em Ajustes."
+                        youtubeBusy = false; youtubeLibraryBusy = false
+                        pendingChannelQueue = emptyList()
+                        return@launch
+                    }
+                    val saved = runCatching {
+                        val latest = store.load()
+                        val existing = latest.accounts.firstOrNull { it.id == account.id }
+                            ?: error("Canal removido durante a atualização.")
+                        require(existing.remoteChannelId == channelId) {
+                            "O ID do canal foi alterado durante a verificação."
+                        }
+                        val updated = latest.copy(accounts = latest.accounts.map {
+                            if (it.id == existing.id) it.copy(googleAccountEmail = discoveredEmail)
+                            else it
+                        })
+                        store.save(updated)
+                        updated
+                    }
+                    if (saved.isFailure) {
+                        youtubeLibraryError = "O canal foi verificado, mas não foi possível salvar " +
+                            "a conta no aparelho. Tente novamente."
+                        youtubeBusy = false; youtubeLibraryBusy = false
+                        pendingChannelQueue = emptyList()
+                        return@launch
+                    }
+                    data = saved.getOrThrow()
                 }
                 verifiedYouTubeIds = verifiedYouTubeIds + channelId
                 youtubeSessionTokens[channelId] = token
@@ -205,16 +243,16 @@ internal fun SocialDashboardScreen(
         }
         val email = account.googleAccountEmail
         if (email.isBlank()) {
-            youtubeLibraryError = "Associe uma conta Google a ${account.label} em " +
-                "Ajustes → Minhas contas e canais. É necessário apenas uma vez por canal."
-            youtubeBusy = false
-            youtubeLibraryBusy = false
-            pendingChannelQueue = emptyList()
-            return
+            // Migração assistida: na primeira consulta seleciona a conta e associa
+            // automaticamente seu e-mail após verificar o ID exato do canal.
+            authorizeYouTube.forUnlinkedChannel { token ->
+                withVerifiedToken(token, needsAssociation = true)
+            }
+        } else {
+            val cached = youtubeSessionTokens[channelId]
+            if (cached != null) withVerifiedToken(cached)
+            else authorizeYouTube.forChannel(email) { token -> withVerifiedToken(token) }
         }
-        val cached = youtubeSessionTokens[channelId]
-        if (cached != null) withVerifiedToken(cached)
-        else authorizeYouTube.forChannel(email) { token -> withVerifiedToken(token) }
     }
     /** Leitura Meta sob ação explícita: Página e token são verificados na sessão.
      * Não há retry automático, persistência de token ou consulta em segundo plano.
@@ -400,17 +438,10 @@ internal fun SocialDashboardScreen(
                         onLoadAll = { channels ->
                             if (!youtubeBusy && channels.isNotEmpty()) {
                                 val distinct = channels.distinctBy { it.remoteChannelId }
-                                val ready = distinct.filter { it.googleAccountEmail.isNotBlank() }
-                                if (ready.isEmpty()) {
-                                    youtubeLibraryError = "Antes de atualizar, associe a conta Google " +
-                                        "de cada canal em Ajustes → Minhas contas e canais."
-                                } else {
-                                    pendingChannelQueue = ready
-                                    if (ready.size != distinct.size) {
-                                        youtubeLibraryError = "Alguns canais precisam de uma " +
-                                            "conta Google associada em Minhas contas e canais."
-                                    }
-                                }
+                                youtubeLibraryError = ""
+                                // Processa também canais de versões antigas sem e-mail vinculado.
+                                // Neles, o Google pode pedir uma escolha inicial; não a cada refresh.
+                                pendingChannelQueue = distinct
                             }
                         }
                     ) else SocialFacebookPageLibraryUi(
@@ -514,7 +545,7 @@ internal fun SocialDashboardScreen(
                                 status = status,
                                 actionLabel = when (account.destination) {
                                     SocialDestination.YOUTUBE ->
-                                        if (account.remoteChannelId.isBlank()) "Vincular canal" else "Conta Google"
+                                        if (account.remoteChannelId.isBlank()) "Vincular canal" else "Trocar conta Google"
                                     SocialDestination.FACEBOOK_PAGE -> "Vincular Página"
                                     else -> null
                                 },
@@ -527,11 +558,18 @@ internal fun SocialDashboardScreen(
                                                 googleLinkTarget = account
                                             } else {
                                                 youtubeBusy = true
-                                                authorizeYouTube(true) { token ->
+                                                authorizeYouTube.forUnlinkedChannel { token ->
                                                     scope.launch {
-                                                        runCatching { YouTubeSocialApi.channel(token) }
-                                                            .onSuccess { channel -> channelToBind = account to channel }
-                                                            .onFailure { failure = it.message ?: "Falha ao consultar canal." }
+                                                        runCatching {
+                                                            val channel = YouTubeSocialApi.channel(token)
+                                                            val email = YouTubeGoogleProfileApi.verifiedEmail(token)
+                                                            channel to email
+                                                        }.onSuccess { (channel, email) ->
+                                                            bindChannelGoogleEmail = email
+                                                            channelToBind = account to channel
+                                                        }.onFailure {
+                                                            failure = "Não foi possível identificar a conta e o canal Google."
+                                                        }
                                                         youtubeBusy = false
                                                     }
                                                 }
@@ -665,8 +703,9 @@ internal fun SocialDashboardScreen(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Todos reúne os vídeos consultados dos canais e os envios confirmados pelo Uai Cortes. " +
                     "As visualizações do canal são totais oficiais do YouTube, diferentes da soma dos vídeos já carregados.")
-                Text("Atualizar canais é manual e pode solicitar a escolha da conta Google. " +
-                    "Uma autorização válida é reutilizada apenas nesta sessão, depois de conferir o ID do canal.")
+                Text("Ao atualizar pela primeira vez um canal antigo, escolha a conta Google. " +
+                    "Depois de verificar o canal, o app salva a associação local e tenta " +
+                    "autorizar consultas seguintes sem abrir o seletor novamente.")
                 Text("Histórico e envios guarda ações pendentes ou incertas. Nenhum upload será repetido automaticamente.")
             }
         },
@@ -678,11 +717,17 @@ internal fun SocialDashboardScreen(
         onYouTube = {
             showAddDialog = false
             youtubeBusy = true
-            authorizeYouTube(true) { token ->
+            authorizeYouTube.forUnlinkedChannel { token ->
                 scope.launch {
-                    runCatching { YouTubeSocialApi.channel(token) }
-                        .onSuccess { newChannelToAdd = it; failure = "" }
-                        .onFailure { failure = it.message ?: "Não foi possível consultar o canal YouTube." }
+                    runCatching {
+                        val channel = YouTubeSocialApi.channel(token)
+                        val email = YouTubeGoogleProfileApi.verifiedEmail(token)
+                        channel to email
+                    }.onSuccess { (channel, email) ->
+                        newChannelToAdd = channel
+                        newChannelGoogleEmail = email
+                        failure = ""
+                    }.onFailure { failure = "Não foi possível identificar a conta e o canal Google." }
                     youtubeBusy = false
                 }
             }
@@ -707,22 +752,23 @@ internal fun SocialDashboardScreen(
             destination = SocialDestination.YOUTUBE,
             accountName = channel.title,
             publicId = channel.id,
-            onDismiss = { newChannelToAdd = null },
+            onDismiss = { newChannelToAdd = null; newChannelGoogleEmail = "" },
             onConfirm = {
                 data?.let { current ->
                     runCatching { SocialPublicationPolicy.upsertYouTube(current, channel.id, channel.title) }
                         .onSuccess { next ->
-                            persist(next)
-                            if (failure.isBlank()) {
-                                verifiedYouTubeIds = verifiedYouTubeIds + channel.id
-                                next.accounts.firstOrNull { it.remoteChannelId == channel.id }?.let { account ->
-                                    googleLinkInput = account.googleAccountEmail
-                                    googleLinkTarget = account
-                                }
-                            }
+                            val linked = next.copy(accounts = next.accounts.map {
+                                if (it.destination == SocialDestination.YOUTUBE &&
+                                    it.remoteChannelId == channel.id)
+                                    it.copy(googleAccountEmail = newChannelGoogleEmail)
+                                else it
+                            })
+                            persist(linked)
+                            if (failure.isBlank()) verifiedYouTubeIds = verifiedYouTubeIds + channel.id
                         }.onFailure { failure = it.message ?: "Não foi possível adicionar o canal." }
                 }
                 newChannelToAdd = null
+                newChannelGoogleEmail = ""
             })
     }
     googleLinkTarget?.let { target ->
@@ -733,9 +779,10 @@ internal fun SocialDashboardScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Canal: ${target.label}", style = MaterialTheme.typography.titleSmall)
-                    Text("Informe uma vez o e-mail da conta Google que tem acesso a este canal. " +
-                        "O Uai Cortes verificará a associação pela API do YouTube. " +
-                        "Nenhum token será salvo.", style = MaterialTheme.typography.bodySmall)
+                    Text("Normalmente a conta é identificada automaticamente ao conectar " +
+                        "ou atualizar o canal. Use esta opção apenas se precisar trocar ou " +
+                        "corrigir uma conta. Nenhum token será salvo.",
+                        style = MaterialTheme.typography.bodySmall)
                     OutlinedTextField(
                         value = googleLinkInput,
                         onValueChange = { googleLinkInput = it.take(254) },
@@ -848,7 +895,7 @@ internal fun SocialDashboardScreen(
             accountName = channel.title,
             publicId = channel.id,
             linkingExisting = true,
-            onDismiss = { channelToBind = null },
+            onDismiss = { channelToBind = null; bindChannelGoogleEmail = "" },
             onConfirm = {
                 data?.let { state ->
                     val conflict = state.accounts.any {
@@ -857,15 +904,13 @@ internal fun SocialDashboardScreen(
                     if (conflict) failure = "Este canal já está vinculado a outra conta."
                     else {
                         val updated = state.copy(accounts = state.accounts.map {
-                            if (it.id == account.id) SocialPublicationPolicy.bindChannel(it, channel.id) else it
+                            if (it.id == account.id) SocialPublicationPolicy.bindChannel(it, channel.id)
+                                .copy(googleAccountEmail = bindChannelGoogleEmail) else it
                         })
                         persist(updated)
                         if (failure.isBlank()) {
                             verifiedYouTubeIds = verifiedYouTubeIds + channel.id
-                            updated.accounts.firstOrNull { it.id == account.id }?.let { linked ->
-                                googleLinkInput = linked.googleAccountEmail
-                                googleLinkTarget = linked
-                            }
+                            bindChannelGoogleEmail = ""
                         }
                     }
                 }

@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.255"
-    const val VERSION_CODE = 256
+    const val VERSION_NAME = "0.1.256"
+    const val VERSION_CODE = 257
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.256", listOf(
+            ReleaseFeature("youtube-auto-account-256", "YouTube sem associar manualmente toda vez",
+                "Na primeira atualização de canais antigos, escolha a conta Google. Depois de confirmar o ID do canal e o e-mail verificado, a associação fica salva para futuras consultas.", "check"),
+            ReleaseFeature("youtube-onboarding-256", "Contas de novos canais identificadas na conexão",
+                "O cadastro salva o e-mail autorizado e o ID do canal após verificação; sem guardar tokens ou alterar destinos de publicação.", "check"),
+            ReleaseFeature("ci213-horizontal-scroll-256", "CI 213: correção de compilação em Texto para Voz",
+                "Corrigido o import de horizontalScroll em Compose, que bloqueou Debug e Release no workflow 213.", "check")
+        )),
         ReleaseSummary("0.1.255", listOf(
             ReleaseFeature("google-voice-rename-255", "Renomear vozes Google com um toque",
                 "Ícone de lápis diretamente no catálogo, com nomes personalizados locais, sem mudar o ID da voz ou afetar os projetos.", "check"),
