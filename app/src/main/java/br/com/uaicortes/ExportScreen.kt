@@ -498,7 +498,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Default.InfoOutline, null,
+                Icon(Icons.Default.Info, null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(19.dp))
                 Text("Mantenha o aplicativo aberto. O arquivo será salvo na galeria, " +

@@ -1,3 +1,10 @@
+# v0.1.252 — Correção de compilação Compose do CI 209
+
+- Base v0.1.251/versionCode 252, nova v0.1.252/versionCode 253. O workflow 209 executou as regressões Python e interrompeu na tarefa `:app:compileDebugKotlin`, com `ExportScreen.kt:501:36 Unresolved reference 'InfoOutline'`.
+- Substituir `Icons.Default.InfoOutline` por `Icons.Default.Info` (símbolo Compose Material já utilizado no projeto), sem alterar texto ou comportamento do aviso da confirmação de exportação.
+- Acrescentar teste de contrato que rejeite `InfoOutline` e exija o aviso de não-publicação automática. Preservar cinco APKs, assinatura, schemas, APIs, projeto e funcionalidade existente.
+- Sincronizar Gradle, workflow, pacote, tela Novidades, README, CHANGELOG e release. Testes locais não comprovam compilação Gradle Android; requer novo CI.
+
 # v0.1.251 — Correção do CI 208 sem restaurar navegação antiga
 
 - Base 0.1.250/versionCode 251, nova 0.1.251/versionCode 252. Preservar cinco APKs, assinatura, SocialStore schema 1, projetos schema 4, YouTube/Facebook Páginas, Gemini e Coqui/Chatterbox.

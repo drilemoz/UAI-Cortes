@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.252 (2026-11-09)
+
+- CI 209: corrigida referência inexistente `Icons.Default.InfoOutline` na confirmação de exportação para o ícone Compose `Icons.Default.Info`, já usado no aplicativo.
+- Incluído contrato automático para impedir a volta da referência inválida e preservar a mensagem informativa da confirmação.
+- Versões sincronizadas em Gradle, CI, GitHub Manager, aplicativo, documentação e pacotes: 0.1.252/versionCode 253.
+- Mantidos projetos, mídias, vozes, bibliotecas sociais, Media3 e cinco APKs Release. Build Android completo pendente no próximo workflow.
+
 # Uai Cortes 0.1.251 (2026-11-09)
 
 - Corrigido teste obsoleto `test_about_whatsnew_207_contract.py` que bloqueou o workflow 208 antes do Gradle; passa a validar a remoção intencional do item Novidades e do histórico na tela pós-atualização, preservando a abertura após update.

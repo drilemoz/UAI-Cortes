@@ -1,3 +1,9 @@
+# Uai Cortes · v0.1.252 — Correção da compilação CI 209
+
+O workflow **209** passou pelos testes Python e chegou ao Gradle, mas `:app:compileDebugKotlin` falhou em `ExportScreen.kt:501:36` por `Unresolved reference 'InfoOutline'`. A referência foi trocada por `Icons.Default.Info`, já utilizada em outras telas do aplicativo, sem alterar o texto, posicionamento ou comportamento da confirmação de exportação.
+
+Adicionado teste `tools/test_ci209_export_info_icon_contract.py` para rejeitar o símbolo inválido e manter o aviso de confirmação. O projeto preserva todos os recursos anteriores, incluindo YouTube/Facebook Páginas, Coqui/Chatterbox, Gemini, legendas, cinco APKs previstos e assinatura. O build Android ainda deve ser confirmado no GitHub Actions.
+
 # Uai Cortes · v0.1.251 — Correção do CI 208
 
 O workflow 208 parou na validação Python porque um teste antigo ainda esperava o botão **Novidades** dentro das Configurações e histórico na tela pós-atualização. Esses itens foram intencionalmente removidos na v0.1.248. A versão 0.1.251 ajusta os testes ao comportamento atual sem regredir a interface, conservando o catálogo interno de histórico e a abertura automática de Novidades após atualizações. Mantém as funcionalidades anteriores de publicação, redes, vozes e exportação. Build Android e testes no aparelho seguem pendentes.

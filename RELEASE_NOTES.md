@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.252 — Correção CI 209
+
+- Corrigido ícone informativo inválido na confirmação de exportação, que bloqueou a compilação Kotlin do workflow 209.
+- Incluído teste de regressão para impedir o retorno do erro.
+- Preservados os módulos de vídeos, legendas, vozes Google, Coqui/Chatterbox, YouTube e Facebook Páginas, além do versionamento e assinatura existentes.
+- Build Android completo e APKs ainda dependem da nova execução do GitHub Actions.
+
 # Uai Cortes · versão 0.1.251 — Correção da validação do workflow 208
 
 - O pipeline 208 falhou antes da compilação Kotlin porque um contrato legado esperava a opção Novidades em Configurações e a lista histórica na tela pós-atualização.

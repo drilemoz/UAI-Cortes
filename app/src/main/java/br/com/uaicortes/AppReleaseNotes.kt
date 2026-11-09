@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.251"
-    const val VERSION_CODE = 252
+    const val VERSION_NAME = "0.1.252"
+    const val VERSION_CODE = 253
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.252", listOf(
+            ReleaseFeature("ci209-export-info-icon-252", "CI 209: correção de compilação na exportação",
+                "Corrigida a referência ao ícone informativo na confirmação de exportação, que impedia a compilação Kotlin do aplicativo.", "check"),
+            ReleaseFeature("ci209-regression-252", "Verificação contra regressão do ícone",
+                "Incluído teste que detecta o símbolo inválido no código de exportação. Projetos, legendas, vozes e redes sociais preservados.", "check")
+        )),
         ReleaseSummary("0.1.251", listOf(
             ReleaseFeature("ci208-whatsnew-contract-251", "CI 208: testes da tela Novidades corrigidos",
                 "O contrato de regressão reconhece que a tela Novidades abre após atualização e não possui mais entrada duplicada em Configurações ou botão de histórico na apresentação.", "check"),
