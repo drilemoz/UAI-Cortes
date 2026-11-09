@@ -6,15 +6,15 @@ import org.junit.Test
 class FrameSnapshotTimingTest {
     @Test fun slicesWithinTrimmedSource() {
         val value = FrameSnapshotTiming.slice(1000, 5000, 3250)!!
-        assertEquals(3180L, value.startMs)
-        assertEquals(3440L, value.endMs)
-        assertEquals(70L, value.frameAtMs)
+        assertEquals(2750L, value.startMs)
+        assertEquals(4350L, value.endMs)
+        assertEquals(500L, value.frameAtMs)
     }
 
     @Test fun nearEndNeverExceedsOriginal() {
         val value = FrameSnapshotTiming.slice(1000, 2000, 1999)!!
         assertEquals(2000L, value.endMs)
-        assertEquals(70L, value.frameAtMs)
+        assertEquals(500L, value.frameAtMs)
     }
 
     @Test fun startAndInvalidInputs() {

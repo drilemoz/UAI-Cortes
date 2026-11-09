@@ -4,8 +4,10 @@ package br.com.uaicortes
  * O PNG vem do vídeo renderizado, nunca de uma região da tela Android.
  */
 internal object FrameSnapshotTiming {
-    const val LEAD_MS = 70L
-    const val WINDOW_MS = 260L
+    // A janela anterior de 260 ms podia produzir poucas amostras para um muxer
+    // Media3 no Xiaomi: o diagnóstico real registrou ERROR_CODE_MUXING_TIMEOUT.
+    const val LEAD_MS = 500L
+    const val WINDOW_MS = 1_600L
 
     data class Slice(val startMs: Long, val endMs: Long, val frameAtMs: Long) {
         val durationMs: Long get() = endMs - startMs
@@ -14,8 +16,11 @@ internal object FrameSnapshotTiming {
     fun slice(startMs: Long, endMs: Long, requestedMs: Long): Slice? {
         if (startMs < 0L || endMs <= startMs) return null
         val capture = requestedMs.coerceIn(startMs, endMs - 1L)
-        val start = (capture - LEAD_MS).coerceAtLeast(startMs)
-        val end = (start + WINDOW_MS).coerceAtMost(endMs)
+        val end = ((capture - LEAD_MS).coerceAtLeast(startMs) + WINDOW_MS)
+            .coerceAtMost(endMs)
+        // Próximo do fim da origem, deslocar a janela para trás para obter
+        // quadros suficientes sem solicitar posições fora do clipe.
+        val start = (end - WINDOW_MS).coerceAtLeast(startMs)
         if (end <= start) return null
         return Slice(start, end, capture - start)
     }

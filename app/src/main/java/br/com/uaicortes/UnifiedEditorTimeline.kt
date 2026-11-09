@@ -77,7 +77,7 @@ private val rulerHeight = 30.dp
 @Composable
 private fun TimelineSegment(span: TimelineVisualSpan, kind: TimelineKind,
     totalMs: Long, width: Dp, tint: Color, selected: Boolean,
-    editable: Boolean, onSelect: () -> Unit,
+    editable: Boolean, onSelect: () -> Unit, onTap: () -> Unit,
     onGestureStart: () -> Unit, onGestureEnd: () -> Unit,
     onCommit: (TimelineHandle, Long, Long) -> Unit) {
     val density=LocalDensity.current
@@ -126,8 +126,8 @@ private fun TimelineSegment(span: TimelineVisualSpan, kind: TimelineKind,
                 draft=UnifiedTimelinePolicy.preview(span,mode,delta,totalMs,minimum)
             })
         } else Modifier)
-        .clickable { onSelect() }
-        .semantics { contentDescription = "${span.title}, início ${formatPipMs(span.startMs)}, duração ${formatPipMs(span.durationMs)}. Toque para selecionar; arraste o centro para mover e as bordas para aparar." },
+        .clickable { onSelect(); onTap() }
+        .semantics { contentDescription = "${span.title}, início ${formatPipMs(span.startMs)}, duração ${formatPipMs(span.durationMs)}. Toque para abrir as ações; segure e arraste o centro para mover e as bordas para aparar." },
         contentAlignment=Alignment.Center) {
         if(selected && drawableWidth>=45.dp) {
             Row(Modifier.fillMaxSize(),verticalAlignment=Alignment.CenterVertically) {
@@ -145,7 +145,8 @@ private fun TimelineSegment(span: TimelineVisualSpan, kind: TimelineKind,
 @Composable
 private fun TimelineLaneBody(kind: TimelineKind, entries: List<TimelineVisualSpan>,
     total: Long, tint: Color, width: Dp, selected: TimelineSelection?,
-    onSelect: (TimelineSelection)->Unit, onEdit: (TimelineKind,String,TimelineHandle,Long,Long)->Unit,
+    onSelect: (TimelineSelection)->Unit, onEntryTap: (TimelineSelection)->Unit,
+    onEdit: (TimelineKind,String,TimelineHandle,Long,Long)->Unit,
     onGestureStart:()->Unit,onGestureEnd:()->Unit,
     canEdit: (String)->Boolean = {true},
     transitions: List<Clip> = emptyList(),onTransition:(Int)->Unit={}) {
@@ -155,6 +156,7 @@ private fun TimelineLaneBody(kind: TimelineKind, entries: List<TimelineVisualSpa
             key(kind,span.id) {
                 TimelineSegment(span,kind,total,width,tint,selected==TimelineSelection(kind,span.id),
                     editable=canEdit(span.id),onSelect={onSelect(TimelineSelection(kind,span.id))},
+                    onTap={ onEntryTap(TimelineSelection(kind,span.id)) },
                     onGestureStart=onGestureStart,onGestureEnd=onGestureEnd,
                     onCommit={h,delta,start -> if(canEdit(span.id))onEdit(kind,span.id,h,delta,start)})
             }
@@ -305,6 +307,13 @@ internal fun UnifiedEditorTimeline(
                                             TimelineKind.AUDIO,TimelineKind.VOICE->{ /* toque apenas seleciona */ }
                                             TimelineKind.SUBTITLE->{ /* editar pelo lápis */ }
                                         }
+                                    },onEntryTap={ item ->
+                                        when(item.kind) {
+                                            TimelineKind.MAIN_VIDEO,TimelineKind.MAIN_IMAGE->onClip(item.id)
+                                            TimelineKind.PIP->onOverlay(item.id)
+                                            TimelineKind.AUDIO,TimelineKind.VOICE->onAudio(item.id)
+                                            TimelineKind.SUBTITLE->onSubtitle(item.id)
+                                        }
                                     },onEdit={kind,id,handle,delta,target ->
                                         val adjusted=if(magnetic) TimelineMagnet.adjust(project,
                                             kind,id,handle,delta,positionMs) else delta
@@ -326,24 +335,11 @@ internal fun UnifiedEditorTimeline(
                 }
             }
         }
-        val item=selected
-        if(item!=null) {
-            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
-                horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                Text("Arraste para mover • puxe as alças para aparar",fontSize=10.sp,
-                    color=MaterialTheme.colorScheme.onSurfaceVariant,modifier=Modifier.weight(1f),
-                    maxLines=2)
-                TextButton(onClick={
-                    when(item.kind) {
-                        TimelineKind.MAIN_VIDEO,TimelineKind.MAIN_IMAGE->onClip(item.id)
-                        TimelineKind.PIP->onOverlay(item.id)
-                        TimelineKind.AUDIO,TimelineKind.VOICE->onAudio(item.id)
-                        TimelineKind.SUBTITLE->onSubtitle(item.id)
-                    }
-                }) {Icon(Icons.Default.Edit,"Editar detalhes",Modifier.size(16.dp))
-                    Spacer(Modifier.width(3.dp));Text("Editar",fontSize=12.sp)}
-            }
-        } else Text("Toque no elemento para selecioná-lo. Os ícones à esquerda adicionam conteúdo.",
+        // Ações do clipe no próprio toque: não ocupar uma linha com botão "Editar".
+        // O gesto de arrastar é tratado separadamente por detectDragGestures e
+        // nunca abre o menu enquanto o usuário move o clipe.
+        Text("Toque em um vídeo para Cortar, Editar ou Excluir. Segure e arraste para mover; " +
+            "puxe as bordas para aparar.",
             fontSize=10.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,
             modifier=Modifier.padding(horizontal=4.dp,vertical=2.dp))
     }

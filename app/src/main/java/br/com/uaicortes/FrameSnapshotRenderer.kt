@@ -7,13 +7,22 @@ import android.os.Looper
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** Renderiza uma janela curta via Media3; extrai o quadro já composto, sem screenshot.
  * O MP4 é temporário, e só o PNG final é publicado na galeria do Android.
  */
 internal object FrameSnapshotRenderer {
-    suspend fun save(context: Context, job: FrameSnapshotJob, fileName: String): Uri =
-        suspendCancellableCoroutine { continuation ->
+    suspend fun save(context: Context, job: FrameSnapshotJob, fileName: String): Uri {
+        if (job.directSourceFrame) {
+            // Sem PiP, legenda nem marca d'água no instante: decodificar diretamente
+            // o quadro original evita recodificação, muxer e perda de qualidade.
+            return withContext(Dispatchers.IO) {
+                VideoFrameSaver.save(context.applicationContext, job.sourceFrame, fileName)
+            }
+        }
+        return suspendCancellableCoroutine { continuation ->
             val engine = ExportEngine(context.applicationContext)
             continuation.invokeOnCancellation {
                 Handler(Looper.getMainLooper()).post { engine.cancel() }
@@ -42,4 +51,5 @@ internal object FrameSnapshotRenderer {
                 if (continuation.isActive) continuation.resumeWithException(e)
             }
         }
+    }
 }

@@ -1,3 +1,10 @@
+# Uai Cortes · v0.1.266 — quadro sem timeout e menu do clipe por toque
+
+- Captura de quadro: vídeo sem PiP, legenda ou marca d'água ativa é extraído diretamente do arquivo original, preservando a resolução e evitando o timeout `ERROR_CODE_MUXING_TIMEOUT` observado com a exportação temporária de 260 ms no aparelho.
+- Quadros com camadas continuam usando renderização Media3, com trecho mais longo e sem áudio; caso falhe, o usuário pode optar por salvar apenas o original, com aviso explícito sobre a ausência das camadas.
+- Toque no clipe da linha do tempo abre menu com Cortar, Editar e Excluir, sem precisar do botão Editar separado. Pressionar/arrastar mantém a reordenação; alças continuam ajustando início/fim.
+- Correção de código e testes locais não substituem compilação e teste real no Android, especialmente na composição com PiP/legendas.
+
 # Uai Cortes · v0.1.265 — quadro renderizado sem bordas da prévia
 
 - O botão de câmera deixa de copiar os pixels da janela com PixelCopy; cria um trecho temporário de vídeo pelo compositor Media3 e extrai o quadro já composto em resolução de origem até 1080p (lado menor).

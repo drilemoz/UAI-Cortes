@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.265"
-    const val VERSION_CODE = 266
+    const val VERSION_NAME = "0.1.266"
+    const val VERSION_CODE = 267
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.266", listOf(
+            ReleaseFeature("frame-muxer-timeout-266", "Captura sem travar o muxer quando não há camadas",
+                "Após o erro real de timeout do Media3, quadros simples passam a ser extraídos diretamente do vídeo original em resolução de fonte, sem bordas e sem gerar MP4 temporário.", "check"),
+            ReleaseFeature("frame-composition-266", "Composição com legendas e PiP mais resistente",
+                "A composição de quadros com camadas usa janela temporal maior e apenas vídeo; caso falhe, permite escolher explicitamente salvar o quadro original sem camadas.", "check"),
+            ReleaseFeature("clip-tap-menu-266", "Toque no vídeo abre Cortar, Editar e Excluir",
+                "O botão Editar separado da linha do tempo foi removido. Um toque abre o menu do clipe, enquanto segurar e arrastar continua reposicionando o trecho, sem alterações nos arquivos originais.", "check")
+        )),
         ReleaseSummary("0.1.265", listOf(
             ReleaseFeature("frame-render-mp4-265", "Quadro em alta qualidade, sem bordas do editor",
                 "O botão de câmera renderiza um trecho curto pelo compositor Media3 em vez de capturar a tela. O PNG não inclui margens da interface, usando a resolução da fonte até 1080 pixels no lado menor.", "check"),

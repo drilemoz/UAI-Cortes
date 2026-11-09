@@ -285,11 +285,17 @@ class ExportEngine(private val context: Context) {
             // Para vídeo com duração intrínseca, Transformer a descobre; omitir evita
             // informar incorretamente clip.durationMs como duração da fonte.
             EditedMediaItem.Builder(item)
-                .apply { if (clip.isImage) setFrameRate(30) }
-                .setEffects(Effects(if (clip.isImage || (clip.volume == 1f && !clip.voiceTone.safe().enabled)) emptyList()
+                .apply {
+                    if (clip.isImage) setFrameRate(30)
+                    if (onRenderedFrame != null) setRemoveAudio(true)
+                }
+                .setEffects(Effects(if (onRenderedFrame != null || clip.isImage ||
+                    (clip.volume == 1f && !clip.voiceTone.safe().enabled)) emptyList()
                     else listOf(voiceProcessors(clip.volume, clip.voiceTone)), videoEffects)).build()
         }
-        val mainSequence = EditedMediaItemSequence.withAudioAndVideoFrom(mainItems)
+        val mainSequence = if (onRenderedFrame != null)
+            EditedMediaItemSequence.withVideoFrom(mainItems)
+        else EditedMediaItemSequence.withAudioAndVideoFrom(mainItems)
         val sequences = mutableListOf<EditedMediaItemSequence>()
         // Ordem estável das entradas de vídeo; áudio é adicionado DEPOIS do vídeo principal.
         for (pip in pipsTopFirst) {
@@ -379,6 +385,10 @@ class ExportEngine(private val context: Context) {
             .build()
         var encodeStartedAtMs = 0L
         transformer = Transformer.Builder(context)
+            // A renderização de um único quadro pode precisar de mais tempo para
+            // produzir as primeiras amostras. Não afeta exportações normais.
+            .apply { if (onRenderedFrame != null)
+                setMaxDelayBetweenMuxerSamplesMs(30_000_000L) }
             .setVideoMimeType(MimeTypes.VIDEO_H264)
             .setAudioMimeType(MimeTypes.AUDIO_AAC)
             .setEncoderFactory(encoderFactory)

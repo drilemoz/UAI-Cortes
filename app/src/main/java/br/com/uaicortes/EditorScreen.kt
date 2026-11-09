@@ -61,6 +61,10 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     val captureScope = rememberCoroutineScope()
     var savingFrame by remember { mutableStateOf(false) }
     var captureAtMs by remember { mutableLongStateOf(0L) }
+    // Só oferecer o original explicitamente quando a composição PiP/legendas falhar.
+    var frameOriginalFallback by remember(p.id) {
+        mutableStateOf<Pair<FrameCaptureTarget, String>?>(null)
+    }
     val playbackVm: EditorPlaybackViewModel = viewModel()
     LaunchedEffect(p.id) { playbackVm.selectProject(p.id) }
     val playbackSpeed = playbackVm.speed
@@ -395,6 +399,9 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 captureAtMs = frozenMs
                 savingFrame = true
                 captureScope.launch {
+                    var sourceOnFailure: FrameCaptureTarget? = null
+                    var nameOnFailure = ""
+                    var isComposedFrame = false
                     try {
                         val target = FrameCapturePlan.locate(p.clips.map {
                             FrameCaptureClip(it.uri, it.startMs, it.endMs)
@@ -403,19 +410,25 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                             VideoFrameSaver.sourceShortSide(context, target.uri)
                         }
                         val job = FrameSnapshotProject.prepare(p, frozenMs, shortSide)
-                            ?: error("Não foi possível renderizar este quadro. Se estiver numa transição, avance alguns quadros e tente novamente.")
+                            ?: error("Quadro indisponível durante uma transição. Avance alguns quadros.")
                         val name = FrameCapturePlan.filename(title,
                             System.currentTimeMillis(), target.sourceTimeMs)
+                        sourceOnFailure = job.sourceFrame
+                        nameOnFailure = name
+                        isComposedFrame = !job.directSourceFrame
                         FrameSnapshotRenderer.save(context.applicationContext, job, name)
                         Toast.makeText(context,
-                            "Quadro renderizado em Imagens/UaiCortes (sem bordas do editor)",
+                            "Quadro salvo em Imagens/UaiCortes, sem bordas do editor",
                             Toast.LENGTH_LONG).show()
                         DiagnosticRecorder.action("editor", "rendered_frame_saved")
                     } catch (e: Exception) {
                         Toast.makeText(context,
-                            "Não foi possível renderizar o quadro: ${e.message ?: "tente novamente"}",
+                            "Falha ao salvar quadro. Confira o diagnóstico e tente outro instante.",
                             Toast.LENGTH_LONG).show()
                         DiagnosticRecorder.exception("rendered_frame_capture", e)
+                        if (isComposedFrame && sourceOnFailure != null && nameOnFailure.isNotBlank()) {
+                            frameOriginalFallback = sourceOnFailure to nameOnFailure
+                        }
                     } finally {
                         savingFrame = false
                     }
@@ -512,6 +525,38 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         if (feedback.isNotBlank()) Text(feedback, modifier=Modifier.padding(horizontal=12.dp,vertical=3.dp),
             color=MaterialTheme.colorScheme.primary, style=MaterialTheme.typography.bodySmall)
     }
+    frameOriginalFallback?.let { (source, pngName) ->
+        AlertDialog(
+            onDismissRequest = { frameOriginalFallback = null }, shape = UaiShapes.dialog,
+            icon = { Icon(Icons.Default.WarningAmber, contentDescription = null) },
+            title = { Text("Não foi possível compor o quadro") },
+            text = { Text("A renderização de legendas ou PiP falhou. Você pode salvar " +
+                "somente o quadro original, sem essas camadas. O vídeo e o projeto permanecem intactos.") },
+            confirmButton = { Button(onClick = {
+                frameOriginalFallback = null
+                savingFrame = true
+                captureScope.launch {
+                    try {
+                        withContext(Dispatchers.IO) {
+                            VideoFrameSaver.save(context.applicationContext, source, pngName)
+                        }
+                        Toast.makeText(context,
+                            "Quadro original salvo sem legendas ou PiP.", Toast.LENGTH_LONG).show()
+                        DiagnosticRecorder.action("editor", "source_frame_fallback_saved")
+                    } catch (e: Exception) {
+                        DiagnosticRecorder.exception("source_frame_fallback", e)
+                        Toast.makeText(context, "Falha ao salvar o quadro original.",
+                            Toast.LENGTH_LONG).show()
+                    } finally { savingFrame = false }
+                }
+            }, enabled = !savingFrame, shape = UaiShapes.button) {
+                Text("Salvar original")
+            } },
+            dismissButton = { TextButton(onClick = { frameOriginalFallback = null }) {
+                Text("Cancelar")
+            } }
+        )
+    }
     val active = p.clips.firstOrNull { it.id == clipMenuId }
     if (active != null) {
         ModalBottomSheet(onDismissRequest={clipMenuId=null}, dragHandle=null,
@@ -533,63 +578,68 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                     feedback=note
                     clipMenuId=null
                 }
-                if (active.isImage) {
-                    OutlinedButton(onClick={
-                        player.pause()
-                        seekGlobal(p.clips.take(idx).sumOf { it.durationMs })
-                        imageFrameDraft=active
-                        clipMenuId=null
-                    },modifier=Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.Crop,"Enquadrar imagem")
-                        Spacer(Modifier.width(8.dp))
-                        Text("Enquadrar imagem · arrastar e ampliar")
-                    }
-                }
-                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                // Toque curto no clipe abre ações principais; segurar e arrastar
+                // não dispara o menu (o gesto é consumido pela TimelineSegment).
+                var showClipDetails by remember(active.id) { mutableStateOf(false) }
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     ClipSheetAction(if (active.isImage) "Duração" else "Cortar",
                         if (active.isImage) Icons.Default.Timer else Icons.Default.ContentCut) {
                         clipMenuId=null;onEdit("trim")
                     }
-                    ClipSheetAction("Duplicar",Icons.Default.ContentCopy) {
-                        val newId = UUID.randomUUID().toString()
-                        val list=p.clips.toMutableList();list.add(idx+1,active.copy(id=newId))
-                        onUpdate(ClipAudioBindings.cloneAttached(
-                            EditFeatures.repositionAfterDelete(p,list), active.id,newId))
-                        feedback="Clipe e áudio vinculados duplicados"
-                        clipMenuId=null
-                    }
-                    ClipSheetAction("Antes",Icons.Default.ArrowBack,idx>0) {
-                        val list=p.clips.toMutableList(); java.util.Collections.swap(list,idx,idx-1)
-                        commit(list,"Clipe movido")
-                    }
-                    ClipSheetAction("Depois",Icons.Default.ArrowForward,idx<p.clips.lastIndex) {
-                        val list=p.clips.toMutableList();java.util.Collections.swap(list,idx,idx+1)
-                        commit(list,"Clipe movido")
+                    ClipSheetAction("Editar",Icons.Default.Edit) {
+                        if (active.isImage) {
+                            player.pause()
+                            seekGlobal(p.clips.take(idx).sumOf { it.durationMs })
+                            imageFrameDraft=active
+                            clipMenuId=null
+                        } else showClipDetails = !showClipDetails
                     }
                     ClipSheetAction("Excluir",Icons.Default.Delete) {
                         deletionRequested = active.id
                     }
                 }
-                OutlinedButton(onClick={ clipMenuId=null; onClipAudio(active.id) },
-                    modifier=Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.Mic, null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(if (p.audioTracks.any { it.clipId == active.id })
-                        "Editar áudio deste clipe" else "Adicionar áudio somente a este clipe")
-                }
-                if (!active.isImage) {
+                if (showClipDetails && !active.isImage) {
+                    HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
+                    Text("Opções do clipe",fontWeight=FontWeight.SemiBold)
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                        ClipSheetAction("Duplicar",Icons.Default.ContentCopy) {
+                            val newId = UUID.randomUUID().toString()
+                            val list=p.clips.toMutableList();list.add(idx+1,active.copy(id=newId))
+                            onUpdate(ClipAudioBindings.cloneAttached(
+                                EditFeatures.repositionAfterDelete(p,list), active.id,newId))
+                            feedback="Clipe e áudio vinculados duplicados"
+                            clipMenuId=null
+                        }
+                        ClipSheetAction("Antes",Icons.Default.ArrowBack,idx>0) {
+                            val list=p.clips.toMutableList(); java.util.Collections.swap(list,idx,idx-1)
+                            commit(list,"Clipe movido")
+                        }
+                        ClipSheetAction("Depois",Icons.Default.ArrowForward,idx<p.clips.lastIndex) {
+                            val list=p.clips.toMutableList();java.util.Collections.swap(list,idx,idx+1)
+                            commit(list,"Clipe movido")
+                        }
+                    }
+                    OutlinedButton(onClick={ clipMenuId=null; onClipAudio(active.id) },
+                        modifier=Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.Mic, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (p.audioTracks.any { it.clipId == active.id })
+                            "Editar áudio deste clipe" else "Adicionar áudio somente a este clipe")
+                    }
                     Text("Volume apenas deste clipe: ${(active.volume*100).toInt()}%")
                     Slider(value=active.volume.coerceIn(0f,1f), onValueChange={ v ->
                         onUpdate(p.copy(clips=p.clips.map { if(it.id==active.id) it.copy(volume=v) else it }))
                     })
-                } else {
-                    Text("Imagem estática · ${active.durationMs/1000L}s · sem som original. " +
-                        "Use Duração para ajustar o tempo exibido.",
+                    Text("Ajustes não alteram o arquivo original. Segure e arraste o clipe na linha do tempo para reposicioná-lo.",
+                        style=MaterialTheme.typography.bodySmall,
+                        color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (active.isImage) {
+                    Text("Imagem estática · ${active.durationMs/1000L}s. " +
+                        "Use Editar para enquadrar, ou Duração para ajustar o tempo.",
                         style=MaterialTheme.typography.bodySmall)
                 }
-                Text("Excluir ou duplicar não altera o arquivo original.",
-                    style=MaterialTheme.typography.bodySmall,
-                    color=MaterialTheme.colorScheme.onSurfaceVariant)
+
             }
         }
     }

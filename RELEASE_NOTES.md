@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.266 — captura de quadro e interação na timeline
+
+- Quadros sem camadas agora são extraídos diretamente da fonte: imagens em resolução original, sem bordas nem a falha de muxer provocada pela exportação curtíssima.
+- Para legendas/PiP, a renderização por Media3 usa apenas vídeo e uma janela maior. Se o renderizador falhar, é oferecida a alternativa explícita de PNG original sem as camadas, mantendo os dados intactos.
+- Toque no clipe da linha do tempo mostra Cortar, Editar e Excluir; o botão Editar separado não aparece mais. O arrasto continua disponível, sem exibir o menu ao mover.
+- A compilação Android completa, a fidelidade visual da composição e os gestos no aparelho permanecem pendentes de validação.
+
 # Uai Cortes · versão 0.1.265 — fotografia de quadros em melhor qualidade
 
 - Captura de quadros passa a gerar PNG a partir de composição renderizada com Media3, sem tirar print da interface. Isso elimina as bordas da janela e preserva mais detalhe quando a fonte tem resolução superior à prévia.

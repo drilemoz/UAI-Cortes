@@ -1,3 +1,10 @@
+# v0.1.266 — captura confiável e ações diretamente sobre o clipe
+
+- Diagnóstico real da v0.1.265 registrou `ERROR_CODE_MUXING_TIMEOUT` na captura renderizada de quadro, durante a espera por amostras de Media3 Transformer. O vídeo de um clipe simples não requer muxer: extrair diretamente do original com MediaMetadataRetriever, em PNG sem bordas e sem redimensionar a prévia.
+- Quando houver PiP, legenda ativa ou marca d'água, continuar usando a composição Media3, mas renderizar uma janela de até 1,6 s, sem áudio e com timeout isolado de 30 s; se falhar, oferecer explicitamente o quadro original sem camadas, nunca salvar uma imagem incompleta como composição final.
+- Linha do tempo: um toque no vídeo abre as ações Cortar, Editar (ajustes de áudio/volume/duplicar/mover), Excluir com confirmação. O botão Editar destacado fora da linha foi removido. `detectDragGestures` permanece, selecionando sem abrir o menu no arrasto, e preserva alças de início/fim e reordenação livre com gesto mantido.
+- Preservar projetos, assinatura, Media3 regular, linha de tempo, áudio, Gemini, cinco APKs e fluxos sociais. Versão 0.1.266/versionCode 267. Validar contratos, Kotlin PSI, pacote oficial e Android no CI antes de afirmar conclusão real.
+
 # v0.1.265 — captura de quadro via renderização Media3
 
 - Base 0.1.264/versionCode 265; nova 0.1.265/versionCode 266. Preservar módulos, projeto schema 4, assinatura, cinco APKs, permissões e mídias.

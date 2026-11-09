@@ -17,9 +17,9 @@ else:
         main.write_text('''package br.com.uaicortes
 fun main() {
     val x = FrameSnapshotTiming.slice(1000,5000,3250)!!
-    check(x.startMs==3180L && x.endMs==3440L && x.frameAtMs==70L)
+    check(x.startMs==2750L && x.endMs==4350L && x.frameAtMs==500L)
     val y = FrameSnapshotTiming.slice(1000,2000,1999)!!
-    check(y.endMs==2000L && y.frameAtMs==70L)
+    check(y.startMs==1000L && y.endMs==2000L && y.frameAtMs==999L)
     check(FrameSnapshotTiming.slice(100,500,100)!!.frameAtMs==0L)
     check(FrameSnapshotTiming.slice(400,300,350)==null)
     check(FrameSnapshotTiming.overlap(190,50,200,250)==200L..239L)

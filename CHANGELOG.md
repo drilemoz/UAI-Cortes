@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.266 (2026-11-09)
+
+- Bug reproduzido no diagnóstico: `ERROR_CODE_MUXING_TIMEOUT` ao salvar quadro por composição Media3 de trecho de 260 ms. Quadro simples agora usa extração nativa da fonte, sem recodificar ou gerar vídeo temporário.
+- Composição para PiP/legendas com janela de até 1,6 segundos, áudio removido e watchdog de 30 segundos exclusivo para snapshots; falha oferece PNG original sem camadas somente mediante confirmação.
+- Toque curto em clipe principal da timeline abre ações Cortar, Editar e Excluir. Botão Editar permanente removido. Arrastar o clipe e as alças preservados sem abrir ações durante o gesto.
+- Documentação, versão 0.1.266/versionCode 267 e workflow do GitHub Actions atualizados. Testes reais do PNG com camadas no dispositivo ainda são necessários.
+
 # Uai Cortes 0.1.265 (2026-11-09)
 
 - Captura de quadro reformulada: renderização curta pelo ExportEngine/Media3, evitando bordas, a faixa inferior da interface e a perda de nitidez causada pelo tamanho do preview.

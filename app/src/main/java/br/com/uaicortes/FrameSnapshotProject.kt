@@ -3,7 +3,9 @@ package br.com.uaicortes
 internal data class FrameSnapshotJob(
     val project: VideoProject,
     val targetInVideoMs: Long,
-    val requestedShortSide: Int
+    val requestedShortSide: Int,
+    val sourceFrame: FrameCaptureTarget,
+    val directSourceFrame: Boolean
 )
 
 /** Reutiliza os mesmos efeitos do ExportEngine com um único trecho de vídeo,
@@ -61,6 +63,15 @@ internal object FrameSnapshotProject {
                             endMs = timing.endMs - projectStart)
                     })
             }
+        // Quando o quadro não usa camadas visuais, evitar uma exportação MP4
+        // desnecessária: a extração nativa preserva os pixels da fonte e não
+        // depende do muxer Media3 (que pode travar em clipes muito curtos).
+        val hasActivePip = project.overlays.any { pip ->
+            atMs >= pip.startAtMs && atMs < pip.startAtMs + pip.durationMs
+        }
+        val hasActiveSubtitle = SubtitlePreviewPolicy.firstAt(project.subtitles, atMs) != null
+        val hasWatermark = project.textWatermark?.toSubtitle(project.durationMs) != null
+        val directSourceFrame = !hasActivePip && !hasActiveSubtitle && !hasWatermark
         val shortSide = sourceShortSide.coerceIn(480, 1080)
         return FrameSnapshotJob(
             project.copy(clips = listOf(clip.copy(startMs = slice.startMs,
@@ -68,7 +79,9 @@ internal object FrameSnapshotProject {
                 overlays = overlays, subtitles = titles,
                 transitions = emptyList(), music = null, audioTracks = emptyList()),
             slice.frameAtMs,
-            shortSide
+            shortSide,
+            target,
+            directSourceFrame
         )
     }
 }
