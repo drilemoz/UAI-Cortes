@@ -1,6 +1,6 @@
 package br.com.uaicortes
 
-import androidx.compose.foundation.drawBehind
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset

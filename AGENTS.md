@@ -1,3 +1,12 @@
+# v0.1.244 — Correção de compilação Kotlin do karaokê rosa (workflow 203)
+
+- Corrigir também o contrato legado `test_standalone_text_to_voice_229_contract.py`: após a home 0.1.243, Texto para Voz é `HomeActionTile` na faixa horizontal, não mais `ItemCard`. Conferir a rota `navTo("text_to_voice")` e preservar o editor separado.
+
+- O workflow 203 compilou a v0.1.242/versionCode 243 e falhou nas tarefas `:app:compileDebugKotlin` e `:app:compileReleaseKotlin`: `SubtitleKaraokeBadge.kt` importava `drawBehind` do pacote inexistente `androidx.compose.foundation.drawBehind`.
+- Corrigir exclusivamente para `androidx.compose.ui.draw.drawBehind` (Jetpack Compose UI); `drawRoundRect` é uma operação de `DrawScope` disponível dentro desse modificador. Acrescentar contrato de regressão que rejeite o import errado.
+- Partir da versão mais nova 0.1.243/versionCode 244, conservando a faixa superior de sete atalhos, renomeação de projetos, Coqui/Chatterbox, karaoke rosa, schema 4, assinaturas e cinco variantes APK Release. Nova versão 0.1.244/versionCode 245.
+- Sincronizar Gradle, GitHub Actions, metadados, README, CHANGELOG, notas e Novidades. Testes estáticos não substituem CI/Gradle Android completo, exportação MP4 e teste em aparelho.
+
 # v0.1.243 — Faixa horizontal com sete atalhos e renomeação segura de projetos
 
 - Tela inicial: os atalhos Novo projeto, Animar fotos, Estúdio de Cenas, Vozes Google, Texto para Voz, Extrair áudio e Dividir vídeo aparecem como cartões azuis de largura fixa em uma `Row.horizontalScroll`, com alvos individuais e texto de orientação. Remover cartões grandes e botões duplicados, preservando navegação, mídia original e serviços externos.

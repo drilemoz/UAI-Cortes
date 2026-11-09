@@ -1,3 +1,11 @@
+# Uai Cortes 0.1.244 (2026-11-09)
+
+- Atualizado teste legado de Texto para Voz que ainda esperava `ItemCard`, removido na 0.1.243; o contrato agora cobre `HomeActionTile` e navegação preservada.
+
+- Corrigido erro de compilação Kotlin `Unresolved reference 'drawBehind'` e `drawRoundRect` apontado no workflow 203: import `drawBehind` movido de `androidx.compose.foundation` para `androidx.compose.ui.draw` em `SubtitleKaraokeBadge.kt`, sem alterar a aparência, a animação ou o tempo das legendas.
+- Criado teste de regressão CI203 para detectar retorno do import inválido e garantir a presença do efeito na prévia e galeria. Mantidos sete atalhos horizontais e renomeação da versão 0.1.243, vozes clonadas Coqui/Chatterbox, projetos e cinco APKs previstos.
+- Versão 0.1.244/versionCode 245 sincronizada em Gradle, CI, metadados, Novidades e documentação. A compilação Android completa permanece pendente de CI.
+
 # Uai Cortes 0.1.243 (2026-11-09)
 
 - Home: sete ações em uma única faixa azul rolável; removidas as seções de Vozes Google, Texto para Voz, Dividir vídeo e Extrair áudio abaixo da faixa. Os destinos foram preservados.

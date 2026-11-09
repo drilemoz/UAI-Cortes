@@ -1,3 +1,12 @@
+# Uai Cortes · versão 0.1.244 — Correção de build do karaokê rosa
+
+- Atualizada regressão antiga de Texto para Voz para reconhecer o atalho da nova faixa rolável.
+
+- Corrigida a importação de `drawBehind` em `SubtitleKaraokeBadge.kt`, responsável por impedir os APKs Debug e Release no workflow 203. O desenho das legendas não mudou.
+- Incluído teste estático específico contra o import inválido.
+- Preservados a faixa rolável de sete ferramentas, botão Renomear nas listas de projetos, Coqui/Chatterbox, renderização das legendas e esquema de projeto 4.
+- v0.1.244/versionCode 245. Sem afirmar que o APK compila antes da execução real de Gradle/CI.
+
 # Uai Cortes · versão 0.1.243 — Atalhos compactos e renomeação de projetos
 
 - Sete cartões azuis lado a lado com rolagem horizontal no topo da Home. Não há cópia das opções de voz, extração de áudio ou divisão de vídeo no espaço inferior.

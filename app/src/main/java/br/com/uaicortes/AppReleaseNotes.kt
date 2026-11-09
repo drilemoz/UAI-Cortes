@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.243"
-    const val VERSION_CODE = 244
+    const val VERSION_NAME = "0.1.244"
+    const val VERSION_CODE = 245
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.244", listOf(
+            ReleaseFeature("ci203-karaoke-drawbehind-import-244", "Correção da compilação do karaokê rosa",
+                "Corrigido o import do drawBehind do Jetpack Compose, que impedia a compilação Debug e Release no workflow 203.", "check"),
+            ReleaseFeature("ci203-preserve-home-243-244", "Atalhos roláveis e renomeação preservados",
+                "Mantém a faixa de ferramentas da versão anterior, os projetos salvos e o estilo de legenda rosa na prévia e exportação.", "film")
+        )),
         ReleaseSummary("0.1.243", listOf(
             ReleaseFeature("home-tools-scroll-243", "Sete ferramentas na faixa superior",
                 "Novo projeto, Animar fotos, Estúdio de Cenas, Vozes Google, Texto para Voz, Extrair áudio e Dividir vídeo agora aparecem em cartões azuis com rolagem horizontal, sem duplicatas abaixo.", "film"),

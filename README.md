@@ -1,3 +1,12 @@
+# Uai Cortes · v0.1.244 — Correção Kotlin do karaokê rosa (CI 203)
+
+O teste antigo de Texto para Voz foi ajustado ao atalho `HomeActionTile` da faixa horizontal, sem recolocar cartões duplicados na tela inicial.
+
+
+O workflow 203 parou na compilação Kotlin (Debug e Release) porque `SubtitleKaraokeBadge.kt` importava `drawBehind` do pacote errado. Agora o efeito usa `androidx.compose.ui.draw.drawBehind`; o desenho `DrawScope.drawRoundRect` permanece inalterado. O teste `tools/test_ci203_karaoke_drawbehind_244_contract.py` previne a regressão.
+
+Esta correção foi aplicada sobre **0.1.243**, preservando os sete atalhos azuis com rolagem horizontal, o renomear de projetos, o karaokê rosa e as vozes Coqui/Chatterbox. É uma atualização de código-fonte para **0.1.244/versionCode 245**; os cinco APKs Release e o comportamento visual no aparelho exigem verificação pelo GitHub Actions e dispositivo Android.
+
 # Uai Cortes · v0.1.243 — Sete atalhos roláveis e renomeação de projetos
 
 A página inicial reúne **Novo projeto**, **Animar fotos**, **Estúdio de Cenas**, **Vozes Google**, **Texto para Voz**, **Extrair áudio** e **Dividir vídeo** em uma única faixa de cartões azuis com rolagem horizontal. Os cartões grandes e botões independentes que ocupavam espaço abaixo foram removidos. Cada atalho mantém seu destino original.
