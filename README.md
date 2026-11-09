@@ -1,3 +1,10 @@
+# Uai Cortes · v0.1.267 — CI 224 e teste de exportação de imagens
+
+- A configuração de `setFrameRate(30)` para clipes de imagem permanece no `EditedMediaItem.Builder(item)` do Media3. O contrato de regressão foi atualizado para aceitar a formatação em múltiplas linhas adotada quando o snapshot passou a remover áudio.
+- O teste também garante que a remoção de áudio `onRenderedFrame` não elimine os 30 FPS de imagens. Nenhuma função de exportação foi desativada.
+- Preservados a captura de PNG, o menu Cortar/Editar/Excluir, a reordenação por arrasto, a edição de áudio, o esquema de projetos e as cinco variantes de APK.
+- Código validado localmente; a compilação Android real depende da execução do workflow atualizado.
+
 # Uai Cortes · v0.1.266 — quadro sem timeout e menu do clipe por toque
 
 - Captura de quadro: vídeo sem PiP, legenda ou marca d'água ativa é extraído diretamente do arquivo original, preservando a resolução e evitando o timeout `ERROR_CODE_MUXING_TIMEOUT` observado com a exportação temporária de 260 ms no aparelho.

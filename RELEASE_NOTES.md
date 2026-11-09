@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.267 — correção da validação CI 224
+
+- Corrigido o teste automatizado que esperava o código de 30 FPS de imagens em uma única linha, embora ele continue presente em um bloco de várias linhas no Media3.
+- Reforçada a verificação para assegurar 30 FPS nas imagens principais e remoção de áudio apenas na captura de quadros, preservando exportação e projetos.
+- Código de exportação e interações da linha do tempo não foram modificados nesta correção.
+- Validações locais do código-fonte não substituem a compilação Android completa e os testes no aparelho.
+
 # Uai Cortes · versão 0.1.266 — captura de quadro e interação na timeline
 
 - Quadros sem camadas agora são extraídos diretamente da fonte: imagens em resolução original, sem bordas nem a falha de muxer provocada pela exportação curtíssima.

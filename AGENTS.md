@@ -1,3 +1,9 @@
+# v0.1.267 — CI 224: contrato de imagens resiliente a formatação Kotlin
+
+- O workflow 224 reprovou `test_main_image_clip_169_contract.py` porque procurava uma única string `.apply { if (clip.isImage) setFrameRate(30) }`. Desde a captura de quadros com remoção opcional de áudio, a mesma chamada está em bloco `.apply` multilinha de `EditedMediaItem.Builder(item)`.
+- Não modificar a exportação, taxa de quadros, snapshot, projetos, assinatura nem editor. Corrigir o teste para localizar a regra principal dentro do builder correto sem depender da quebra de linha ou espaços, e garantir a preservação de `setRemoveAudio(true)` quando `onRenderedFrame != null`.
+- Versão 0.1.267/versionCode 268. Atualizar Gradle, workflow, metadados, notas, RELEASE/README/CHANGELOG; executar a validação e a mesma sequência Python do CI antes de empacotar. Build Android real segue pendente.
+
 # v0.1.266 — captura confiável e ações diretamente sobre o clipe
 
 - Diagnóstico real da v0.1.265 registrou `ERROR_CODE_MUXING_TIMEOUT` na captura renderizada de quadro, durante a espera por amostras de Media3 Transformer. O vídeo de um clipe simples não requer muxer: extrair diretamente do original com MediaMetadataRetriever, em PNG sem bordas e sem redimensionar a prévia.

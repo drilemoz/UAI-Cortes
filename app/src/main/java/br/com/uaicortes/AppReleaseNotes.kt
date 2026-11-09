@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.266"
-    const val VERSION_CODE = 267
+    const val VERSION_NAME = "0.1.267"
+    const val VERSION_CODE = 268
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.267", listOf(
+            ReleaseFeature("ci224-main-image-contract-267", "CI 224: verificação da exportação de imagens corrigida",
+                "O contrato antigo agora reconhece a configuração de 30 FPS mesmo quando o bloco Kotlin usa várias linhas, sem exigir a formatação anterior.", "check"),
+            ReleaseFeature("ci224-snapshot-audio-267", "Captura de quadros e áudio preservados",
+                "O teste também verifica que a renderização de snapshots pode remover áudio sem perder a regra de 30 FPS para clipes de imagem. A exportação e os dados de projetos não foram alterados.", "check")
+        )),
         ReleaseSummary("0.1.266", listOf(
             ReleaseFeature("frame-muxer-timeout-266", "Captura sem travar o muxer quando não há camadas",
                 "Após o erro real de timeout do Media3, quadros simples passam a ser extraídos diretamente do vídeo original em resolução de fonte, sem bordas e sem gerar MP4 temporário.", "check"),

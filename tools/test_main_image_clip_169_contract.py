@@ -1,5 +1,6 @@
 """Regressão de contrato da capa na linha principal; não substitui teste Android."""
 from pathlib import Path
+import re
 R = Path(__file__).resolve().parents[1]
 S = R/'app/src/main/java/br/com/uaicortes'
 read=lambda name:(S/name).read_text(encoding='utf-8')
@@ -26,7 +27,14 @@ assert 'ImageClipImport.copyIntoProject' in read('MainImageInsertionUi.kt')
 assert 'ImageClipImport.inspect' in read('MainImageInsertionUi.kt')
 assert 'ImageClipPolicy.resizeInProject' in read('TrimScreen.kt')
 assert 'ClipMediaItems.playback(clip)' in read('ExportEngine.kt')
-assert '.apply { if (clip.isImage) setFrameRate(30) }' in read('ExportEngine.kt')
+# A configuração foi expandida em várias linhas para remover áudio em snapshots.
+# Verificar a regra aplicada à trilha principal, sem depender da formatação do Kotlin.
+export = read('ExportEngine.kt')
+main_builder = export.split('EditedMediaItem.Builder(item)', 1)[1].split('.setEffects(', 1)[0]
+assert re.search(r'\.apply\s*\{\s*if\s*\(clip\.isImage\)\s*setFrameRate\s*\(30\)', main_builder), \
+    'Imagem principal deve continuar sendo exportada em 30 fps'
+assert 'if (onRenderedFrame != null) setRemoveAudio(true)' in main_builder, \
+    'Snapshot deve continuar desabilitando áudio sem modificar o frame rate da imagem' 
 assert 'MediaItem.Builder().setUri(clip.uri)' in read('StaticImageClip.kt')
 assert '.setImageDurationMs(clip.durationMs)' in read('StaticImageClip.kt')
 assert 'if (!clip.isImage)' in read('AutoSubtitleEngine.kt')

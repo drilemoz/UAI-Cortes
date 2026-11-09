@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.267 (2026-11-09)
+
+- CI 224: corrigido o contrato legado de clipes de imagem que falhava por exigir uma expressão `.apply` em linha única, apesar de a regra `clip.isImage -> setFrameRate(30)` ainda existir no builder do Media3.
+- O teste verifica agora de modo tolerante a quebras de linha a configuração da trilha principal e a remoção opcional de áudio de snapshots, protegendo ambos os comportamentos.
+- Não há alterações no motor de exportação, captura, linha do tempo, vídeos originais ou dados de projetos.
+- Sincronizados Gradle, versionCode 268, workflow, documentação e notas. Compilação Android continua pendente do próximo CI.
+
 # Uai Cortes 0.1.266 (2026-11-09)
 
 - Bug reproduzido no diagnóstico: `ERROR_CODE_MUXING_TIMEOUT` ao salvar quadro por composição Media3 de trecho de 260 ms. Quadro simples agora usa extração nativa da fonte, sem recodificar ou gerar vídeo temporário.
