@@ -1,3 +1,7 @@
+# Uai Cortes · v0.1.238 — painel Redes unificado
+
+A tela Redes agora reúne canais em uma faixa rolável (Todos/individual), estatísticas de canais consultadas do YouTube e vídeos anteriores junto dos uploads confirmados pelo Uai Cortes. O cartão Desempenho vazio foi removido; a ajuda fica no cabeçalho e o histórico técnico continua disponível recolhido. Consultas exigem ação explícita; a última resposta fica em cache privado local, sem tokens Google nem sincronização em segundo plano. Versão 0.1.238/versionCode 239; build Android e teste real OAuth pendentes.
+
 # Uai Cortes · v0.1.237 — Correção da reprodução no editor
 
 A prévia do editor agora **para ao concluir o último clipe**, em vez de repetir o projeto sem fim. Ao minimizar o aplicativo, bloquear a tela ou abrir outro app, a prévia é **pausada pelo ciclo de vida Android** e não retoma automaticamente quando o usuário volta. Se tocar em Play após o fim, a reprodução começa do início do projeto. Essas mudanças não alteram o vídeo exportado, os áudios originais, nem o posicionamento do projeto. Versão 0.1.237/versionCode 238. APK e teste em aparelho pendentes.

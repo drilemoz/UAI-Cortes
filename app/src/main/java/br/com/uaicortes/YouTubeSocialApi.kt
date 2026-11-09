@@ -110,9 +110,21 @@ internal object YouTubeSocialApi {
         val publishedAt: String,
         val viewCount: Long? = null,
         val channelId: String = "",
-        val channelTitle: String = ""
+        val channelTitle: String = "",
+        val fromUai: Boolean = false
     )
-    internal data class PreviousPage(val videos: List<PreviousVideo>, val nextPageToken: String)
+    internal data class ChannelStatistics(
+        val channelId: String,
+        val views: Long?,
+        val videos: Long?,
+        val subscribers: Long?,
+        val checkedAt: Long = System.currentTimeMillis()
+    )
+    internal data class PreviousPage(
+        val videos: List<PreviousVideo>,
+        val nextPageToken: String,
+        val channelStatistics: ChannelStatistics? = null
+    )
 
     /** Não usa search.list: a playlist de uploads permite paginação barata e inclui uploads antigos. */
     suspend fun previousVideos(
@@ -121,17 +133,25 @@ internal object YouTubeSocialApi {
         require(SocialPublicationPolicy.validChannel(expectedChannelId) && expectedChannelId.isNotBlank())
         require(pageToken.length <= 1024 && pageToken.none { it.isISOControl() })
         // Conferir o proprietário a CADA busca, inclusive em páginas posteriores.
-        val channelConnection = connect("$API/channels?part=id%2CcontentDetails&mine=true" +
-            "&fields=items(id%2CcontentDetails%2FrelatedPlaylists%2Fuploads)", token, "GET")
-        val uploadsId = try {
+        val channelConnection = connect("$API/channels?part=id%2CcontentDetails%2Cstatistics&mine=true" +
+            "&fields=items(id%2CcontentDetails%2FrelatedPlaylists%2Fuploads%2C" +
+            "statistics(viewCount%2CvideoCount%2CsubscriberCount%2ChiddenSubscriberCount))", token, "GET")
+        val (uploadsId, channelStatistics) = try {
             ensureOk(channelConnection, "Canal YouTube")
             val current = JSONObject(readLimited(channelConnection)).optJSONArray("items")
                 ?.optJSONObject(0) ?: throw IOException("Nenhum canal encontrado para esta conta Google.")
             if (current.optString("id") != expectedChannelId)
                 throw IOException("Conta Google diferente do canal selecionado. Escolha a conta correta.")
-            current.optJSONObject("contentDetails")?.optJSONObject("relatedPlaylists")
+            val uploads = current.optJSONObject("contentDetails")?.optJSONObject("relatedPlaylists")
                 ?.optString("uploads").orEmpty().takeIf { it.isNotBlank() }
                 ?: throw IOException("A playlist de envios do canal não está disponível.")
+            val stats = current.optJSONObject("statistics")
+            fun nonnegative(key: String): Long? = stats?.optString(key)
+                ?.toLongOrNull()?.takeIf { it >= 0L }
+            val subscribers = if (stats?.optBoolean("hiddenSubscriberCount") == true) null
+                else nonnegative("subscriberCount")
+            uploads to ChannelStatistics(expectedChannelId, nonnegative("viewCount"),
+                nonnegative("videoCount"), subscribers)
         } finally { channelConnection.disconnect() }
 
         val idParam = java.net.URLEncoder.encode(uploadsId, "UTF-8")
@@ -163,7 +183,7 @@ internal object YouTubeSocialApi {
                 }
             }.distinctBy { it.id }
             val withStats = if (videos.isEmpty()) emptyList() else enrichPreviousVideos(token, videos)
-            PreviousPage(withStats, body.optString("nextPageToken").take(1024))
+            PreviousPage(withStats, body.optString("nextPageToken").take(1024), channelStatistics)
         } finally { playlistConnection.disconnect() }
     }
 

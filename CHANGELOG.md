@@ -1,3 +1,11 @@
+# Uai Cortes 0.1.238 (2026-11-08)
+
+- Redes: faixa de canais horizontal Todos/individual, métricas oficiais de visualizações, vídeos e inscritos, remoção do cartão Desempenho sem dados e ajuda no topo.
+- Lista única de vídeos carregados de todos os canais junto dos uploads confirmados pelo app, deduplicados pelo ID YouTube. Histórico local permanece recolhido para registros pendentes e ações técnicas.
+- Busca manual por canal ou Atualizar canais, reutilização de tokens em RAM após verificação de identidade, sem forçar escolha de conta a cada página.
+- Cache local privado preserva a última consulta sem guardar tokens; dados exibem a última atualização e não são considerados atuais automaticamente.
+- Metadados atualizados para 0.1.238/versionCode 239. Compilação Android e teste com canais reais pendentes.
+
 # Uai Cortes 0.1.237 (2026-11-08)
 
 - Editor: removida repetição automática de todos os clipes ao chegar ao final da prévia.

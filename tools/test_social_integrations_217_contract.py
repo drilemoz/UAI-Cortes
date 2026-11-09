@@ -38,7 +38,14 @@ assert 'GeminiCredentialStore' not in center  # apenas abre as configurações e
 assert 'META_APP_SECRET' not in center and 'TIKTOK_CLIENT_SECRET' not in center
 assert 'connectMeta(false, account)' in dashboard and 'consultMetaPages(account)' in dashboard
 assert 'if (state.accounts.any { it.destination == SocialDestination.FACEBOOK_PAGE })' in dashboard
-assert 'metricsExpanded' in dashboard and 'Publicar vídeo' in dashboard
+assert 'Publicar vídeo' in dashboard
+# A partir da v238, o quadro Desempenho foi substituído por estatísticas da API.
+if int(check(ROOT)[0].rsplit('.', 1)[-1]) >= 238:
+    assert 'SocialYouTubeLibraryUi(' in dashboard
+    assert 'channelStatistics = youtubeChannelStats' in dashboard
+    assert 'showSocialHelp' in dashboard
+else:
+    assert 'metricsExpanded' in dashboard
 assert 'SHARED_UNCONFIRMED' in dashboard and 'CONFIRMED_MANUALLY' in dashboard
 assert 'AtomicFile(' in store and 'accessToken' not in store
 assert test.exists()

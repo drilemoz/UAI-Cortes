@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.238 — Painel Redes com todos os canais
+
+- Redes Sociais: canais selecionáveis em faixa horizontal, filtros Todos/canal e indicador de dados reais do YouTube.
+- Desempenho substituído por métricas oficiais consultadas: visualizações, vídeos e inscritos. Explicação no botão de ajuda do cabeçalho.
+- Vídeos antigos dos canais e publicações confirmadas pelo Uai Cortes na mesma lista, identificados e sem duplicação pelo ID. Histórico completo e envios sem confirmação continuam acessíveis.
+- Autorização Google reutilizada somente na sessão após verificar o canal; escolha explícita da conta fica como alternativa em caso de divergência. Somente metadados ficam em cache privado; nenhum token é persistido.
+- Código v0.1.238/versionCode 239; build Android e teste real com OAuth ainda pendentes.
+
 # Uai Cortes · versão 0.1.237 — Prévia do editor termina e pausa em segundo plano
 
 - A reprodução na edição para ao chegar ao fim do último clipe, sem voltar automaticamente para o começo.

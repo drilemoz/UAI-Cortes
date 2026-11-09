@@ -1,3 +1,10 @@
+# v0.1.238 — Redes unificadas por canal, métricas e OAuth sem prompt forçado
+
+- Manter canais cadastrados, vídeos remotos e envios confirmados em uma lista única filtrada por canal, preservando o histórico de operações pendentes ou incertas.
+- Exibir canais horizontalmente com seleção Todos, métricas de channels.list(statistics) por canal e somas apenas de canais efetivamente consultados, distinguindo totais oficiais de somas de vídeos carregados.
+- Reduzir prompts de contas Google: utilizar AuthorizationClient sem SELECT_ACCOUNT na consulta normal e memorizar tokens somente em RAM por canal verificado, com confirmação do canal na API e fallback explícito se a conta não corresponder. Nunca persistir OAuth, nem fazer upload ou repetição automáticos.
+- Preservar YouTube, Facebook, Gemini, Polly, editor, projetos schema 4, SocialStore schema 1 e cinco APKs. Sincronizar 0.1.238/versionCode 239; Android Gradle real e consulta remota precisam validação.
+
 # v0.1.237 — Reprodução da prévia do editor sem loop e sem áudio em segundo plano
 
 - Na tela EditorScreen, usar `Player.REPEAT_MODE_OFF` para encerrar a reprodução ao fim do último clipe em vez de repetir o projeto continuamente.

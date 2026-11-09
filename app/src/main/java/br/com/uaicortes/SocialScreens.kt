@@ -27,6 +27,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 internal fun copyText(context: Context, text: String) {
     (context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)
@@ -58,6 +60,7 @@ internal fun SocialDashboardScreen(
 ) {
     val context = LocalContext.current
     val store = remember(context) { SocialStore(context) }
+    val youtubeCache = remember(context) { SocialYouTubeSnapshotCache(context) }
     var data by remember { mutableStateOf<SocialData?>(null) }
     var failure by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
@@ -68,6 +71,17 @@ internal fun SocialDashboardScreen(
         mutableStateOf<Map<String, List<YouTubeSocialApi.PreviousVideo>>>(emptyMap())
     }
     var youtubeLibraryNextPages by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var youtubeChannelStats by remember {
+        mutableStateOf<Map<String, YouTubeSocialApi.ChannelStatistics>>(emptyMap())
+    }
+    // Tokens só em RAM e associados ao canal verificado; nunca entram no SocialStore.
+    val youtubeSessionTokens = remember { mutableMapOf<String, String>() }
+    DisposableEffect(Unit) { onDispose { youtubeSessionTokens.clear() } }
+    var pendingChannelQueue by remember { mutableStateOf<List<SocialAccount>>(emptyList()) }
+    var selectedChannelId by rememberSaveable { mutableStateOf("") }
+    var manageAccounts by rememberSaveable { mutableStateOf(false) }
+    var showHistory by rememberSaveable { mutableStateOf(false) }
+    var showSocialHelp by rememberSaveable { mutableStateOf(false) }
 
     var channelToBind by remember { mutableStateOf<Pair<SocialAccount, YouTubeSocialApi.Channel>?>(null) }
     var pageToBind by remember { mutableStateOf<SocialAccount?>(null) }
@@ -109,44 +123,87 @@ internal fun SocialDashboardScreen(
     val authorizeYouTube = rememberYouTubeAuthorization { error ->
         youtubeBusy = false
         if (youtubeLibraryBusy) {
+            pendingChannelQueue = emptyList()
             youtubeLibraryBusy = false
             youtubeLibraryError = error
         } else failure = error
     }
     fun fetchOldYouTubeVideos(account: SocialAccount, page: String) {
-        if (youtubeLibraryBusy || youtubeBusy || account.remoteChannelId.isBlank()) return
+        val channelId = account.remoteChannelId
+        if (youtubeLibraryBusy || youtubeBusy || channelId.isBlank()) return
         val isNextPage = page.isNotBlank()
         youtubeLibraryBusy = true
         youtubeBusy = true
         youtubeLibraryError = ""
-        // Sempre confirma a conta na API, inclusive ao carregar mais páginas.
-        authorizeYouTube(true) { token ->
+        fun withVerifiedToken(token: String, allowAccountPicker: Boolean) {
             scope.launch {
+                val channelResult = runCatching { YouTubeSocialApi.channel(token) }
+                val channel = channelResult.getOrNull()
+                if (channel == null) {
+                    youtubeSessionTokens.remove(channelId)
+                    youtubeLibraryError = channelResult.exceptionOrNull()?.message
+                        ?: "Não foi possível verificar o canal Google."
+                    youtubeBusy = false; youtubeLibraryBusy = false
+                    pendingChannelQueue = emptyList()
+                    return@launch
+                }
+                if (channel.id != channelId) {
+                    youtubeSessionTokens.remove(channelId)
+                    if (allowAccountPicker) {
+                        // A seleção explícita é apenas fallback para a conta Google errada.
+                        authorizeYouTube(true) { selectedToken ->
+                            withVerifiedToken(selectedToken, false)
+                        }
+                    } else {
+                        youtubeLibraryError = "A conta Google autorizada não corresponde a ${account.label}. " +
+                            "Selecione a conta desse canal para continuar."
+                        youtubeBusy = false; youtubeLibraryBusy = false
+                        pendingChannelQueue = emptyList()
+                    }
+                    return@launch
+                }
+                verifiedYouTubeIds = verifiedYouTubeIds + channelId
+                youtubeSessionTokens[channelId] = token
                 runCatching {
-                    YouTubeSocialApi.previousVideos(token, account.remoteChannelId,
-                        if (isNextPage) page else "")
+                    YouTubeSocialApi.previousVideos(token, channelId, if (isNextPage) page else "")
                 }.onSuccess { result ->
                     val previous = if (isNextPage) {
-                        youtubeLibraryVideosByChannel[account.remoteChannelId].orEmpty()
+                        youtubeLibraryVideosByChannel[channelId].orEmpty()
                     } else emptyList()
                     val enriched = result.videos.map { video ->
-                        video.copy(
-                            channelId = video.channelId.ifBlank { account.remoteChannelId },
-                            channelTitle = video.channelTitle.ifBlank { account.label }
-                        )
+                        video.copy(channelId = channelId,
+                            channelTitle = video.channelTitle.ifBlank { account.label })
                     }
                     val merged = previous.plus(enriched).distinctBy { it.id }.take(300)
-                    youtubeLibraryVideosByChannel = youtubeLibraryVideosByChannel +
-                        (account.remoteChannelId to merged)
+                    youtubeLibraryVideosByChannel = youtubeLibraryVideosByChannel + (channelId to merged)
                     youtubeLibraryNextPages = youtubeLibraryNextPages +
-                        (account.remoteChannelId to if (merged.size >= 300) "" else result.nextPageToken)
+                        (channelId to if (merged.size >= 300) "" else result.nextPageToken)
+                    result.channelStatistics?.let { stats ->
+                        youtubeChannelStats = youtubeChannelStats + (channelId to stats)
+                    }
                     youtubeLibraryError = ""
+                    val snapshot = SocialYouTubeSnapshotCache.Snapshot(
+                        youtubeLibraryVideosByChannel, youtubeLibraryNextPages, youtubeChannelStats)
+                    runCatching { withContext(Dispatchers.IO) { youtubeCache.save(snapshot) } }
                 }.onFailure { error ->
-                    youtubeLibraryError = error.message ?: "Não foi possível consultar os vídeos do canal."
+                    youtubeSessionTokens.remove(channelId)
+                    youtubeLibraryError = error.message ?: "Não foi possível consultar o canal."
+                    pendingChannelQueue = emptyList()
                 }
-                youtubeLibraryBusy = false
                 youtubeBusy = false
+                youtubeLibraryBusy = false
             }
+        }
+        val cached = youtubeSessionTokens[channelId]
+        if (cached != null) withVerifiedToken(cached, false)
+        else authorizeYouTube(false) { token -> withVerifiedToken(token, true) }
+    }
+    // Ação explícita Atualizar canais: um canal por vez; sem autorização em segundo plano.
+    LaunchedEffect(youtubeBusy, pendingChannelQueue) {
+        if (!youtubeBusy && pendingChannelQueue.isNotEmpty()) {
+            val next = pendingChannelQueue.first()
+            pendingChannelQueue = pendingChannelQueue.drop(1)
+            fetchOldYouTubeVideos(next, "")
         }
     }
     fun refresh() {
@@ -157,7 +214,15 @@ internal fun SocialDashboardScreen(
         runCatching { store.save(next) }.onSuccess { data = next; failure = "" }
             .onFailure { failure = "Falha ao salvar. Nenhuma alteração foi aplicada." }
     }
-    LaunchedEffect(Unit) { refresh() }
+    LaunchedEffect(Unit) {
+        refresh()
+        val saved = withContext(Dispatchers.IO) { youtubeCache.load() }
+        val validIds = data?.accounts?.filter { it.destination == SocialDestination.YOUTUBE }
+            ?.map { it.remoteChannelId }?.toSet().orEmpty()
+        youtubeLibraryVideosByChannel = saved.videos.filterKeys { it in validIds }
+        youtubeLibraryNextPages = saved.nextPages.filterKeys { it in validIds }
+        youtubeChannelStats = saved.stats.filterKeys { it in validIds }
+    }
     var showAddDialog by remember { mutableStateOf(false) }
     var manualDestination by remember { mutableStateOf<SocialDestination?>(null) }
     var deletingAccount by remember { mutableStateOf<SocialAccount?>(null) }
@@ -172,12 +237,15 @@ internal fun SocialDashboardScreen(
                 Text("Contas e publicações", style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            IconButton(onClick = { showSocialHelp = true }) {
+                Icon(Icons.Default.HelpOutline, "Ajuda sobre Redes Sociais")
+            }
             IconButton(onClick = onApiCenter) { Icon(Icons.Default.Settings, "Integrações e APIs") }
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (failure.isNotBlank()) Text(failure, color = MaterialTheme.colorScheme.error)
-            Button(onClick = onCompose, modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
+            Button(onClick = onCompose, modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp),
                 shape = UaiShapes.button, enabled = data != null) {
                 Icon(Icons.Default.Upload, null)
                 Spacer(Modifier.width(8.dp))
@@ -185,44 +253,38 @@ internal fun SocialDashboardScreen(
             }
             val state = data
             if (state != null) {
-                val metricPosts = state.publications.filter { it.metrics.hasData }
-                val views = metricPosts.sumOf { it.metrics.views ?: 0L }
-                var metricsExpanded by rememberSaveable { mutableStateOf(false) }
-                OutlinedCard(shape = UaiShapes.card) {
-                    Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp)) {
-                        Row(Modifier.fillMaxWidth().clickable { metricsExpanded = !metricsExpanded }
-                            .heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.BarChart, null, tint = MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.width(10.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text("Desempenho", fontWeight = FontWeight.Medium)
-                                Text(if (metricPosts.isEmpty()) "Sem métricas registradas" else
-                                    "$views visualizações · ${metricPosts.size} com dados",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            Icon(if (metricsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                "Mostrar ou ocultar detalhes")
-                        }
-                        if (metricsExpanded) {
-                            Text("Métricas manuais ou obtidas do YouTube com autorização. " +
-                                "Outras redes não têm sincronização automática nesta versão.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(Modifier.height(8.dp))
-                        }
+                // Controle de contas fora do painel: canais em faixa horizontal no resumo.
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Meus canais e contas (${state.accounts.size})",
+                        modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                    TextButton(onClick = { manageAccounts = !manageAccounts }) {
+                        Text(if (manageAccounts) "Fechar" else "Gerenciar")
                     }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Minhas contas (${state.accounts.size})", modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.titleMedium)
-                    TextButton(onClick = { showAddDialog = true },
+                    IconButton(onClick = { showAddDialog = true },
                         enabled = state.accounts.size < 30 && !youtubeBusy && !metaBusy) {
-                        Icon(Icons.Default.Add, null); Text("Adicionar")
+                        Icon(Icons.Default.Add, "Adicionar conta")
                     }
                 }
-                if (state.accounts.isEmpty()) Text("Conecte YouTube ou Facebook Página; outras redes usam cadastro manual.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                SocialYouTubeLibraryUi(
+                    accounts = state.accounts,
+                    selectedChannelId = selectedChannelId,
+                    onSelectChannel = { selectedChannelId = it; youtubeLibraryError = "" },
+                    busy = youtubeLibraryBusy || youtubeBusy,
+                    videosByChannel = youtubeLibraryVideosByChannel,
+                    nextPageTokensByChannel = youtubeLibraryNextPages,
+                    channelStatistics = youtubeChannelStats,
+                    publications = state.publications,
+                    error = youtubeLibraryError,
+                    onLoad = ::fetchOldYouTubeVideos,
+                    onLoadAll = { channels ->
+                        if (!youtubeBusy && channels.isNotEmpty()) {
+                            pendingChannelQueue = channels.distinctBy { it.remoteChannelId }
+                        }
+                    }
+                )
+                if (manageAccounts) {
+                    if (state.accounts.isEmpty()) Text("Adicione um canal para consultar seus vídeos.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 // Controles Meta aparecem apenas quando há Página cadastrada.
                 // Configuração técnica e guia ficam na Central de Integrações.
                 if (state.accounts.any { it.destination == SocialDestination.FACEBOOK_PAGE }) {
@@ -342,15 +404,25 @@ internal fun SocialDashboardScreen(
                         if (rowAccounts.size < 2) Spacer(Modifier.weight(1f))
                     }
                 }
-                SocialYouTubeLibraryUi(
-                    accounts = state.accounts,
-                    busy = youtubeLibraryBusy || youtubeBusy,
-                    videosByChannel = youtubeLibraryVideosByChannel,
-                    nextPageTokensByChannel = youtubeLibraryNextPages,
-                    error = youtubeLibraryError,
-                    onLoad = ::fetchOldYouTubeVideos,
-                    onAccountSelected = { youtubeLibraryError = "" }
-                )
+                }
+                val reviewCount = state.publications.count {
+                    it.status == SocialPublicationStatus.UPLOAD_REVIEW ||
+                        it.status == SocialPublicationStatus.SHARED_UNCONFIRMED
+                }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Histórico e envios", style = MaterialTheme.typography.titleMedium)
+                        Text("${state.publications.size} registros · $reviewCount para conferir",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (reviewCount > 0) MaterialTheme.colorScheme.error else
+                                MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    TextButton(onClick = { showHistory = !showHistory }) {
+                        Text(if (showHistory) "Recolher" else "Ver histórico")
+                        Icon(if (showHistory) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null)
+                    }
+                }
+                if (showHistory) {
                 SocialPublicationHistoryUi(
                     data = state,
                     busy = youtubeBusy,
@@ -421,11 +493,27 @@ internal fun SocialDashboardScreen(
                         }
                     }
                 )
+                }
                 Spacer(Modifier.height(14.dp))
             }
         }
         MainNav("social", onTab)
     }
+    if (showSocialHelp) AlertDialog(
+        onDismissRequest = { showSocialHelp = false },
+        shape = UaiShapes.dialog,
+        title = { Text("Sobre o painel Redes") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Todos reúne os vídeos consultados dos canais e os envios confirmados pelo Uai Cortes. " +
+                    "As visualizações do canal são totais oficiais do YouTube, diferentes da soma dos vídeos já carregados.")
+                Text("Atualizar canais é manual e pode solicitar a escolha da conta Google. " +
+                    "Uma autorização válida é reutilizada apenas nesta sessão, depois de conferir o ID do canal.")
+                Text("Histórico e envios guarda ações pendentes ou incertas. Nenhum upload será repetido automaticamente.")
+            }
+        },
+        confirmButton = { TextButton(onClick = { showSocialHelp = false }) { Text("Entendi") } }
+    )
     if (showAddDialog) SocialAddDestinationDialog(
         metaAvailable = SocialMetaAuth.isConfigured,
         onDismiss = { showAddDialog = false },

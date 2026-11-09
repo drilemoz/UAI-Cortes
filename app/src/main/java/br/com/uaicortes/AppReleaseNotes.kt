@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.237"
-    const val VERSION_CODE = 238
+    const val VERSION_NAME = "0.1.238"
+    const val VERSION_CODE = 239
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.238", listOf(
+            ReleaseFeature("social-unified-238", "Redes com vídeos e métricas unificados",
+                "Canais em faixa horizontal com Todos, visualizações, vídeos e inscritos oficiais por canal e vídeos antigos junto dos envios confirmados, sem duplicar IDs.", "film"),
+            ReleaseFeature("social-oauth-238", "Menos seleção repetida de contas",
+                "A consulta tenta reutilizar autorização da sessão e verifica o ID real do canal. O seletor Google só é forçado quando a conta não corresponde; histórico pendente permanece separado.", "check")
+        )),
         ReleaseSummary("0.1.237", listOf(
             ReleaseFeature("editor-preview-stop-237", "Prévia termina com o projeto",
                 "A reprodução do editor para ao concluir o último clipe em vez de reiniciar continuamente. Tocar em Reproduzir após o fim volta ao início do projeto.", "film"),
