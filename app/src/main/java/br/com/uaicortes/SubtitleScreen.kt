@@ -98,7 +98,7 @@ internal fun previewSubtitleScale(cue: SubtitleCue, widthPx: Int, textSizePx: Fl
     val displayText = br.com.uaicortes.subtitles.core.SubtitleTextCasePolicy.display(cue.text, cue.textCase)
     val longest = displayText.split(Regex("\\s+")).maxOfOrNull { paint.measureText(it) } ?: 0f
     val total = displayText.lines().sumOf { paint.measureText(it).toDouble() }.toFloat()
-    val available = (widthPx * .90f - textSizePx * .65f).coerceAtLeast(1f)
+    val available = (widthPx - textSizePx * .65f).coerceAtLeast(1f)
     return SubtitleAutoFit.factor(longest, total, available)
 }
 
@@ -125,10 +125,12 @@ internal fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
                 rawLocation.second.coerceIn(0,(frameSize.height-textSize.height).coerceAtLeast(0))
             val density=LocalDensity.current
             val frameWidthDp=with(density) { frameSize.width.toDp() }
-            val textLimitPx=minOf(frameSize.width * .94f,with(density) { 280.dp.toPx() })
-            val fontScale=previewSubtitleScale(cue,textLimitPx.toInt(),
-                with(density) { cue.sizeSp.sp.toPx() })
-            val previewFontSp=cue.sizeSp * fontScale
+            val proportionalSizeSp = SubtitleFrameTypography.previewSizeSp(
+                cue.sizeSp, frameWidthDp.value, density.fontScale)
+            val textLimitPx=SubtitleFrameTypography.allowedTextWidth(frameSize.width)
+            val fontScale=previewSubtitleScale(cue,textLimitPx,
+                with(density) { proportionalSizeSp.sp.toPx() })
+            val previewFontSp=proportionalSizeSp * fontScale
             val family = subtitleFont(cue.fontFamily)
             val textWeight = if (cue.bold) FontWeight.Bold else FontWeight.Normal
             val fontStyle = if (cue.italic) androidx.compose.ui.text.font.FontStyle.Italic
@@ -152,7 +154,7 @@ internal fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
                     color=Color(cue.shadowColor), offset=Offset(shadowPx,shadowPx),blurRadius=0f
                 ) else null)
             Box(modifier=Modifier.offset { IntOffset(location.first,location.second) }
-                .widthIn(max=minOf(280.dp,(frameWidthDp * .94f).coerceAtLeast(14.dp)))
+                .widthIn(max=(frameWidthDp * SubtitleFrameTypography.SIDE_PADDING).coerceAtLeast(14.dp))
                 .onSizeChanged { textSize=it }
                 .graphicsLayer {
                     alpha=animationFrame.alpha

@@ -313,12 +313,15 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
                 }
             }
         }
-        Text("Alta qualidade H.264: 720p solicita 8 Mb/s; 1080p solicita 18 Mb/s. " +
-            "O resultado depende do vídeo original e do codificador do aparelho.",
+        Text("Esta resolução é usada como seleção inicial na tela Exportar. " +
+            "Você pode alterá-la para cada vídeo. O perfil Alta solicita 8 Mb/s em 720p " +
+            "ou 18 Mb/s em 1080p; o valor obtido depende do codificador e da origem.",
             style=MaterialTheme.typography.bodySmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp));Text("Os vídeos são salvos em Filmes/UaiCortes.", color=MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.height(12.dp)); Text("Mídias importadas recebem cópias independentes: vídeos em Filmes/UaiCortes/Projetos, áudios em Música/UaiCortes/Projetos e imagens em Imagens/UaiCortes/Projetos. No Android 8/9, cópias ficam em armazenamento privado do aplicativo.",
+        Spacer(Modifier.height(12.dp)); Text("Novas mídias importadas são copiadas para o armazenamento privado do aplicativo. " +
+            "Cópias de versões antigas podem continuar nas pastas públicas Filmes, Música e Imagens/UaiCortes/Projetos. " +
+            "Os vídeos exportados permanecem em Filmes/UaiCortes.",
             style=MaterialTheme.typography.bodySmall, color=MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(12.dp)); Text("Essas cópias não substituem backup externo. Excluir o aplicativo pode remover dados privados; evite apagar as cópias em uso.",
             style=MaterialTheme.typography.bodySmall, color=MaterialTheme.colorScheme.onSurfaceVariant)

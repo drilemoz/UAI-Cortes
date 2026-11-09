@@ -1,3 +1,13 @@
+# Uai Cortes · v0.1.245 — Atualizações, legendas e exportação
+
+A tela Atualizações agora oferece **Pausar / Retomar / Parar** o download do APK. Retomar usa Range somente quando o servidor retorna intervalo correto; em outro caso reinicia sem reaproveitar um arquivo incompatível. A instalação continua dependendo de verificação SHA-256 e consentimento do Android.
+
+Na edição das legendas, prévia e Media3 compartilham uma escala proporcional à largura do quadro (régua de 280, área horizontal de 90%). Isso reduz divergências anteriores de tamanho, mas requer comparação visual em MP4 exportado, especialmente em 720p/1080p e com o karaokê rosa.
+
+A exportação pede confirmação, mostra o nome sem `.mp4` no campo, adiciona a extensão ao gerar o arquivo e renova as telas de progresso e vídeo salvo. A ferramenta Descrição saiu da barra do editor, mantendo geração de texto/IA na tela final. A qualidade padrão de Geral continua sendo a seleção inicial (pode ser substituída na exportação), com explicação corrigida e detalhes da nova mídia privada.
+
+O diagnóstico opcional registra estados de download e exportação, classifica motivos de encerramento quando o Android fornece essa informação e limita taps redundantes. Os logs não capturam conteúdo privado. Esta é uma versão-fonte 0.1.245/versionCode 246; não é garantia de compilação nem de paridade visual sem CI/testes físicos.
+
 # Uai Cortes · v0.1.244 — Correção Kotlin do karaokê rosa (CI 203)
 
 O teste antigo de Texto para Voz foi ajustado ao atalho `HomeActionTile` da faixa horizontal, sem recolocar cartões duplicados na tela inicial.

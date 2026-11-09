@@ -9,6 +9,16 @@ internal object GitHubUpdateCore {
     private val shaPattern = Regex("^sha256:([a-fA-F0-9]{64})$")
     const val MAX_APK_BYTES = 200L * 1024L * 1024L
 
+    /** A resposta 206 precisa corresponder ao byte solicitado e ao tamanho da Release. */
+    fun matchingContentRange(header: String?, start: Long, total: Long): Boolean {
+        if (start <= 0L || total <= 0L) return false
+        val match = Regex("^bytes (\\d+)-(\\d+)/(\\d+)$").matchEntire(header.orEmpty()) ?: return false
+        val first = match.groupValues[1].toLongOrNull() ?: return false
+        val last = match.groupValues[2].toLongOrNull() ?: return false
+        val reportedTotal = match.groupValues[3].toLongOrNull() ?: return false
+        return first == start && last >= first && last < total && reportedTotal == total
+    }
+
     fun normalizedRepository(value: String): String? = value.trim().removePrefix("https://github.com/")
         .removeSuffix("/").takeIf { repositoryPattern.matches(it) &&
             !it.split('/').any { part -> part == "." || part == ".." } }

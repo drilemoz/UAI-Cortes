@@ -59,13 +59,16 @@ fun DiagnosticScreen(onBack: () -> Unit, onEnabledChanged: (Boolean) -> Unit) {
                     feedback = if (it) "Captura iniciada." else "Captura interrompida. O relatório foi mantido."
                 })
             }
-            Text("Quando ativo, registra data/hora, tela, ações, erros e falhas de API " +
+            Text("Quando ativo, registra data/hora, tela, ações, estados de downloads, etapas da exportação, " +
+                "motivos de encerramento anteriores quando o Android informar, erros e falhas de API " +
                 "(serviço, operação, HTTP, modelo público, latência e tokens quando informados). " +
                 "Não registra chaves, tokens, prompts, mensagens HTTP, nomes dos arquivos, caminhos, áudio, vídeos ou senhas. " +
                 "O TXT inclui o modelo do aparelho e a versão do Android.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("Os dados ficam no aparelho (limite de 512 KiB; eventos mais antigos são descartados). " +
+            Text("Os toques repetitivos são amostrados para reduzir consumo. " +
+                "Travamentos não reportados pelo Android podem não aparecer. " +
+                "Os dados ficam no aparelho (limite de 512 KiB; eventos mais antigos são descartados). " +
                 "Nada é enviado automaticamente. Você decide se deseja salvar ou compartilhar o relatório.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)

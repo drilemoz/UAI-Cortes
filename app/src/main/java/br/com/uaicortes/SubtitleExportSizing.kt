@@ -8,7 +8,7 @@ object SubtitleExportSizing {
     fun safeFrameWidth(width: Int): Int = width.takeIf { it >= 16 } ?: 720
 
     /** Área horizontal com 5% de margem de cada lado. */
-    fun textBoxWidth(width: Int): Int = (safeFrameWidth(width) * 0.90f).toInt().coerceAtLeast(2)
+    fun textBoxWidth(width: Int): Int = SubtitleFrameTypography.allowedTextWidth(safeFrameWidth(width))
 
     /** O valor em sp controla o tamanho visual proporcional à largura do vídeo.
      * Na prévia típica de 380 dp: 12 sp -> 12 dp, 22 sp -> 22 dp.
@@ -23,9 +23,10 @@ object SubtitleExportSizing {
 
     fun relativeFontSize(sizeSp: Int, frameWidth: Int, longestWordPxAt100: Float,
                          fullTextPxAt100: Float = 0f): Float {
-        val base = (sizeSp.coerceIn(12, 48) / 380f) * safeFrameWidth(frameWidth) / 100f
+        val base = SubtitleFrameTypography.fontPixelsForFrame(sizeSp, safeFrameWidth(frameWidth)) / 100f
         val factor = SubtitleAutoFit.factor(longestWordPxAt100 * base,
-            fullTextPxAt100 * base, textBoxWidth(frameWidth).toFloat())
+            fullTextPxAt100 * base,
+            (textBoxWidth(frameWidth) - base * 100f * .65f).coerceAtLeast(1f))
         // Não impor piso visual de 0,01: em palavras sem espaços muito extensas,
         // esse piso poderia fazer o texto ultrapassar o quadro mesmo após ajustar.
         return (base * factor).coerceAtLeast(Float.MIN_VALUE)

@@ -138,7 +138,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
         })
         previewPlayer.prepare()
     }
-    var name by rememberSaveable(p.id) { mutableStateOf(ProjectNaming.exportName(p.title)) }
+    var name by rememberSaveable(p.id) { mutableStateOf(ProjectNaming.exportName(p.title).removeSuffix(".mp4")) }
     var quality by rememberSaveable(p.id) {mutableIntStateOf(defaultQuality.takeIf { it in listOf(360, 480, 720, 1080) } ?: 1080)}
     var bitratePresetName by rememberSaveable(p.id) { mutableStateOf(ExportBitratePreset.HIGH.name) }
     var qualityHelpExpanded by rememberSaveable(p.id) { mutableStateOf(false) }
@@ -173,6 +173,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
         }
     }
     var confirmCancelExport by remember {mutableStateOf(false)}
+    var confirmStartExport by remember {mutableStateOf(false)}
     // Conteúdo rolável e ação principal fixa. Em telas pequenas/alto zoom, as opções
     // permanecem acessíveis sem esconder o botão de exportação.
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
@@ -192,7 +193,8 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
             OutlinedTextField(value=name,onValueChange={name=it},singleLine=true,
                 modifier=Modifier.fillMaxWidth(),textStyle=MaterialTheme.typography.bodyMedium,
                 leadingIcon={Icon(Icons.Default.Description,contentDescription=null,modifier=Modifier.size(19.dp))},
-                shape=UaiShapes.card,enabled=!working)
+                shape=UaiShapes.card,enabled=!working,
+                supportingText={Text("A extensão .mp4 será adicionada automaticamente.")})
             Spacer(Modifier.height(12.dp))
             CompactExportLabel("Destino",Icons.Default.MovieFilter)
             Spacer(Modifier.height(5.dp))
@@ -437,11 +439,8 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(5.dp))
                 Button(onClick={
-                    if(name.isNotBlank() && p.clips.isNotEmpty() && !working) {
-                        previewPlayer.pause()
-                        previewPlaying=false
-                        exportVm.start(p, quality, name, bitratePreset, destination, frameMode)
-                    }
+                    if(name.isNotBlank() && p.clips.isNotEmpty() && !working)
+                        confirmStartExport=true
                 },enabled=!working && name.isNotBlank() && p.clips.isNotEmpty(),
                     modifier=Modifier.fillMaxWidth().height(48.dp),
                     shape=UaiShapes.card,
@@ -452,6 +451,32 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                 }
             }
         }
+    }
+    if (confirmStartExport) {
+        val safeName = ProjectNaming.exportName(name)
+        val estimated = VideoExportQuality.estimatedMiBForDuration(
+            p.durationMs, quality, true, bitratePreset)
+        AlertDialog(onDismissRequest = { confirmStartExport=false }, shape=UaiShapes.dialog,
+            icon={Icon(Icons.Default.SaveAlt,null)},
+            title={Text("Confirmar exportação")},
+            text={Column(verticalArrangement=Arrangement.spacedBy(7.dp)) {
+                Text("Arquivo: $safeName")
+                Text("${quality}p · ${bitratePreset.label} · " +
+                    "${VideoExportQuality.videoBitrateBps(quality,bitratePreset)/1_000_000} Mb/s solicitados")
+                Text("Tamanho estimado: ~$estimated MiB (pode variar).")
+                Text("Mantenha o aplicativo aberto enquanto processa. " +
+                    "A exportação não publica o vídeo automaticamente.",
+                    style=MaterialTheme.typography.bodySmall)
+            }},
+            confirmButton={TextButton(onClick={
+                confirmStartExport=false
+                if (!working && p.clips.isNotEmpty()) {
+                    previewPlayer.pause()
+                    previewPlaying=false
+                    exportVm.start(p,quality,safeName,bitratePreset,destination,frameMode)
+                }
+            }) {Text("Exportar vídeo")}},
+            dismissButton={TextButton(onClick={confirmStartExport=false}) {Text("Revisar")}})
     }
     if(framingHelpExpanded) {
         AlertDialog(onDismissRequest={framingHelpExpanded=false},
@@ -477,64 +502,100 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
             }) {Text("Ver guias na prévia")}},
             dismissButton={TextButton(onClick={framingHelpExpanded=false}) {Text("Fechar")}})
     }
-    // Enquanto o Media3 processa, a tela de exportação fica inteira visível.
-    // Sem percentual disponível, usar indicador indeterminado em vez de inventar progresso.
+    // Uma tela de progresso clara, com progresso verdadeiro somente durante RENDERING.
     if (working) {
         Dialog(onDismissRequest = {}, properties = DialogProperties(
             dismissOnBackPress = false, dismissOnClickOutside = false,
             usePlatformDefaultWidth = false)) {
-            Surface(Modifier.fillMaxSize(),color=MaterialTheme.colorScheme.background) {
+            Surface(Modifier.fillMaxSize(), color=MaterialTheme.colorScheme.background) {
                 Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
-                        .padding(horizontal=28.dp,vertical=28.dp),
+                        .padding(horizontal=24.dp, vertical=24.dp),
                     horizontalAlignment=Alignment.CenterHorizontally,
                     verticalArrangement=Arrangement.SpaceBetween) {
-                    Column(horizontalAlignment=Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.Movie,contentDescription=null,tint=Blue,
-                            modifier=Modifier.size(40.dp))
-                        Spacer(Modifier.height(14.dp))
-                        Text("Exportando vídeo",style=MaterialTheme.typography.headlineSmall,
-                            fontWeight=FontWeight.Bold)
-                        Spacer(Modifier.height(9.dp))
-                        Text(exportingName,maxLines=2,overflow=TextOverflow.Ellipsis,
-                            textAlign=TextAlign.Center,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
                     Column(horizontalAlignment=Alignment.CenterHorizontally,
-                        modifier=Modifier.fillMaxWidth()) {
-                        val currentProgress = ExportProgressUi.renderPercent(exportPhase,progress)
-                        if (currentProgress != null) {
-                            CircularProgressIndicator(progress={currentProgress / 100f},
-                                modifier=Modifier.size(144.dp),strokeWidth=9.dp)
-                            Spacer(Modifier.height(18.dp))
-                            Text("$currentProgress%",fontSize=32.sp,fontWeight=FontWeight.Bold)
-                        } else {
-                            CircularProgressIndicator(modifier=Modifier.size(100.dp),strokeWidth=7.dp)
+                        verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                        Surface(shape=RoundedCornerShape(20.dp),
+                            color=MaterialTheme.colorScheme.primaryContainer) {
+                            Icon(Icons.Default.MovieFilter, null, tint=Blue,
+                                modifier=Modifier.padding(17.dp).size(34.dp))
                         }
-                        Spacer(Modifier.height(22.dp))
-                        Text(ExportProgressUi.stageLabel(exportPhase),
-                            textAlign=TextAlign.Center,style=MaterialTheme.typography.titleMedium)
-                        Spacer(Modifier.height(12.dp))
-                        Text("Tempo decorrido: ${ExportProgressUi.elapsedLabel(elapsedSeconds)}",
-                            color=MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(5.dp))
-                Text(ExportProgressUi.progressExplanation(exportPhase),
-                    style=MaterialTheme.typography.labelSmall,
-                    textAlign=TextAlign.Center,
-                    color=MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(3.dp))
+                        Text("Preparando seu vídeo", style=MaterialTheme.typography.headlineSmall,
+                            fontWeight=FontWeight.Bold)
+                        Text(exportingName, style=MaterialTheme.typography.bodyMedium,
+                            color=MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign=TextAlign.Center, maxLines=2,
+                            overflow=TextOverflow.Ellipsis)
                         Text("${SocialExportPolicy.requestedLabel(destination,exportState.quality)} · " +
-                            "${bitratePreset.label} · MP4",style=MaterialTheme.typography.bodySmall,
+                            "${bitratePreset.label} · MP4",
+                            style=MaterialTheme.typography.labelMedium,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                    Card(Modifier.fillMaxWidth(), shape=RoundedCornerShape(22.dp),
+                        colors=CardDefaults.cardColors(
+                            containerColor=MaterialTheme.colorScheme.surfaceVariant)) {
+                        Column(Modifier.fillMaxWidth().padding(24.dp),
+                            horizontalAlignment=Alignment.CenterHorizontally,
+                            verticalArrangement=Arrangement.spacedBy(13.dp)) {
+                            val actualPercent=ExportProgressUi.renderPercent(exportPhase,progress)
+                            Box(Modifier.size(164.dp), contentAlignment=Alignment.Center) {
+                                if (actualPercent == null) {
+                                    CircularProgressIndicator(modifier=Modifier.size(150.dp),
+                                        strokeWidth=8.dp)
+                                    Icon(Icons.Default.HourglassTop, null, tint=Blue,
+                                        modifier=Modifier.size(38.dp))
+                                } else {
+                                    CircularProgressIndicator(progress={actualPercent/100f},
+                                        modifier=Modifier.size(150.dp), strokeWidth=9.dp)
+                                    Text("$actualPercent%",fontSize=36.sp,
+                                        fontWeight=FontWeight.Bold)
+                                }
+                            }
+                            Text(ExportProgressUi.stageLabel(exportPhase),
+                                textAlign=TextAlign.Center,
+                                style=MaterialTheme.typography.titleMedium,
+                                fontWeight=FontWeight.SemiBold)
+                            Text("Tempo decorrido: ${ExportProgressUi.elapsedLabel(elapsedSeconds)}",
+                                style=MaterialTheme.typography.bodyMedium,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(ExportProgressUi.progressExplanation(exportPhase),
+                                textAlign=TextAlign.Center,
+                                style=MaterialTheme.typography.bodySmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                            HorizontalDivider()
+                            Row(Modifier.fillMaxWidth(),
+                                horizontalArrangement=Arrangement.SpaceEvenly) {
+                                listOf("Preparar", "Codificar", "Salvar").forEachIndexed { idx, label ->
+                                    Column(horizontalAlignment=Alignment.CenterHorizontally,
+                                        verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                                        val done=when (exportPhase) {
+                                            ExportPhase.PREPARING -> idx==0
+                                            ExportPhase.RENDERING -> idx<=1
+                                            ExportPhase.SAVING -> true
+                                        }
+                                        Icon(if(done)Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                                            null,Modifier.size(18.dp),
+                                            tint=if(done)Blue else MaterialTheme.colorScheme.outline)
+                                        Text(label,style=MaterialTheme.typography.labelSmall)
+                                    }
+                                }
+                            }
+                        }
+                    }
                     Column(horizontalAlignment=Alignment.CenterHorizontally,
-                        modifier=Modifier.fillMaxWidth()) {
-                        Text("Mantenha o aplicativo aberto até terminar.",
-                            textAlign=TextAlign.Center,style=MaterialTheme.typography.bodySmall,
+                        verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                        Text("Mantenha o aplicativo aberto até a conclusão.",
+                            textAlign=TextAlign.Center,
+                            style=MaterialTheme.typography.bodySmall,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.height(18.dp))
                         OutlinedButton(onClick={confirmCancelExport=true},
                             enabled=ExportProgressUi.canCancel(exportPhase),
-                            modifier=Modifier.fillMaxWidth(), shape = UaiShapes.button) {
-                            Text(if(exportPhase==ExportPhase.SAVING) "Concluindo salvamento…" else "Cancelar exportação")
+                            modifier=Modifier.fillMaxWidth().heightIn(min=52.dp),
+                            shape=UaiShapes.button) {
+                            Icon(Icons.Default.Close,null,Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(if(exportPhase==ExportPhase.SAVING)
+                                "Finalizando…" else "Cancelar exportação")
                         }
                     }
                 }

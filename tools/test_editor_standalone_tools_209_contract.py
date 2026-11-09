@@ -11,7 +11,9 @@ bar = editor.split('val actions = remember { listOf(', 1)[1].split(') }', 1)[0]
 assert '"animate"' not in bar and '"flow_prompt"' not in bar
 assert '"Animar imagens"' not in bar and '"Prompt Flow"' not in bar
 assert all(f'Triple("{label}"' in bar for label in (
-    'Cortar', 'Transição', 'Legendas', 'Áudio', "Marca d'água", 'Vozes IA', 'Descrição'))
+    'Cortar', 'Transição', 'Legendas', 'Áudio', "Marca d'água", 'Vozes IA'))
+# O atalho Descrição foi removido da barra: o texto é editado após salvar o MP4.
+assert 'Triple("Descrição", Icons.Default.Description, "publication")' not in bar
 # Permanecem na página inicial como funcionalidades independentes.
 assert 'HomePrimaryActions(onCreate, onAnimate, onFlow = onFlow,' in home
 assert '"flow_workspace" -> FlowWorkspaceScreen(::back)' in main

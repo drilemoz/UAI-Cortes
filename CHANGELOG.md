@@ -1,3 +1,11 @@
+# Uai Cortes 0.1.245 (2026-11-09)
+
+- GitHub Updates: pausa retém APK parcial, retomada condicional com validação HTTP 206 Content-Range e SHA-256 do arquivo inteiro, parada descarta parcial, reinício manual gera transferência limpa. UI informa progresso/velocidade e estado.
+- Legendas: fonte proporcional à largura do quadro (mesma referência 280) na prévia Compose e exportação Media3; área de texto ajustada para 90% sem limite físico fixo em dp. Verificação visual de exportação real pendente.
+- Exportação: campo nome sem extensão, normalização `.mp4` apenas no arquivo, confirmação com bitrate solicitado e tamanho estimado; progresso redesenhado em três etapas, tela Vídeo salvo simplificada com assistir, compartilhar, descrição e gerar com IA. Removido atalho Descrição duplicado do editor.
+- Ajustes: Geral descreve qualidade como valor inicial substituível e esclarece mídia privada; diagnóstico amostra toques, registra download, exportação e motivo de saída anterior no Android 11+ quando disponível, sem informações sensíveis.
+- Mantidos projetos schema 4, Voizes IA Coqui/Chatterbox, publicação e cinco variantes previstas. v0.1.245/versionCode 246; execução Android Gradle e testes no dispositivo pendentes.
+
 # Uai Cortes 0.1.244 (2026-11-09)
 
 - Atualizado teste legado de Texto para Voz que ainda esperava `ItemCard`, removido na 0.1.243; o contrato agora cobre `HomeActionTile` e navegação preservada.

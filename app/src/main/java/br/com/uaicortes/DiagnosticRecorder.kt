@@ -1,6 +1,8 @@
 package br.com.uaicortes
 
 import android.content.Context
+import android.app.ActivityManager
+import android.app.ApplicationExitInfo
 import android.os.Build
 import java.io.File
 import java.io.IOException
@@ -22,6 +24,7 @@ object DiagnosticRecorder {
     private val lock = Any()
     private val active = AtomicBoolean(false)
     private val lastSaveLogMs = AtomicLong(0L)
+    private val lastTapLogMs = AtomicLong(0L)
     @Volatile private var app: Context? = null
     private var installedHandler = false
 
@@ -45,6 +48,7 @@ object DiagnosticRecorder {
             }
         }
         log("SESSION", "app_start sdk=${Build.VERSION.SDK_INT}")
+        if (active.get()) executor.execute { inspectPreviousProcessExit(context.applicationContext) }
     }
 
     fun isEnabled(): Boolean = active.get()
@@ -82,8 +86,64 @@ object DiagnosticRecorder {
             elapsedMs, tokens, outcome)
         log("API", event)
     }
-    fun tap(route: String, x: Float, y: Float, width: Int, height: Int) = log("TAP",
-        "screen=${DiagnosticPrivacy.safeIdentifier(route)} ${DiagnosticPrivacy.touchGrid(x,y,width,height)}")
+    /** Limita taps repetitivos sem impedir o registro de SCREEN, ACTION e ERROR. */
+    fun tap(route: String, x: Float, y: Float, width: Int, height: Int) {
+        if (!active.get()) return
+        val now = System.currentTimeMillis()
+        val previous = lastTapLogMs.get()
+        if (now - previous < 250L || !lastTapLogMs.compareAndSet(previous, now)) return
+        log("TAP", "screen=${DiagnosticPrivacy.safeIdentifier(route)} " +
+            DiagnosticPrivacy.touchGrid(x,y,width,height))
+    }
+
+    /** Telemetria de atualização sem URL, nome de APK ou headers de autenticação. */
+    fun update(event: String, bytes: Long? = null) {
+        val allowed = setOf("started", "pause_requested", "paused", "resumed", "stop_requested",
+            "stopped", "resume_full_restart", "interrupted", "verified", "failed")
+        val safe = event.takeIf { it in allowed } ?: "unknown"
+        val mib = bytes?.takeIf { it >= 0L }?.div(1024L * 1024L)
+        log("UPDATE", "state=$safe${mib?.let { " size_mib=$it" }.orEmpty()}")
+    }
+
+    /** Somente dimensões, qualidade e estágio de processamento, nunca nome do vídeo. */
+    fun exportEvent(stage: String, requestedShortSide: Int? = null,
+                    progress: Int? = null, elapsedMs: Long? = null) {
+        val phase = stage.takeIf { it in setOf("start", "rendering", "saving", "success", "failure", "cancel") }
+            ?: "unknown"
+        val quality = requestedShortSide?.takeIf { it in listOf(360,480,720,1080) }
+        val percent = progress?.coerceIn(0,100)
+        val seconds = elapsedMs?.takeIf { it >= 0L }?.div(1000L)
+        log("EXPORT", "stage=$phase${quality?.let { " quality=$it" }.orEmpty()}" +
+            "${percent?.let { " percent=$it" }.orEmpty()}" +
+            "${seconds?.let { " elapsed_s=$it" }.orEmpty()}")
+    }
+
+    /** Causa do encerramento ANTERIOR, quando Android 11+ informa. Não examina dump privado. */
+    private fun inspectPreviousProcessExit(context: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || !active.get()) return
+        runCatching {
+            val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+                ?: return@runCatching
+            val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            val lastReported = prefs.getLong("last_exit_timestamp", 0L)
+            val info = manager.getHistoricalProcessExitReasons(null, 0, 5)
+                .filter { it.timestamp > lastReported && it.timestamp <= System.currentTimeMillis() }
+                .maxByOrNull { it.timestamp } ?: return@runCatching
+            val reason = when (info.reason) {
+                ApplicationExitInfo.REASON_ANR -> "anr"
+                ApplicationExitInfo.REASON_CRASH -> "java_crash"
+                ApplicationExitInfo.REASON_CRASH_NATIVE -> "native_crash"
+                ApplicationExitInfo.REASON_LOW_MEMORY -> "low_memory"
+                ApplicationExitInfo.REASON_SIGNALED -> "signal"
+                ApplicationExitInfo.REASON_USER_REQUESTED -> "user_requested"
+                ApplicationExitInfo.REASON_EXIT_SELF -> "exit_self"
+                else -> "other"
+            }
+            write("${Instant.now()} PROCESS_EXIT reason=$reason")
+            prefs.edit().putLong("last_exit_timestamp", info.timestamp).apply()
+        }
+    }
+
     fun failure(stage: String, raw: String) = log("ERROR",
         "stage=${DiagnosticPrivacy.safeIdentifier(stage)} ${DiagnosticPrivacy.safeFailure(raw)}")
     fun exception(stage: String, error: Throwable) = log("ERROR",

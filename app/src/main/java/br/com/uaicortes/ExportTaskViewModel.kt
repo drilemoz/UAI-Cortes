@@ -21,6 +21,7 @@ internal class ExportTaskViewModel(application: Application) : AndroidViewModel(
     private val coordinator = ExportTaskCoordinator()
     private var polling: Job? = null
     private var projectId: String? = null
+    private var lastProgressBucket = -1
 
     var task by mutableStateOf(coordinator.snapshot)
         private set
@@ -53,18 +54,23 @@ internal class ExportTaskViewModel(application: Application) : AndroidViewModel(
         if (task.working) return
         setProject(project.id)
         if (name.isBlank() || project.clips.isEmpty()) return
-        val requestedName = name.trim().let { if (it.endsWith(".mp4", true)) it else "$it.mp4" }
+        val requestedName = ProjectNaming.exportName(name)
         val id = coordinator.start(requestedName, quality, SystemClock.elapsedRealtime()) ?: return
         savedVideo = null
         savedName = ""
         qualityReport = null
         publish()
         DiagnosticRecorder.action("export", "export_start_${quality}p")
+        DiagnosticRecorder.exportEvent("start", quality)
+        lastProgressBucket = -1
         try {
             engine.start(project, quality, requestedName, preset = preset,
                 destination = destination, frameMode = frameMode,
                 onSaving = {
-                    if (coordinator.saving(id)) publish()
+                    if (coordinator.saving(id)) {
+                        DiagnosticRecorder.exportEvent("saving", quality)
+                        publish()
+                    }
                 },
                 onSuccess = { uri, report ->
                     if (coordinator.success(id)) {
@@ -73,6 +79,8 @@ internal class ExportTaskViewModel(application: Application) : AndroidViewModel(
                         savedName = requestedName
                         qualityReport = report
                         DiagnosticRecorder.action("export", "export_success")
+                        DiagnosticRecorder.exportEvent("success", quality,
+                            elapsedMs = SystemClock.elapsedRealtime() - task.startedAtMs)
                         publish()
                     }
                 },
@@ -80,6 +88,7 @@ internal class ExportTaskViewModel(application: Application) : AndroidViewModel(
                     if (coordinator.failure(id, error)) {
                         polling?.cancel()
                         DiagnosticRecorder.failure("export", error)
+                        DiagnosticRecorder.exportEvent("failure", quality)
                         publish()
                     }
                 })
@@ -90,6 +99,11 @@ internal class ExportTaskViewModel(application: Application) : AndroidViewModel(
                     val percent = if (task.phase == ExportPhase.RENDERING)
                         engine.progressOrNull() else null
                     if (coordinator.tick(id, percent, SystemClock.elapsedRealtime())) publish()
+                    val bucket = percent?.coerceIn(0,100)?.div(10)
+                    if (bucket != null && bucket > lastProgressBucket) {
+                        lastProgressBucket = bucket
+                        DiagnosticRecorder.exportEvent("rendering", quality, percent)
+                    }
                     delay(400)
                 }
             }
@@ -110,6 +124,7 @@ internal class ExportTaskViewModel(application: Application) : AndroidViewModel(
             engine.cancel() // invalida o ticket antes do cancelamento assíncrono do Media3
             polling?.cancel()
             DiagnosticRecorder.action("export", "export_cancelled")
+            DiagnosticRecorder.exportEvent("cancel", task.quality)
             publish()
         }
         return cancelled

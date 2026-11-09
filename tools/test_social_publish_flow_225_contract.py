@@ -30,7 +30,7 @@ assert 'https://studio.youtube.com/video/' in ui
 assert 'require(channel.id == account.remoteChannelId)' in ui
 assert 'SocialPublicationPolicy.markUploadReview(source)' in ui
 assert 'SocialPublicationPolicy.confirmApiUpload(' in ui
-assert '"Publicar vídeo"' in saved and '"Mais opções"' in saved
+assert '"Publicar vídeo"' in saved and 'Text("Compartilhar")' in saved
 assert 'onSocialPublish(uri, displayedName, currentDraft())' in saved
 assert 'MediaMetadataRetriever' in engine and 'savedMp4Geometry(' in engine
 assert 'savedRotationDegrees == 90' in quality

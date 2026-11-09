@@ -1,3 +1,12 @@
+# v0.1.245 — Atualização controlável, paridade proporcional de legendas e fluxo de exportação
+
+- Base 0.1.244/versionCode 245; nova 0.1.245/versionCode 246. Preservar schemaVersion 4, mídia privada, voices Coqui/Chatterbox, cinco APKs Release e configurações anteriores. Não apagar dados de projetos.
+- Atualização: pausar mantém parcial temporário, parar remove bytes incompletos, retomar exige HTTP 206 com Content-Range exato (senão reinicia sem concatenar). Não instalar sem SHA-256 completo e checagem do APK/versão. Nenhuma instalação automática.
+- Legendas: tamanho de fonte proporcional à largura REAL do quadro, régua comum de 280 e área horizontal máxima 90% na prévia e exportação. Medir pixels do MP4 no aparelho antes de afirmar paridade total entre Compose e Media3.
+- Exportação: campo de nome mostra só nome; `.mp4` é acrescentado na persistência, com limpeza de caracteres inválidos; confirmação antes de iniciar (não publicar por engano); novo progresso por fase e resumo de vídeo salvo; Descrição permanece apenas após exportar, removida da barra do editor.
+- Diagnóstico: captura opcional sem tokens, URIs, nomes de mídia ou conteúdo; estados de download/exportação e motivo de saída anterior do Android quando disponível, sem promessa de detectar todo ANR; eventos de toque amostrados.
+- Testes Python/JVM, PSI, sintaxe e ZIP devem ser executados; compilação Android Media3 e validação visual em aparelho exigem CI, não equiparar teste estático a build.
+
 # v0.1.244 — Correção de compilação Kotlin do karaokê rosa (workflow 203)
 
 - Corrigir também o contrato legado `test_standalone_text_to_voice_229_contract.py`: após a home 0.1.243, Texto para Voz é `HomeActionTile` na faixa horizontal, não mais `ItemCard`. Conferir a rota `navTo("text_to_voice")` e preservar o editor separado.

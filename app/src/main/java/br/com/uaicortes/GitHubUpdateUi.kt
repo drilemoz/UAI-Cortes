@@ -35,6 +35,7 @@ import kotlinx.coroutines.launch
     val scope = rememberCoroutineScope()
     var confirmDownload by remember { mutableStateOf<GitHubUpdateRelease?>(null) }
     var installMessage by remember { mutableStateOf<String?>(null) }
+    var confirmStop by remember { mutableStateOf(false) }
     val check = manager.result
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
         .padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -42,7 +43,7 @@ import kotlinx.coroutines.launch
         Text("Versão instalada: ${BuildConfig.VERSION_NAME}",
             style = MaterialTheme.typography.titleMedium)
         Button(onClick = { scope.launch { manager.check() } },
-            enabled = check !is GitHubUpdateResult.Checking && !manager.downloading,
+            enabled = check !is GitHubUpdateResult.Checking && !manager.downloading && !manager.paused,
             shape = UaiShapes.button,
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
             Icon(Icons.Default.SystemUpdate, contentDescription = null, modifier = Modifier.size(20.dp))
@@ -73,7 +74,7 @@ import kotlinx.coroutines.launch
                     }
                 }
                 if (release.sha256 != null) {
-                    if (!manager.downloading && manager.readyFile == null) {
+                    if (!manager.downloading && !manager.paused && manager.readyFile == null) {
                         Button(onClick = { confirmDownload = release },
                             shape = UaiShapes.button,
                             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
@@ -88,11 +89,12 @@ import kotlinx.coroutines.launch
                 }
             }
         }
-        if (manager.downloading) {
+        if (manager.downloading || manager.paused) {
             Surface(shape = UaiShapes.card, color = MaterialTheme.colorScheme.surfaceVariant) {
                 Column(Modifier.fillMaxWidth().padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Baixando APK: ${manager.downloadPercent}%",
+                    Text(if (manager.paused) "Download pausado: ${manager.downloadPercent}%"
+                        else "Baixando APK: ${manager.downloadPercent}%",
                         style = MaterialTheme.typography.titleSmall)
                     LinearProgressIndicator(progress = { manager.downloadPercent / 100f },
                         modifier = Modifier.fillMaxWidth())
@@ -101,15 +103,36 @@ import kotlinx.coroutines.launch
                         GitHubDownloadProgress.readableBytes(manager.downloadTotalBytes),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    GitHubDownloadProgress.remainingSeconds(manager.downloadedBytes,
-                        manager.downloadTotalBytes, manager.downloadSpeedBytesPerSecond)
-                        ?.takeIf { it in 1..3599 }
-                        ?.let { seconds ->
-                            Text(if (seconds < 60) "Restam aproximadamente ${seconds}s"
-                                else "Restam aproximadamente ${(seconds + 59) / 60} min",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (manager.downloading) GitHubDownloadProgress.remainingSeconds(
+                        manager.downloadedBytes, manager.downloadTotalBytes,
+                        manager.downloadSpeedBytesPerSecond)?.takeIf { it in 1..3599 }?.let { seconds ->
+                        Text(if (seconds < 60) "Restam aproximadamente ${seconds}s"
+                            else "Restam aproximadamente ${(seconds + 59) / 60} min",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    val release = (check as? GitHubUpdateResult.Available)?.release
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = {
+                            if (manager.paused && release != null) scope.launch { manager.resumeDownload(release) }
+                            else manager.pauseDownload()
+                        }, enabled = manager.paused && release != null || manager.downloading,
+                            shape=UaiShapes.button, modifier=Modifier.weight(1f)) {
+                            Text(if (manager.paused) "Retomar" else "Pausar")
                         }
+                        OutlinedButton(onClick = { confirmStop = true },
+                            shape=UaiShapes.button, modifier=Modifier.weight(1f)) {
+                            Text("Parar")
+                        }
+                        OutlinedButton(onClick = {
+                            if (release != null) scope.launch { manager.restartDownload(release) }
+                        }, enabled=release != null,
+                            shape=UaiShapes.button, modifier=Modifier.weight(1f)) {
+                            Text("Recomeçar")
+                        }
+                    }
+                    if (manager.paused) Text("O download parcial será verificado antes da instalação. " +
+                        "Se o servidor não aceitar retomada, o download recomeçará do zero.",
+                        style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -135,6 +158,14 @@ import kotlinx.coroutines.launch
         }
         Spacer(Modifier.height(20.dp))
     }
+    if (confirmStop) AlertDialog(onDismissRequest = { confirmStop = false },
+        title = { Text("Interromper download?") },
+        text = { Text("Parar remove o APK incompleto. Para apenas suspender, use Pausar.") },
+        confirmButton = { TextButton(onClick = {
+            confirmStop = false
+            manager.stopDownload()
+        }) { Text("Parar e apagar parcial") } },
+        dismissButton = { TextButton(onClick = { confirmStop = false }) { Text("Continuar") } })
     confirmDownload?.let { release ->
         AlertDialog(onDismissRequest = { confirmDownload = null }, shape = UaiShapes.dialog,
             title = { Text("Baixar versão ${release.version}?") },

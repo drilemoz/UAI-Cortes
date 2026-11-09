@@ -16,11 +16,21 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.244"
-    const val VERSION_CODE = 245
+    const val VERSION_NAME = "0.1.245"
+    const val VERSION_CODE = 246
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.245", listOf(
+            ReleaseFeature("update-pause-resume-245", "Atualizações com pausa, retomada e parada",
+                "Controle manual do APK parcial, retomada HTTP Range validada e verificação SHA-256 antes de instalar. O servidor pode exigir reinício do download.", "check"),
+            ReleaseFeature("subtitle-export-parity-245", "Legendas mais próximas da prévia",
+                "Fonte dimensionada proporcionalmente ao quadro em ambas as renderizações, com limite de largura comum. Confira o MP4 real no aparelho.", "film"),
+            ReleaseFeature("export-flow-245", "Exportação com confirmação e telas renovadas",
+                "Nome sem extensão no editor, confirmação prévia, indicador de etapas, ações diretas no vídeo salvo e atalho Descrição removido da timeline.", "check"),
+            ReleaseFeature("diagnostics-workflow-245", "Diagnóstico de download, exportação e saídas do Android",
+                "Eventos estruturados sem conteúdo dos arquivos, classificação de encerramentos anteriores e redução de taps repetitivos.", "check")
+        )),
         ReleaseSummary("0.1.244", listOf(
             ReleaseFeature("ci203-karaoke-drawbehind-import-244", "Correção da compilação do karaokê rosa",
                 "Corrigido o import do drawBehind do Jetpack Compose, que impedia a compilação Debug e Release no workflow 203.", "check"),

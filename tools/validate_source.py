@@ -279,8 +279,9 @@ assert 'InlineVideoPreview(canvasAspect, maxHeightDp = if (previewExpanded) null
 assert 'InlineVideoPreview(previewAspect)' in ui
 assert 'val previewAspect = if (destination.isVertical) 9f / 16f else exportPreviewAspect' in ui
 assert 'val fit=AdaptiveVideoLayout.fit(' in ui
-assert 'previewSubtitleScale(cue,textLimitPx.toInt(),' in ui
-assert 'frameWidthDp * .94f' in ui
+assert 'previewSubtitleScale(cue,textLimitPx,' in ui
+assert 'SubtitleFrameTypography.previewSizeSp(' in ui
+assert 'frameWidthDp * SubtitleFrameTypography.SIDE_PADDING' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/AdaptiveVideoLayoutTest.kt').exists()
 assert 'mediaAspect(context' in ui and 'METADATA_KEY_VIDEO_ROTATION' in ui
 print('OK: v0.1.64 / versionCode 74, proporção da prévia e largura de legenda responsivas')
@@ -383,7 +384,7 @@ print('OK: 0.1.52 (51), diagnóstico opt-in, toques, erros, compartilhamento loc
 
 # v0.1.52: proteção da área das legendas e confirmação pós-salvamento real.
 export_sizing=(root/'app/src/main/java/br/com/uaicortes/SubtitleExportSizing.kt').read_text()
-assert 'fun textBoxWidth(' in export_sizing and '0.90f' in export_sizing
+assert 'fun textBoxWidth(' in export_sizing and 'SubtitleFrameTypography.allowedTextWidth' in export_sizing
 assert 'fun relativeFontSize(' in export_sizing
 assert 'override fun getBitmap(presentationTimeUs: Long)' in fx
 assert 'StaticLayout.Builder.obtain(styled' in fx
@@ -392,7 +393,7 @@ assert 'setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE)' in fx
 assert 'RelativeSizeSpan(relativeFontSize)' in fx
 assert 'VideoSavedDialog(uri=savedUri' in export
 assert 'savedVideo = uri' in (root/'app/src/main/java/br/com/uaicortes/ExportTaskViewModel.kt').read_text() and 'onSuccess = { uri, report ->' in (root/'app/src/main/java/br/com/uaicortes/ExportTaskViewModel.kt').read_text()
-assert all(t in (root/'app/src/main/java/br/com/uaicortes/VideoSavedDialog.kt').read_text() for t in ['Vídeo salvo!', 'Abrir vídeo', 'Compartilhar'])
+assert all(t in (root/'app/src/main/java/br/com/uaicortes/VideoSavedDialog.kt').read_text() for t in ['Vídeo salvo!', 'Assistir', 'Compartilhar'])
 assert 'Voltar ao editor' in export and 'Filmes/UaiCortes' in (root/'app/src/main/java/br/com/uaicortes/VideoSavedDialog.kt').read_text()
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleExportSizingTest.kt').exists()
 print('OK: v0.1.52, legenda limitada ao quadro e confirmação em tela cheia após exportação')
@@ -689,7 +690,7 @@ export_vm = (app_files/'ExportTaskViewModel.kt').read_text()
 export_tasks = (app_files/'ExportTaskCoordinator.kt').read_text()
 engine = (app_files/'ExportEngine.kt').read_text()
 assert 'val exportVm: ExportTaskViewModel = viewModel()' in export_screen
-assert 'exportVm.start(p, quality, name, bitratePreset, destination, frameMode)' in export_screen
+assert 'exportVm.start(p,quality,safeName,bitratePreset,destination,frameMode)' in export_screen
 assert 'destination = destination, frameMode = frameMode' in export_vm
 assert 'exportVm.cancel()' in export_screen
 assert 'DisposableEffect(engine)' not in export_screen
@@ -1019,7 +1020,7 @@ assert 'enum class ExportBitratePreset' in quality and 'MAXIMUM' in quality and 
 assert 'videoBitrateBps(height, preset)' in export
 assert 'project.durationMs, height, true, preset' in export
 assert 'setiFrameIntervalSeconds(VideoExportQuality.REQUESTED_KEYFRAME_INTERVAL_SECONDS)' in export
-assert 'exportVm.start(p, quality, name, bitratePreset, destination, frameMode)' in export_screen
+assert 'exportVm.start(p,quality,safeName,bitratePreset,destination,frameMode)' in export_screen
 assert 'destination = destination, frameMode = frameMode' in export_vm
 assert 'estimatedMiBPerMinute(quality,true,bitratePreset)' in export_screen
 assert 'engine.start(project, quality, requestedName, preset = preset' in viewmodel_export

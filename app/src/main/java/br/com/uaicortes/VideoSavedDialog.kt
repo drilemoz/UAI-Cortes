@@ -138,23 +138,27 @@ internal fun VideoSavedDialog(
                 .padding(horizontal = 18.dp, vertical = 14.dp)) {
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Icon(Icons.Default.CheckCircle, null, Modifier.size(46.dp),
-                        tint = MaterialTheme.colorScheme.primary)
-                    Column {
-                        Text("Vídeo salvo!", style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold)
-                        Text("Disponível na galeria do celular",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Surface(shape=RoundedCornerShape(18.dp),
+                    color=MaterialTheme.colorScheme.primaryContainer) {
+                    Row(Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(Icons.Default.CheckCircle, null, Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.primary)
+                        Column {
+                            Text("Vídeo salvo!", style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold)
+                            Text("Exportação concluída e arquivo disponível na galeria",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
 
                 Card(Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(width = 104.dp, height = 76.dp)
+                        Box(Modifier.size(width = 124.dp, height = 94.dp)
                             .clip(RoundedCornerShape(10.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                             contentAlignment = Alignment.Center) {
@@ -192,10 +196,10 @@ internal fun VideoSavedDialog(
                 }
 
 
-                Spacer(Modifier.height(4.dp))
-                Text("Pronto para publicar", style = MaterialTheme.typography.titleMedium,
+                Text("Próximos passos", style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold)
-                Text("O vídeo está salvo. Publique agora ou ajuste a descrição antes.",
+                Text("Assista, compartilhe ou publique. A descrição pode ser criada aqui, " +
+                    "sem voltar à linha do tempo.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (exportDetails.isNotEmpty()) {
@@ -234,64 +238,59 @@ internal fun VideoSavedDialog(
                         Text("Publicar vídeo")
                     }
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedButton(onClick = {
-                        showAiOptions = false
-                        showCaptionDialog = true
-                    }, modifier = Modifier.weight(1f), shape = UaiShapes.button) {
-                        Icon(Icons.Default.Description, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Descrição e IA", maxLines = 1)
-                    }
-                    Box {
-                        var menuExpanded by remember(uri) { mutableStateOf(false) }
-                        TextButton(onClick = { menuExpanded = true }) {
-                            Text("Mais opções")
-                            Icon(Icons.Default.MoreVert, contentDescription = null)
-                        }
-                        DropdownMenu(expanded = menuExpanded,
-                            onDismissRequest = { menuExpanded = false }) {
-                            DropdownMenuItem(text = { Text("Gerar descrição") }, onClick = {
-                                menuExpanded = false
-                                showAiOptions = false
-                                showCaptionDialog = true
-                            })
-                            DropdownMenuItem(text = { Text("Gerar com IA") }, onClick = {
-                                menuExpanded = false
-                                showAiOptions = true
-                                showCaptionDialog = true
-                            })
-                            DropdownMenuItem(text = { Text("Compartilhar") }, onClick = {
-                                menuExpanded = false
-                                runCatching {
-                                    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-                                        type = "video/mp4"
-                                        putExtra(Intent.EXTRA_STREAM, uri)
-                                        if (captionValid) putExtra(Intent.EXTRA_TEXT,
-                                            VideoCaption(description.trim(), hashtags.trim()).combined)
-                                        clipData = ClipData.newUri(context.contentResolver, "Vídeo", uri)
-                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    }, "Compartilhar vídeo"))
-                                }.onFailure { failure = "Não foi possível compartilhar este vídeo." }
-                            })
-                        }
-                    }
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick={
                         runCatching {
                             context.startActivity(Intent(Intent.ACTION_VIEW).apply {
                                 setDataAndType(uri, "video/mp4")
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             })
-                        }.onFailure { failure = "Não há aplicativo disponível para abrir este vídeo." }
-                    }) { Text("Abrir vídeo") }
-                    TextButton(onClick = { if (persistDraft()) onEdit(currentDraft()) }) {
-                        Text(editLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }.onFailure { failure="Não há aplicativo disponível para abrir este vídeo." }
+                    }, modifier=Modifier.weight(1f),shape=UaiShapes.button) {
+                        Icon(Icons.Default.PlayArrow,null,Modifier.size(19.dp))
+                        Spacer(Modifier.width(5.dp))
+                        Text("Assistir")
                     }
-                    TextButton(onClick = { if (persistDraft()) onClose() }) { Text(closeLabel) }
+                    OutlinedButton(onClick={
+                        runCatching {
+                            context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                                type="video/mp4"
+                                putExtra(Intent.EXTRA_STREAM,uri)
+                                if(captionValid) putExtra(Intent.EXTRA_TEXT,
+                                    VideoCaption(description.trim(),hashtags.trim()).combined)
+                                clipData=ClipData.newUri(context.contentResolver,"Vídeo",uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            },"Compartilhar vídeo"))
+                        }.onFailure { failure="Não foi possível compartilhar este vídeo." }
+                    },modifier=Modifier.weight(1f),shape=UaiShapes.button) {
+                        Icon(Icons.Default.Share,null,Modifier.size(18.dp))
+                        Spacer(Modifier.width(5.dp))
+                        Text("Compartilhar")
+                    }
+                }
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick={showAiOptions=false;showCaptionDialog=true},
+                        modifier=Modifier.weight(1f),shape=UaiShapes.button) {
+                        Icon(Icons.Default.Description,null,Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Descrição")
+                    }
+                    OutlinedButton(onClick={showAiOptions=true;showCaptionDialog=true},
+                        modifier=Modifier.weight(1f),shape=UaiShapes.button) {
+                        Icon(Icons.Default.AutoAwesome,null,Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Gerar com IA")
+                    }
+                }
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick={if(persistDraft()) onEdit(currentDraft())},
+                        modifier=Modifier.weight(1f)) {
+                        Text(editLabel,maxLines=1,overflow=TextOverflow.Ellipsis)
+                    }
+                    Button(onClick={if(persistDraft()) onClose()},
+                        modifier=Modifier.weight(1f),shape=UaiShapes.button) {
+                        Text(closeLabel)
+                    }
                 }
             }
         }

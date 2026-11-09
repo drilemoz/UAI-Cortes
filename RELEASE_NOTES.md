@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.245 — Atualizações e exportação mais controláveis
+
+- O atualizador oferece Pausar, Retomar e Parar: parcial conservado ao pausar, Range validado ao retomar, exclusão ao parar e SHA-256 obrigatório.
+- Legendas têm tamanho relativo ao vídeo mais próximo entre prévia e MP4, mantendo o karaokê rosa e estilos anteriores; teste real em 720p/1080p ainda necessário.
+- Exportar pede confirmação, não mostra `.mp4` no campo, renova a tela de processamento e o resumo do vídeo pronto. Descrição continua disponível na etapa de publicação, não mais na barra de edição.
+- Diagnóstico detalha estados de download e exportação, preservando privacidade, com suporte a detectar causas de encerramento anterior informadas pelo Android.
+- Versão-fonte 0.1.245/versionCode 246. Não houve compilação Android completa comprovada nesta entrega.
+
 # Uai Cortes · versão 0.1.244 — Correção de build do karaokê rosa
 
 - Atualizada regressão antiga de Texto para Voz para reconhecer o atalho da nova faixa rolável.

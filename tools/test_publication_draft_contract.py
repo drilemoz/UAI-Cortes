@@ -23,10 +23,11 @@ assert 'write(it.copy(publicationDraft = draft))' in main
 assert 'LaunchedEffect(uri, description, hashtags)' in saved
 assert 'delay(650)' in saved
 assert 'if (persistDraft()) onClose()' in saved
-assert 'if (persistDraft()) onEdit(currentDraft())' in saved
+assert 'if(persistDraft()) onEdit(currentDraft())' in saved or 'if (persistDraft()) onEdit(currentDraft())' in saved
 assert 'onUseInEditor(uri, draft)' in images and 'if (onUseInEditor(uri, draft)) animationVm.dismissSaved()' in images
 assert 'publicationDraft=publicationDraft.takeUnless' in main
-assert 'Triple("Descrição", Icons.Default.Description, "publication")' in editor
+assert 'Triple("Descrição", Icons.Default.Description, "publication")' not in editor
+assert 'Triple("Vozes IA", Icons.Default.RecordVoiceOver, "voices")' in editor
 assert '"publication"' in nav and '"publication" ->' not in nav
 assert 'ProjectPublicationScreen(current' in main
 assert 'VideoCaptionPolicy.isValid(description, hashtags)' in publication

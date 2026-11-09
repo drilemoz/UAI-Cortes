@@ -8,7 +8,7 @@ assert 'listOf(360,480,720,1080).forEach' in s
 assert 'Modifier.weight(1f).height(62.dp)' in s
 assert 'ExportProgressUi.progressExplanation(exportPhase)' in s
 assert 'ExportProgressUi.renderPercent(exportPhase,progress)' in s
-assert 'exportVm.start(p, quality, name, bitratePreset, destination, frameMode)' in s
+assert 'exportVm.start(p,quality,safeName,bitratePreset,destination,frameMode)' in s
 c=(src/'ExportTaskCoordinator.kt').read_text()
 assert 'quality in listOf(360, 480, 720, 1080)' in c
 q=(src/'VideoExportQuality.kt').read_text()
@@ -21,7 +21,7 @@ assert 'if (phase == ExportPhase.RENDERING) percent?' in p
 assert 'Progresso real do vídeo' in p
 v=(src/'VideoSavedDialog.kt').read_text()
 assert 'if (showCaptionDialog)' in v and 'if (showAiOptions)' in v
-assert all(f'Text("{label}"' in v for label in ['Gerar descrição','Gerar com IA','Compartilhar'])
+assert all(f'Text("{label}"' in v for label in ['Descrição','Gerar com IA','Compartilhar'])
 assert 'showGeminiConsent' in v and 'GeminiCredentialStore(context).read()' in v
 assert 'persistDraft()' in v
 assert 'Intent.EXTRA_TEXT' in v and 'Intent.EXTRA_STREAM' in v
