@@ -27,6 +27,11 @@ class ProjectMediaCopiesAndroidTest {
             val projectId = UUID.randomUUID().toString()
             safe = ProjectMediaCopies.copy(context, source, projectId, ProjectMediaCopies.Kind.VIDEO)
             assertNotEquals(source, safe)
+            // Novos backups são internos: nunca inserir no MediaStore/Galeria.
+            assertEquals("${context.packageName}.diagnostics", safe.authority)
+            assertEquals("project_media", safe.pathSegments.first())
+            assertEquals(projectId, safe.pathSegments[1])
+            assertEquals("video", safe.pathSegments[2])
             assertTrue(ProjectMediaAvailability.canOpen(context, safe.toString()))
             // A cópia é independente do caminho inicial; não depende do cache/Downloads.
             assertTrue(original.delete())
@@ -39,7 +44,7 @@ class ProjectMediaCopiesAndroidTest {
         } finally {
             original.delete()
             safe?.let { uri ->
-                if (android.os.Build.VERSION.SDK_INT >= 29)
+                if (uri.authority == "${context.packageName}.diagnostics")
                     runCatching { context.contentResolver.delete(uri, null, null) }
             }
         }

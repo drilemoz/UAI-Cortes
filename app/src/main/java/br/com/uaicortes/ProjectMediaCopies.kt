@@ -1,6 +1,5 @@
 package br.com.uaicortes
 
-import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
 import android.os.Build
@@ -17,8 +16,10 @@ import java.security.MessageDigest
 
 /**
  * A mídia importada recebe uma cópia independente da URI escolhida pelo usuário.
- * Android 10+: vídeo em Filmes, áudio em Música, imagem em Imagens (MediaStore).
- * Android 8/9: cópia privada via FileProvider, sem permissões amplas de armazenamento.
+ * Todas as versões Android suportadas: cópia PRIVADA em filesDir/project_media_v1
+ * através de FileProvider. Nunca registrar backups na galeria pública (MediaStore).
+ * URIs legadas MediaStore continuam reconhecidas e acessíveis: não há migração
+ * destrutiva nem exclusão automática dos projetos/cópias antigos.
  *
  * A URI retornada somente é entregue depois da conclusão integral da cópia.
  * Nunca exclui ou altera a origem; um erro elimina somente a cópia parcial criada.
@@ -53,8 +54,12 @@ internal object ProjectMediaCopies {
     }
 
     private fun alreadyProtected(context: Context, uri: Uri, projectId: String, kind: Kind): Boolean {
-        if (uri.authority == "${context.packageName}.diagnostics" &&
-            uri.pathSegments.firstOrNull() in setOf("project_images", "project_media")) return true
+        if (uri.scheme == "content" && uri.authority == "${context.packageName}.diagnostics") {
+            val parts = uri.pathSegments
+            if (parts.firstOrNull() == "project_images" && kind == Kind.IMAGE) return true
+            if (parts.size >= 4 && parts[0] == "project_media" &&
+                parts[1] == projectId && parts[2] == kind.name.lowercase()) return true
+        }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || uri.scheme != "content") return false
         return runCatching {
             context.contentResolver.query(uri, arrayOf(MediaStore.MediaColumns.RELATIVE_PATH),
@@ -105,39 +110,21 @@ internal object ProjectMediaCopies {
             }.getOrDefault(-1L)
             require(expectedSize != 0L) { "O arquivo original está vazio." }
             val name = displayName(context, source, kind, key)
-            val destination: Uri
-            val privateFile: File?
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val collection = when (kind) {
-                    Kind.VIDEO -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
-                    Kind.AUDIO -> MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-                    Kind.IMAGE -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-                }
-                val values = ContentValues().apply {
-                    put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-                    put(MediaStore.MediaColumns.MIME_TYPE, actualMime.ifBlank { kind.fallbackMime })
-                    put(MediaStore.MediaColumns.RELATIVE_PATH, folder(projectId, kind))
-                    put(MediaStore.MediaColumns.IS_PENDING, 1)
-                }
-                destination = resolver.insert(collection, values)
-                    ?: error("Não foi possível reservar espaço para a cópia da mídia.")
-                privateFile = null
-            } else {
-                val dir = File(context.filesDir, "project_media_v1/$projectId/${kind.name.lowercase()}")
-                require(dir.isDirectory || dir.mkdirs()) { "Não foi possível criar a pasta privada de mídias." }
-                privateFile = File(dir, name)
-                destination = FileProvider.getUriForFile(context,
-                    "${context.packageName}.diagnostics", privateFile)
+            // Cópia privada em TODAS as versões Android; não indexa mídia na Galeria.
+            // A pasta é específica do projeto para evitar conflitos entre projetos.
+            val dir = File(context.filesDir, "project_media_v1/$projectId/${kind.name.lowercase()}")
+            require(dir.isDirectory || dir.mkdirs()) { "Não foi possível criar a pasta privada de mídias." }
+            var privateFile = File(dir, name)
+            if (privateFile.exists()) {
+                // Nunca sobrescrever uma cópia anterior mesmo se o mapeamento local sumiu.
+                privateFile = File(dir, "${java.util.UUID.randomUUID()}_$name")
             }
+            val partial = File(dir, "${privateFile.name}.partial")
             try {
                 var total = 0L
-                val target = if (privateFile != null) {
-                    // Na API 26-28 a cópia final é atômica (arquivo parcial -> rename).
-                    File(privateFile.parentFile, "${privateFile.name}.partial").outputStream()
-                } else resolver.openOutputStream(destination, "w")
-                    ?: error("Não foi possível abrir o destino da mídia.")
-                target.use { output ->
-                    (resolver.openInputStream(source) ?: error("Não foi possível abrir a mídia original.")).use { input ->
+                partial.outputStream().use { output ->
+                    (resolver.openInputStream(source)
+                        ?: error("Não foi possível abrir a mídia original.")).use { input ->
                         val buffer = ByteArray(256 * 1024)
                         while (true) {
                             currentCoroutineContext().ensureActive()
@@ -147,28 +134,23 @@ internal object ProjectMediaCopies {
                             total += read
                         }
                         output.flush()
-                        if (output is java.io.FileOutputStream) output.fd.sync()
+                        output.fd.sync()
                     }
                 }
                 check(total > 0L && (expectedSize < 0L || total == expectedSize)) {
                     "A cópia ficou incompleta; confira o espaço disponível."
                 }
-                if (privateFile != null) {
-                    val partial = File(privateFile.parentFile, "${privateFile.name}.partial")
-                    check(partial.renameTo(privateFile)) { "Não foi possível finalizar a cópia privada." }
-                } else {
-                    check(resolver.update(destination, ContentValues().apply {
-                        put(MediaStore.MediaColumns.IS_PENDING, 0)
-                    }, null, null) > 0) { "Não foi possível publicar a mídia copiada." }
+                check(!privateFile.exists() && partial.renameTo(privateFile)) {
+                    "Não foi possível finalizar a cópia privada."
                 }
+                val destination = FileProvider.getUriForFile(context,
+                    "${context.packageName}.diagnostics", privateFile)
                 // Persistir mapeamento evita duplicar cópias do mesmo arquivo no mesmo projeto.
                 prefs.edit().putString(key, destination.toString()).apply()
                 destination
             } catch (failure: Throwable) {
-                if (privateFile != null) {
-                    File(privateFile.parentFile, "${privateFile.name}.partial").delete()
-                    privateFile.delete()
-                } else runCatching { resolver.delete(destination, null, null) }
+                partial.delete()
+                privateFile.delete()
                 throw failure
             }
         }

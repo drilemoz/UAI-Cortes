@@ -1,3 +1,11 @@
+# Uai Cortes · v0.1.239 — Backups privados na importação e correção CI199
+
+As cópias de segurança de vídeos, áudios e imagens importados para projetos agora ficam em `filesDir/project_media_v1/<ID>/` e são acessadas por FileProvider, sem registrar novos itens no MediaStore e sem duplicar vídeos na Galeria. A cópia permanece integral, verificada e atômica. Os vídeos finais exportados continuam sendo salvos normalmente na galeria.
+
+Projetos antigos continuam usando as URIs previamente salvas, inclusive os arquivos públicos de `Filmes/UaiCortes/Projetos/`. Nenhuma mídia legada é excluída nem migrada automaticamente. **A mudança evita novas duplicações na galeria, mas não recupera espaço ocupado por cópias já criadas.** Limpar dados ou desinstalar o aplicativo remove arquivos privados e pode deixar projetos sem suas mídias; preservar backup/exportações antes dessas ações.
+
+Corrigida a falha do workflow 199 (`SocialYouTubeLibraryAggregateTest.loadedChannelCountConsidersOnlyNonEmptyLists`): a contagem local de canais com vídeos não inclui listas vazias, enquanto as métricas oficiais dos canais permanecem independentes. Versão 0.1.239, versionCode 240. A compilação Android e testes reais de recuperação/reprodução precisam passar no CI/aparelho.
+
 # Uai Cortes · v0.1.238 — painel Redes unificado
 
 A tela Redes agora reúne canais em uma faixa rolável (Todos/individual), estatísticas de canais consultadas do YouTube e vídeos anteriores junto dos uploads confirmados pelo Uai Cortes. O cartão Desempenho vazio foi removido; a ajuda fica no cabeçalho e o histórico técnico continua disponível recolhido. Consultas exigem ação explícita; a última resposta fica em cache privado local, sem tokens Google nem sincronização em segundo plano. Versão 0.1.238/versionCode 239; build Android e teste real OAuth pendentes.

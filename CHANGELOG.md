@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.239 (2026-11-08)
+
+- Importação de vídeo, áudio e imagem passa a criar cópia protegida somente no armazenamento privado (`filesDir/project_media_v1/<projeto>/`), com FileProvider, arquivo `.partial`, verificação de tamanho, sincronização e finalização atômica. Não indexa novas mídias do projeto no MediaStore/Galeria.
+- Compatibilidade preservada com URIs das cópias públicas anteriores; nenhuma exclusão ou migração destrutiva, e vídeos exportados permanecem públicos.
+- Correção CI199: `SocialYouTubeLibraryAggregate.loadedChannelCount` volta a contar apenas canais com vídeos carregados; estatísticas oficiais continuam distintas.
+- Sincronizados versionName 0.1.239/versionCode 240, novidades, CI, metadados e testes. Compilação Android e testes instrumentados ainda necessários.
+
 # Uai Cortes 0.1.238 (2026-11-08)
 
 - Redes: faixa de canais horizontal Todos/individual, métricas oficiais de visualizações, vídeos e inscritos, remoção do cartão Desempenho sem dados e ajuda no topo.

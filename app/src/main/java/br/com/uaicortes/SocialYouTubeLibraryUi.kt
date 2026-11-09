@@ -60,7 +60,7 @@ internal object SocialYouTubeLibraryAggregate {
     }
 
     fun loadedChannelCount(videosByChannel: Map<String, List<YouTubeSocialApi.PreviousVideo>>): Int =
-        videosByChannel.keys.size
+        videosByChannel.count { it.value.isNotEmpty() }
 
     fun totalViews(videos: List<YouTubeSocialApi.PreviousVideo>): Long =
         videos.sumOf { it.viewCount ?: 0L }

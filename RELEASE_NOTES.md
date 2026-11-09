@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.239 — Cópias privadas e correção CI199
+
+- Vídeos, áudios e imagens importados deixam de gerar novas cópias visíveis na Galeria: proteção em armazenamento privado do app por projeto, com arquivo temporário e conclusão verificada.
+- Cópias públicas de projetos antigos continuam acessíveis por suas URIs. Nenhuma mídia legada é apagada automaticamente e vídeos exportados seguem na galeria.
+- Corrigido o teste JUnit de canais com vídeos carregados que interrompeu o workflow 199 (677 de 678 testes passaram; 1 falhou). As métricas oficiais permanecem separadas.
+- Versão 0.1.239/versionCode 240. Requer build Gradle real e teste de projeto legado/novo no dispositivo.
+
 # Uai Cortes · versão 0.1.238 — Painel Redes com todos os canais
 
 - Redes Sociais: canais selecionáveis em faixa horizontal, filtros Todos/canal e indicador de dados reais do YouTube.

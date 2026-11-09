@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.238"
-    const val VERSION_CODE = 239
+    const val VERSION_NAME = "0.1.239"
+    const val VERSION_CODE = 240
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.239", listOf(
+            ReleaseFeature("media-private-copies-239", "Cópias protegidas fora da galeria",
+                "Vídeos, áudios e imagens novos são protegidos em armazenamento privado por projeto, sem criar duplicatas visíveis na Galeria. As mídias exportadas continuam públicas e as cópias anteriores são preservadas.", "check"),
+            ReleaseFeature("ci199-channel-test-239", "Correção do workflow 199",
+                "Ajustada a contagem de canais com vídeos carregados, eliminando a falha do teste JUnit no workflow 199. Mantidos os totais oficiais do YouTube.", "check")
+        )),
         ReleaseSummary("0.1.238", listOf(
             ReleaseFeature("social-unified-238", "Redes com vídeos e métricas unificados",
                 "Canais em faixa horizontal com Todos, visualizações, vídeos e inscritos oficiais por canal e vídeos antigos junto dos envios confirmados, sem duplicar IDs.", "film"),

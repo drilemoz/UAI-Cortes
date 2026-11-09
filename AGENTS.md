@@ -1,3 +1,11 @@
+# v0.1.239 — Cópias privadas de projeto e regressão CI199
+
+- Em `ProjectMediaCopies.kt`, novas cópias de VIDEO/AUDIO/IMAGE em qualquer Android suportado ficam no armazenamento privado `filesDir/project_media_v1/<projectId>/<kind>/`, acessíveis pelo FileProvider já configurado; não chamar MediaStore.insert nem tornar backups visíveis na galeria. Finalização atômica via `.partial`, checar tamanho/bytes e assegurar cancelamento/rollback.
+- Preservar projetos legados e os arquivos MediaStore criados em versões anteriores, sem excluí-los, migrá-los compulsoriamente ou sobrescrevê-los. `alreadyProtected` reconhece URLs legadas do projeto e os caminhos privados exatos; mapeamento antigo continua válido.
+- Exportações finais (vídeo, áudio, imagem) continuam usando os destinos públicos próprios; a alteração é somente na mídia importada como cópia de trabalho.
+- Corrigir `SocialYouTubeLibraryAggregateTest` reprovado no CI199 (contar canais não vazios), preservando métricas oficiais e o painel Redes.
+- Avançar versão 0.1.239/versionCode 240 e sincronizar CI, Gradle, metadados, Novidades e documentação. Executar regressões, Kotlin PSI, ZIP/CRC e build Android real sempre que disponível, sem confundir sintaxe com compilação.
+
 # v0.1.238 — Redes unificadas por canal, métricas e OAuth sem prompt forçado
 
 - Manter canais cadastrados, vídeos remotos e envios confirmados em uma lista única filtrada por canal, preservando o histórico de operações pendentes ou incertas.
