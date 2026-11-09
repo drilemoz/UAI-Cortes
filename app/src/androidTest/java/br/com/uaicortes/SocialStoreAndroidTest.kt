@@ -118,6 +118,29 @@ class SocialStoreAndroidTest {
         }
     }
 
+    @Test fun associacaoGooglePorCanalNaoModificaPublicacoesNemSchemaSocial() {
+        val id = "UC1234567890123456789012"
+        val context = temporaryContext()
+        val store = SocialStore(context)
+        val channel = SocialAccount(destination = SocialDestination.YOUTUBE, label = "Canal",
+            remoteChannelId = id, googleAccountEmail = "conta@gmail.com")
+        val publication = SocialPublication(accountId = channel.id,
+            videoUri = "content://media/external/video/media/44", videoName = "video.mp4")
+        store.save(SocialData(accounts = listOf(channel), publications = listOf(publication)))
+        val read = SocialStore(context).load()
+        assertEquals("conta@gmail.com", read.accounts.single().googleAccountEmail)
+        assertEquals(publication.id, read.publications.single().id)
+        assertTrue(File(context.filesDir, "social_v1/catalog.json").readText().contains("\"schema\":1"))
+        assertFalse(SocialPublicConfig.export(read).contains("conta@gmail.com"))
+        assertEquals("", SocialPublicationPolicy.bindChannel(channel,
+            "UC8765432109876543210987").googleAccountEmail)
+        val legacy = channel.toJson().apply { remove("googleAccountEmail") }
+        assertEquals("", SocialAccount.fromJson(legacy).googleAccountEmail)
+        assertThrows(IllegalArgumentException::class.java) {
+            store.save(read.copy(accounts = listOf(channel.copy(googleAccountEmail = "incorreto"))))
+        }
+    }
+
     @Test fun catalogoCorrompidoNaoPodeSerSobrescrito() {
         val context = temporaryContext()
         val store = SocialStore(context)

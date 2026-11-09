@@ -50,18 +50,23 @@ internal data class SocialAccount(
     val profileUrl: String = "",
     val remoteChannelId: String = "",
     val remotePageId: String = "",
+    /** E-mail associado explicitamente e verificado pelo ID YouTube; nunca um token. */
+    val googleAccountEmail: String = "",
     val createdAt: Long = System.currentTimeMillis()
 ) {
     fun toJson() = JSONObject().put("id", id).put("destination", destination.name)
         .put("label", label).put("profileUrl", profileUrl)
-        .put("remoteChannelId", remoteChannelId).put("remotePageId", remotePageId).put("createdAt", createdAt)
+        .put("remoteChannelId", remoteChannelId).put("remotePageId", remotePageId)
+        .put("googleAccountEmail", googleAccountEmail).put("createdAt", createdAt)
     companion object {
         fun fromJson(json: JSONObject): SocialAccount = SocialAccount(
             id = json.getString("id"),
             destination = requireNotNull(SocialDestination.parse(json.getString("destination"))),
             label = json.getString("label"), profileUrl = json.optString("profileUrl"),
             remoteChannelId = json.optString("remoteChannelId"),
-            remotePageId = json.optString("remotePageId"), createdAt = json.optLong("createdAt", 0L)
+            remotePageId = json.optString("remotePageId"),
+            googleAccountEmail = json.optString("googleAccountEmail"),
+            createdAt = json.optLong("createdAt", 0L)
         )
     }
 }
@@ -246,7 +251,8 @@ internal object SocialPublicationPolicy {
     /** Acesso autorizado é obtido a cada ação; só o ID público do canal fica em disco. */
     fun bindChannel(account: SocialAccount, id: String): SocialAccount {
         require(account.destination == SocialDestination.YOUTUBE && id.isNotBlank() && validChannel(id))
-        return account.copy(remoteChannelId = id)
+        return account.copy(remoteChannelId = id,
+            googleAccountEmail = if (account.remoteChannelId == id) account.googleAccountEmail else "")
     }
 
     /** Gravar antes do primeiro POST: sem repetição após resposta incerta. */
@@ -330,6 +336,10 @@ internal class SocialStore(context: Context) {
             SocialPublicationPolicy.isSafeHttps(it.profileUrl) &&
             SocialPublicationPolicy.validChannel(it.remoteChannelId) &&
             (it.remoteChannelId.isBlank() || it.destination == SocialDestination.YOUTUBE) &&
+            (it.googleAccountEmail.isBlank() ||
+                (it.destination == SocialDestination.YOUTUBE && it.remoteChannelId.isNotBlank() &&
+                    YouTubeGoogleAccountEmail.valid(it.googleAccountEmail) &&
+                    it.googleAccountEmail == YouTubeGoogleAccountEmail.normalized(it.googleAccountEmail))) &&
             (it.remotePageId.isBlank() ||
                 (it.destination == SocialDestination.FACEBOOK_PAGE &&
                     SocialPublicationPolicy.validPageId(it.remotePageId))) })

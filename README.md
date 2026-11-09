@@ -1,3 +1,7 @@
+# Uai Cortes · v0.1.254 — Canais Google com conta associada
+
+A atualização dos vídeos do YouTube usa a conta Google vinculada ao ID do canal, sem escolher novamente cada conta toda vez. Em Ajustes → Minhas contas e canais → Conta Google, informe uma vez o e-mail, confirme a autorização e o app valida o canal pela API antes de gravar a associação. Não persiste tokens OAuth. A leitura usa youtube.readonly, e o upload pede youtube.upload apenas durante publicação confirmada. Sem vínculo, não consulta a conta errada. Consentimento Google pode aparecer se necessário.
+
 # Uai Cortes · v0.1.253 — Correção do pacote de código-fonte do CI 210
 
 O workflow 210 falhou antes da compilação porque a versão do workflow no GitHub ficou em 0.1.251 enquanto o código Android estava em 0.1.252. O ZIP de fonte anterior omitiu o diretório oculto `.github/`. Este pacote inclui o workflow atualizado e um teste que valida **o ZIP real extraído**, não só a pasta de desenvolvimento.

@@ -337,7 +337,7 @@ internal fun SocialPublishScreen(initialUri: Uri?, initialName: String,
                     youtubeBusy = true
                     youtubeProgress = "Autorizando canal..."
                     val chosenPrivacy = uploadPrivacy
-                    authorizeYouTube(true) { token ->
+                    authorizeYouTube.forUpload(account.googleAccountEmail.ifBlank { null }) { token ->
                         scope.launch {
                             runCatching {
                                 val channel = YouTubeSocialApi.channel(token)

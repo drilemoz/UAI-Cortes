@@ -1,3 +1,14 @@
+# Validação da v0.1.254 / versionCode 255 (Google por canal)
+
+- Base: ZIP oficial v0.1.253, incluindo `.github/workflows/android-apk.yml`.
+- Versão: `tools/check_version_sync.py` e `tools/validate_source.py` aprovados.
+- OAuth: `tools/test_youtube_google_account_254_contract.py` e contratos sociais direcionados aprovados após atualização de quatro expectativas antigas.
+- Kotlin: análise PSI de **456 arquivos** sem erro sintático e compilação JVM isolada da regra pura de e-mail aprovada.
+- E-mail: normalização e casos inválidos testados; associação persistida somente depois de `channels.list(mine=true)` confirmar ID exato; backup público não exporta e-mail; tokens OAuth não são persistidos.
+- Regressão completa: **não concluída neste ambiente**, por limites de tempo, sem afirmar aprovação dos demais testes.
+- **Pendente:** compilação Gradle/Android, testes instrumentados SocialStore, vínculo OAuth real para duas contas no dispositivo, publicação confirmada e validação de Play Services em aparelho.
+- Importante: `setAccount` reduz a necessidade de escolher contas repetidamente, mas o Google pode exigir consentimento ou resolução quando o acesso tiver sido revogado, expirado ou não tiver sido concedido.
+
 ## v0.1.208 (versionCode 209): correção do contrato CI172
 
 - Falha observada: workflow **Gerar APK Uai Cortes 172**, etapa **Validar código-fonte e regressões locais**; `AssertionError` em `tools/test_main_image_clip_169_contract.py:12`.

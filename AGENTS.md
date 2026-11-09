@@ -1,3 +1,12 @@
+# v0.1.254 — Autorização YouTube por canal sem seleção repetitiva
+
+- Base 0.1.253/versionCode 254; nova 0.1.254/versionCode 255. Preservar os cinco APKs, assinatura, Media3, schemaVersion de projetos 4 e schema do SocialStore 1.
+- Em Ajustes > Minhas contas e canais, permitir associação explícita de e-mail Google a um ID de canal previamente vinculado. Persistir somente e-mail normalizado após `YouTubeSocialApi.channel()` confirmar correspondência EXATA; nenhum OAuth access_token ou refresh_token em disco, backup, logs ou projeto.
+- Para atualizar biblioteca, estatísticas e status: requer conta associada e chama Google Identity `AuthorizationRequest.Builder.setAccount(Account(email, "com.google"))` com escopo APENAS youtube.readonly; não forçar prompt SELECT_ACCOUNT nem abrir seletor automaticamente ao encontrar conta errada. Sem vinculação, orientar uma única associação e não tentar outra conta.
+- Para publicar: pedir `youtube.upload` mais `youtube.readonly` somente após confirmação de envio e verificar novamente o ID do canal antes do POST. Não repetir uploads incertos.
+- Manter persistência retrocompatível SocialStore schema 1, preservar contas e publicações existentes. Validar e-mail, rejeitar mapping em outros destinos, limpar vínculo ao trocar canal. Google poderá mostrar consentimento novamente se necessário; não garantir autenticação sem UI em todos os aparelhos.
+- Empacotar somente com `tools/package_source.py`, confirmar `.github/workflows/android-apk.yml` e sincronização de versões. Testes de contrato, Kotlin PSI, ZIP e CI; compilação Android física ainda depende do GitHub Actions.
+
 # v0.1.253 — Correção de distribuição do workflow no CI 210
 
 - O workflow 210 parou na validação antes do Gradle: o código Android estava em 0.1.252/versionCode 253, mas o workflow mantido no repositório estava em 0.1.251/versionCode 252.

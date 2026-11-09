@@ -30,8 +30,13 @@ assert '.distinctBy { it.id }.take(300)' in dash
 assert 'LaunchedEffect' not in ui and 'SocialStore(' not in ui
 if int(version.rsplit('.', 1)[-1]) >= 238:
     assert 'part=id%2CcontentDetails%2Cstatistics&mine=true' in api
-    assert 'authorizeYouTube(false)' in dash
-    assert 'withVerifiedToken(token, true)' in dash
+    if int(version.rsplit('.', 1)[-1]) >= 254:
+        assert 'authorizeYouTube.forChannel(email)' in dash
+        assert 'withVerifiedToken(token)' in dash
+        assert 'youtubeLibraryError = "Associe uma conta Google' in dash
+    else:
+        assert 'authorizeYouTube(false)' in dash
+        assert 'withVerifiedToken(token, true)' in dash
     assert 'channelStatistics = youtubeChannelStats' in dash
     assert 'videosByChannel = youtubeLibraryVideosByChannel' in dash
     assert 'mergeWithLocal(videosByChannel, publications, accounts)' in ui

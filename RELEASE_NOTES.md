@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.254 — Conta Google por canal
+
+- Contas de canais YouTube agora têm associação explícita e validada pela API com e-mail Google; tokens ficam só na RAM.
+- Atualizações, métricas e status usam apenas `youtube.readonly` e `setAccount` quando a associação existe, sem `SELECT_ACCOUNT` repetitivo.
+- Publicação pede `youtube.upload` somente depois de confirmação do usuário e confirma o ID do canal antes de enviar.
+- Canais antigos permanecem cadastrados no schema social 1; uma associação inicial por canal é necessária.
+- Preservados histórico, ferramentas, vozes, Facebook, cinco APKs e workflow sincronizado. Build Android/Google OAuth físico pendente.
+
 # Uai Cortes · versão 0.1.253 — Correção CI 210
 
 - Corrigido pacote-fonte para incluir `.github/workflows/android-apk.yml`, ausente no ZIP anterior.

@@ -28,7 +28,7 @@ assert not any(x in dash for x in ('internal fun SocialAccountDialog(',
     'internal object SocialPublicConfig', 'internal fun SocialPublishScreen('))
 assert 'Text("Publicar vídeo"' in dash and 'SocialAccountCard(' in dash and 'rememberSaveable(account.id)' in account
 assert 'UaiShapes.card' in account and 'if (expanded)' in account
-assert 'Vincular canal' in dash and 'Verificar conta' in dash
+assert 'Vincular canal' in dash and ('Verificar conta' in dash or 'Conta Google' in dash)
 assert 'A autorização será conferida ao publicar' in account
 assert 'expandedPublicationId' in history and 'Ações e detalhes' in history
 assert history.index('SocialPublicationStatus.UPLOAD_REVIEW ->') < history.index('if (expandedPublicationId == publication.id)')

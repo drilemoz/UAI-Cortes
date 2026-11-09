@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.253"
-    const val VERSION_CODE = 254
+    const val VERSION_NAME = "0.1.254"
+    const val VERSION_CODE = 255
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.254", listOf(
+            ReleaseFeature("yt-channel-account-link-254", "Conta Google associada a cada canal",
+                "Associe uma vez a conta Google de cada canal YouTube em Ajustes → Minhas contas e canais. A API confirma o ID antes de salvar o vínculo local, sem guardar tokens.", "check"),
+            ReleaseFeature("yt-read-only-refresh-254", "Atualização dos canais sem escolha repetida",
+                "A consulta usa somente a permissão de leitura e pede a conta associada diretamente ao Google. O sistema ainda pode solicitar consentimento após revogação ou expiração da autorização.", "check"),
+            ReleaseFeature("yt-upload-scope-254", "Publicação com permissões separadas",
+                "youtube.upload só é solicitado ao confirmar publicação; a consulta de vídeos e métricas não pede permissão de envio.", "check")
+        )),
         ReleaseSummary("0.1.253", listOf(
             ReleaseFeature("ci210-workflow-synced-253", "CI 210: versão do workflow sincronizada",
                 "O pacote de código-fonte agora entrega o workflow Android junto com o aplicativo, impedindo que a validação use uma versão antiga após a importação.", "check"),
