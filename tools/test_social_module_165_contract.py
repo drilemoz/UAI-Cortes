@@ -32,7 +32,7 @@ assert 'require(entry.length() == 2)' in screens and 'put("profileUrl", account.
 assert 'Conectar canal YouTube' in integrations
 assert 'SocialApiCenterScreen(' in main and 'SocialDashboardScreen(' in main
 assert '"social_publish"' in nav and '"social"' in nav and '"api_center"' in nav
-assert 'MainNav("social", onTab)' in screens and 'Triple("social",Icons.Default.Public,"Redes")' in home
+assert 'MainNav(if (accountsOnly) "settings" else "social", onTab)' in screens and 'Triple("social",Icons.Default.Public,"Redes")' in home
 assert 'onSocialPublish' in saved and 'Publicar vídeo' in saved
 assert 'onSocialPublish' in export and 'onSocialPublish' in animated
 assert f'versionCode = {__import__("check_version_sync").check(root)[1]}' in (root/'app/build.gradle.kts').read_text()

@@ -6,6 +6,11 @@ import android.content.Context
 import androidx.activity.ComponentActivity
 import android.content.Intent
 import android.net.Uri
+import android.media.MediaMetadataRetriever
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
@@ -91,20 +96,47 @@ internal fun SocialPublishScreen(initialUri: Uri?, initialName: String,
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (failure.isNotBlank()) Text(failure, color = MaterialTheme.colorScheme.error)
-            OutlinedCard {
-                Column(Modifier.fillMaxWidth().padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(if (videoUri.isBlank()) "Escolha o MP4" else videoName,
-                        style = MaterialTheme.typography.titleMedium)
-                    OutlinedButton(onClick = { picker.launch(arrayOf("video/mp4", "video/*")) },
-                        enabled = !youtubeBusy) {
-                        Icon(Icons.Default.VideoLibrary, null)
-                        Spacer(Modifier.width(6.dp)); Text("Escolher vídeo da galeria/arquivos")
+            OutlinedCard(shape = UaiShapes.card) {
+                if (videoUri.isBlank()) {
+                    Column(Modifier.fillMaxWidth().padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Escolha um vídeo para publicar", style = MaterialTheme.typography.titleMedium)
+                        OutlinedButton(onClick = { picker.launch(arrayOf("video/mp4", "video/*")) },
+                            enabled = !youtubeBusy) {
+                            Icon(Icons.Default.VideoLibrary, null)
+                            Spacer(Modifier.width(6.dp)); Text("Escolher vídeo")
+                        }
+                    }
+                } else {
+                    Row(Modifier.fillMaxWidth().padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Box(Modifier.width(112.dp).height(77.dp).clickable {
+                            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(Uri.parse(videoUri), "video/*")
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }) }.onFailure { failure = "Não foi possível abrir a prévia do vídeo." }
+                        }, contentAlignment = Alignment.Center) {
+                            SocialSelectedVideoThumbnail(videoUri)
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text(videoName, style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold, maxLines = 2,
+                                overflow = TextOverflow.Ellipsis)
+                            Text("Toque na imagem para assistir", style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        IconButton(onClick = {
+                            videoUri = ""; videoName = ""; title = ""; prepared = false
+                            failure = ""
+                        }, enabled = !youtubeBusy) {
+                            Icon(Icons.Default.Close, "Remover vídeo selecionado")
+                        }
                     }
                 }
             }
             Text("Publicar em", style = MaterialTheme.typography.titleMedium)
-            if (data?.accounts.isNullOrEmpty()) Text("Conecte um canal em Redes → Minhas contas para publicar.")
+            if (data?.accounts.isNullOrEmpty()) Text("Conecte um canal em Configurações → Minhas contas e canais para publicar.")
             data?.accounts?.forEach { account ->
                 OutlinedCard(onClick = {
                     if (youtubeBusy) return@OutlinedCard
@@ -286,23 +318,15 @@ internal fun SocialPublishScreen(initialUri: Uri?, initialName: String,
         else externalToConfirm = null
     }
     uploadToConfirm?.let { post ->
-        AlertDialog(onDismissRequest = { if (!youtubeBusy) uploadToConfirm = null },
-            shape = UaiShapes.dialog,
-            title = { Text("Confirmar envio ao YouTube") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text(data?.accounts?.firstOrNull { it.id == post.accountId }?.label.orEmpty(),
-                        fontWeight = FontWeight.SemiBold)
-                    Text("Título: ${post.title}")
-                    Text("Privacidade: " + when (uploadPrivacy) {
-                        "public" -> "Público"; "unlisted" -> "Não listado"; else -> "Privado"
-                    })
-                    Text("O Google poderá pedir autorização desta conta novamente. " +
-                        "Não há reenvio automático após uma interrupção.",
-                        style = MaterialTheme.typography.bodySmall)
-                }
-            },
-            confirmButton = { TextButton(enabled = !youtubeBusy, onClick = {
+        UaiActionDialog(
+            title = "Confirmar envio ao YouTube",
+            description = "Confira o destino e a privacidade antes de autorizar o envio.",
+            icon = Icons.Default.CloudUpload,
+            primaryLabel = "Autorizar e enviar", secondaryLabel = "Cancelar",
+            onDismiss = { if (!youtubeBusy) uploadToConfirm = null },
+            confirmEnabled = !youtubeBusy,
+            onConfirm = {
+
                 val account = data?.accounts?.firstOrNull { it.id == post.accountId }
                 if (account == null || account.destination != SocialDestination.YOUTUBE ||
                     account.remoteChannelId.isBlank()) {
@@ -353,9 +377,24 @@ internal fun SocialPublishScreen(initialUri: Uri?, initialName: String,
                         }
                     }
                 }
-            }) { Text("Autorizar e enviar") } },
-            dismissButton = { TextButton(enabled = !youtubeBusy,
-                onClick = { uploadToConfirm = null }) { Text("Cancelar") } })
+            }, content = {
+            Surface(shape = UaiShapes.item,
+                color = MaterialTheme.colorScheme.surfaceVariant) {
+                Column(Modifier.fillMaxWidth().padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(data?.accounts?.firstOrNull { it.id == post.accountId }?.label.orEmpty(),
+                        fontWeight = FontWeight.SemiBold)
+                    Text("Título: ${post.title}", maxLines = 3)
+                    Text("Privacidade: " + when (uploadPrivacy) {
+                        "public" -> "Público"; "unlisted" -> "Não listado"; else -> "Privado"
+                    })
+                }
+            }
+            Text("O Google poderá solicitar autorização novamente. " +
+                "Uma interrupção não provoca reenvio automático.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        })
     }
     uploadedResult?.let { confirmed ->
         AlertDialog(onDismissRequest = { uploadedResult = null }, shape = UaiShapes.dialog,
@@ -380,3 +419,28 @@ internal fun SocialPublishScreen(initialUri: Uri?, initialName: String,
     }
 }
 
+
+/** Só decodifica o primeiro quadro local; não cria outro item nem envia mídia pela internet. */
+@Composable
+private fun SocialSelectedVideoThumbnail(uri: String) {
+    val context = LocalContext.current
+    val bitmap by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, uri) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                val retriever = MediaMetadataRetriever()
+                try {
+                    retriever.setDataSource(context, Uri.parse(uri))
+                    val frame = if (android.os.Build.VERSION.SDK_INT >= 27)
+                        retriever.getScaledFrameAtTime(0L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 256, 160)
+                    else retriever.getFrameAtTime(0L, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                    frame?.asImageBitmap()
+                } finally { retriever.release() }
+            }.getOrNull()
+        }
+    }
+    if (bitmap != null) Image(bitmap!!, "Prévia do vídeo selecionado",
+        modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+    else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Icon(Icons.Default.Movie, "Prévia indisponível")
+    }
+}

@@ -690,7 +690,7 @@ export_vm = (app_files/'ExportTaskViewModel.kt').read_text()
 export_tasks = (app_files/'ExportTaskCoordinator.kt').read_text()
 engine = (app_files/'ExportEngine.kt').read_text()
 assert 'val exportVm: ExportTaskViewModel = viewModel()' in export_screen
-assert 'exportVm.start(p,quality,safeName,bitratePreset,destination,frameMode)' in export_screen
+assert 'exportVm.start(p, quality, safeName, bitratePreset, destination, frameMode)' in export_screen
 assert 'destination = destination, frameMode = frameMode' in export_vm
 assert 'exportVm.cancel()' in export_screen
 assert 'DisposableEffect(engine)' not in export_screen
@@ -798,7 +798,7 @@ assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
 assert 'if (whatsNewSeen.shouldOpen())' in main and 'screen = "whats_new"' in main
-assert '"whats_new"' in nav and '"whats_new"' in home
+assert '"whats_new"' in nav and '"whats_new"' in main and 'Minhas contas e canais' in home
 assert 'putStringSet' in seen and '.commit()' in seen
 assert (root/'app/src/test/java/br/com/uaicortes/WhatsNewReleaseNotesTest.kt').exists()
 print('OK: v0.1.69 / versionCode 74, tela Novidades uma vez e fonte única com Sobre')
@@ -1020,7 +1020,7 @@ assert 'enum class ExportBitratePreset' in quality and 'MAXIMUM' in quality and 
 assert 'videoBitrateBps(height, preset)' in export
 assert 'project.durationMs, height, true, preset' in export
 assert 'setiFrameIntervalSeconds(VideoExportQuality.REQUESTED_KEYFRAME_INTERVAL_SECONDS)' in export
-assert 'exportVm.start(p,quality,safeName,bitratePreset,destination,frameMode)' in export_screen
+assert 'exportVm.start(p, quality, safeName, bitratePreset, destination, frameMode)' in export_screen
 assert 'destination = destination, frameMode = frameMode' in export_vm
 assert 'estimatedMiBPerMinute(quality,true,bitratePreset)' in export_screen
 assert 'engine.start(project, quality, requestedName, preset = preset' in viewmodel_export

@@ -503,6 +503,8 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     { pendingProjectRename = it; projectRenameInput = it.title },
                     { pendingProjectDelete = it }, onTab = { screen = it })
                 "social" -> SocialDashboardScreen({ screen = it }, { openSocialPublish(null) }, { previous = "social"; screen = "api_center" })
+                "social_accounts" -> SocialDashboardScreen({ screen = it }, { openSocialPublish(null) },
+                    { previous = "social_accounts"; screen = "api_center" }, accountsOnly = true)
                 "social_publish" -> SocialPublishScreen(pendingSocialVideoUri.takeIf(String::isNotBlank)?.let(Uri::parse),
                     pendingSocialVideoName, VideoPublicationDraft(pendingSocialDescription, pendingSocialHashtags), { screen = "social" })
                 "settings" -> SettingsScreen(::back, { previous = "settings"; screen = it }, { screen = it })

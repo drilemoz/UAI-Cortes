@@ -8,7 +8,7 @@ assert 'listOf(360,480,720,1080).forEach' in s
 assert 'Modifier.weight(1f).height(62.dp)' in s
 assert 'ExportProgressUi.progressExplanation(exportPhase)' in s
 assert 'ExportProgressUi.renderPercent(exportPhase,progress)' in s
-assert 'exportVm.start(p,quality,safeName,bitratePreset,destination,frameMode)' in s
+assert 'exportVm.start(p, quality, safeName, bitratePreset, destination, frameMode)' in s
 c=(src/'ExportTaskCoordinator.kt').read_text()
 assert 'quality in listOf(360, 480, 720, 1080)' in c
 q=(src/'VideoExportQuality.kt').read_text()

@@ -6,6 +6,11 @@ import java.io.File
 import java.io.IOException
 import org.json.JSONObject
 
+/** Histórico local de prévias: não armazena o texto falado, chaves ou informações pessoais. */
+internal data class GeminiSavedVoicePreview(
+    val key: String, val voiceId: String, val bytes: Long, val savedAt: Long
+)
+
 /** Amostras TTS do próprio usuário, sem texto de projetos ou credenciais.
  * Cache de longo prazo em filesDir (não expira por tempo); remoção manual, dados do app
  * ou falta de espaço podem apagá-lo. Toda leitura/gravação deve ocorrer em Dispatchers.IO.
@@ -78,6 +83,44 @@ internal class GeminiVoicePreviewCache(context: Context) {
             return target
         } finally { temp.delete() }
     }
+    /** Histórico de todas as amostras indexadas da voz, independente da frase, modelo e estilo atuais.
+     * Prévias anteriores ao índice (sem vínculo conhecido) não são atribuídas a outra voz.
+     */
+    fun listByVoice(voiceId: String): List<GeminiSavedVoicePreview> {
+        if (!GeminiVoiceFavorites.valid(voiceId)) return emptyList()
+        return readIndex().asSequence().filter { (_, storedVoice) -> storedVoice == voiceId }
+            .mapNotNull { (key, _) ->
+                val audio = runCatching { path(key) }.getOrNull() ?: return@mapNotNull null
+                if (!exists(key)) null else GeminiSavedVoicePreview(key, voiceId, audio.length(),
+                    audio.lastModified().coerceAtLeast(0L))
+            }.sortedWith(compareByDescending<GeminiSavedVoicePreview> { it.savedAt }.thenBy { it.key })
+            .take(100).toList()
+    }
+
+    /** Contagens offline para a Central. Sem leitura dos WAVs na thread de UI. */
+    fun countsByVoice(): Map<String, Int> = readIndex().asSequence()
+        .filter { (key, _) -> exists(key) }.groupingBy { it.value }.eachCount()
+
+    /** Remove apenas uma amostra escolhida. Outras amostras, narrações e favoritos ficam intactos. */
+    fun removeOne(key: String): Boolean {
+        val audio = runCatching { path(key) }.getOrNull() ?: return false
+        if (!audio.isFile || !audio.delete()) return false
+        // Um índice obsoleto nunca deve ressuscitar bytes apagados.
+        runCatching {
+            val remaining = readIndex().filterKeys { it != key && exists(it) }
+            val temp = File(folder, "voice-index.json.part")
+            try {
+                val json = JSONObject()
+                remaining.forEach { (hash, voiceId) -> json.put(hash, voiceId) }
+                temp.outputStream().use { out ->
+                    out.write(json.toString().toByteArray(Charsets.UTF_8)); out.fd.sync()
+                }
+                if (!temp.renameTo(index)) throw IOException("Falha ao atualizar índice de prévias.")
+            } finally { temp.delete() }
+        }
+        return true
+    }
+
     fun usageBytes(): Long = folder.listFiles().orEmpty().filter { namePattern.matches(it.name) }
         .sumOf { it.length().coerceAtLeast(0L) }
     fun clear(): Int {

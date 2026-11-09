@@ -18,7 +18,7 @@ assert 'selectedChannelId' in screen
 assert 'SocialYouTubeLibraryUi(' in screen and 'channelStatistics = youtubeChannelStats' in screen
 assert 'Icons.Default.HelpOutline' in screen and 'Sobre o painel Redes' in screen
 assert 'Text("Desempenho"' not in screen
-assert 'if (manageAccounts)' in screen and 'if (showHistory)' in screen
+assert 'if (accountsOnly && manageAccounts)' in screen and 'if (showHistory)' in screen
 assert 'pendingChannelQueue' in screen and 'LaunchedEffect(youtubeBusy, pendingChannelQueue)' in screen
 assert 'authorizeYouTube(false)' in screen and 'authorizeYouTube(true)' in screen
 assert 'youtubeSessionTokens[channelId] = token' in screen

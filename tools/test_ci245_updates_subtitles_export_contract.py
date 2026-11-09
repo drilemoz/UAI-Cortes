@@ -23,8 +23,8 @@ assert 'fontPixelsForFrame' in sizing and 'allowedTextWidth(' in sizing
 assert 'REFERENCE_WIDTH = 280f' in policy
 export=(s/'ExportScreen.kt').read_text()
 assert 'confirmStartExport' in export and 'ProjectNaming.exportName(name)' in export
-assert 'exportVm.start(p,quality,safeName,bitratePreset,destination,frameMode)' in export
-assert 'Confirmar exportação' in export and 'A extensão .mp4 será adicionada' in export
+assert 'exportVm.start(p, quality, safeName, bitratePreset, destination, frameMode)' in export
+assert 'UaiActionDialog(' in export and 'Tudo pronto para exportar' in export and 'A extensão .mp4 será adicionada' in export
 assert 'Triple("Descrição", Icons.Default.Description, "publication")' not in (s/'EditorScreen.kt').read_text()
 saved=(s/'VideoSavedDialog.kt').read_text()
 assert 'Text("Assistir")' in saved and 'Text("Compartilhar")' in saved

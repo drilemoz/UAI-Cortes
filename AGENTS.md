@@ -1,3 +1,36 @@
+# v0.1.250 — Consulta limitada de publicações com vídeo em Páginas Facebook
+
+- Base 0.1.249/versionCode 250, nova 0.1.250/versionCode 251; preservar SocialStore schema 1, projetos schema 4, cinco APKs e publicações existentes.
+- Na aba Redes, filtro YouTube/Facebook. Consulta Facebook por Página autorizada e atualização explícita em GET /{page-id}/posts com anexo de vídeo; a Graph API pode omitir Reels e não oferecer estatísticas. Não apresentar resultado como biblioteca completa.
+- Tokens Meta ficam somente em RAM e leitura usa pages_read_engagement e pages_read_user_content, sem exigir pages_manage_posts; não iniciar upload nem OAuth sem toque. Validar Página recebida de /me/accounts antes da consulta.
+- Mostrar thumbnails apenas de CDN *.fbcdn.net sobre HTTPS com limite de bytes/pixels, sem persistir URLs de sessão; links de posts apenas facebook.com. Paginar com cursor validado e limite de 300 por Página. Não inventar visualizações.
+- Sem migração de schemas; testar parser de anexos, links, paginação, ausência de vídeos, contratos, PSI, versão e ZIP. Build completo Android/OAuth Meta/consulta real pendentes até CI e teste físico.
+
+
+- Base v0.1.248/versionCode 249; nova v0.1.249/versionCode 250. Alterações apenas de interface; preservar SocialStore schema 1, projetos schema 4, cinco APKs, OAuth exclusivamente em RAM, atualizações manuais e publicação confirmada.
+- Cartão azul de publicação, título/estatísticas em hierarquia melhorada, filtros por canal com cantos arredondados e cartões 16:9 em duas colunas. Visualizações vêm do valor da API ou são exibidas como indisponíveis, nunca inventadas.
+- Busca em diálogo com resultados legíveis e estado vazio; não efetuar rede ao digitar, abrir página YouTube apenas com ID validado. Consultas ao YouTube continuam somente por ação explícita.
+- Suporte a temas via MaterialTheme; nenhum texto fixo assume cores escuras exceto o cartão azul e selo sobre miniatura. Gerenciamento permanece em Configurações; Facebook ainda não fornece biblioteca remota.
+- Validar testes/versões/PSI/ZIP e CI Android antes de declarar compilação aprovada.
+
+# v0.1.248 — Redes Sociais, publicação e diálogos personalizados
+
+- Base v0.1.247/versionCode 248; nova v0.1.248/versionCode 249. Preservar projetos schema 4, histórico SocialStore schema 1, credenciais OAuth só na RAM, todas as funcionalidades e cinco APKs.
+- A aba Redes apresenta vídeos publicados de canais YouTube em grade de duas colunas, com thumbs reais por ID/metadata e visualizações destacadas; pesquisa abre Dialog central e filtra título/canal apenas dos vídeos carregados, sem chamada de API por tecla.
+- Centralizar cadastro, vínculo e autorização de contas em Configurações > Minhas contas e canais; não deixar controles de contas duplicados na aba Redes. Manter Facebook Página existente sem inventar listagem remota Facebook ainda não implementada.
+- Publicação usa um único vídeo selecionado; prévia de quadro via MediaMetadataRetriever local e ação X removem a seleção. Um vídeo pode manter vários destinos permitidos.
+- Diálogos personalizados para confirmação de exportação e envio ao YouTube, preservando checagens, autorização explícita e tratamento de falha/resultado incerto. Novidades mostra só versão atual e sai de Configurações; o catálogo histórico permanece no código/docs.
+- Testar regras de thumbnail, URL restrita, fonte de cache, opções de navegação, confirmação, sintaxe Kotlin, versão e ZIP; build Android CI e testes físicos obrigatórios.
+
+# v0.1.247 — Histórico de prévias de Vozes Google sem nova chamada de API
+
+- Base 0.1.246/versionCode 247; nova 0.1.247/versionCode 248. Preservar schemaVersion 4, projetos, credenciais, cinco APKs, assinatura, clipes, Coqui/Chatterbox, legendas e fluxos existentes.
+- Central Gemini mostra prévias de qualquer frase/modelo por voz, lendo apenas o índice local de WAVs existente. Não inferir modelo, frase nem estilo a partir de hash antigo; não salvar conteúdo do texto em novos metadados.
+- Histórico permite ouvir/parar, exportar WAV com SAF e apagar somente uma amostra com confirmação; voz, favoritos, prévias restantes e narrações de projetos intactos. Nenhuma ação de histórico dispara síntese ou rede.
+- Distinção clara entre filtro prévia do perfil atual e histórico de qualquer amostra salva. Atualizar contagem após salvar, apagar, limpar e limitar cache.
+- Fixar modelo/frase/estilo antes da primeira suspensão de síntese e usar os mesmos valores para hash, pacing e requisição para evitar cache sob identidade errada.
+- Testar contrato novo, AndroidTest de cache offline, PSI, versionamento e integridade ZIP; compilação completa Android e testes físicos continuam necessários, não presumir aprovação de CI.
+
 # v0.1.246 — Robustez na importação de imagens e recuperação de mídias
 
 - Base 0.1.245/versionCode 246, nova 0.1.246/versionCode 247. Não modificar schemaVersion 4, manter cópias privadas, editor, Coqui/Chatterbox, legendas rosa, atualizador SHA-256, cinco APKs e assinatura.

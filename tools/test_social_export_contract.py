@@ -19,7 +19,7 @@ assert 'Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP' in engine
 assert 'Presentation.LAYOUT_SCALE_TO_FIT' in engine
 assert 'portraitSize?.first' in engine and 'portraitSize?.second' in engine
 assert 'destination = destination, frameMode = frameMode' in vm
-assert 'exportVm.start(p,quality,safeName,bitratePreset,destination,frameMode)' in ui
+assert 'exportVm.start(p, quality, safeName, bitratePreset, destination, frameMode)' in ui
 assert 'configureExportPreviewFrame' in ui
 assert 'showFrameGuides' in ui
 assert 'requestFrameWidth' not in engine

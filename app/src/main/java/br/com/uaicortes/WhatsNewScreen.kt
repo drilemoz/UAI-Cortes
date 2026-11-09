@@ -80,7 +80,7 @@ internal fun ReleaseHighlights(entries: List<ReleaseSummary>, modifier: Modifier
 
 @Composable
 internal fun WhatsNewScreen(onContinue: () -> Unit) {
-    var showHistory by remember { mutableStateOf(false) }
+    // Histórico permanece nos metadados do app, mas não interrompe a apresentação pós-atualização.
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp)) {
@@ -106,22 +106,7 @@ internal fun WhatsNewScreen(onContinue: () -> Unit) {
             }
             Spacer(Modifier.height(24.dp))
             ReleaseHighlights(AppReleaseNotes.forWhatsNew())
-            Spacer(Modifier.height(16.dp))
-            OutlinedButton(onClick = { showHistory = !showHistory }, shape = UaiShapes.button) {
-                Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(19.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(if (showHistory) "Ocultar histórico" else "Ver histórico de versões")
-            }
-            if (showHistory) {
-                Spacer(Modifier.height(16.dp))
-                ReleaseHighlights(AppReleaseNotes.forHistory())
-            }
             Spacer(Modifier.height(24.dp))
-            Text("As mudanças anteriores ficam no histórico, disponível quando você quiser consultar.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(16.dp))
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Button(onClick = onContinue,

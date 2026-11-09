@@ -1,3 +1,38 @@
+# Uai Cortes 0.1.250 (2026-11-09)
+
+- Página Redes: alternância entre YouTube e Facebook · Páginas, mantendo a grade de vídeos do YouTube intacta.
+- Consulta manual de posts da Página que a Meta retorna com anexo de vídeo; filtros por Página, busca local, paginação e miniaturas restritas à CDN. Não promete listar todos os Reels nem apresenta métricas não fornecidas.
+- Permissão de leitura independente da permissão de publicar, tokens só na RAM, checagem da Página autorizada a cada consulta. Nenhum schema modificado, sem postagem automática.
+- Testes de parser/links, sintaxe Kotlin, regressões, ZIP e versionamento; build Android e acesso real à Meta ainda exigem validação.
+
+
+- Redes Sociais: novo cartão principal azul para publicar vídeos, hierarquia de cabeçalho mais clara e espaçamento revisado.
+- Visão geral: filtros compactos por canal, métricas com ícones e valores legíveis sem alterar as fontes de dados oficiais.
+- Vídeos publicados: cartões com cantos arredondados, thumbnails 16:9, selo YouTube, identificação do canal e visualizações em destaque, dois por linha.
+- Busca e erros: resultados de pesquisa com fundo e alvos mais claros, aviso quando não há resultados, estados vazios de canal e vídeo mais orientativos.
+- Sem alteração de endpoints, banco, credenciais, fluxo de publicação, cotas ou suporte de plataforma. Facebook permanece futuro na lista remota.
+- v0.1.249/versionCode 250; compilar CI e revisar aparência em aparelho antes de considerar APK validado.
+
+# Uai Cortes 0.1.248 (2026-11-09)
+
+- Redes: catálogo YouTube renderizado com cartões em duas colunas, miniaturas reais de host validado, cache de memória limitado e visualizações em destaque.
+- Pesquisa: lupa ao lado de Vídeos publicados, janela central com filtro por título/canal sobre dados já carregados; atualizar vira ícone.
+- Contas: painel de inclusão, vínculo e autorização movido para Configurações > Minhas contas e canais; aba Redes reduz duplicação.
+- Publicação: visualização do único vídeo selecionado em miniatura, tocar abre prévia no player do sistema; X remove arquivo para nova seleção. Preserva multipublicação explícita.
+- Exportação e upload YouTube: diálogos personalizados com hierarquia de ações, sem envio automático; histórico retirado da tela Novidades após atualização.
+- Compatibilidade: metadados de miniatura opcionais no cache atual, sem alterar esquema de projetos ou catálogo social; plataforma Facebook futura não é considerada implementada.
+- v0.1.248/versionCode 249; CI Android e validação visual no aparelho pendentes.
+
+# Uai Cortes 0.1.247 (2026-11-09)
+
+- Vozes Google: histórico offline de prévias associado ao ID real da voz em armazenamento privado; lista mesmo quando a frase, o modelo ou o estilo atual diferem dos usados na geração.
+- Central: contagem de amostras por voz; acesso pela ficha, dois filtros distintos (prévia atual vs qualquer amostra indexada), reprodução, parar e exportar WAV pelo Storage Access Framework sem custos de API.
+- Exclusão individual de WAV com confirmação, sem alterar favoritos, catálogo, outras prévias, mídia do projeto ou credenciais. Falhas de exportação não removem a fonte.
+- Identidade de prévia congelada antes da chamada: evita guardar a geração de um modelo/frase com hash de outro perfil se a configuração mudar durante a suspensão.
+- Sem inferência de propriedades que não constam do índice histórico; sem envio de texto, caminho de arquivo ou tokens no diagnóstico.
+- AndroidTest do histórico e contrato Python de regressão incluídos; preservados cinco APKs, esquema 4, assinatura, narrativas externas/Coqui/Chatterbox.
+- Código-fonte 0.1.247/versionCode 248. Build Android Media3, instrumentação e aparelhos físicos pendentes.
+
 # Uai Cortes 0.1.246 (2026-11-09)
 
 - Importação de imagem: valida dimensões por BitmapFactory e identifica MIME pelos bytes decodificados; admite provedores sem MIME ou SIZE válidos; bloqueia conteúdos não suportados sem confiar apenas na declaração do provedor.

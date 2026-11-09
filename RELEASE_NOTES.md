@@ -1,3 +1,36 @@
+# Uai Cortes · v0.1.250 — Vídeos de Páginas Facebook sob consulta
+
+- Abas YouTube e Facebook · Páginas em Redes Sociais, preservando filtros e estatísticas reais do YouTube.
+- Facebook: consulta explícita de publicações de Página contendo anexos de vídeo, grade de dois cartões, busca local e paginação. Reels ausentes na API não são inventados.
+- Visualizações do Facebook marcadas indisponíveis quando não retornadas; imagens externas com validação HTTPS e limites de memória.
+- Tokens de Página permanecem em memória e autorização de leitura não exige autorização de publicação.
+- 0.1.250/versionCode 251. Compilação Android e API Meta real pendentes.
+
+
+- Publicar vídeo em destaque azul com ícone, descrição e seta.
+- Visão geral com chips de canais e cartões de métricas com ícones.
+- Miniaturas em dois cartões por linha, identificação YouTube, títulos legíveis e visualizações destacadas.
+- Busca central com resultados mais organizados e mensagens de estados vazios mais claras.
+- Consultas e publicação continuam apenas mediante ação do usuário; contas permanecem em Configurações e Facebook ainda não integra a biblioteca de vídeos.
+- Compilação Android e teste visual em aparelho pendentes.
+
+# Uai Cortes · v0.1.248 — Redes e publicação mais organizadas
+
+- Redes Sociais: vídeos em grade de duas colunas com miniaturas reais e visualizações destacadas.
+- Pesquisa em pop-up central e atualização por ícone; título da biblioteca virou Vídeos publicados.
+- Minhas contas e canais em Configurações com os controles existentes de YouTube e Facebook Página.
+- Publicar vídeo mostra miniatura e nome do único arquivo escolhido, permite assistir ou remover com X.
+- Exportar e autorizar envio YouTube usam janelas personalizadas; Novidades depois de atualizar mostra a versão atual sem botão de histórico.
+- O catálogo de vídeos Facebook permanece futuro, sem presumir integração de listagem. Compilação Android e testes no aparelho pendentes.
+
+# Uai Cortes · versão 0.1.247 — Histórico e exportação de Vozes Google
+
+- Histórico de prévias WAV por voz na Central, incluindo amostras de frases e modelos anteriores que continuam armazenadas no aparelho.
+- Reproduzir ou parar uma prévia sem acesso à internet; salvar WAV externo usando o seletor Android, ou excluir individualmente com confirmação.
+- Filtros separados para vozes com prévia do perfil atual e vozes com qualquer amostra indexada, sem gerar ou cobrar novas solicitações Gemini ao explorar o histórico.
+- Geração de nova prévia passa a fixar modelo, texto e estilo no início para associar o áudio ao hash correto do cache.
+- Vozes, favoritos, áudios de projeto e demais funções mantidos. Código-fonte v0.1.247/versionCode 248; build Android e validação no celular pendentes.
+
 # Uai Cortes · versão 0.1.246 — Reparar mídias e importar fotos
 
 - Importar fotos funciona melhor com provedores de galeria que omitem MIME ou metadados, usando os dados da imagem para validar o formato e a resolução.

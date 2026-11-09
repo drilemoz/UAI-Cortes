@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
@@ -56,7 +57,8 @@ internal fun tryShareVideo(context: Context, publication: SocialPublication): Bo
 internal fun SocialDashboardScreen(
     onTab: (String) -> Unit,
     onCompose: () -> Unit,
-    onApiCenter: () -> Unit
+    onApiCenter: () -> Unit,
+    accountsOnly: Boolean = false
 ) {
     val context = LocalContext.current
     val store = remember(context) { SocialStore(context) }
@@ -79,7 +81,17 @@ internal fun SocialDashboardScreen(
     DisposableEffect(Unit) { onDispose { youtubeSessionTokens.clear() } }
     var pendingChannelQueue by remember { mutableStateOf<List<SocialAccount>>(emptyList()) }
     var selectedChannelId by rememberSaveable { mutableStateOf("") }
-    var manageAccounts by rememberSaveable { mutableStateOf(false) }
+    var selectedFacebookPageId by rememberSaveable { mutableStateOf("") }
+    var activePlatform by rememberSaveable { mutableStateOf("youtube") }
+    var facebookBusy by remember { mutableStateOf(false) }
+    var facebookError by remember { mutableStateOf("") }
+    var facebookAuthorized by remember { mutableStateOf(SocialMetaAuth.currentUserToken() != null) }
+    var facebookPostsByPage by remember {
+        mutableStateOf<Map<String, List<FacebookPageVideoPost>>>(emptyMap())
+    }
+    var facebookNextCursors by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var pendingFacebookPages by remember { mutableStateOf<List<SocialAccount>>(emptyList()) }
+    var manageAccounts by rememberSaveable(accountsOnly) { mutableStateOf(accountsOnly) }
     var showHistory by rememberSaveable { mutableStateOf(false) }
     var showSocialHelp by rememberSaveable { mutableStateOf(false) }
 
@@ -198,6 +210,75 @@ internal fun SocialDashboardScreen(
         if (cached != null) withVerifiedToken(cached, false)
         else authorizeYouTube(false) { token -> withVerifiedToken(token, true) }
     }
+    /** Leitura Meta sob ação explícita: Página e token são verificados na sessão.
+     * Não há retry automático, persistência de token ou consulta em segundo plano.
+     */
+    fun fetchFacebookPosts(account: SocialAccount, cursor: String) {
+        val id = account.remotePageId
+        if (facebookBusy || metaBusy || !SocialPublicationPolicy.validPageId(id)) return
+        if (!SocialMetaAuth.isConfigured) {
+            facebookError = "A integração Meta não está configurada neste APK."
+            pendingFacebookPages = emptyList()
+            return
+        }
+        val userToken = SocialMetaAuth.currentUserToken()
+        if (userToken == null) {
+            facebookAuthorized = false
+            facebookError = "Entre com Facebook para consultar as publicações da Página."
+            pendingFacebookPages = emptyList()
+            return
+        }
+        facebookAuthorized = true
+        facebookBusy = true
+        facebookError = ""
+        scope.launch {
+            try {
+                val pages = SocialExternalApis.facebookPages(userToken)
+                SocialMetaAuth.putPageTokens(pages)
+                val page = pages.firstOrNull { it.id == id }
+                    ?: error("A Página cadastrada não pertence às Páginas autorizadas nesta sessão.")
+                val token = SocialMetaAuth.pageReadToken(id)
+                    ?: error("Permissões pages_read_engagement/pages_read_user_content ausentes. Autorize a leitura das Páginas.")
+                val pageResult = FacebookPagePostsApi.listVideoPosts(token, id,
+                    page.name.ifBlank { account.label }, cursor)
+                val old = if (cursor.isEmpty()) emptyList() else facebookPostsByPage[id].orEmpty()
+                facebookPostsByPage = facebookPostsByPage + (id to
+                    (old + pageResult.posts).distinctBy { it.id }.take(300))
+                facebookNextCursors = facebookNextCursors +
+                    (id to if (facebookPostsByPage[id].orEmpty().size >= 300) "" else pageResult.nextCursor)
+                if (pageResult.posts.isEmpty() && pageResult.consulted > 0 && cursor.isEmpty())
+                    facebookError = "Publicações consultadas, mas sem anexos de vídeo acessíveis. Alguns Reels não aparecem na API."
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                facebookError = if (error is IllegalStateException) error.message
+                    ?: "Falha ao consultar a Página Facebook." else
+                    "Não foi possível consultar as publicações da Página. Confira rede e permissões Meta."
+                pendingFacebookPages = emptyList()
+            } finally {
+                facebookBusy = false
+            }
+        }
+    }
+    LaunchedEffect(facebookBusy, pendingFacebookPages) {
+        if (!facebookBusy && pendingFacebookPages.isNotEmpty()) {
+            val next = pendingFacebookPages.first()
+            pendingFacebookPages = pendingFacebookPages.drop(1)
+            fetchFacebookPosts(next, "")
+        }
+    }
+    fun connectFacebookReader() {
+        if (activity == null || !SocialMetaAuth.isConfigured) {
+            facebookError = "Login Meta indisponível. Confira Serviços e APIs."
+            return
+        }
+        facebookBusy = true
+        SocialMetaAuth.start(activity, false) { ok, message ->
+            facebookBusy = false
+            facebookAuthorized = ok
+            facebookError = if (ok) "Autorização concluída. Toque em atualizar para consultar suas Páginas." else message
+        }
+    }
     // Ação explícita Atualizar canais: um canal por vez; sem autorização em segundo plano.
     LaunchedEffect(youtubeBusy, pendingChannelQueue) {
         if (!youtubeBusy && pendingChannelQueue.isNotEmpty()) {
@@ -229,13 +310,18 @@ internal fun SocialDashboardScreen(
     var selectedPost by remember { mutableStateOf<SocialPublication?>(null) }
     var tikTokStatusPost by remember { mutableStateOf<SocialPublication?>(null) }
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp),
+        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Redes Sociais", style = MaterialTheme.typography.headlineSmall,
+                Text(if (accountsOnly) "Minhas contas" else "Redes Sociais",
+                    style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold)
-                Text("Contas e publicações", style = MaterialTheme.typography.bodySmall,
+                Text(if (accountsOnly) "Canais conectados e autorizações" else "Sua central de publicações",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (accountsOnly) IconButton(onClick = { onTab("settings") }) {
+                Icon(Icons.Default.ArrowBack, "Voltar às configurações")
             }
             IconButton(onClick = { showSocialHelp = true }) {
                 Icon(Icons.Default.HelpOutline, "Ajuda sobre Redes Sociais")
@@ -243,18 +329,33 @@ internal fun SocialDashboardScreen(
             IconButton(onClick = onApiCenter) { Icon(Icons.Default.Settings, "Integrações e APIs") }
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            .padding(horizontal = 16.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             if (failure.isNotBlank()) Text(failure, color = MaterialTheme.colorScheme.error)
-            Button(onClick = onCompose, modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp),
-                shape = UaiShapes.button, enabled = data != null) {
-                Icon(Icons.Default.Upload, null)
-                Spacer(Modifier.width(8.dp))
-                Text("Publicar vídeo")
+            if (!accountsOnly) Surface(
+                onClick = onCompose, enabled = data != null, modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp), color = Blue, contentColor = Color.White
+            ) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Box(Modifier.size(52.dp).background(Color.White.copy(alpha = 0.16f),
+                        RoundedCornerShape(16.dp)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Upload, null, Modifier.size(27.dp), tint = Color.White)
+                    }
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Publicar vídeo", style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("Escolha seu vídeo e os canais de destino",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.88f))
+                    }
+                    Icon(Icons.Default.ArrowForward, "Abrir publicação de vídeo",
+                        Modifier.size(24.dp), tint = Color.White)
+                }
             }
             val state = data
             if (state != null) {
-                // Controle de contas fora do painel: canais em faixa horizontal no resumo.
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                if (accountsOnly) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("Meus canais e contas (${state.accounts.size})",
                         modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
                     TextButton(onClick = { manageAccounts = !manageAccounts }) {
@@ -265,24 +366,56 @@ internal fun SocialDashboardScreen(
                         Icon(Icons.Default.Add, "Adicionar conta")
                     }
                 }
-                SocialYouTubeLibraryUi(
-                    accounts = state.accounts,
-                    selectedChannelId = selectedChannelId,
-                    onSelectChannel = { selectedChannelId = it; youtubeLibraryError = "" },
-                    busy = youtubeLibraryBusy || youtubeBusy,
-                    videosByChannel = youtubeLibraryVideosByChannel,
-                    nextPageTokensByChannel = youtubeLibraryNextPages,
-                    channelStatistics = youtubeChannelStats,
-                    publications = state.publications,
-                    error = youtubeLibraryError,
-                    onLoad = ::fetchOldYouTubeVideos,
-                    onLoadAll = { channels ->
-                        if (!youtubeBusy && channels.isNotEmpty()) {
-                            pendingChannelQueue = channels.distinctBy { it.remoteChannelId }
-                        }
+                if (!accountsOnly) {
+                    Row(Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = activePlatform == "youtube",
+                            onClick = { activePlatform = "youtube" },
+                            label = { Text("YouTube") },
+                            leadingIcon = { Icon(Icons.Default.PlayCircleOutline, null,
+                                Modifier.size(18.dp)) })
+                        FilterChip(selected = activePlatform == "facebook",
+                            onClick = { activePlatform = "facebook" },
+                            label = { Text("Facebook · Páginas") },
+                            leadingIcon = { Icon(Icons.Default.VideoLibrary, null,
+                                Modifier.size(18.dp)) })
                     }
-                )
-                if (manageAccounts) {
+                    if (activePlatform == "youtube") SocialYouTubeLibraryUi(
+                        accounts = state.accounts,
+                        selectedChannelId = selectedChannelId,
+                        onSelectChannel = { selectedChannelId = it; youtubeLibraryError = "" },
+                        busy = youtubeLibraryBusy || youtubeBusy,
+                        videosByChannel = youtubeLibraryVideosByChannel,
+                        nextPageTokensByChannel = youtubeLibraryNextPages,
+                        channelStatistics = youtubeChannelStats,
+                        publications = state.publications,
+                        error = youtubeLibraryError,
+                        onLoad = ::fetchOldYouTubeVideos,
+                        onLoadAll = { channels ->
+                            if (!youtubeBusy && channels.isNotEmpty()) {
+                                pendingChannelQueue = channels.distinctBy { it.remoteChannelId }
+                            }
+                        }
+                    ) else SocialFacebookPageLibraryUi(
+                        accounts = state.accounts,
+                        selectedPageId = selectedFacebookPageId,
+                        onSelectPage = { selectedFacebookPageId = it; facebookError = "" },
+                        videosByPage = facebookPostsByPage,
+                        nextCursors = facebookNextCursors,
+                        busy = facebookBusy,
+                        error = facebookError,
+                        configured = SocialMetaAuth.isConfigured,
+                        authorized = facebookAuthorized,
+                        onAuthorize = ::connectFacebookReader,
+                        onLoad = ::fetchFacebookPosts,
+                        onLoadAll = { pages ->
+                            if (!facebookBusy && pages.isNotEmpty()) {
+                                pendingFacebookPages = pages.distinctBy { it.remotePageId }
+                            }
+                        }
+                    )
+                }
+                if (accountsOnly && manageAccounts) {
                     if (state.accounts.isEmpty()) Text("Adicione um canal para consultar seus vídeos.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 // Controles Meta aparecem apenas quando há Página cadastrada.
@@ -405,6 +538,7 @@ internal fun SocialDashboardScreen(
                     }
                 }
                 }
+                if (!accountsOnly) {
                 val reviewCount = state.publications.count {
                     it.status == SocialPublicationStatus.UPLOAD_REVIEW ||
                         it.status == SocialPublicationStatus.SHARED_UNCONFIRMED
@@ -495,9 +629,10 @@ internal fun SocialDashboardScreen(
                 )
                 }
                 Spacer(Modifier.height(14.dp))
+                }
             }
         }
-        MainNav("social", onTab)
+        MainNav(if (accountsOnly) "settings" else "social", onTab)
     }
     if (showSocialHelp) AlertDialog(
         onDismissRequest = { showSocialHelp = false },

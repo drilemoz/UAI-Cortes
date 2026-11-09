@@ -281,8 +281,8 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
             .padding(horizontal=18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Heading("Configurações",back)
-        // Novidades acessível no topo, sem interferir na abertura automática pós-update.
-        ItemCard(Icons.Default.AutoAwesome,"Novidades","Mudanças da versão atual e histórico") { onClick("whats_new") }
+        ItemCard(Icons.Default.People,"Minhas contas e canais",
+            "Gerenciar YouTube e páginas do Facebook") { onClick("social_accounts") }
         ItemCard(Icons.Default.Tune,"Geral","Qualidade e armazenamento") {onClick("general")}
         ItemCard(Icons.Default.Backup,"Salvamento e segurança",
             "Cópias automáticas, restauração e backup externo") { onClick("backup_settings") }

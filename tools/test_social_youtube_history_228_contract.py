@@ -44,7 +44,7 @@ else:
     assert 'youtubeLibraryVideos' in dash
     assert 'Filtrar títulos carregados' in ui
     assert 'SocialYouTubeLibraryAggregate.merge(videosByChannel)' in ui
-assert 'https://www.youtube.com/watch?v=${video.id}' in ui
+assert 'https://www.youtube.com/watch?v=$id' in ui
 assert 'Envios pelo Uai Cortes' in history
 assert 'horizontalScroll(rememberScrollState())' in history
 assert 'youtube.readonly' in auth and 'requestOfflineAccess' not in auth

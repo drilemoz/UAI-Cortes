@@ -26,7 +26,7 @@ assert all(x in dialogs for x in ('internal fun SocialAddDestinationDialog(',
     'internal fun SocialAccountDialog(', 'internal fun SocialPublicationDetailDialog('))
 assert not any(x in dash for x in ('internal fun SocialAccountDialog(',
     'internal object SocialPublicConfig', 'internal fun SocialPublishScreen('))
-assert 'Text("Publicar vídeo")' in dash and 'SocialAccountCard(' in dash and 'rememberSaveable(account.id)' in account
+assert 'Text("Publicar vídeo"' in dash and 'SocialAccountCard(' in dash and 'rememberSaveable(account.id)' in account
 assert 'UaiShapes.card' in account and 'if (expanded)' in account
 assert 'Vincular canal' in dash and 'Verificar conta' in dash
 assert 'A autorização será conferida ao publicar' in account

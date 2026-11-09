@@ -1,3 +1,29 @@
+# Uai Cortes · v0.1.250 — Redes com consulta de publicações Facebook
+
+- Redes Sociais passa a alternar entre vídeos do YouTube e publicações Facebook de Páginas autorizadas. A leitura Facebook acontece apenas quando o usuário solicita; filtros por Página e pesquisa local sobre o que foi carregado.
+- A Meta pode não devolver todos os Reels e pode omitir miniaturas/visualizações: o aplicativo informa a limitação, sem fabricar estatísticas ou realizar publicações.
+- Tokens OAuth/Meta não são persistidos; dados de projetos, edições e vídeos enviados permanecem no mesmo esquema.
+- A consulta depende de configuração Meta, permissões aprovadas e conexão. Necessita testes reais no aparelho, além da validação do código.
+
+
+A aba Redes Sociais agora destaca **Publicar vídeo** num cartão principal, seguido de Visão geral com filtros por canal e estatísticas realmente recebidas do YouTube. Os vídeos continuam em duas colunas com miniatura 16:9, título, origem e visualizações. As mensagens de ausência de canais/vídeos e a busca em janela central foram reorganizadas. Tudo respeita temas claro, escuro e AMOLED, sem criar solicitações de rede ao digitar. Não alteramos OAuth, armazenamento de projetos, esquema social, atualização dos canais ou envio de vídeos. Facebook/Reels não são listados ainda, pois faltam integração e autorização específicas de consulta. A validação visual e o build Android completos seguem pendentes.
+
+# Uai Cortes · v0.1.248 — Biblioteca de vídeos e publicação renovadas
+
+Na aba Redes Sociais, os **Vídeos publicados** de canais YouTube consultados aparecem em dois cartões por linha com imagem de capa real, contador de visualizações e indicação de canal. A lupa abre a busca local centralizada por título/canal; atualizar é uma ação manual única. Imagens de URL restrita (YouTube) são buscadas sem token OAuth e guardadas somente em cache de memória limitado. Miniaturas ainda podem faltar por falta de rede, remoção do vídeo ou CDN indisponível.
+
+**Minhas contas e canais** foi movido para Configurações, conservando cadastro, vinculação e autorização de canais YouTube e Facebook Página. A biblioteca principal ainda consulta somente vídeos do YouTube; Facebook/Reels na listagem requer API e autorização próprias no futuro. Publicar vídeo aceita um arquivo por vez, mostra miniatura local e nome, permite assistir e remover com X antes de escolher outro, mantendo vários destinos quando permitidos e confirmação antes do upload.
+
+O diálogo de exportação e o de autorização do YouTube usam o novo componente visual reutilizável com ações claras. A tela Novidades após atualização mostra apenas as alterações atuais; histórico técnico permanece na documentação e catálogo interno, mas não abre na interface pós-atualização. Não modificar apps/credenciais nem enviar vídeos sem toque explícito. Compilar CI e conferir UI no aparelho antes de usar como APK estável.
+
+# Uai Cortes · v0.1.247 — Vozes Google com histórico de prévias offline
+
+A Central de Vozes Gemini ganhou acesso a amostras WAV anteriores, mesmo depois de trocar a frase de comparação, o modelo ou o estilo. Na ficha de uma voz, use **Prévias offline** para listar o histórico local conhecido, reproduzir, parar, salvar WAV via seletor de arquivos do Android ou excluir só a amostra escolhida. O catálogo, os favoritos, as narrações e os projetos não são alterados.
+
+O filtro **Somente prévias da frase/modelo atuais** continua existindo, separado do novo filtro **Vozes com qualquer prévia no histórico offline**. As prévias do histórico são identificadas por voz e hash; modelo, frase e estilo de arquivos antigos **não são recuperáveis**, portanto não são inventados. Prévia anterior ao índice de associação não recebe vínculo presumido.
+
+A síntese Gemini mantém confirmação explícita de envio e possível custo; ações offline não geram requisições. Para impedir confusão no cache, a geração congela modelo, texto e instrução de estilo no início da chamada. Arquivos WAV exportados são salvos somente no destino escolhido, podendo ser usados em editores externos conforme termos dos serviços. Testes Android reais e CI ainda devem confirmar funcionamento.
+
 # Uai Cortes · v0.1.246 — Fotos e projetos com mídia ausente
 
 A importação de fotos agora tenta reconhecer o formato pelos dados decodificados quando a galeria retorna MIME genérico ou não fornece metadados. A validação ainda limita imagens a 24 MiB e 24 megapixels, rejeita formatos não suportados e cancela cópias de forma segura ao sair da tela. Nenhum original é apagado.

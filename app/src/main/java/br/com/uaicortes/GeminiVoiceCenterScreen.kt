@@ -1,6 +1,8 @@
 package br.com.uaicortes
 
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -23,6 +26,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import java.text.DateFormat
 import java.util.Date
 
@@ -63,6 +67,7 @@ internal fun GeminiVoiceCenterScreen(
     var occupiedBytes by remember { mutableLongStateOf(0L) }
     var favoriteIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var previewIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var historyCounts by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var aliases by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var manualReviews by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var hideReviewedSimilar by remember { mutableStateOf(false) }
@@ -82,6 +87,7 @@ internal fun GeminiVoiceCenterScreen(
     var language by remember { mutableStateOf("") }
     var onlyFavorites by remember { mutableStateOf(false) }
     var onlySaved by remember { mutableStateOf(false) }
+    var onlyWithHistory by remember { mutableStateOf(false) }
     var sampleModel by remember { mutableStateOf(initialModel) }
     var modelMenu by remember { mutableStateOf(false) }
     var storageMenu by remember { mutableStateOf(false) }
@@ -94,11 +100,34 @@ internal fun GeminiVoiceCenterScreen(
     var blindRevealed by remember { mutableStateOf(false) }
     var lastBlindPair by remember { mutableStateOf<String?>(null) }
     var detailsVoice by remember { mutableStateOf<GeminiVoice?>(null) }
+    var historyVoice by remember { mutableStateOf<GeminiVoice?>(null) }
+    var historyItems by remember { mutableStateOf<List<GeminiSavedVoicePreview>>(emptyList()) }
+    var pendingHistoryDelete by remember { mutableStateOf<GeminiSavedVoicePreview?>(null) }
+    var pendingHistoryExport by rememberSaveable { mutableStateOf<String?>(null) }
     var editVoice by remember { mutableStateOf<GeminiVoice?>(null) }
     var aliasDraft by remember { mutableStateOf("") }
     var pendingSample by remember { mutableStateOf<GeminiVoice?>(null) }
     var pendingDelete by remember { mutableStateOf(false) }
     var visibleCount by remember { mutableIntStateOf(30) }
+
+    val wavPicker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("audio/wav")) { uri ->
+        val hash = pendingHistoryExport
+        pendingHistoryExport = null
+        if (uri != null && hash != null) scope.launch {
+            try {
+                val bytes = withContext(Dispatchers.IO) {
+                    val source = cache.find(hash) ?: throw IOException("A prévia não está disponível.")
+                    ctx.contentResolver.openOutputStream(uri, "w")?.use { output ->
+                        source.inputStream().use { input -> input.copyTo(output) }
+                    } ?: throw IOException("Não foi possível escrever o WAV.")
+                }
+                status = "Prévia exportada: ${bytes / 1024} KiB. Nenhuma chamada Google foi feita."
+            } catch (e: CancellationException) { throw e }
+            catch (_: Exception) {
+                status = "Falha ao salvar WAV no destino escolhido; a prévia original foi preservada."
+            }
+        }
+    }
 
     fun title(voice: GeminiVoice) = GeminiVoiceAliases.title(voice, aliases)
     fun sampleText(): String = GeminiVoiceSampleText.content(sampleMode, customText)
@@ -108,10 +137,12 @@ internal fun GeminiVoiceCenterScreen(
     suspend fun updatePreviewIndicators() {
         val keys = voices.map { it.id to sampleId(it) }
         val state = withContext(Dispatchers.IO) {
-            keys.mapNotNull { (id, hash) -> id.takeIf { cache.exists(hash) } }.toSet() to cache.usageBytes()
+            Triple(keys.mapNotNull { (id, hash) -> id.takeIf { cache.exists(hash) } }.toSet(),
+                cache.usageBytes(), cache.countsByVoice())
         }
         previewIds = state.first
         occupiedBytes = state.second
+        historyCounts = state.third
     }
     suspend fun fetchAllLanguages() {
         if (working) return
@@ -198,6 +229,17 @@ internal fun GeminiVoiceCenterScreen(
         loaded = true
         updatePreviewIndicators()
     }
+    LaunchedEffect(historyVoice) {
+        historyItems = historyVoice?.let { selected ->
+            withContext(Dispatchers.IO) { cache.listByVoice(selected.id) }
+        }.orEmpty()
+    }
+    suspend fun reloadHistory() {
+        updatePreviewIndicators()
+        historyItems = historyVoice?.let { selected ->
+            withContext(Dispatchers.IO) { cache.listByVoice(selected.id) }
+        }.orEmpty()
+    }
     // Atualização automática é opt-in; o padrão é funcionar somente com snapshot local.
     LaunchedEffect(loaded, autoRefresh) {
         if (loaded && autoRefresh) fetchFromGoogle()
@@ -205,7 +247,7 @@ internal fun GeminiVoiceCenterScreen(
     LaunchedEffect(sampleModel, styleInstruction, voices, sampleMode, customText) {
         if (loaded) updatePreviewIndicators()
     }
-    LaunchedEffect(query, gender, pitch, accent, contextFilter, persona, language, onlyFavorites, onlySaved, onlyPortuguese, hideReviewedSimilar) {
+    LaunchedEffect(query, gender, pitch, accent, contextFilter, persona, language, onlyFavorites, onlySaved, onlyWithHistory, onlyPortuguese, hideReviewedSimilar) {
         visibleCount = 30
     }
 
@@ -220,6 +262,7 @@ internal fun GeminiVoiceCenterScreen(
         .let { GeminiVoiceSearch.byMetadata(it, "persona", persona) }
         .let { GeminiVoiceSearch.byMetadata(it, "language", language) }
         .filter { (!onlyFavorites || it.id in favoriteIds) && (!onlySaved || it.id in previewIds) &&
+            (!onlyWithHistory || historyCounts.getOrDefault(it.id, 0) > 0) &&
             (!onlyPortuguese || GeminiVoiceDiscovery.isPortuguese(it)) && it.id !in reviewedHidden }
         .sortedWith(compareByDescending<GeminiVoice> { it.id in favoriteIds }
             .thenBy { GeminiVoiceAliases.title(it, aliases) })
@@ -231,7 +274,7 @@ internal fun GeminiVoiceCenterScreen(
     val currentReview = comparisonKey?.let { manualReviews[it] }
     val advancedCount = listOf(accent, contextFilter, persona, language).count { it.isNotBlank() } +
         (if (gender != "Todas") 1 else 0) + (if (pitch != "Todos") 1 else 0) +
-        (if (onlySaved) 1 else 0) + (if (onlyPortuguese) 1 else 0) +
+        (if (onlySaved) 1 else 0) + (if (onlyWithHistory) 1 else 0) + (if (onlyPortuguese) 1 else 0) +
         (if (hideReviewedSimilar) 1 else 0)
 
     fun startBlindComparison() {
@@ -438,8 +481,11 @@ internal fun GeminiVoiceCenterScreen(
                                 Text(GeminiVoicePresentation.shortDetails(voice), fontSize = 11.sp,
                                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                if (saved) Text("Prévia offline", fontSize = 10.sp,
+                                if (saved) Text("Prévia desta frase/modelo", fontSize = 10.sp,
                                     color = MaterialTheme.colorScheme.primary)
+                                val historyCount = historyCounts[voice.id] ?: 0
+                                if (historyCount > 0) Text("$historyCount prévia(s) no histórico local",
+                                    fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             IconButton(onClick = {
                                 val next = GeminiVoiceFavorites.toggle(favoriteIds, voice.id)
@@ -532,7 +578,11 @@ internal fun GeminiVoiceCenterScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = onlySaved, onCheckedChange = { onlySaved = it })
-                    Text("Somente prévias salvas neste perfil")
+                    Text("Somente prévias da frase/modelo atuais")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = onlyWithHistory, onCheckedChange = { onlyWithHistory = it })
+                    Text("Vozes com qualquer prévia no histórico offline")
                 }
                 Text("Sem inferir sotaque, idade ou identidade pela gravação.", fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -541,7 +591,7 @@ internal fun GeminiVoiceCenterScreen(
         confirmButton = { TextButton(onClick = { filtersOpen = false }) { Text("Ver resultados") } },
         dismissButton = { TextButton(onClick = {
             gender = "Todas"; pitch = "Todos"; accent = ""; persona = ""; contextFilter = ""
-            language = ""; onlySaved = false; onlyPortuguese = false; hideReviewedSimilar = false
+            language = ""; onlySaved = false; onlyWithHistory = false; onlyPortuguese = false; hideReviewedSimilar = false
         }) { Text("Limpar filtros") } })
 
     if (settingsOpen) AlertDialog(onDismissRequest = { settingsOpen = false },
@@ -666,6 +716,16 @@ internal fun GeminiVoiceCenterScreen(
                     }, modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
                         Icon(Icons.Default.Edit, null); Text("Apelido local")
                     }
+                    OutlinedButton(onClick = {
+                        detailsVoice = null; historyVoice = voice
+                    }, modifier = Modifier.fillMaxWidth(), enabled = (historyCounts[voice.id] ?: 0) > 0,
+                        shape = UaiShapes.button) {
+                        Icon(Icons.Default.FolderOpen, null)
+                        Text("Prévias offline (${historyCounts[voice.id] ?: 0})")
+                    }
+                    Text("Amostras geradas com outras frases e modelos continuam acessíveis. " +
+                        "Ouvir e exportar não chama o Gemini.", fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = {
                             blindComparison = false; compareA = voice.id
@@ -683,6 +743,79 @@ internal fun GeminiVoiceCenterScreen(
                 }
             },
             confirmButton = { TextButton(onClick = { detailsVoice = null }) { Text("Fechar") } })
+    }
+    historyVoice?.let { voice ->
+        AlertDialog(onDismissRequest = { historyVoice = null },
+            title = { Text("Prévias de ${title(voice)}") },
+            text = {
+                Column(Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Arquivos WAV já gerados neste aparelho. Sem novas cobranças ou " +
+                        "requisições ao Google. O áudio não substitui uma fala do projeto.", fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (historyItems.isEmpty()) Text("Nenhuma prévia disponível para esta voz.")
+                    historyItems.forEachIndexed { index, item ->
+                        Surface(shape = UaiShapes.card,
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f)) {
+                            Column(Modifier.fillMaxWidth().padding(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("Amostra ${index + 1} · último uso: " +
+                                    DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+                                        .format(Date(item.savedAt)), fontWeight = FontWeight.Medium,
+                                    fontSize = 12.sp)
+                                Text("WAV · ${item.bytes / 1024} KiB · frase/modelo anteriores podem variar",
+                                    fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    IconButton(onClick = {
+                                        scope.launch {
+                                            try {
+                                                val audio = withContext(Dispatchers.IO) { cache.find(item.key) }
+                                                    ?: throw IOException("Prévia indisponível")
+                                                player.setMediaItem(MediaItem.fromUri(Uri.fromFile(audio)))
+                                                player.prepare(); player.play()
+                                                status = "Reproduzindo prévia local. Nenhuma chamada Google."
+                                            } catch (e: CancellationException) { throw e }
+                                            catch (_: Exception) {
+                                                status = "Não foi possível reproduzir a prévia salva."
+                                                reloadHistory()
+                                            }
+                                        }
+                                    }) { Icon(Icons.Default.PlayArrow, "Ouvir prévia") }
+                                    IconButton(onClick = { player.stop() }) {
+                                        Icon(Icons.Default.Stop, "Parar reprodução")
+                                    }
+                                    IconButton(onClick = {
+                                        pendingHistoryExport = item.key
+                                        wavPicker.launch("UaiCortes-previa-${index + 1}.wav")
+                                    }) { Icon(Icons.Default.SaveAlt, "Salvar WAV fora do aplicativo") }
+                                    IconButton(onClick = { pendingHistoryDelete = item }) {
+                                        Icon(Icons.Default.DeleteOutline, "Excluir somente esta prévia")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { historyVoice = null }) { Text("Fechar") } })
+    }
+    pendingHistoryDelete?.let { preview ->
+        AlertDialog(onDismissRequest = { pendingHistoryDelete = null },
+            title = { Text("Excluir apenas esta prévia?") },
+            text = { Text("A exclusão afeta somente este WAV salvo localmente. " +
+                "A voz, os favoritos, os áudios dos projetos e as outras prévias serão preservados.") },
+            confirmButton = { TextButton(onClick = {
+                pendingHistoryDelete = null
+                scope.launch {
+                    val removed = withContext(Dispatchers.IO) { cache.removeOne(preview.key) }
+                    if (removed) {
+                        player.stop()
+                        reloadHistory()
+                        status = "Prévia removida; nenhuma fala de projeto foi alterada."
+                    } else status = "A prévia não pôde ser removida."
+                }
+            }) { Text("Excluir WAV") } },
+            dismissButton = { TextButton(onClick = { pendingHistoryDelete = null }) { Text("Cancelar") } })
     }
     editVoice?.let { voice ->
         AlertDialog(onDismissRequest = { editVoice = null },
@@ -718,14 +851,20 @@ internal fun GeminiVoiceCenterScreen(
                 scope.launch {
                     working = true
                     try {
-                        val id = sampleId(voice)
+                        // Fixar configuração ANTES da primeira suspensão: trocar modelo/frase na tela
+                        // não pode salvar um WAV de outro perfil sob a chave da configuração antiga.
+                        val requestedModel = sampleModel
+                        val requestedText = sampleText()
+                        val requestedStyle = styleInstruction
+                        val id = GeminiPreviewIdentity.idForText("", requestedModel,
+                            voice.id, requestedStyle, requestedText)
                         val existing = withContext(Dispatchers.IO) { cache.find(id) }
                         val file = if (existing != null) existing else {
                             val key = withContext(Dispatchers.IO) { credentials.read() }
                                 ?: error("Chave Gemini ausente.")
-                            withContext(Dispatchers.IO) { pacing.beforeRequest(sampleModel) { } }
-                            val wave = client.synthesize(key, sampleModel, voice.id,
-                                styleInstruction, sampleText())
+                            withContext(Dispatchers.IO) { pacing.beforeRequest(requestedModel) { } }
+                            val wave = client.synthesize(key, requestedModel, voice.id,
+                                requestedStyle, requestedText)
                             withContext(Dispatchers.IO) { cache.save(id, wave.bytes, voice.id) }
                         }
                         player.setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))

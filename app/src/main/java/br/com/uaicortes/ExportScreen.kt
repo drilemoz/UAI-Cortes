@@ -456,27 +456,58 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
         val safeName = ProjectNaming.exportName(name)
         val estimated = VideoExportQuality.estimatedMiBForDuration(
             p.durationMs, quality, true, bitratePreset)
-        AlertDialog(onDismissRequest = { confirmStartExport=false }, shape=UaiShapes.dialog,
-            icon={Icon(Icons.Default.SaveAlt,null)},
-            title={Text("Confirmar exportação")},
-            text={Column(verticalArrangement=Arrangement.spacedBy(7.dp)) {
-                Text("Arquivo: $safeName")
-                Text("${quality}p · ${bitratePreset.label} · " +
-                    "${VideoExportQuality.videoBitrateBps(quality,bitratePreset)/1_000_000} Mb/s solicitados")
-                Text("Tamanho estimado: ~$estimated MiB (pode variar).")
-                Text("Mantenha o aplicativo aberto enquanto processa. " +
-                    "A exportação não publica o vídeo automaticamente.",
-                    style=MaterialTheme.typography.bodySmall)
-            }},
-            confirmButton={TextButton(onClick={
-                confirmStartExport=false
+        UaiActionDialog(title = "Tudo pronto para exportar",
+            description = "Confira as configurações antes de salvar seu vídeo.",
+            icon = Icons.Default.SaveAlt,
+            primaryLabel = "Exportar vídeo", secondaryLabel = "Voltar e revisar",
+            onDismiss = { confirmStartExport = false },
+            onConfirm = {
+                confirmStartExport = false
                 if (!working && p.clips.isNotEmpty()) {
                     previewPlayer.pause()
-                    previewPlaying=false
-                    exportVm.start(p,quality,safeName,bitratePreset,destination,frameMode)
+                    previewPlaying = false
+                    exportVm.start(p, quality, safeName, bitratePreset, destination, frameMode)
                 }
-            }) {Text("Exportar vídeo")}},
-            dismissButton={TextButton(onClick={confirmStartExport=false}) {Text("Revisar")}})
+            }, confirmEnabled = !working && p.clips.isNotEmpty()) {
+            Surface(shape = UaiShapes.item,
+                color = MaterialTheme.colorScheme.surfaceVariant) {
+                Column(Modifier.fillMaxWidth().padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.VideoFile, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(9.dp))
+                        Text(safeName, fontWeight = FontWeight.SemiBold,
+                            maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
+                    HorizontalDivider()
+                    Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Column(Modifier.weight(1f)) {
+                            Text("${quality}p", fontWeight = FontWeight.Bold)
+                            Text("Resolução", style = MaterialTheme.typography.labelSmall)
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text("${VideoExportQuality.videoBitrateBps(quality, bitratePreset)/1_000_000} Mb/s",
+                                fontWeight = FontWeight.Bold)
+                            Text("Solicitado", style = MaterialTheme.typography.labelSmall)
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text("~$estimated MiB", fontWeight = FontWeight.Bold)
+                            Text("Estimativa", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Default.InfoOutline, null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(19.dp))
+                Text("Mantenha o aplicativo aberto. O arquivo será salvo na galeria, " +
+                    "sem publicar automaticamente em nenhuma rede.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f))
+            }
+        }
     }
     if(framingHelpExpanded) {
         AlertDialog(onDismissRequest={framingHelpExpanded=false},

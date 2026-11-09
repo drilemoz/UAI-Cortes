@@ -22,7 +22,7 @@ assert 'if(it) previewExpanded=true' in s
 assert s.index('Column(Modifier.weight(1f).verticalScroll') < s.index('Surface(shadowElevation=8.dp')
 assert s.index('Surface(shadowElevation=8.dp') < s.index('if(framingHelpExpanded)')
 assert 'navigationBarsPadding()' in s and 'Button(onClick={' in s
-assert 'exportVm.start(p,quality,safeName,bitratePreset,destination,frameMode)' in s
+assert 'exportVm.start(p, quality, safeName, bitratePreset, destination, frameMode)' in s
 assert 'ExportBitratePreset.values().forEach' in s
 assert 'ExportDestination.ORIGINAL.name' in s and 'VerticalFrameMode.FIT.name' in s
 assert 'exportVm.savedVideo' not in s or 'VideoSavedDialog(' in s

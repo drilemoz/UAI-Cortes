@@ -43,7 +43,9 @@ internal class SocialYouTubeSnapshotCache(context: Context) {
                         publishedAt = item.optString("date").take(40),
                         viewCount = optionalNumber(item, "views"),
                         channelId = id,
-                        channelTitle = item.optString("channelTitle").take(100)
+                        channelTitle = item.optString("channelTitle").take(100),
+                        thumbnailUrl = SocialYoutubeThumbnailPolicy.safeUrl(
+                            videoId, item.optString("thumbnailUrl"))
                     ))
                 }
             }.distinctBy { it.id }
@@ -74,7 +76,8 @@ internal class SocialYouTubeSnapshotCache(context: Context) {
                     .put("title", video.title.take(160))
                     .put("date", video.publishedAt.take(40))
                     .put("views", video.viewCount ?: JSONObject.NULL)
-                    .put("channelTitle", video.channelTitle.take(100)))
+                    .put("channelTitle", video.channelTitle.take(100))
+                    .put("thumbnailUrl", SocialYoutubeThumbnailPolicy.safeUrl(video.id, video.thumbnailUrl)))
             }
             entry.put("videos", entries)
             snapshot.stats[id]?.let { stats ->

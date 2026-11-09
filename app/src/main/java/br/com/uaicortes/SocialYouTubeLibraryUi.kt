@@ -5,6 +5,13 @@ import android.net.Uri
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.window.Dialog
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -16,6 +23,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
 import java.text.NumberFormat
 import java.time.Instant
 import java.util.Locale
@@ -52,6 +61,7 @@ internal object SocialYouTubeLibraryAggregate {
                 viewCount = video.viewCount ?: localMatch.viewCount,
                 channelId = video.channelId.ifBlank { localMatch.channelId },
                 channelTitle = video.channelTitle.ifBlank { localMatch.channelTitle },
+                thumbnailUrl = video.thumbnailUrl.ifBlank { localMatch.thumbnailUrl },
                 fromUai = true
             )
         }
@@ -61,6 +71,12 @@ internal object SocialYouTubeLibraryAggregate {
 
     fun loadedChannelCount(videosByChannel: Map<String, List<YouTubeSocialApi.PreviousVideo>>): Int =
         videosByChannel.count { it.value.isNotEmpty() }
+
+    fun matches(video: YouTubeSocialApi.PreviousVideo, text: String): Boolean {
+        val search = text.trim()
+        return search.isEmpty() || video.title.contains(search, ignoreCase = true) ||
+            video.channelTitle.contains(search, ignoreCase = true)
+    }
 
     fun totalViews(videos: List<YouTubeSocialApi.PreviousVideo>): Long =
         videos.sumOf { it.viewCount ?: 0L }
@@ -104,8 +120,9 @@ internal fun SocialYouTubeLibraryUi(
         it.channelId in validIds && (selected == null || it.channelId == selected.remoteChannelId)
     }
     var query by rememberSaveable { mutableStateOf("") }
+    var searching by rememberSaveable { mutableStateOf(false) }
     var visibleLimit by rememberSaveable { mutableIntStateOf(30) }
-    val filtered = selectedVideos.filter { it.title.contains(query.trim(), ignoreCase = true) }
+    val filtered = selectedVideos.filter { SocialYouTubeLibraryAggregate.matches(it, query) }
     val relevantStats = if (selected == null) channelStatistics.filterKeys { it in validIds }.values
         else listOfNotNull(channelStatistics[selected.remoteChannelId])
     val (views, videos, subscribers) = SocialYouTubeLibraryAggregate.channelTotals(relevantStats)
@@ -114,14 +131,30 @@ internal fun SocialYouTubeLibraryUi(
     val context = LocalContext.current
     val lastChecked = relevantStats.map { it.checkedAt }.filter { it > 0L }.minOrNull()
 
-    Text("Canais (${channels.size})", style = MaterialTheme.typography.titleMedium)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("Visão geral", style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold)
+            Text("Acompanhe seus canais do YouTube",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Surface(shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.primaryContainer) {
+            Text("${channels.size} canais", Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer)
+        }
+    }
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         FilterChip(selected = selected == null, onClick = { onSelectChannel(""); visibleLimit = 30 },
+            shape = RoundedCornerShape(12.dp),
             label = { Text("Todos") }, leadingIcon = if (selected == null) { { Icon(Icons.Default.Check, null,
                 Modifier.size(16.dp)) } } else null)
         channels.forEach { channel ->
             FilterChip(selected = selected?.remoteChannelId == channel.remoteChannelId,
+                shape = RoundedCornerShape(12.dp),
                 onClick = { onSelectChannel(channel.remoteChannelId); visibleLimit = 30 },
                 label = { Text(channel.label, maxLines = 1) },
                 leadingIcon = if (selected?.remoteChannelId == channel.remoteChannelId) { {
@@ -130,9 +163,9 @@ internal fun SocialYouTubeLibraryUi(
         }
     }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        SocialMetricTile("Visualizações", views, Modifier.weight(1f))
-        SocialMetricTile("Vídeos", videos, Modifier.weight(1f))
-        SocialMetricTile("Inscritos", subscribers, Modifier.weight(1f))
+        SocialMetricTile("Visualizações", views, Icons.Default.Visibility, Modifier.weight(1f))
+        SocialMetricTile("Vídeos", videos, Icons.Default.PlayCircleOutline, Modifier.weight(1f))
+        SocialMetricTile("Inscritos", subscribers, Icons.Default.PeopleOutline, Modifier.weight(1f))
     }
     Text(if (selected == null) "$loadedCount de ${channels.size} canais com dados · totais da API" else
         if (relevantStats.isEmpty()) "Canal ainda não consultado" else
@@ -140,29 +173,40 @@ internal fun SocialYouTubeLibraryUi(
                 .format(java.util.Date(lastChecked ?: 0L)),
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Spacer(Modifier.height(4.dp))
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text("Vídeos do YouTube", style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.weight(1f))
-        TextButton(onClick = {
+        Column(Modifier.weight(1f)) {
+            Text("Vídeos publicados", style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold)
+            Text("Miniaturas e desempenho dos vídeos carregados",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        IconButton(onClick = { query = ""; searching = true },
+            enabled = selectedVideos.isNotEmpty()) {
+            Icon(Icons.Default.Search, "Pesquisar vídeos publicados")
+        }
+        IconButton(onClick = {
             if (selected != null) onLoad(selected, "") else onLoadAll(channels)
         }, enabled = !busy && channels.isNotEmpty()) {
-            Icon(Icons.Default.Refresh, null, Modifier.size(18.dp))
-            Spacer(Modifier.width(4.dp))
-            Text(if (selected == null) "Atualizar canais" else "Atualizar canal")
+            Icon(Icons.Default.Refresh, "Atualizar vídeos dos canais")
         }
     }
     if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-    if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error,
-        style = MaterialTheme.typography.bodySmall)
-    if (channels.isEmpty()) Text("Adicione um canal YouTube em Gerenciar para consultar os vídeos.",
-        style = MaterialTheme.typography.bodySmall)
-    else {
-        if (selectedVideos.isNotEmpty()) {
-            OutlinedTextField(value = query, onValueChange = { query = it.take(100); visibleLimit = 30 },
-                label = { Text("Pesquisar vídeos carregados") },
-                leadingIcon = { Icon(Icons.Default.Search, null) }, singleLine = true,
-                modifier = Modifier.fillMaxWidth(), shape = UaiShapes.item)
+    if (error.isNotBlank()) Surface(shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.errorContainer) {
+        Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.ErrorOutline, null, tint = MaterialTheme.colorScheme.onErrorContainer)
+            Text(error, color = MaterialTheme.colorScheme.onErrorContainer,
+                style = MaterialTheme.typography.bodySmall)
         }
+    }
+    if (channels.isEmpty()) SocialVideosEmptyState(
+        "Nenhum canal do YouTube cadastrado",
+        "Adicione seus canais em Configurações > Minhas contas e canais.")
+    else {
+        // Pesquisa local acontece no diálogo e não dispara requisição a cada tecla.
         val knownViewCount = selectedVideos.count { it.viewCount != null }
         Text("${socialFormatCount(selectedVideos.size.toLong())} vídeos carregados · " +
             if (knownViewCount == 0) "visualizações não consultadas" else
@@ -170,46 +214,18 @@ internal fun SocialYouTubeLibraryUi(
                     "visualizações em $knownViewCount vídeo(s)",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
-        if (filtered.isEmpty() && !busy) Text(
-            if (selectedVideos.isEmpty()) "Toque em Atualizar para consultar o YouTube. " +
-                "Vídeos confirmados pelo Uai Cortes também aparecem aqui."
-            else "Nenhum título encontrado entre os vídeos carregados.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-        filtered.take(visibleLimit).forEach { video ->
-            OutlinedCard(shape = UaiShapes.card) {
-                Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(video.title, style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold, maxLines = 2,
-                        overflow = TextOverflow.Ellipsis)
-                    val details = buildList {
-                        if (selected == null && video.channelTitle.isNotBlank()) add(video.channelTitle)
-                        if (video.publishedAt.length >= 10) add(video.publishedAt.take(10))
-                        add(video.viewCount?.let { "${socialFormatCount(it)} visualizações" }
-                            ?: "Visualizações não consultadas")
-                    }
-                    Text(details.joinToString(" · "), style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (video.fromUai) Text("Enviado pelo Uai Cortes",
-                            modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary)
-                        else Spacer(Modifier.weight(1f))
-                        TextButton(onClick = {
-                            if (SocialPublicationPolicy.validVideoId(video.id)) runCatching {
-                                context.startActivity(Intent(Intent.ACTION_VIEW,
-                                    Uri.parse("https://www.youtube.com/watch?v=${video.id}")))
-                            }
-                        }) {
-                            Icon(Icons.Default.OpenInNew, null, Modifier.size(16.dp))
-                            Spacer(Modifier.width(4.dp)); Text("Abrir")
-                        }
-                    }
+        if (selectedVideos.isEmpty() && !busy) SocialVideosEmptyState(
+            "Nenhum vídeo carregado",
+            "Toque em atualizar para consultar os vídeos deste canal.")
+        selectedVideos.take(visibleLimit).chunked(2).forEach { rowVideos ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                rowVideos.forEach { video ->
+                    SocialPublishedVideoCard(video, context, Modifier.weight(1f))
                 }
+                if (rowVideos.size == 1) Spacer(Modifier.weight(1f))
             }
         }
-        if (visibleLimit < filtered.size) TextButton(onClick = { visibleLimit += 30 }) {
+        if (visibleLimit < selectedVideos.size) TextButton(onClick = { visibleLimit += 30 }) {
             Text("Mostrar mais vídeos carregados")
         }
         val toLoadMore = nextPageChannels.filter { nextPageTokensByChannel[it.remoteChannelId].orEmpty().isNotBlank() }
@@ -226,16 +242,138 @@ internal fun SocialYouTubeLibraryUi(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
+    if (searching) {
+        Dialog(onDismissRequest = { searching = false }) {
+            Surface(shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Pesquisar publicações", style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.weight(1f))
+                        IconButton(onClick = { searching = false }) {
+                            Icon(Icons.Default.Close, "Fechar pesquisa")
+                        }
+                    }
+                    OutlinedTextField(value = query, onValueChange = { query = it.take(100) },
+                        label = { Text("Título ou canal") }, singleLine = true,
+                        leadingIcon = { Icon(Icons.Default.Search, null) },
+                        trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = "" }) {
+                            Icon(Icons.Default.Clear, "Limpar pesquisa")
+                        } }, modifier = Modifier.fillMaxWidth())
+                    Text("${filtered.size} resultado(s) entre os vídeos carregados",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    LazyColumn(Modifier.heightIn(max = 365.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(filtered, key = { it.id }) { video ->
+                            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant).clickable {
+                                openSocialYouTubeVideo(context, video.id)
+                            }.padding(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                SocialYoutubeThumbnail(video.id, video.thumbnailUrl, Modifier.size(75.dp, 50.dp)
+                                    .clip(RoundedCornerShape(7.dp)))
+                                Column(Modifier.weight(1f)) {
+                                    Text(video.title, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                                        style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                                    Text(video.channelTitle, style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                                }
+                            }
+                        }
+                    }
+                    if (filtered.isEmpty()) Text("Nenhum vídeo corresponde à pesquisa.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    TextButton(onClick = { searching = false }, modifier = Modifier.align(Alignment.End)) {
+                        Text("Fechar")
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun openSocialYouTubeVideo(context: android.content.Context, id: String) {
+    if (SocialPublicationPolicy.validVideoId(id) && id.isNotBlank()) runCatching {
+        context.startActivity(Intent(Intent.ACTION_VIEW,
+            Uri.parse("https://www.youtube.com/watch?v=$id")))
+    }
+}
+
+/** Mesmo layout e os mesmos dados reais em temas claro, escuro e AMOLED. */
+@Composable
+private fun SocialPublishedVideoCard(
+    video: YouTubeSocialApi.PreviousVideo, context: android.content.Context,
+    modifier: Modifier = Modifier
+) {
+    OutlinedCard(onClick = { openSocialYouTubeVideo(context, video.id) },
+        modifier = modifier, shape = RoundedCornerShape(18.dp)) {
+        Column {
+            Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f)) {
+                SocialYoutubeThumbnail(video.id, video.thumbnailUrl, Modifier.fillMaxSize())
+                Surface(modifier = Modifier.align(Alignment.BottomStart).padding(7.dp),
+                    shape = RoundedCornerShape(7.dp), color = Color.Black.copy(alpha = 0.72f)) {
+                    Text("YouTube", Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                        color = Color.White, fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold)
+                }
+            }
+            Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Text(video.title, maxLines = 2, minLines = 2, overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                Text(video.channelTitle.ifBlank { "Canal" },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Icon(Icons.Default.Visibility, null, Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary)
+                    Text(video.viewCount?.let(::socialFormatCount) ?: "—",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1)
+                }
+                Text("visualizações", style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
 }
 
 @Composable
-private fun SocialMetricTile(title: String, value: Long?, modifier: Modifier) {
-    Surface(modifier = modifier, shape = UaiShapes.item,
+private fun SocialVideosEmptyState(title: String, detail: String) {
+    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surfaceVariant) {
-        Column(Modifier.padding(horizontal = 5.dp, vertical = 10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 22.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(Icons.Default.VideoLibrary, null, Modifier.size(30.dp),
+                tint = MaterialTheme.colorScheme.primary)
+            Text(title, style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold)
+            Text(detail, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun SocialMetricTile(
+    title: String, value: Long?, icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier
+) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant) {
+        Column(Modifier.padding(horizontal = 8.dp, vertical = 13.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(icon, null, Modifier.size(19.dp),
+                tint = MaterialTheme.colorScheme.primary)
             Text(value?.let(::socialFormatCount) ?: "—",
-                style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(title, style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

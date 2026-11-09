@@ -60,7 +60,8 @@ internal object SocialMetaAuth {
             if (publish) {
                 manager.logInWithPublishPermissions(activity, listOf("pages_manage_posts"))
             } else {
-                manager.logInWithReadPermissions(activity, listOf("pages_show_list", "pages_read_engagement"))
+                manager.logInWithReadPermissions(activity,
+                    listOf("pages_show_list", "pages_read_engagement", "pages_read_user_content"))
             }
         } catch (error: Exception) {
             complete(false, "Falha ao abrir autorização Meta. Verifique as configurações do aplicativo.")
@@ -84,6 +85,14 @@ internal object SocialMetaAuth {
             if (page.accessToken.isNotBlank()) pageTokens[page.id] = page.accessToken
         }
     }
+
+    /** Para consultas read-only, sem exigir a permissão de publicação. */
+    @Synchronized
+    fun pageReadToken(pageId: String): String? =
+        if (isConfigured && currentUserToken() != null &&
+            AccessToken.getCurrentAccessToken()?.permissions?.containsAll(
+                setOf("pages_read_engagement", "pages_read_user_content")) == true)
+            pageTokens[pageId] else null
 
     @Synchronized
     fun pageToken(pageId: String): String? =

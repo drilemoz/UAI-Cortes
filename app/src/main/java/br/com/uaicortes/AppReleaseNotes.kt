@@ -16,11 +16,43 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.246"
-    const val VERSION_CODE = 247
+    const val VERSION_NAME = "0.1.250"
+    const val VERSION_CODE = 251
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.250", listOf(
+            ReleaseFeature("meta-page-posts-250", "Redes Sociais: vídeos das Páginas Facebook",
+                "Consulte manualmente posts de Páginas autorizadas que contenham anexos de vídeo; filtros e pesquisa local, sem prometer acesso a todos os Reels.", "film"),
+            ReleaseFeature("meta-read-permissions-250", "Autorização Meta separada de publicação",
+                "Leitura usa páginas autorizadas e pages_read_engagement sem exigir pages_manage_posts. Tokens ficam apenas na memória, sem envios automáticos.", "check"),
+            ReleaseFeature("meta-safe-media-250", "Miniaturas seguras e métricas transparentes",
+                "Miniaturas disponibilizadas pela Meta são limitadas em tamanho; visualizações ausentes aparecem como indisponíveis, nunca zero inventado.", "check")
+        )),
+        ReleaseSummary("0.1.249", listOf(
+            ReleaseFeature("social-visual-hierarchy-249", "Redes Sociais com destaque para publicação",
+                "Cartão de publicação em destaque, seção Visão geral com filtros compactos e métricas com ícones, mantendo consultas sob demanda.", "film"),
+            ReleaseFeature("social-video-cards-249", "Cartões de vídeo mais claros e organizados",
+                "Miniatura, identificação da plataforma, canal e visualizações organizados em cartões arredondados com grade de duas colunas.", "check"),
+            ReleaseFeature("social-empty-search-249", "Busca e estados sem conteúdo aprimorados",
+                "Resultados de busca mais legíveis e mensagens de falta de dados e erro com ações orientativas, sem chamadas extras à API.", "check")
+        )),
+        ReleaseSummary("0.1.248", listOf(
+            ReleaseFeature("social-grid-thumbnails-248", "Redes: vídeos em grade com miniaturas reais",
+                "Vídeos publicados aparecem em duas colunas, com miniatura do YouTube, canal e destaque de visualizações. A busca abre janela central e filtra os itens carregados.", "film"),
+            ReleaseFeature("social-accounts-publish-248", "Contas nas Configurações e publicação com prévia",
+                "O cadastro de canais foi centralizado em Configurações. Publicar vídeo mostra um arquivo por vez com miniatura e opção X de remover a seleção.", "check"),
+            ReleaseFeature("dialog-updates-248", "Janelas de confirmação mais claras",
+                "Exportar e autorizar envio ao YouTube usam janelas adaptáveis com informações resumidas e botões principais visíveis. Novidades pós-atualização mostra só a versão atual.", "check")
+        )),
+        ReleaseSummary("0.1.247", listOf(
+            ReleaseFeature("google-voice-offline-history-247", "Histórico offline de prévias por voz",
+                "Reproduza amostras antigas, mesmo após trocar frase ou modelo de comparação; a Central mostra o total salvo por voz e permite filtrar quem já tem prévias.", "music"),
+            ReleaseFeature("google-voice-wav-export-247", "Exportar e remover uma única prévia WAV",
+                "Salve qualquer amostra pelo seletor Android ou apague somente uma, preservando vozes, favoritos, outras prévias e arquivos de projetos. Ouvir e exportar não chamam Gemini.", "check"),
+            ReleaseFeature("google-voice-request-identity-247", "Geração com configuração consistente",
+                "O modelo, a frase e o estilo são fixados antes da solicitação para impedir que mudanças na tela salvem o áudio com identificação de outra prévia.", "check")
+        )),
         ReleaseSummary("0.1.246", listOf(
             ReleaseFeature("image-import-provider-fallback-246", "Importação de fotos mais resistente",
                 "Verifica o formato real da imagem mesmo se a galeria informar tipo genérico ou falhar na leitura de metadados. Confere limites e interrompe cópias canceladas sem deixar arquivos parciais.", "check"),

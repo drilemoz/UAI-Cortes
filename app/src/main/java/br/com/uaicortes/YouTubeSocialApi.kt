@@ -111,7 +111,8 @@ internal object YouTubeSocialApi {
         val viewCount: Long? = null,
         val channelId: String = "",
         val channelTitle: String = "",
-        val fromUai: Boolean = false
+        val fromUai: Boolean = false,
+        val thumbnailUrl: String = ""
     )
     internal data class ChannelStatistics(
         val channelId: String,
@@ -160,7 +161,7 @@ internal object YouTubeSocialApi {
         val playlistConnection = connect(
             "$API/playlistItems?part=snippet%2CcontentDetails&playlistId=$idParam&maxResults=20$pageParam" +
                 "&fields=nextPageToken%2Citems(contentDetails(videoId%2CvideoPublishedAt)%2C" +
-                "snippet(title%2CpublishedAt%2CresourceId%2FvideoId))",
+                "snippet(title%2CpublishedAt%2CresourceId%2FvideoId%2Cthumbnails%2Fmedium%2Furl%2Cthumbnails%2Fdefault%2Furl))",
             token, "GET")
         try {
             ensureOk(playlistConnection, "Vídeos anteriores do YouTube")
@@ -179,7 +180,11 @@ internal object YouTubeSocialApi {
                         .ifBlank { "Vídeo sem título" }
                     val date = details?.optString("videoPublishedAt").orEmpty()
                         .ifBlank { snippet?.optString("publishedAt").orEmpty() }
-                    add(PreviousVideo(id = id, title = title, publishedAt = date.take(40)))
+                    val thumbs = snippet?.optJSONObject("thumbnails")
+                    val thumbnail = thumbs?.optJSONObject("medium")?.optString("url")
+                        .orEmpty().ifBlank { thumbs?.optJSONObject("default")?.optString("url").orEmpty() }
+                    add(PreviousVideo(id = id, title = title, publishedAt = date.take(40),
+                        thumbnailUrl = SocialYoutubeThumbnailPolicy.safeUrl(id, thumbnail)))
                 }
             }.distinctBy { it.id }
             val withStats = if (videos.isEmpty()) emptyList() else enrichPreviousVideos(token, videos)
