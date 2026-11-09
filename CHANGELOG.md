@@ -1,3 +1,10 @@
+# Uai Cortes · v0.1.253 — Correção CI 210: workflow no ZIP
+
+- Corrigida a distribuição do código-fonte: o pacote da v0.1.252 omitiu `.github/workflows/android-apk.yml`. Ao importar o ZIP, o workflow permaneceu na versão 0.1.251 e a checagem de versionamento falhou antes da compilação Android.
+- Workflow sincronizado com Gradle, `VERSION`, notas, metadados e empacotador de APKs em 0.1.253/versionCode 254.
+- Adicionado teste de regressão que gera um ZIP real pelo empacotador oficial, verifica presença do workflow e reconstrói a validação a partir do ZIP extraído.
+- Sem mudanças nos módulos de edição, legendas, atualizações, vozes ou redes sociais. Compilação Android ainda pendente do GitHub Actions.
+
 # Uai Cortes 0.1.252 (2026-11-09)
 
 - CI 209: corrigida referência inexistente `Icons.Default.InfoOutline` na confirmação de exportação para o ícone Compose `Icons.Default.Info`, já usado no aplicativo.

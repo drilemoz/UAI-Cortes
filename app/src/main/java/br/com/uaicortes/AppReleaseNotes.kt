@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.252"
-    const val VERSION_CODE = 253
+    const val VERSION_NAME = "0.1.253"
+    const val VERSION_CODE = 254
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.253", listOf(
+            ReleaseFeature("ci210-workflow-synced-253", "CI 210: versão do workflow sincronizada",
+                "O pacote de código-fonte agora entrega o workflow Android junto com o aplicativo, impedindo que a validação use uma versão antiga após a importação.", "check"),
+            ReleaseFeature("ci210-source-zip-253", "ZIP completo e validado antes do envio",
+                "O empacotador oficial confere o workflow, o versionamento e o código-fonte extraído. Funcionalidades anteriores preservadas.", "check")
+        )),
         ReleaseSummary("0.1.252", listOf(
             ReleaseFeature("ci209-export-info-icon-252", "CI 209: correção de compilação na exportação",
                 "Corrigida a referência ao ícone informativo na confirmação de exportação, que impedia a compilação Kotlin do aplicativo.", "check"),

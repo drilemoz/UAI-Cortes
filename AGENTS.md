@@ -1,3 +1,10 @@
+# v0.1.253 — Correção de distribuição do workflow no CI 210
+
+- O workflow 210 parou na validação antes do Gradle: o código Android estava em 0.1.252/versionCode 253, mas o workflow mantido no repositório estava em 0.1.251/versionCode 252.
+- O ZIP entregue na v0.1.252 não continha `.github/workflows/android-apk.yml`, embora `tools/package_source.py` já exigisse o arquivo. Não usar compactação manual que omita diretórios ocultos; usar `python3 tools/package_source.py --output <zip fora da raiz>`.
+- Na v0.1.253/versionCode 254, incluir explicitamente o workflow no ZIP e conferir a extração, a sincronização de versões e a presença do diretório oculto. Reprovar ZIPs sem `.github`.
+- Preservar módulos, schemas, chaves e cinco APKs planejados. O workflow novo só valerá no GitHub após importar/commitá-lo; a validação local não comprova o build Android.
+
 # v0.1.252 — Correção de compilação Compose do CI 209
 
 - Base v0.1.251/versionCode 252, nova v0.1.252/versionCode 253. O workflow 209 executou as regressões Python e interrompeu na tarefa `:app:compileDebugKotlin`, com `ExportScreen.kt:501:36 Unresolved reference 'InfoOutline'`.

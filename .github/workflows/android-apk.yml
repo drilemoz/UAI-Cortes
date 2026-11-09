@@ -15,8 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      VERSION: '0.1.251'
-      VERSION_CODE: '252'
+      VERSION: '0.1.253'
+      VERSION_CODE: '254'
     steps:
       - name: Checkout
         uses: actions/checkout@v4

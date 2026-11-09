@@ -11,6 +11,7 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 from zipfile import ZipFile, ZIP_DEFLATED
+from check_version_sync import check
 
 ROOT = Path(__file__).resolve().parents[1]
 ROOT_FILES = {
@@ -102,11 +103,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', required=True, type=Path)
     args = parser.parse_args()
-    gradle = (ROOT/'app/build.gradle.kts').read_text()
-    version = re.search(r'versionName\s*=\s*"([^"]+)"', gradle)
-    if not version:
-        fail('Não foi possível determinar versionName do Gradle')
-    build_zip(args.output, version.group(1))
+    # Falhar antes de empacotar se Gradle, workflow e metadados divergem.
+    version, _code = check(ROOT)
+    build_zip(args.output, version)
 
 
 if __name__ == '__main__':

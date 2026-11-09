@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.253 — Correção CI 210
+
+- Corrigido pacote-fonte para incluir `.github/workflows/android-apk.yml`, ausente no ZIP anterior.
+- Sincronizada versão 0.1.253/versionCode 254 no workflow, Gradle e demais metadados.
+- Acrescentado teste automatizado do ZIP realmente produzido e conferência da sincronização após extração.
+- Nenhum módulo funcional alterado; os cinco APKs Release ainda precisam ser gerados e verificados no novo workflow.
+
 # Uai Cortes · versão 0.1.252 — Correção CI 209
 
 - Corrigido ícone informativo inválido na confirmação de exportação, que bloqueou a compilação Kotlin do workflow 209.

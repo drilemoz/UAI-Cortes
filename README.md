@@ -1,3 +1,9 @@
+# Uai Cortes · v0.1.253 — Correção do pacote de código-fonte do CI 210
+
+O workflow 210 falhou antes da compilação porque a versão do workflow no GitHub ficou em 0.1.251 enquanto o código Android estava em 0.1.252. O ZIP de fonte anterior omitiu o diretório oculto `.github/`. Este pacote inclui o workflow atualizado e um teste que valida **o ZIP real extraído**, não só a pasta de desenvolvimento.
+
+**Para importar:** manter todos os arquivos e diretórios do ZIP, **inclusive `.github/workflows/android-apk.yml`**, ao enviar ao repositório. Gerar o pacote apenas com `python3 tools/package_source.py --output /caminho/arquivo.zip`. Verificar a alteração do workflow antes de executar novamente o GitHub Actions.
+
 # Uai Cortes · v0.1.252 — Correção da compilação CI 209
 
 O workflow **209** passou pelos testes Python e chegou ao Gradle, mas `:app:compileDebugKotlin` falhou em `ExportScreen.kt:501:36` por `Unresolved reference 'InfoOutline'`. A referência foi trocada por `Icons.Default.Info`, já utilizada em outras telas do aplicativo, sem alterar o texto, posicionamento ou comportamento da confirmação de exportação.
