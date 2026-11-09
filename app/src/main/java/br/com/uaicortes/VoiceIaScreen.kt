@@ -100,6 +100,9 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
     var showPendingReminder by remember(project.id) { mutableStateOf(false) }
     var reminderChecked by remember(project.id) { mutableStateOf(false) }
     var advancedCueId by remember { mutableStateOf<String?>(null) }
+    var showVoiceCloneStudio by remember { mutableStateOf(false) }
+    val cloneLibrary = remember(context) { VoiceCloneLibrary(context) }
+    var cloneProfiles by remember(context) { mutableStateOf(cloneLibrary.load()) }
     var importCueId by remember { mutableStateOf<String?>(null) }
     var importedUri by remember { mutableStateOf<Uri?>(null) }
     val externalPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -208,7 +211,8 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
             takes = recovery.first
             savedQueue = recovery.second
             model = takes.firstOrNull()?.model
-                ?: project.audioTracks.firstOrNull { it.kind == VoiceIaPolicy.KIND }?.ttsModel
+                ?: project.audioTracks.firstOrNull { it.kind == VoiceIaPolicy.KIND &&
+                    !VoiceIaExternalAudio.isImported(it) }?.ttsModel
                 ?: GeminiModels.LITE
             defaultVoice = project.voiceIaVoices.defaultVoiceId ?: takes.firstOrNull()?.voiceId
                 ?: project.audioTracks.firstOrNull { it.kind == VoiceIaPolicy.KIND }?.voiceId
@@ -230,6 +234,13 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
     }
     fun speakerFor(cue: SubtitleCue): SubtitleSpeaker? =
         project.subtitleSpeakers.firstOrNull { it.id == cue.speakerId }
+    fun cloneIdFor(cue: SubtitleCue): String? {
+        val speaker = speakerFor(cue)
+        return if (speaker != null) project.voiceIaVoices.speakerCloneProfiles[speaker.id]
+            else project.voiceIaVoices.cueCloneProfiles[cue.id]
+    }
+    fun cloneFor(cue: SubtitleCue): VoiceCloneProfile? =
+        cloneIdFor(cue)?.let { id -> cloneProfiles.firstOrNull { it.id == id } }
     fun voiceFor(cue: SubtitleCue): String? {
         // Uma fala com personagem exige voz definida nele: não herdar exceções
         // legadas de fala ou voz geral que poderiam trocar a identidade sem aviso.
@@ -256,6 +267,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
     fun importedFor(cue: SubtitleCue): AudioTrack? =
         VoiceIaExternalAudio.importedFor(project, cue)
     fun readyForFile(cue: SubtitleCue): Boolean {
+        if (cloneIdFor(cue) != null) return false
         val id = voiceFor(cue) ?: return false
         return takes.any { VoiceIaPolicy.matches(it, cue, id, model,
             GeminiNarrationStyling.instruction(styleFor(cue))) && File(it.filePath).isFile }
@@ -313,6 +325,13 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
         }
     }
     fun requestPendingGeneration() {
+        val clonePending = cues.firstOrNull { !hasPreparedAudio(it) && cloneIdFor(it) != null }
+        if (clonePending != null) {
+            selectedCueId = clonePending.id
+            showVoiceCloneStudio = true
+            status = "Este personagem usa uma referência de voz clonada. Gere pelo Coqui/Chatterbox, sem substituir por Gemini."
+            return
+        }
         val pendingIds = cues.filterNot(::hasPreparedAudio).map { it.id }
         if (pendingIds.isEmpty()) return
         if (savedQueue?.unfinished == true) {
@@ -364,7 +383,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
             it.stage == VoiceIaQueueStage.PENDING
         }.map { it.cueId } else ids
         val chosen = cues.filter { it.id in selectedIds &&
-            (it.id == regenerateId || importedFor(it) == null) }
+            (it.id == regenerateId || importedFor(it) == null) && cloneIdFor(it) == null }
         if (chosen.isEmpty()) return
         if (!resumeQueued && chosen.any { voiceFor(it).isNullOrBlank() }) {
             status = "Faltam vozes em ${chosen.count { voiceFor(it).isNullOrBlank() }} fala(s) deste lote. " +
@@ -666,7 +685,8 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
             val prior = takes.any { it.cueId == cue.id } || inserted != null
             val queueUncertain = savedQueue?.items?.any { it.cueId == cue.id &&
                 it.stage == VoiceIaQueueStage.REVIEW } == true
-            VoiceIaReviewItem(cue.id, cue.speakerId, imported || !voiceFor(cue).isNullOrBlank(),
+            VoiceIaReviewItem(cue.id, cue.speakerId,
+                imported || cloneIdFor(cue) != null || !voiceFor(cue).isNullOrBlank(),
                 wav != null || imported,
                 (prior && wav == null && !imported) || (installedOutdated && !imported),
                 wav?.let { it.durationMs > cue.endMs - cue.startMs } == true,
@@ -708,7 +728,13 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                     enabled = !busy && loaded && preparedCount > 0,
                     onClick = { pendingBatchInsert = true })
             }
-            if (importedCount > 0) Text("$importedCount áudio(s) externo(s) inserido(s) · " +
+            TextButton(onClick = { showVoiceCloneStudio = true }, enabled = !busy,
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
+                Icon(Icons.Default.GraphicEq, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Clonar voz · Coqui / Chatterbox", fontSize = 11.sp)
+            }
+            if (importedCount > 0) Text("$importedCount áudio(s) externo(s) ou clonado(s) inserido(s) · " +
                 "não serão regenerados pelo lote Gemini.", fontSize = 10.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (status.isNotBlank()) {
@@ -753,7 +779,11 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                                         modifier = Modifier.weight(1f), overflow = TextOverflow.Ellipsis)
                                     Text("${cues.count { it.speakerId == speaker.id }}", fontSize = 10.sp)
                                 }
-                                Text(displayVoiceName(voiceId), fontSize = 10.sp, maxLines = 1,
+                                Text(if (project.voiceIaVoices.speakerCloneProfiles[speaker.id] != null)
+                                    "Clonada · ${cloneProfiles.firstOrNull {
+                                        it.id == project.voiceIaVoices.speakerCloneProfiles[speaker.id]
+                                    }?.name ?: "referência ausente"}"
+                                    else displayVoiceName(voiceId), fontSize = 10.sp, maxLines = 1,
                                     overflow = TextOverflow.Ellipsis)
                                 Row(horizontalArrangement = Arrangement.SpaceEvenly,
                                     modifier = Modifier.fillMaxWidth()) {
@@ -912,10 +942,11 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                                     fontSize = 12.sp, fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal)
                                 Text("${character?.name ?: "Sem personagem"} · " + when {
                                     isGenerating -> "Gerando"
-                                    imported != null -> "Áudio externo inserido"
+                                    imported != null -> if (VoiceCloneAudio.isClone(imported)) "Voz clonada inserida" else "Áudio externo inserido"
                                     insertedCompatible -> "Inserida"
                                     wav != null && inserted != null -> "Atualizar"
                                     wav != null -> "Pronta"
+                                    cloneIdFor(cue) != null -> "Clonagem pendente"
                                     voiceFor(cue).isNullOrBlank() -> "Sem voz"
                                     else -> "Pendente"
                                 }, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 10.sp,
@@ -935,7 +966,8 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                                         }
                                     } else status = "Áudio externo não encontrado. Importe novamente."
                                 } else if (wav == null) {
-                                    if (voiceFor(cue).isNullOrBlank()) {
+                                    if (cloneIdFor(cue) != null) showVoiceCloneStudio = true
+                                    else if (voiceFor(cue).isNullOrBlank()) {
                                         if (character == null) voicePickerCueId = cue.id
                                         else { showSpeakerSettings = true; voicePickerSpeakerId = character.id }
                                     } else { forceCueId = null; promptGenerate = listOf(cue.id) }
@@ -979,6 +1011,12 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
             }
         }
     }
+    if (showVoiceCloneStudio) VoiceCloneStudioDialog(
+        project = project, cue = selectedCue,
+        onSave = onSave, onClose = {
+            showVoiceCloneStudio = false
+            cloneProfiles = cloneLibrary.load()
+        })
     advancedCueId?.let { id ->
         val cue = cues.firstOrNull { it.id == id }
         if (cue == null) LaunchedEffect(id) { advancedCueId = null }
@@ -1000,8 +1038,16 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                     if (speakerFor(cue) != null) Text(
                         "Voz definida no personagem. Nesta fala, personalize somente o humor.",
                         fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (importedFor(cue) != null) Text("Áudio externo já inserido nesta fala.",
+                    if (importedFor(cue) != null) Text("Áudio importado ou clonado já inserido nesta fala.",
                         fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+                    TextButton(onClick = {
+                        selectedCueId = cue.id
+                        advancedCueId = null
+                        showVoiceCloneStudio = true
+                    }, enabled = !busy) {
+                        Icon(Icons.Default.GraphicEq, null, Modifier.size(18.dp))
+                        Text("Clonar voz / gerar com Coqui ou Chatterbox")
+                    }
                     TextButton(onClick = { advancedCueId = null; stylePickerCueId = cue.id },
                         enabled = !busy) { Icon(Icons.Default.Mood, null, Modifier.size(18.dp))
                         Text("Alterar humor desta fala") }
@@ -1033,7 +1079,10 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                     }
                     TextButton(onClick = {
                         advancedCueId = null
-                        if (voiceFor(cue).isNullOrBlank()) {
+                        if (cloneIdFor(cue) != null) {
+                            selectedCueId = cue.id
+                            showVoiceCloneStudio = true
+                        } else if (voiceFor(cue).isNullOrBlank()) {
                             val speaker = speakerFor(cue)
                             if (speaker != null) { showSpeakerSettings = true; voicePickerSpeakerId = speaker.id }
                             else voicePickerCueId = cue.id
@@ -1379,7 +1428,12 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                 forceCueId = null
                 val quick = quickGenerateId
                 quickGenerateId = null
-                generate(ids, regenerate, quick)
+                val cloned = cues.firstOrNull { it.id in ids && cloneIdFor(it) != null }
+                if (cloned != null) {
+                    selectedCueId = cloned.id
+                    showVoiceCloneStudio = true
+                    status = "Gere esta voz vinculada usando Coqui ou Chatterbox."
+                } else generate(ids, regenerate, quick)
             }) { Text("Gerar") } },
             dismissButton = { TextButton(onClick = { promptGenerate = null; quickGenerateId = null }) { Text("Cancelar") } })
     }

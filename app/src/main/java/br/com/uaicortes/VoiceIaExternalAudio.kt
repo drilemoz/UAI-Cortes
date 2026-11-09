@@ -25,7 +25,7 @@ internal object VoiceIaExternalAudio {
         "audio/aac" to "aac", "audio/ogg" to "ogg"
     )
     fun isImported(track: AudioTrack?): Boolean =
-        track != null && track.kind == VoiceIaPolicy.KIND && track.ttsModel == MODEL
+        track != null && track.kind == VoiceIaPolicy.KIND && (track.ttsModel == MODEL || VoiceCloneAudio.isClone(track))
 
     /** Arquivo local já inserido conta como concluído, não como pedido pendente ao Gemini. */
     fun importedFor(project: VideoProject, cue: SubtitleCue): AudioTrack? =

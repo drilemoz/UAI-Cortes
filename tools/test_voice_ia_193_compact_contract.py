@@ -5,17 +5,21 @@ ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT/'app/src/main/java/br/com/uaicortes'
 UI=(SRC/'VoiceIaScreen.kt').read_text()
 class Compact193(unittest.TestCase):
- def test_three_icons_and_long_press_actions(self):
+ def test_compact_icons_conditional_and_long_press_actions(self):
   bar=UI[UI.index('''                    val wav = take?.takeIf'''):UI.index('''    advancedCueId?.let''')]
-  self.assertEqual(bar.count('IconButton('),3)
+  self.assertEqual(bar.count('IconButton('),4)  # 3 por fala: ícone da voz ou menu, nunca ambos
+  self.assertIn('if (character == null) IconButton(',bar)
+  self.assertIn('else IconButton(',bar)
   for value in ('"Ouvir fala ', '"Gerar fala ', '"Alterar tom da fala ', '"Trocar voz da fala ', 'onLongClickLabel', 'advancedCueId = cue.id'):
    self.assertIn(value,bar)
   details=UI[UI.index('''    advancedCueId?.let'''):UI.index('''    if (voicePickerCueId != null''')]
   for token in ('pendingInsertId = cue.id','pendingSyncId = cue.id','forceCueId = cue.id','pendingDeleteId = cue.id','restoreOriginal(cue, take)'):
    self.assertIn(token,details)
  def test_global_counter_and_recovery(self):
-  for key in ('"$preparedCount/${cues.size} prontas"','"$pending faltando"','showTechnicalDetails = !showTechnicalDetails','showSpeakerSettings = !showSpeakerSettings','requestPendingGeneration()'):
+  for key in ('"$readyCount/${cues.size} prontas"','"$pending faltando"','showTechnicalDetails = !showTechnicalDetails','showSpeakerSettings = !showSpeakerSettings','requestPendingGeneration()'):
    self.assertIn(key,UI)
+  self.assertIn('val importedCount = cues.count { importedFor(it) != null }',UI)
+  self.assertIn('val readyCount = batchPlan.reusable',UI)
   self.assertIn('showPendingReminder = VoiceIaCompactPolicy.shouldRemind(',UI)
   self.assertIn('savedQueue?.unfinished == true',UI)
   self.assertIn('"Depois"',UI)

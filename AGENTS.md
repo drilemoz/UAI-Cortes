@@ -1,3 +1,12 @@
+# v0.1.241 — Biblioteca de voz clonada, Coqui e Chatterbox + correção CI201
+
+- Reutilizar perfis WAV privados entre projetos; vincular explicitamente por personagem (campos opcionais `speakerCloneProfiles`) ou fala (`cueCloneProfiles`) no JSON do projeto, mantendo `schemaVersion=4`.
+- Não executar PyTorch dentro do APK. Motor Coqui XTTS-v2/Chatterbox Multilingual V3 no serviço Python externo; HTTPS confiável, token apenas em memória da tela, conexão somente sob toque, sem retry automático. Não enviar referências a Gemini.
+- Em falha de rede, validação ou `onSave`, não substituir faixa antiga; eliminar WAV parcial. Respeitar duração do vídeo e não regenerar faixas clonadas nas filas Gemini.
+- Chatterbox é um projeto arquivado; modelo geral suporta português (`pt`), não promete sotaque pt-BR. Coqui XTTS-v2 tem licença com restrições comerciais; declarar isso no app/docs.
+- Manter 5 APKs Release, assinatura, funcionamento dos demais módulos e schema 4. Corrigir os dois testes legados v193 que pararam o CI201 antes do Gradle.
+- Avançar v0.1.241/versionCode 242, sincronizar metadados, novidades e histórico. Testes Python/Kotlin/Gradle quando disponíveis; não chamar validação estática de APK compilado.
+
 # v0.1.240 — Voz fixa por personagem, humor individual e áudio externo
 
 - Personagem com voz definida prevalece sobre escolhas legadas por fala. Novas escolhas de voz individual só para falas sem personagem; estilos/humor continuam por fala com herança do personagem. Ao fixar voz, remover apenas metadados de voz legados desse personagem, preservando WAVs e legendas.

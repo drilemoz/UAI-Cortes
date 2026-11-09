@@ -9,7 +9,9 @@ data class VoiceIaVoiceAssignments(
     val cueVoices: Map<String, String> = emptyMap(),
     val defaultStyle: String? = null,
     val speakerStyles: Map<String, String> = emptyMap(),
-    val cueStyles: Map<String, String> = emptyMap()
+    val cueStyles: Map<String, String> = emptyMap(),
+    val speakerCloneProfiles: Map<String, String> = emptyMap(),
+    val cueCloneProfiles: Map<String, String> = emptyMap()
 ) {
     fun json(): JSONObject = JSONObject()
         .put("defaultVoiceId", defaultVoiceId)
@@ -30,6 +32,18 @@ data class VoiceIaVoiceAssignments(
             speakerStyles.entries.take(SubtitleSpeakerPolicy.MAX_SPEAKERS).forEach { (id, style) ->
                 if (VoiceIaSpeakerVoicePolicy.validSpeakerId(id) && VoiceIaStylePolicy.valid(style))
                     out.put(id, style)
+            }
+        })
+        .put("speakerCloneProfiles", JSONObject().also { out ->
+            speakerCloneProfiles.entries.take(SubtitleSpeakerPolicy.MAX_SPEAKERS).forEach { (id, profile) ->
+                if (VoiceIaSpeakerVoicePolicy.validSpeakerId(id) && VoiceClonePolicy.safeId(profile))
+                    out.put(id, profile)
+            }
+        })
+        .put("cueCloneProfiles", JSONObject().also { out ->
+            cueCloneProfiles.entries.take(VoiceIaSpeakerVoicePolicy.MAX_CUE_OVERRIDES).forEach { (id, profile) ->
+                if (VoiceIaSpeakerVoicePolicy.validCueId(id) && VoiceClonePolicy.safeId(profile))
+                    out.put(id, profile)
             }
         })
         .put("cueStyles", JSONObject().also { out ->
@@ -74,6 +88,10 @@ data class VoiceIaVoiceAssignments(
                 readStyles("speakerStyles", SubtitleSpeakerPolicy.MAX_SPEAKERS,
                     VoiceIaSpeakerVoicePolicy::validSpeakerId),
                 readStyles("cueStyles", VoiceIaSpeakerVoicePolicy.MAX_CUE_OVERRIDES,
+                    VoiceIaSpeakerVoicePolicy::validCueId),
+                readMap("speakerCloneProfiles", SubtitleSpeakerPolicy.MAX_SPEAKERS,
+                    VoiceIaSpeakerVoicePolicy::validSpeakerId),
+                readMap("cueCloneProfiles", VoiceIaSpeakerVoicePolicy.MAX_CUE_OVERRIDES,
                     VoiceIaSpeakerVoicePolicy::validCueId)
             )
         }

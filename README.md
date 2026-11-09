@@ -1,3 +1,9 @@
+# Uai Cortes · v0.1.241 — Biblioteca de vozes clonadas Coqui + Chatterbox
+
+Em **Vozes IA > Clonar voz**, importe uma referência WAV de 3–30 segundos, escolha Coqui XTTS-v2 ou Chatterbox Multilingual V3, fixe-a no personagem e gere novas falas. Os modelos são processados por serviço Python HTTPS externo, com token informado em cada sessão. O app mantém a referência privada e insere WAVs após ação explícita, sem regenerar por Gemini. O backend e as instruções estão em `tools/voice_bridge/README.md`.
+
+> É necessário configurar e executar o serviço Python: o APK não inclui modelos ou clonagem local Android. Coqui XTTS-v2 pode restringir o uso comercial dos áudios. Não clonar vozes sem autorização. O workflow 201 interrompeu na regressão legada da interface (4 ramos de botões / contador de áudios); os contratos foram corrigidos.
+
 # Uai Cortes · v0.1.240 — Vozes IA: personagens, humor e importação externa
 
 A tela **Vozes IA** respeita agora a voz fixa de cada personagem nas gerações em lote; os humores individuais continuam independentes. Com personagens definidos, a barra principal mostra Personagens e a lista de falas não permite trocar a voz individualmente. Toque numa fala para abrir ações, incluindo escolher humor ou importar áudio externo (WAV, MP3, M4A, AAC e OGG até 64 MiB). O áudio importado é guardado privadamente, validado e associado apenas à fala escolhida, sem gastar cota Gemini; o WAV anterior não é apagado automaticamente. Lembretes de pendência têm X e progresso separado. Dados de projeto schemaVersion 4, integração Gemini, Polly, Redes e cinco APKs preservados. Compilação Gradle Android e testes físicos continuam pendentes.

@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.241 (2026-11-08)
+
+- Biblioteca global de vozes clonadas: referência WAV privada, autorização de uso, Chatterbox Multilingual V3 e Coqui XTTS-v2, IDs persistentes por personagem/fala em campos opcionais do schema 4.
+- Interface Vozes IA: gerar e inserir uma fala manualmente via serviço HTTPS Python, com segurança dos arquivos e sem substituir áudio em falha. Serviço e instruções em `tools/voice_bridge/`.
+- Regressão antiga v193 atualizada, corrigindo as duas falhas do workflow 201. Sem alterar a composição de cinco APKs, assinatura, credenciais, filas Gemini/Polly.
+- Testes sintáticos e estruturais executados; build Gradle/Android físico e inferência com pesos reais ainda pendentes.
+
 # Uai Cortes 0.1.240 (2026-11-08)
 
 - Personagem com voz definida agora prevalece na geração por fala; ajustes de humor continuam individuais. Escolhas antigas de voz por fala são limpas somente ao definir uma voz fixa para aquele personagem, sem apagar arquivos.

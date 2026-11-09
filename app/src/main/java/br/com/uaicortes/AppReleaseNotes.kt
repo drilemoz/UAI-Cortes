@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.240"
-    const val VERSION_CODE = 241
+    const val VERSION_NAME = "0.1.241"
+    const val VERSION_CODE = 242
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.241", listOf(
+            ReleaseFeature("voice-clone-library-241", "Biblioteca de vozes clonadas por personagem",
+                "Cadastre referências WAV privadas, escolha Coqui XTTS-v2 ou Chatterbox V3 e reutilize a identidade vocal em outros projetos. Fixe a referência por personagem.", "music"),
+            ReleaseFeature("voice-clone-bridge-241", "Gerar voz clonada e inserir na timeline",
+                "Servidor Python HTTPS configurável, token só em memória e inserção manual de WAV por fala. Correção dos testes legados que impediam o workflow 201.", "check")
+        )),
         ReleaseSummary("0.1.240", listOf(
             ReleaseFeature("voice-speaker-lock-240", "Voz fixa por personagem e humor em cada fala",
                 "A voz do personagem prevalece sobre escolhas antigas por fala, enquanto o humor individual continua independente. O lote respeita ambas as configurações.", "music"),

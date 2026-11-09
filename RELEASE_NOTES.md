@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.241 — Coqui e Chatterbox com identidade vocal persistente
+
+- Biblioteca de referências WAV privada, com vozes identificadas por nome e motor de clonagem; utilização em diversos projetos e vínculo fixo ao personagem ou fala sem personagem.
+- Síntese manual via serviço Python HTTPS autenticado, Coqui XTTS-v2 e Chatterbox Multilingual V3; inserção de WAV clonado na timeline e preservação do áudio já gerado.
+- Sem geração automática, sem repetir chamadas incertas, token somente em RAM, seleção por SAF, limites de tamanho e duração, rejeição de HTTP e execução dos modelos fora do Android.
+- Testes de regressão v193 atualizados para a interface v240, corrigindo os dois erros do workflow 201. Build Android e áudio real ainda requerem validação de CI/servidor.
+- v0.1.241 / versionCode 242, schema de projeto 4 e cinco APKs Release preservados.
+
 # Uai Cortes · versão 0.1.240 — Voz de personagem fixa, humor por fala e importação
 
 - Vozes IA: cada personagem mantém a voz definida na geração de todas as suas falas, enquanto cada fala pode ter um humor diferente.
