@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -100,13 +101,17 @@ internal fun SubtitleStyledSample(cue: SubtitleCue, frame: SubtitleAnimations.Fr
     // Não inventar texto quando o efeito (ex.: máquina de escrever) ainda está vazio.
     if (frame.text.isBlank()) return
     val shown=frame.text
+    val badgeMode=cue.animation==SubtitleAnimations.KARAOKE_BADGE
+    var badgeLayout by remember(cue.id,shown) { mutableStateOf<TextLayoutResult?>(null) }
     val colored=buildAnnotatedString {
         append(shown)
-        SubtitleWordEffects.colors(cue.copy(text=shown,textCase="original"),shown,frame.highlighted,
+        SubtitleWordEffects.colors(cue.copy(text=shown,textCase="original"),shown,
+            if(badgeMode) null else frame.highlighted,
             frame.highlightColorOverride ?: cue.highlightColor).forEach { span ->
             addStyle(SpanStyle(color=Color(span.color)),span.range.first,span.range.last+1)
         }
         frame.highlighted?.takeIf { it.first >= 0 && it.last < shown.length }?.let { selected ->
+            if(badgeMode) addStyle(SpanStyle(color=Color.White),selected.first,selected.last+1)
             if (frame.boldActiveWord || frame.underlineActiveWord)
                 addStyle(SpanStyle(
                     fontWeight=if(frame.boldActiveWord) FontWeight.Bold else null,
@@ -119,7 +124,8 @@ internal fun SubtitleStyledSample(cue: SubtitleCue, frame: SubtitleAnimations.Fr
     val style=if(cue.italic) FontStyle.Italic else FontStyle.Normal
     val fontSize=if(compact) 16.sp else cue.sizeSp.coerceIn(12,38).sp
     Box(Modifier.background(Color(cue.backgroundColor),RoundedCornerShape(4.dp))
-        .padding(horizontal=if(compact) 4.dp else 7.dp,vertical=3.dp),
+        .padding(horizontal=if(compact) 4.dp else 7.dp,vertical=3.dp)
+        .subtitleKaraokeBadge(cue,frame,badgeLayout),
         contentAlignment=Alignment.Center) {
         if(cue.outlineWidth>0) {
             Text(shown,color=Color(cue.outlineColor),fontSize=fontSize,
@@ -130,7 +136,7 @@ internal fun SubtitleStyledSample(cue: SubtitleCue, frame: SubtitleAnimations.Fr
         }
         Text(colored,color=Color(cue.color),fontSize=fontSize,fontWeight=weight,
             fontStyle=style,fontFamily=subtitleFont(cue.fontFamily),maxLines=3,
-            textAlign=TextAlign.Center,
+            textAlign=TextAlign.Center,onTextLayout={badgeLayout=it},
             style=TextStyle(shadow=if(cue.shadowOffsetDp>0)
                 androidx.compose.ui.graphics.Shadow(
                     color=Color(cue.shadowColor),
@@ -150,6 +156,7 @@ internal fun SubtitleWordColorEditor(draft: SubtitleCue, onChange:(SubtitleCue)-
         "Amarelo" to 0xFFFFFF00.toInt(),
         "Azul" to 0xFF00CCFF.toInt(),
         "Vermelho" to 0xFFFF2828.toInt(),
+        "Rosa do vídeo" to 0xFFE81050.toInt(),
         "Roxo" to 0xFFD549FF.toInt(),
         "Verde" to 0xFF65FF60.toInt()
     )

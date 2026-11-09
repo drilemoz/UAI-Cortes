@@ -204,7 +204,7 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
                 SubtitleAnimations.NONE, SubtitleAnimations.SOFT_POP,
                 SubtitleAnimations.CINEMATIC, SubtitleAnimations.SOFT_FADE,
                 SubtitleAnimations.IMPACT, SubtitleAnimations.GLIDE,
-                SubtitleAnimations.KARAOKE, SubtitleAnimations.WORD_REVEAL)
+                SubtitleAnimations.KARAOKE, SubtitleAnimations.KARAOKE_BADGE, SubtitleAnimations.WORD_REVEAL)
             SubtitleTwoColumnChoices(recommendedEffects.map(SubtitleAnimations::label),
                 selected={ label -> draft.animation in recommendedEffects &&
                     SubtitleAnimations.label(draft.animation)==label },

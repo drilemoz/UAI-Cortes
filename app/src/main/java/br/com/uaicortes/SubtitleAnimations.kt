@@ -17,6 +17,8 @@ object SubtitleAnimations {
     const val KARAOKE_PULSE = "karaoke_pulse"
     const val KARAOKE_BOLD = "karaoke_bold"
     const val KARAOKE_UNDERLINE = "karaoke_underline"
+    /** Palavra ativa recebe um retângulo rosa arredondado, letras brancas/pretas. */
+    const val KARAOKE_BADGE = "karaoke_badge"
     const val POP = "pop"
     const val FADE = "fade"
     const val SLIDE = "slide"
@@ -42,6 +44,7 @@ object SubtitleAnimations {
         PHRASES to "Frase por frase", KARAOKE to "Palavra destacada",
         KARAOKE_PULSE to "Pulso de cor", KARAOKE_BOLD to "Palavra forte",
         KARAOKE_UNDERLINE to "Sublinhar palavra",
+        KARAOKE_BADGE to "Destaque rosa (vídeo)",
         POP to "Pop / zoom", FADE to "Aparecer / sumir", SLIDE to "Deslizar",
         BOUNCE to "Bounce", PULSE to "Pulsar", ZOOM_OUT to "Zoom reverso",
         RISE to "Subir", DROP to "Descer",
@@ -56,12 +59,12 @@ object SubtitleAnimations {
     val groups: List<Pair<String, List<String>>> = listOf(
         "Entrada" to listOf(NONE, POP, FADE, SLIDE, ZOOM_OUT, RISE, DROP, SLIDE_LEFT, SLIDE_RIGHT, ELASTIC, SOFT_POP, CINEMATIC, SOFT_FADE, GLIDE),
         "Texto" to listOf(TYPEWRITER, PHRASES, WORD_REVEAL, KARAOKE,
-            KARAOKE_PULSE, KARAOKE_BOLD, KARAOKE_UNDERLINE),
+            KARAOKE_PULSE, KARAOKE_BOLD, KARAOKE_UNDERLINE, KARAOKE_BADGE),
         "Movimento" to listOf(BOUNCE, PULSE, FLOAT, SWAY, SOFT_SHAKE, IMPACT)
     )
     fun label(id: String): String = choices.firstOrNull { it.first == id }?.second ?: "Sem efeito"
     fun isKaraoke(id: String): Boolean = normalize(id) in setOf(
-        KARAOKE, KARAOKE_PULSE, KARAOKE_BOLD, KARAOKE_UNDERLINE)
+        KARAOKE, KARAOKE_PULSE, KARAOKE_BOLD, KARAOKE_UNDERLINE, KARAOKE_BADGE)
     fun normalize(value: String): String = if (choices.any { it.first == value }) value else NONE
     fun speed(value: Float): Float = if (value.isFinite()) value.coerceIn(.5f, 2f) else 1f
 
@@ -94,7 +97,7 @@ object SubtitleAnimations {
                 val idx = ((ratio * rate).coerceIn(0f, .999999f) * parts.size).toInt()
                 Frame(parts.getOrElse(idx) { "" })
             }
-            KARAOKE, KARAOKE_PULSE, KARAOKE_BOLD, KARAOKE_UNDERLINE -> {
+            KARAOKE, KARAOKE_PULSE, KARAOKE_BOLD, KARAOKE_UNDERLINE, KARAOKE_BADGE -> {
                 val words = Regex("\\S+").findAll(text).toList()
                 if (words.isEmpty()) Frame(text) else {
                     val exact = SubtitleWordEffects.activeWordIndex(cue, absoluteMs)

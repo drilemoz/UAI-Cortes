@@ -55,6 +55,6 @@ class SubtitleKaraokeAccentsTest {
         assertNotNull(f.highlighted)
         assertTrue(c.wordTimings.isEmpty())
         assertEquals(25,SubtitleStyles.presets.size)
-        assertEquals(27,SubtitleAnimations.choices.size)
+        assertEquals(28,SubtitleAnimations.choices.size)
     }
 }

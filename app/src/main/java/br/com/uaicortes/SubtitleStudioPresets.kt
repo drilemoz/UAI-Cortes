@@ -5,6 +5,10 @@ import br.com.uaicortes.subtitles.core.SubtitleTextCasePolicy
 /** Presets de estreia do Subtitle Studio. Presets legados permanecem acessíveis. */
 internal object SubtitleStudioPresets {
     val recommended: List<SubtitleStylePreset> = listOf(
+        SubtitleStylePreset("Karaokê rosa do vídeo", 0xFFFFFFFF.toInt(),
+            SubtitleStyles.NO_BACKGROUND, outlineWidth=4,shadowOffsetDp=2,
+            highlightColor=0xFFE81050.toInt(),animation=SubtitleAnimations.KARAOKE_BADGE,
+            textCase=SubtitleTextCasePolicy.UPPER),
         SubtitleStylePreset("Pop moderno", -1, SubtitleStyles.NO_BACKGROUND,
             outlineWidth=4, shadowOffsetDp=2, highlightColor=0xFFFFD840.toInt(),
             animation=SubtitleAnimations.SOFT_POP, textCase=SubtitleTextCasePolicy.UPPER),

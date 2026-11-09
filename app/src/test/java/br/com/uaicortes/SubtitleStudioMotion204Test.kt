@@ -9,7 +9,7 @@ class SubtitleStudioMotion204Test {
         val old = SubtitleCue(id="c", text="Você está pronto?", startMs=300, endMs=2400,
             textCase="upper", speakerId="voz-2", x=.3f, y=.82f,
             wordTimings=listOf(SubtitleWordTiming(300L,700L)))
-        assertEquals(8, SubtitleStudioPresets.recommended.size)
+        assertEquals(9, SubtitleStudioPresets.recommended.size)
         assertTrue(SubtitleStudioPresets.recommended.count { it.animation in SubtitleMotionPolicy.styles } >= 6)
         for (preset in SubtitleStudioPresets.recommended) {
             val modified = SubtitleStyles.applyToCue(old, preset)

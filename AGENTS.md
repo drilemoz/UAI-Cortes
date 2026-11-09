@@ -1,3 +1,11 @@
+# v0.1.242 — Destaque rosa por palavra do vídeo de referência
+
+- Novo preset em primeiro lugar: **Karaokê rosa do vídeo**, com texto branco em maiúsculas, contorno preto de 4 dp, sombra, tarja rosa arredondada na palavra ativa e sem tarja de fundo na frase.
+- Animação `karaoke_badge` persistida como texto no schema 4. Prévia Compose, galeria de estilos e exportação Media3 usam os mesmos intervalos de palavra; os tempos reais têm prioridade sobre distribuição uniforme aproximada.
+- Geração automática exibe o modo **Rosa do vídeo** como padrão novo (22 sp, eixo X central, base a 79% do quadro); os modos clássicos continuam disponíveis. Novas legendas manuais adotam o estilo rosa. Projetos já salvos e estilos antigos não são migrados ou apagados.
+- Não há inferência automática de horários reais a partir do áudio: sem `wordTimings`, o tempo é dividido entre palavras. Não carrega fontes comerciais/externas. Validar aparência real após build Android.
+- Versão 0.1.242/versionCode 243, cinco APKs Release, clonagem Coqui/Chatterbox, outros serviços e projetos schemaVersion 4 preservados.
+
 # v0.1.241 — Biblioteca de voz clonada, Coqui e Chatterbox + correção CI201
 
 - Reutilizar perfis WAV privados entre projetos; vincular explicitamente por personagem (campos opcionais `speakerCloneProfiles`) ou fala (`cueCloneProfiles`) no JSON do projeto, mantendo `schemaVersion=4`.

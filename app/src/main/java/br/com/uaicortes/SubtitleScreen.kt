@@ -40,6 +40,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.Shadow
@@ -142,6 +143,10 @@ internal fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
             val spacing = SubtitleStyles.normalizeLineSpacing(cue.lineSpacingPercent) / 100f
             val textLineHeight = if (cue.lineSpacingPercent > 100)
                 (previewFontSp * 1.2f * spacing).sp else TextUnit.Unspecified
+            var badgeLayout by remember(cue.id,animationFrame.text) {
+                mutableStateOf<TextLayoutResult?>(null)
+            }
+            val badgeMode = cue.animation == SubtitleAnimations.KARAOKE_BADGE
             val fillStyle = TextStyle(lineHeight = textLineHeight,
                 shadow = if (cue.shadowOffsetDp > 0) Shadow(
                     color=Color(cue.shadowColor), offset=Offset(shadowPx,shadowPx),blurRadius=0f
@@ -169,7 +174,8 @@ internal fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
                         })
                 } else Modifier)
                 .background(Color(cue.backgroundColor),RoundedCornerShape(3.dp))
-                .padding(horizontal=7.dp,vertical=2.dp)) {
+                .padding(horizontal=7.dp,vertical=2.dp)
+                .subtitleKaraokeBadge(cue,animationFrame,badgeLayout)) {
                 if (cue.outlineWidth > 0) {
                     Text(animationFrame.text,color=Color(cue.outlineColor),fontSize=previewFontSp.sp,
                         fontFamily=family,fontWeight=textWeight,fontStyle=fontStyle,textAlign=alignment,
@@ -178,7 +184,8 @@ internal fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
                 }
                 val animatedText=buildAnnotatedString {
                     append(animationFrame.text)
-                    SubtitleWordEffects.colors(cue.copy(text=animationFrame.text, textCase="original"),animationFrame.text,animationFrame.highlighted,
+                    SubtitleWordEffects.colors(cue.copy(text=animationFrame.text, textCase="original"),animationFrame.text,
+                        if (badgeMode) null else animationFrame.highlighted,
                         animationFrame.highlightColorOverride ?: cue.highlightColor)
                         .forEach { colored ->
                             addStyle(SpanStyle(color=Color(colored.color)),
@@ -187,6 +194,7 @@ internal fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
                     animationFrame.highlighted?.takeIf {
                         it.first >= 0 && it.last < animationFrame.text.length
                     }?.let { selected ->
+                        if (badgeMode) addStyle(SpanStyle(color=Color.White),selected.first,selected.last+1)
                         if (animationFrame.boldActiveWord || animationFrame.underlineActiveWord)
                             addStyle(SpanStyle(
                                 fontWeight=if (animationFrame.boldActiveWord) FontWeight.Bold else null,
@@ -197,7 +205,7 @@ internal fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
                 }
                 Text(animatedText,color=Color(cue.color),fontSize=previewFontSp.sp,
                     fontFamily=family,fontWeight=textWeight,fontStyle=fontStyle,textAlign=alignment,
-                    style=fillStyle)
+                    style=fillStyle,onTextLayout={badgeLayout=it})
             }
         }
     }
@@ -669,7 +677,9 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
             SubtitleToolButton(Icons.Default.Add,"Nova",p.durationMs>0,
                 Modifier.weight(1f)) {
                 SubtitleListNavigation.newInterval(p.durationMs,cursorMs)?.let { (start,end) ->
-                    val cue=SubtitleCue(text="Nova legenda",startMs=start,endMs=end)
+                    val cue=SubtitleAppearancePolicy.generated(
+                        SubtitleCue(text="Nova legenda",startMs=start,endMs=end),
+                        SubtitleAppearanceMode.KARAOKE_ROSA,22)
                     if(update(p.copy(subtitles=p.subtitles+cue))) {
                         batchUndo=null;deletedSnapshot=null
                         searchQuery="";speakerFilter=null;selectedId=cue.id

@@ -126,6 +126,62 @@ class SubtitleShadowSpan(
     }
 }
 
+/** Palavra ativa em caixa rosa arredondada, atrás do contorno preto.
+ * Aplica o mesmo texto/posicionamento da linha que o SubtitleOutlineSpan.
+ * Não altera as larguras do StaticLayout nem depende de bitmap/fonte externa.
+ */
+@OptIn(UnstableApi::class)
+class SubtitleActiveWordBadgeSpan(
+    private val startIndex: Int, private val endExclusive: Int,
+    private val background: Int, private val family: String,
+    private val bold: Boolean, private val italic: Boolean,
+    private val relativeSize: Float, private val alignment: String
+) : LineBackgroundSpan {
+    override fun drawBackground(canvas: Canvas, paint: Paint, left: Int, right: Int,
+        top: Int, baseline: Int, bottom: Int, text: CharSequence,
+        start: Int, end: Int, lineNumber: Int) {
+        val from = maxOf(start, startIndex)
+        val to = minOf(end, endExclusive)
+        if (from >= to) return
+        var lineEnd = end
+        while(lineEnd>start && (text[lineEnd-1]=='\n' || text[lineEnd-1]=='\r')) lineEnd--
+        if (lineEnd <= start) return
+        val font = Paint(paint).apply {
+            isAntiAlias=true
+            textSize=TextOverlay.TEXT_SIZE_PIXELS*relativeSize
+            typeface=Typeface.create(when(SubtitleStyles.normalizeFont(family)) {
+                SubtitleStyles.FONT_SERIF->"serif"
+                SubtitleStyles.FONT_MONO->"monospace"
+                SubtitleStyles.FONT_CURSIVE->"cursive"
+                else->"sans-serif"
+            },when {
+                bold && italic->Typeface.BOLD_ITALIC
+                bold->Typeface.BOLD
+                italic->Typeface.ITALIC
+                else->Typeface.NORMAL
+            })
+        }
+        val lineWidth=font.measureText(text,start,lineEnd)
+        val lineX=when(SubtitleStyles.normalizeAlignment(alignment)) {
+            SubtitleStyles.ALIGN_LEFT->left.toFloat()
+            SubtitleStyles.ALIGN_RIGHT->right-lineWidth
+            else->(left+right-lineWidth)/2f
+        }
+        val before=font.measureText(text,start,from)
+        val highlightedWidth=font.measureText(text,from,to)
+        if (highlightedWidth<=0f) return
+        val fm=font.fontMetrics
+        val height=(fm.descent-fm.ascent).coerceAtLeast(1f)
+        val padX=height*.12f
+        val padY=height*.035f
+        val radius=height*.14f
+        val badge=Paint(Paint.ANTI_ALIAS_FLAG).apply { color=background; style=Paint.Style.FILL }
+        canvas.drawRoundRect(lineX+before-padX,baseline+fm.ascent-padY,
+            lineX+before+highlightedWidth+padX,baseline+fm.descent+padY,
+            radius,radius,badge)
+    }
+}
+
 /** Relative additional leading; 100 keeps Android layout's default line height. */
 class SubtitleLineSpacingSpan(private val percent: Int) : LineHeightSpan {
     override fun chooseHeight(text: CharSequence, start: Int, end: Int, spanstartv: Int,
@@ -213,7 +269,9 @@ class TimedSubtitleOverlay(
             .setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE)
             .build()
         val longestLine = (0 until layout.lineCount).maxOfOrNull { layout.getLineWidth(it) } ?: 0f
-        val tightWidth = ceil(longestLine + 8f).toInt().coerceIn(2, width)
+        val badgePadding = if(active?.animation==SubtitleAnimations.KARAOKE_BADGE)
+            (longestLine*.02f).coerceAtLeast(10f) else 8f
+        val tightWidth = ceil(longestLine + badgePadding).toInt().coerceIn(2, width)
         // O bloco segue a largura real da frase, sem uma caixa 90% larga para textos curtos.
         val finalLayout = if (tightWidth < width) StaticLayout.Builder.obtain(
             styled, 0, styled.length, paint, tightWidth)
@@ -250,10 +308,17 @@ class TimedSubtitleOverlay(
         }
         if (active != null && frame != null) {
             text.setSpan(ForegroundColorSpan(active.color), 0, text.length, 0)
-            SubtitleWordEffects.colors(active.copy(text=rendered, textCase="original"),rendered,frame.highlighted,
+            val badgeMode=active.animation==SubtitleAnimations.KARAOKE_BADGE
+            SubtitleWordEffects.colors(active.copy(text=rendered, textCase="original"),rendered,
+                if(badgeMode) null else frame.highlighted,
                 frame.highlightColorOverride ?: active.highlightColor).forEach { colored ->
                 text.setSpan(ForegroundColorSpan(colored.color),colored.range.first,
                     colored.range.last+1,0)
+            }
+            if(badgeMode) frame.highlighted?.takeIf {
+                it.first>=0 && it.last<text.length
+            }?.let { selected ->
+                text.setSpan(ForegroundColorSpan(Color.WHITE),selected.first,selected.last+1,0)
             }
             if (Color.alpha(active.backgroundColor) > 0)
                 text.setSpan(BackgroundColorSpan(active.backgroundColor), 0, text.length, 0)
@@ -297,6 +362,13 @@ class TimedSubtitleOverlay(
             text.setSpan(AlignmentSpan.Standard(layoutAlign), 0, text.length, Spanned.SPAN_PARAGRAPH)
             if (active.lineSpacingPercent > 100)
                 text.setSpan(SubtitleLineSpacingSpan(active.lineSpacingPercent), 0, text.length, Spanned.SPAN_PARAGRAPH)
+            if (badgeMode) frame.highlighted?.takeIf {
+                it.first>=0 && it.last<text.length
+            }?.let { selected ->
+                text.setSpan(SubtitleActiveWordBadgeSpan(selected.first,selected.last+1,
+                    active.highlightColor,active.fontFamily,active.bold,active.italic,
+                    relativeFontSize,active.textAlignment),0,text.length,0)
+            }
             if (active.shadowOffsetDp > 0)
                 text.setSpan(SubtitleShadowSpan(active.shadowColor, active.shadowOffsetDp,
                     active.fontFamily, active.bold, relativeFontSize, active.textAlignment,

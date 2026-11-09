@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.242 — Legenda karaokê rosa do vídeo
+
+- Letras brancas em maiúsculas com contorno preto e sombra; palavra ativa com fundo rosa arredondado, sem cobrir a frase inteira.
+- Novo estilo em destaque na galeria e modo padrão para legendas novas/automáticas. A linha do tempo pré-existente e as legendas de projetos salvos são preservadas.
+- Desenho na prévia Compose e na exportação Media3, com horários reais de palavras quando disponíveis e divisão temporal aproximada na ausência desses horários.
+- 0.1.242 / versionCode 243. Exige CI/compilação Android e teste de exportação para confirmar paridade visual e desempenho em vídeo real.
+
 # Uai Cortes · versão 0.1.241 — Coqui e Chatterbox com identidade vocal persistente
 
 - Biblioteca de referências WAV privada, com vozes identificadas por nome e motor de clonagem; utilização em diversos projetos e vínculo fixo ao personagem ou fala sem personagem.

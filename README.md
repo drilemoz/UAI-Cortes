@@ -1,3 +1,11 @@
+# Uai Cortes · v0.1.242 — Karaokê rosa igual ao estilo do vídeo
+
+A galeria **Legendas > Estilo** agora destaca **Karaokê rosa do vídeo** como primeira opção. As letras são brancas e maiúsculas, com contorno preto e a palavra falada destacada por um retângulo rosa arredondado. O fundo do restante da frase permanece transparente. A prévia, a miniatura do estilo e a exportação Media3 usam o mesmo efeito `karaoke_badge`.
+
+Nas **Legendas automáticas**, a aparência inicial sugerida é **Rosa do vídeo** (22 sp, centralizada a cerca de 79% da altura). Você pode escolher **Karaokê IA** ou **Clássica (SRT)**. Novas legendas manuais também usam o efeito rosa; legendas e projetos existentes mantêm seu estilo original até escolha explícita. A sincronia segue os tempos por palavra quando disponíveis; sem eles, o destaque avança por divisão aproximada do intervalo, não por análise do áudio.
+
+A fonte é a sans-serif em negrito do Android, similar, não necessariamente idêntica à usada na referência. Não muda modelos de voz nem serviços externos. A compilação e o vídeo exportado precisam ser validados em aparelho/CI.
+
 # Uai Cortes · v0.1.241 — Biblioteca de vozes clonadas Coqui + Chatterbox
 
 Em **Vozes IA > Clonar voz**, importe uma referência WAV de 3–30 segundos, escolha Coqui XTTS-v2 ou Chatterbox Multilingual V3, fixe-a no personagem e gere novas falas. Os modelos são processados por serviço Python HTTPS externo, com token informado em cada sessão. O app mantém a referência privada e insere WAVs após ação explícita, sem regenerar por Gemini. O backend e as instruções estão em `tools/voice_bridge/README.md`.

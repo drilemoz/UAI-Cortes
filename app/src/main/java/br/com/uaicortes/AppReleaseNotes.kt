@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.241"
-    const val VERSION_CODE = 242
+    const val VERSION_NAME = "0.1.242"
+    const val VERSION_CODE = 243
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.242", listOf(
+            ReleaseFeature("subtitle-pink-karaoke-242", "Karaokê rosa do vídeo",
+                "Legendas brancas em maiúsculas com contorno preto; cada palavra recebe uma tarja rosa arredondada sincronizada, também no MP4 exportado.", "film"),
+            ReleaseFeature("subtitle-pink-default-242", "Legendas novas já vêm com o estilo rosa",
+                "O modo Rosa do vídeo é o padrão das novas legendas e pode ser escolhido na galeria. Seus projetos antigos e os outros estilos continuam disponíveis.", "check")
+        )),
         ReleaseSummary("0.1.241", listOf(
             ReleaseFeature("voice-clone-library-241", "Biblioteca de vozes clonadas por personagem",
                 "Cadastre referências WAV privadas, escolha Coqui XTTS-v2 ou Chatterbox V3 e reutilize a identidade vocal em outros projetos. Fixe a referência por personagem.", "music"),

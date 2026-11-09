@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.242 (2026-11-08)
+
+- Novo destaque rosa arredondado atrás da palavra falada, com texto branco maiúsculo, contorno preto e sombra, baseado no vídeo de referência do usuário.
+- Adicionado preset destacado na galeria, animação `karaoke_badge`, renderer Compose/Media3 e modo de aparência automático padrão **Rosa do vídeo**. Novas legendas manuais também usam este visual; estilos existentes não são modificados.
+- Utiliza `wordTimings` reais quando presentes; caso contrário, usa aproximação uniforme e informa a limitação. Não há migração de esquema nem download de fonte externa.
+- Novos testes de tempo/JSON e contrato de integração, sincronização v0.1.242/versionCode 243, cinco APKs Release e sistema Coqui/Chatterbox preservados. Compilação Android real e revisão da aparência em aparelho pendentes.
+
 # Uai Cortes 0.1.241 (2026-11-08)
 
 - Biblioteca global de vozes clonadas: referência WAV privada, autorização de uso, Chatterbox Multilingual V3 e Coqui XTTS-v2, IDs persistentes por personagem/fala em campos opcionais do schema 4.
