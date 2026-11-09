@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.258"
-    const val VERSION_CODE = 259
+    const val VERSION_NAME = "0.1.259"
+    const val VERSION_CODE = 260
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.259", listOf(
+            ReleaseFeature("studio-voice-layout-259", "Estúdio de Voz mais organizado",
+                "Editor de texto compacto, voz selecionada em destaque, estilos rápidos, idioma e configurações avançadas recolhidas. Botão de geração respeita teclado e barra do Android.", "check"),
+            ReleaseFeature("studio-audio-library-259", "Biblioteca de narrações aprimorada",
+                "WAVs novos ganham duração medida, voz e trecho de identificação; renomeie, favorite, ouça e exporte. Áudios antigos continuam disponíveis, sem inventar metadados retroativos.", "check"),
+            ReleaseFeature("studio-draft-timeline-259", "Rascunho local e integração com editor",
+                "Salve ou restaure rascunho explicitamente; quando houver projeto aberto, adicione WAV à linha do tempo usando cópia independente e confirmação, sem chamadas automáticas ao Gemini.", "check")
+        )),
         ReleaseSummary("0.1.258", listOf(
             ReleaseFeature("ci215-voice-range-258", "Correção do CI 215: páginas da Central de Vozes",
                 "Corrigida a exibição do intervalo de 50 vozes: a tela agora usa o segundo valor do Pair retornado pelo paginador. Os dados e filtros existentes são preservados.", "check"),

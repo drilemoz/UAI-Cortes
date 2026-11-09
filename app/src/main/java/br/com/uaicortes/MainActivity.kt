@@ -524,7 +524,9 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 "voice_center" -> GeminiVoiceCenterScreen(onBack = ::back)
                 "text_to_voice" -> StandaloneTextToVoiceScreen(onBack = ::back,
                     onOpenGeminiSettings = { previous = "text_to_voice"; screen = "gemini_settings" },
-                    draft = standaloneVoiceDraft)
+                    draft = standaloneVoiceDraft,
+                    onAddToEditor = StandaloneVoiceTimelineImport.callback(context, project,
+                        positionMs, { project }, ::write) { screen = "audio" })
                 "appearance" -> AppearanceScreen(theme, { theme = it; store.setTheme(it) }, ::back)
                 "about" -> AboutScreen(::back,
                     onUpdates = { previous = "about"; screen = "updates" })

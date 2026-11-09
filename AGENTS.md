@@ -1,3 +1,12 @@
+# v0.1.259 — Estúdio de Voz redesenhado e biblioteca WAV
+
+- Base 0.1.258/versionCode 259; entrega 0.1.259/versionCode 260. Preservar editor, SocialStore, Coqui/Chatterbox, catálogo de vozes Gemini, 5 APKs e workflow Android.
+- Texto para Voz mantém título na navegação, mas exibe Estúdio de Voz internamente. Editor compacto, botão inferior respeitando IME, cartão com voz escolhida/renomeada, chips de estilos, idioma e opções técnicas recolhidas.
+- Salvar rascunho em armazenamento privado somente após toque, com Restaurar/Apagar salvo; texto não vai para diagnóstico, nunca salvar token. Campo mantém limite de 4000 caracteres e estimativas identificadas como tal.
+- Histórico WAV preserva nomes físicos/arquivos antigos; metadados opcionais locais por sidecar .info, renomear/favoritar sem tocar no WAV, exclusão confirmada apaga apenas WAV + metadados. Salvar WAV via SAF, reprodução, cancelamento e consentimento de cota mantidos.
+- Adicionar áudio ao editor somente se houver projeto aberto, com confirmação; copiar para ProjectMediaCopies antes de associar e verificar duração disponível e sessão inalterada. Sem corte silencioso e sem dependência do WAV removível da biblioteca.
+- Testar contratos Python, regras Kotlin/JVM isoladas, PSI Kotlin, versões, ZIP oficial com .github; só CI/Android e teste Gemini real comprovam compilação e aparência/geração.
+
 # v0.1.258 — CI 215: correção de compilação da Central de Vozes
 
 - Base 0.1.257/versionCode 258; nova 0.1.258/versionCode 259. Preservar catálogo de 500 vozes, paginação 50/pg, favoritos, apelidos, cache de prévias, 5 APKs, assinatura e workflow.

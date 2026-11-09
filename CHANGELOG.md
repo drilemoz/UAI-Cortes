@@ -1,3 +1,12 @@
+# Uai Cortes 0.1.259 (2026-11-09)
+
+- Redesigned Texto para Voz as Estúdio de Voz, com editor compacto, botão de colar, estimativa de duração identificada, voz selecionada com apelido, estilos rápidos, idioma e opções técnicas recolhidas.
+- Biblioteca de WAVs com nome e favorito locais, voz, trecho de identificação e duração medida em novas narrações; arquivos antigos compatíveis, sem metadados inventados. Excluir remove somente WAV/sidecar associado após confirmação.
+- Rascunho privado opcional (salvar/restaurar/apagar por ação), preservando texto em memória entre telas; sem novas chamadas de rede e sem registrar texto em diagnósticos.
+- Quando existe projeto aberto, adição explícita do WAV à timeline por cópia protegida, com verificação de duração, sem alteração do projeto se a operação falhar.
+- Integração Gemini, cota, cancelamento e SAF anteriores preservados. Testes sintáticos, contratos e Kotlin/JVM locais; build Android e teste no aparelho pendentes.
+- Workflow/Gradle/README/AGENTS/RELEASE_NOTES/metadados sincronizados em v0.1.259/versionCode 260.
+
 # Uai Cortes 0.1.258 (2026-11-09)
 
 - CI 215: corrigida a referência `.last` no `Pair<Int, Int>` da paginação da Central de Vozes. A interface usa `.second`, como definido por `GeminiVoicePaging.range()`.

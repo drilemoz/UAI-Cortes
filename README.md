@@ -1,3 +1,11 @@
+# Uai Cortes · v0.1.259 — Estúdio de Voz reformulado
+
+- Tela Texto para Voz reorganizada como Estúdio de Voz: editor compacto, estimativa de duração, botão de colar, voz e apelido visíveis, estilos rápidos, idioma pt-BR/automático, opções técnicas recolhidas e botão de geração fixo acima da área de navegação/teclado.
+- Biblioteca de WAVs agora aceita renomeação, favoritos e metadados opcionais de voz/duração/trecho para novos áudios, preservando gravações antigas. Reprodução, exportação SAF e exclusão com confirmação mantidas.
+- Rascunho local gravado apenas a pedido, com restaurar e apagar. Adição confirmada à timeline do projeto aberto copia o WAV para mídia protegida do projeto, sem depender da biblioteca removível.
+- Continua sendo necessária a API Gemini para novas sínteses; nenhuma geração automática nem servidor adicional. A integração Android completa depende de GitHub Actions e testes físicos, não comprovados só pelos testes locais.
+- ZIP oficial inclui workflow `.github/workflows/android-apk.yml` na versão 0.1.259/versionCode 260.
+
 # Uai Cortes · v0.1.258 — Correção de compilação da Central de Vozes
 
 - Corrige o CI 215: `GeminiVoicePaging.range()` retorna `Pair<Int, Int>`; a Central agora mostra o último índice usando `second`, não `last`.

@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.259 — Estúdio de Voz mais prático
+
+- Texto para Voz agora exibe o Estúdio de Voz: editor menor, duração estimada, presets rápidos de interpretação, voz selecionada em destaque e configurações avançadas recolhidas.
+- Biblioteca de áudios com renomeação, favoritos e duração/voz quando disponíveis. WAVs anteriores permanecem acessíveis; nenhum áudio antigo é alterado.
+- Rascunho local opcional, com salvar, restaurar e apagar. WAV pode ser copiado para a linha do tempo do projeto aberto com confirmação e validação da duração.
+- Geração Gemini continua exigindo consentimento explícito e pode consumir cota. Compilação Android e teste real pendentes.
+
 # Uai Cortes · versão 0.1.258 — Correção do CI 215
 
 - Corrigida a falha de compilação Kotlin na Central de Vozes: o fim do intervalo de paginação usa a propriedade correta do Pair (`second`).
