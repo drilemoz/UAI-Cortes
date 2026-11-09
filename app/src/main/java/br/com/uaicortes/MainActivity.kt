@@ -189,7 +189,6 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 "discard" -> null
                 else -> return false
             }
-            // Snapshot histórico somente depois do commit do cadastro.
             if (savedProject != null && backupStore.preferences.enabled)
                 importScope.launch(Dispatchers.IO) {
                     runCatching { backupStore.snapshot(savedProject.id) }
@@ -278,7 +277,6 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     fun importVideoClips(uris: List<Uri>, persistDocumentAccess: Boolean) {
         if (uris.isEmpty()) return
         val request = VideoImportRequest(project?.id.orEmpty(), pendingPicker == "new")
-        // ID definido ANTES da cópia, inclusive para projetos ainda não salvos.
         val importTarget = if (request.createNew) VideoProject() else project ?: VideoProject()
         val selectedBeforePicker = selectedClip
         val origin = MediaTaskOrigin(project?.id.orEmpty(), screen, mediaAction)
@@ -466,9 +464,11 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     onVoiceCenter = { navTo("voice_center") },
                     onTextToVoice = { navTo("text_to_voice") },
                     onQuickSplit = { navTo("quick_split") },
-                    onQuickAudio = { navTo("quick_audio") })
+                    onQuickAudio = { navTo("quick_audio") },
+                    onEditAudio = { navTo("edit_audio") })
                 "quick_split" -> QuickVideoToolsScreen(QuickToolMode.SPLIT_VIDEO, ::back)
                 "quick_audio" -> QuickVideoToolsScreen(QuickToolMode.EXTRACT_AUDIO, ::back)
+                "edit_audio" -> AudioClipEditorScreen(::back)
                 "flow_workspace" -> FlowWorkspaceScreen(::back)
                 "animate" -> AnimateImagesScreen(animationImages.toList(),
                     onChoose = { openGallery("animate","animate_images") },

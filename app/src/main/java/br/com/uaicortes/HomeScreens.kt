@@ -104,10 +104,10 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
     }
 }
 
-/** Sete ferramentas independentes em uma faixa horizontal, inclusive em telas estreitas. */
+/** Oito ferramentas independentes em uma faixa horizontal, inclusive em telas estreitas. */
 @Composable internal fun HomePrimaryActions(onCreate: () -> Unit, onAnimate: () -> Unit,
     preview: Boolean = false, onFlow: () -> Unit = {}, onVoiceCenter: () -> Unit = {},
-    onTextToVoice: () -> Unit = {}, onQuickAudio: () -> Unit = {},
+    onTextToVoice: () -> Unit = {}, onEditAudio: () -> Unit = {}, onQuickAudio: () -> Unit = {},
     onQuickSplit: () -> Unit = {}) {
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -122,6 +122,8 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
             enabled = !preview, modifier = Modifier.width(126.dp))
         HomeActionTile("Texto para Voz", Icons.Default.GraphicEq, onTextToVoice,
             enabled = !preview, modifier = Modifier.width(126.dp))
+        HomeActionTile("Editar áudio", Icons.Default.ContentCut, onEditAudio,
+            enabled = !preview, modifier = Modifier.width(126.dp))
         HomeActionTile("Extrair áudio", Icons.Default.AudioFile, onQuickAudio,
             enabled = !preview, modifier = Modifier.width(126.dp))
         HomeActionTile("Dividir vídeo", Icons.Default.ContentCut, onQuickSplit,
@@ -134,7 +136,8 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
     onDelete: (VideoProject)->Unit, onDeleteAll: ()->Unit,
     onSettings: ()->Unit, onTab:(String)->Unit, onFlow: () -> Unit = {},
     onVoiceCenter: () -> Unit = {}, onQuickSplit: () -> Unit = {},
-    onQuickAudio: () -> Unit = {}, onTextToVoice: () -> Unit = {}) {
+    onQuickAudio: () -> Unit = {}, onTextToVoice: () -> Unit = {},
+    onEditAudio: () -> Unit = {}) {
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically) {
@@ -150,7 +153,7 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
             Spacer(Modifier.height(8.dp))
             HomePrimaryActions(onCreate, onAnimate, onFlow = onFlow,
                 onVoiceCenter = onVoiceCenter, onTextToVoice = onTextToVoice,
-                onQuickAudio = onQuickAudio, onQuickSplit = onQuickSplit)
+                onEditAudio = onEditAudio, onQuickAudio = onQuickAudio, onQuickSplit = onQuickSplit)
             Spacer(Modifier.height(6.dp))
             Text("Deslize para o lado para ver todas as ferramentas",
                 style = MaterialTheme.typography.labelSmall,

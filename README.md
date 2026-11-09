@@ -1,3 +1,9 @@
+# Uai Cortes · v0.1.260 — Editor de Áudio independente
+
+- Novo cartão Editar áudio na faixa de atalhos da Home, com seleção de arquivo via Android, forma de onda real em segundo plano quando suportada e recorte com duas alças.
+- Prévia somente do trecho selecionado com repetição opcional, ajuste fino de 0,1 s e exportação AAC em M4A no local escolhido via SAF. Arquivo original preservado.
+- Sem servidores ou chamadas à internet; duração de áudio e codecs dependem do aparelho. Build Android e validação física pendentes.
+
 # Uai Cortes · v0.1.259 — Estúdio de Voz reformulado
 
 - Tela Texto para Voz reorganizada como Estúdio de Voz: editor compacto, estimativa de duração, botão de colar, voz e apelido visíveis, estilos rápidos, idioma pt-BR/automático, opções técnicas recolhidas e botão de geração fixo acima da área de navegação/teclado.

@@ -53,8 +53,8 @@ class HomeAboutPreviewAndroidTest {
         }
     }
 
-    @Test fun sevenHomeShortcutsScrollAndKeepIndividualNavigation() {
-        val calls = IntArray(7)
+    @Test fun eightHomeShortcutsScrollAndKeepIndividualNavigation() {
+        val calls = IntArray(8)
         rule.setContent {
             MaterialTheme {
                 HomePrimaryActions(
@@ -63,14 +63,15 @@ class HomeAboutPreviewAndroidTest {
                     onFlow = { calls[2]++ },
                     onVoiceCenter = { calls[3]++ },
                     onTextToVoice = { calls[4]++ },
-                    onQuickAudio = { calls[5]++ },
-                    onQuickSplit = { calls[6]++ })
+                    onEditAudio = { calls[5]++ },
+                    onQuickAudio = { calls[6]++ },
+                    onQuickSplit = { calls[7]++ })
             }
         }
         listOf("Novo projeto", "Animar fotos", "Estúdio de Cenas", "Vozes Google",
-            "Texto para Voz", "Extrair áudio", "Dividir vídeo").forEach { label ->
+            "Texto para Voz", "Editar áudio", "Extrair áudio", "Dividir vídeo").forEach { label ->
             rule.onNodeWithText(label).performScrollTo().performClick()
         }
-        rule.runOnIdle { org.junit.Assert.assertArrayEquals(IntArray(7) { 1 }, calls) }
+        rule.runOnIdle { org.junit.Assert.assertArrayEquals(IntArray(8) { 1 }, calls) }
     }
 }

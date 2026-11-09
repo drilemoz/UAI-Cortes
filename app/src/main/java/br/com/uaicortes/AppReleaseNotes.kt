@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.259"
-    const val VERSION_CODE = 260
+    const val VERSION_NAME = "0.1.260"
+    const val VERSION_CODE = 261
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.260", listOf(
+            ReleaseFeature("audio-editor-home-260", "Editor de Áudio independente na Home",
+                "Novo atalho Editar áudio abre arquivo local sem criar projeto. Uma faixa por vez, com onda sonora em segundo plano e seleção por duas alças.", "check"),
+            ReleaseFeature("audio-editor-preview-260", "Ouça somente o trecho escolhido",
+                "Arraste limites, faça ajustes de 0,1 segundo, reproduza apenas a seleção e repita quando desejar. Arquivo original não é alterado.", "check"),
+            ReleaseFeature("audio-editor-m4a-260", "Exporte recortes M4A offline",
+                "Recodificação AAC com Media3, salvamento pelo seletor Android, cancelamento e opção de limpar saída incompleta. Compatibilidade depende do decodificador do aparelho.", "check")
+        )),
         ReleaseSummary("0.1.259", listOf(
             ReleaseFeature("studio-voice-layout-259", "Estúdio de Voz mais organizado",
                 "Editor de texto compacto, voz selecionada em destaque, estilos rápidos, idioma e configurações avançadas recolhidas. Botão de geração respeita teclado e barra do Android.", "check"),

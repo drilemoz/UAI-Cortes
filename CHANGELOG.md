@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.260 (2026-11-09)
+
+- Novo módulo Editar áudio independente em Home, mantendo Extrair áudio e Dividir vídeo.
+- Seleção de trecho e reprodução delimitada; onda real decodificada em streaming e ajustes finos.
+- Exportação M4A/AAC offline via Media3/SAF, cancelamento, exclusão confirmada de arquivo incompleto e proteção do original.
+- Testes de intervalo, Home, rota, pacote e validação Kotlin; build Android físico ainda pendente.
+
 # Uai Cortes 0.1.259 (2026-11-09)
 
 - Redesigned Texto para Voz as Estúdio de Voz, com editor compacto, botão de colar, estimativa de duração identificada, voz selecionada com apelido, estilos rápidos, idioma e opções técnicas recolhidas.

@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.260 — Editor de Áudio
+
+- Ferramenta Editar áudio na Home: escolha uma faixa, selecione o trecho e ouça antes de exportar.
+- Onda sonora real quando o aparelho permite decodificá-la; em outros casos, ajuste os limites pelos controles.
+- Exportação AAC/M4A offline usando o seletor de arquivos do Android, preservando a fonte.
+- Não muda projetos existentes, assinaturas ou integrações. Requer CI Android e testes em aparelho.
+
 # Uai Cortes · versão 0.1.259 — Estúdio de Voz mais prático
 
 - Texto para Voz agora exibe o Estúdio de Voz: editor menor, duração estimada, presets rápidos de interpretação, voz selecionada em destaque e configurações avançadas recolhidas.

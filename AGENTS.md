@@ -1,3 +1,11 @@
+# v0.1.260 — Editor de Áudio independente
+
+- Base 0.1.259/versionCode 260; nova 0.1.260/versionCode 261. Preservar esquema de projeto, cinco APKs, autenticação Google/Meta, Gemini e ferramentas anteriores.
+- Home inclui Editar áudio entre Texto para Voz e Extrair áudio. Um arquivo por vez via OpenDocument com permissão de leitura persistível; nunca modificar a origem.
+- Editor com áudio local, seleção por alças, prévia limitada, ajuste fino 100 ms, repetição e exportação AAC/M4A via Media3 Transformer para SAF. Cancelar deve invalidar callbacks antigos; não exibir porcentagem inventada.
+- Onda de áudio decodificada por MediaCodec em segundo plano e reduzida a 160 picos, sem PCM completo em memória; arquivos longos podem usar controles sem onda.
+- Testar intervalos puros Kotlin/JVM, UI/contratos, PSI e ZIP oficial com .github. Não afirmar compilação Android sem Gradle/CI ou compatibilidade MP3 universal.
+
 # v0.1.259 — Estúdio de Voz redesenhado e biblioteca WAV
 
 - Base 0.1.258/versionCode 259; entrega 0.1.259/versionCode 260. Preservar editor, SocialStore, Coqui/Chatterbox, catálogo de vozes Gemini, 5 APKs e workflow Android.
