@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.268 (2026-11-09)
+
+- CI 225: corrigido o teste `FrameSnapshotTimingTest.nearEndNeverExceedsOriginal` que exigia `frameAtMs == 500` mesmo quando a janela de renderização é deslocada para trás perto do fim do clipe.
+- Adicionadas regressões Kotlin/JVM para fim de clipes longos, fontes curtas e solicitações fora do intervalo, mantendo o frame sempre dentro dos limites.
+- Sem mudanças no motor Media3, em arquivos de projeto, no esquema de dados ou na exportação de vídeos.
+- Versionamento atualizado para 0.1.268/versionCode 269; build Android completo continua sujeito ao workflow.
+
 # Uai Cortes 0.1.267 (2026-11-09)
 
 - CI 224: corrigido o contrato legado de clipes de imagem que falhava por exigir uma expressão `.apply` em linha única, apesar de a regra `clip.isImage -> setFrameRate(30)` ainda existir no builder do Media3.

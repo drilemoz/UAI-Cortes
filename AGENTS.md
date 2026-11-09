@@ -1,3 +1,10 @@
+# v0.1.268 — CI 225: teste unitário de captura próximo ao fim
+
+- Workflow 225: validação Python passou e Kotlin compilou, mas `:app:testDebugUnitTest` reprovou `FrameSnapshotTimingTest.nearEndNeverExceedsOriginal` (713/714 testes aprovados). A expectativa de `frameAtMs == 500` ficou obsoleta após v0.1.266 mudar a janela para 1600 ms e deslocá-la para trás próximo do fim do clipe.
+- Não reverter o deslocamento nem reduzir janela, pois o objetivo é evitar `ERROR_CODE_MUXING_TIMEOUT` observado na renderização Media3 em aparelhos Xiaomi. Corrigir o teste para esperar tempo relativo coerente com a janela calculada, verificando início, fim, duração e a igualdade entre tempo solicitado e startMs + frameAtMs.
+- Ampliar os testes dos limites com casos no final de clipe longo, clipe curto e solicitações fora da duração. Preservar fonte de produção, captura direta, PiP/legendas, menu/arrasto, dados de usuário, assinatura e workflow de 5 APKs.
+- Versionamento 0.1.268/versionCode 269 sincronizado em Gradle, Android, workflow, README, CHANGELOG, RELEASE_NOTES e notas no app. Rodar testes Kotlin isolados, contratos Python, `tools/validate_source.py` e gerar fonte apenas por `tools/package_source.py`; Gradle Android completo deve ser validado pelo próximo CI.
+
 # v0.1.267 — CI 224: contrato de imagens resiliente a formatação Kotlin
 
 - O workflow 224 reprovou `test_main_image_clip_169_contract.py` porque procurava uma única string `.apply { if (clip.isImage) setFrameRate(30) }`. Desde a captura de quadros com remoção opcional de áudio, a mesma chamada está em bloco `.apply` multilinha de `EditedMediaItem.Builder(item)`.

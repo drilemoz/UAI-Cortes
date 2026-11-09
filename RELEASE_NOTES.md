@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.268 — CI 225: teste de quadros corrigido
+
+- Ajustado o teste de captura de quadros perto do fim para refletir a janela temporal usada pelo compositor.
+- Reforçados os testes de limites para não buscar quadros fora do clipe nem desfazer a prevenção do timeout de renderização anterior.
+- Preservados vídeo, áudio, projetos, exportação e ações da linha do tempo.
+- Compilação e testes Android completos ainda precisam ser confirmados no GitHub Actions.
+
 # Uai Cortes · versão 0.1.267 — correção da validação CI 224
 
 - Corrigido o teste automatizado que esperava o código de 30 FPS de imagens em uma única linha, embora ele continue presente em um bloco de várias linhas no Media3.

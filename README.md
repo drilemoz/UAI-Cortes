@@ -1,3 +1,10 @@
+# Uai Cortes · v0.1.268 — CI 225: regressão de captura no fim de clipe
+
+- Workflow 225 concluiu a validação Python e compilou Kotlin, mas um dos 714 testes unitários falhou por expectativa obsoleta do instante relativo da captura próxima ao fim.
+- Corrigido `FrameSnapshotTimingTest.nearEndNeverExceedsOriginal` para respeitar o deslocamento da janela de até 1,6 s; adicionados testes de limites temporais, preservando a lógica de produção e a prevenção do timeout Media3.
+- Motor de vídeo, screenshots, PiP, clipes, exportação, áudio, credenciais, assinatura e projetos permanecem inalterados.
+- Ainda é necessário executar o CI completo para garantir os cinco APKs e testar a captura no aparelho.
+
 # Uai Cortes · v0.1.267 — CI 224 e teste de exportação de imagens
 
 - A configuração de `setFrameRate(30)` para clipes de imagem permanece no `EditedMediaItem.Builder(item)` do Media3. O contrato de regressão foi atualizado para aceitar a formatação em múltiplas linhas adotada quando o snapshot passou a remover áudio.

@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.267"
-    const val VERSION_CODE = 268
+    const val VERSION_NAME = "0.1.268"
+    const val VERSION_CODE = 269
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.268", listOf(
+            ReleaseFeature("ci225-snapshot-near-end-test-268", "CI 225: teste de quadro próximo do fim corrigido",
+                "O teste unitário agora considera a janela deslocada para trás quando o quadro está no final do clipe, preservando a renderização Media3 e os limites da fonte.", "check"),
+            ReleaseFeature("ci225-snapshot-boundaries-268", "Proteção dos tempos de captura reforçada",
+                "Novos testes cobrem vídeos curtos, fim de clipes longos e posições solicitadas fora do intervalo. Nenhum vídeo, projeto ou áudio original foi alterado.", "check")
+        )),
         ReleaseSummary("0.1.267", listOf(
             ReleaseFeature("ci224-main-image-contract-267", "CI 224: verificação da exportação de imagens corrigida",
                 "O contrato antigo agora reconhece a configuração de 30 FPS mesmo quando o bloco Kotlin usa várias linhas, sem exigir a formatação anterior.", "check"),
