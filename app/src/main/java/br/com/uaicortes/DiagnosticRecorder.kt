@@ -105,6 +105,11 @@ object DiagnosticRecorder {
         log("UPDATE", "state=$safe${mib?.let { " size_mib=$it" }.orEmpty()}")
     }
 
+    /** Somente quantidade agregada de fontes indisponíveis, sem URI ou títulos. */
+    fun mediaAvailability(missing: Int) {
+        if (missing > 0) log("MEDIA", "state=inaccessible count=${missing.coerceIn(1, 100)}")
+    }
+
     /** Somente dimensões, qualidade e estágio de processamento, nunca nome do vídeo. */
     fun exportEvent(stage: String, requestedShortSide: Int? = null,
                     progress: Int? = null, elapsedMs: Long? = null) {

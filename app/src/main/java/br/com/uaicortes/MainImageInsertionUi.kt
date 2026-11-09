@@ -1,6 +1,7 @@
 package br.com.uaicortes
 
 import android.widget.Toast
+import kotlinx.coroutines.CancellationException
 import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -59,9 +60,13 @@ internal fun MainImageInsertionUi(
                     ImageClipImport.discardUnused(context.applicationContext, durable)
                     Toast.makeText(context, "O projeto mudou. Importe novamente.", Toast.LENGTH_LONG).show()
                 }
+            } catch (cancelled: CancellationException) {
+                // Sair da tela deve cancelar a leitura, sem toast ou commit tardio.
+                throw cancelled
             } catch (error: Exception) {
                 DiagnosticRecorder.exception("image_import", error)
-                Toast.makeText(context, error.message ?: "Não foi possível importar a foto.",
+                DiagnosticRecorder.action("image_import", "failure_${ImageImportSafety.diagnosticKind(error)}")
+                Toast.makeText(context, ImageImportSafety.userMessage(error),
                     Toast.LENGTH_LONG).show()
             }
         }

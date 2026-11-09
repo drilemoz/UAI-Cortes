@@ -1,3 +1,11 @@
+# v0.1.246 — Robustez na importação de imagens e recuperação de mídias
+
+- Base 0.1.245/versionCode 246, nova 0.1.246/versionCode 247. Não modificar schemaVersion 4, manter cópias privadas, editor, Coqui/Chatterbox, legendas rosa, atualizador SHA-256, cinco APKs e assinatura.
+- Para fotos: provedores de galeria podem retornar MIME genérico ou falhar ao consultar SIZE. A validação deve usar os cabeçalhos decodificados, os limites existentes 24 MiB e 24 megapixels e a cópia privada com checagem de cancelamento. Não aceitar GIF disfarçado de PNG; não persistir caminhos de fotos em logs.
+- Um projeto com mídia inacessível apresenta aviso único por projeto/sessão com acesso ao reparo. Não apagar/alterar cortes, áudios, legendas ou mídia original. Cópias de imagem no reparo que não forem salvas devem ser eliminadas.
+- Catches de importação/reparo preservam CancellationException; mensagens de erro ao usuário não podem reproduzir URIs ou detalhes livres de provedores. Diagnóstico agrega apenas contagem de fontes perdidas.
+- Testar regras puras Kotlin, contratos Python, PSI, sincronização de versão e integridade ZIP. Build completo Android e reprodução física ainda dependem do CI/dispositivo; não declarar correção visual de legendas sem confronto de MP4.
+
 # v0.1.245 — Atualização controlável, paridade proporcional de legendas e fluxo de exportação
 
 - Base 0.1.244/versionCode 245; nova 0.1.245/versionCode 246. Preservar schemaVersion 4, mídia privada, voices Coqui/Chatterbox, cinco APKs Release e configurações anteriores. Não apagar dados de projetos.

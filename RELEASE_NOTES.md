@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.246 — Reparar mídias e importar fotos
+
+- Importar fotos funciona melhor com provedores de galeria que omitem MIME ou metadados, usando os dados da imagem para validar o formato e a resolução.
+- Cópias privadas de imagens podem ser canceladas sem deixar arquivo parcial; mensagens de erro não mostram detalhes internos do provedor.
+- Projetos com mídias não acessíveis oferecem diretamente a opção Reparar mídias, sem alterar cortes e legendas. Cópias temporárias de foto são descartadas se a recuperação não for salva.
+- Relatório diagnóstico opcional registra número de mídias inacessíveis e categoria de erro da importação, sem registrar nome/URI; checagem aceita provedores com stream sem FileDescriptor.
+- Preservados outros módulos e versão de projeto. Código-fonte v0.1.246/versionCode 247; Android Gradle e teste físico pendentes.
+
 # Uai Cortes · versão 0.1.245 — Atualizações e exportação mais controláveis
 
 - O atualizador oferece Pausar, Retomar e Parar: parcial conservado ao pausar, Range validado ao retomar, exclusão ao parar e SHA-256 obrigatório.

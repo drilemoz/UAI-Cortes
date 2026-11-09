@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.245"
-    const val VERSION_CODE = 246
+    const val VERSION_NAME = "0.1.246"
+    const val VERSION_CODE = 247
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.246", listOf(
+            ReleaseFeature("image-import-provider-fallback-246", "Importação de fotos mais resistente",
+                "Verifica o formato real da imagem mesmo se a galeria informar tipo genérico ou falhar na leitura de metadados. Confere limites e interrompe cópias canceladas sem deixar arquivos parciais.", "check"),
+            ReleaseFeature("project-media-repair-alert-246", "Reparar mídia direto do aviso",
+                "Projetos com arquivos inacessíveis mostram uma ação para localizar a origem sem perder cortes, legendas e outros ajustes. A recuperação de foto limpa cópias não salvas.", "film"),
+            ReleaseFeature("media-errors-privacy-246", "Erros de mídia mais claros e privados",
+                "Diagnóstico registra contagem de mídias inacessíveis, sem nomes ou caminhos, e a interface evita mensagens técnicas fornecidas por aplicativos externos.", "check")
+        )),
         ReleaseSummary("0.1.245", listOf(
             ReleaseFeature("update-pause-resume-245", "Atualizações com pausa, retomada e parada",
                 "Controle manual do APK parcial, retomada HTTP Range validada e verificação SHA-256 antes de instalar. O servidor pode exigir reinício do download.", "check"),

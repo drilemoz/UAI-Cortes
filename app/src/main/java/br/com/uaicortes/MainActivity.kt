@@ -121,7 +121,6 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     }
     ProjectDraftRecoveryLifecycle(draftRecoveryStore, project,
         projectSession.draftBaseline, projectSession.hasPendingChanges)
-    ProjectMediaAlert(if (screen == "editor") project else null)
     var selectedClip by workspace::selectedClip
     var selectedAudioTrackId by workspace::selectedAudioTrackId
     var selectedVoiceCueId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -227,6 +226,8 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
         DiagnosticRecorder.action(screen, "open_${DiagnosticPrivacy.safeIdentifier(s)}")
         previous = screen; screen = s
     }
+    ProjectMediaAlert(if (screen == "editor") project else null,
+        onRepair = { navTo("media_repair") })
     fun saveOverlays(current: VideoProject, requested: List<Overlay>, preferredId: String?,
                      decision: String = "ask"): Boolean {
         val canvasAspect = current.clips.firstOrNull()?.let { mediaAspect(context, it.uri, it.isImage) } ?: 16f / 9f

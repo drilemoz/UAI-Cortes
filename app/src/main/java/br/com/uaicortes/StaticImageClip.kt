@@ -13,6 +13,8 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /** Uma foto na faixa principal equivale a UM clipe, não a um PiP ou vídeo intermediário. */
 internal object ImageClipPolicy {
@@ -122,21 +124,16 @@ internal object ImageClipImport {
 
     suspend fun inspect(context: Context, uri: Uri): ImageClipSource = withContext(Dispatchers.IO) {
         require(uri.scheme == "content") { "Escolha uma imagem da galeria ou do gerenciador de arquivos." }
-        val mime = context.contentResolver.getType(uri)?.lowercase()
-            ?: error("Não foi possível reconhecer o formato da imagem.")
-        require(mime in ImageClipPolicy.ALLOWED_MIMES) {
-            "Formato não suportado. Escolha JPG, PNG, WebP, HEIC ou BMP (GIF não é aceito)."
-        }
-        if (mime == "image/heic" || mime == "image/heif") {
-            require(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                "HEIC exige Android 9 ou mais recente. Escolha JPG ou PNG."
-            }
-        }
-        val length = context.contentResolver.query(uri, arrayOf(OpenableColumns.SIZE),
-            null, null, null)?.use { cursor ->
-            if (cursor.moveToFirst() && !cursor.isNull(0)) cursor.getLong(0) else null
-        }
-        require(length == null || length in 1..MAX_FILE_BYTES) {
+        // Alguns provedores de fotos não expõem MIME/SIZE ou fecham o cursor durante a consulta.
+        // Metadados são dicas: cabeçalho real + cópia limitada definem o aceite.
+        val reportedMime = runCatching { context.contentResolver.getType(uri) }.getOrNull()
+        val reportedSize = runCatching {
+            context.contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)
+                ?.use { cursor ->
+                    if (cursor.moveToFirst() && !cursor.isNull(0)) cursor.getLong(0) else null
+                }
+        }.getOrNull()
+        require(reportedSize == null || reportedSize < 0L || reportedSize in 1..MAX_FILE_BYTES) {
             "Imagem vazia ou acima de 24 MB. Escolha um arquivo menor."
         }
         val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -151,6 +148,14 @@ internal object ImageClipImport {
             options.outWidth.toLong() * options.outHeight.toLong() <= MAX_PIXELS) {
             "Imagem inválida ou acima de 24 megapixels. Reduza a resolução."
         }
+        val mime = ImageImportSafety.recognizedMime(reportedMime, options.outMimeType)
+            ?: error("Formato não suportado. Escolha JPG, PNG, WebP, HEIC ou BMP (GIF não é aceito).")
+        if (mime == "image/heic" || mime == "image/heif") {
+            require(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                "HEIC exige Android 9 ou mais recente. Escolha JPG ou PNG."
+            }
+        }
+        currentCoroutineContext().ensureActive()
         val title = runCatching { mediaName(context, uri) }.getOrDefault("Imagem")
         ImageClipSource(uri.toString(), title, mime)
     }
@@ -175,6 +180,7 @@ internal object ImageClipImport {
                     partial.outputStream().use { target ->
                         val buffer = ByteArray(32 * 1024)
                         while (true) {
+                            currentCoroutineContext().ensureActive()
                             val count = input.read(buffer)
                             if (count < 0) break
                             written += count
@@ -184,6 +190,7 @@ internal object ImageClipImport {
                         target.fdSyncIfAvailable()
                     }
                 } ?: error("Não foi possível ler a imagem.")
+                currentCoroutineContext().ensureActive()
                 require(written > 0L && partial.renameTo(output)) { "Falha ao salvar imagem no projeto." }
                 val stable = FileProvider.getUriForFile(context,
                     context.packageName + ".diagnostics", output)

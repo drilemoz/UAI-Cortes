@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -46,19 +47,28 @@ internal fun ProjectMediaRepairScreen(
         if (picked != null && target != null && !busy) {
             scope.launch {
                 busy = true
+                var provisionalCopy: String? = null
                 try {
                     val replacement = MediaRelinkVerification.prepare(context.applicationContext, picked, target)
+                    if (target.mimePrefix == "image/") provisionalCopy = replacement
                     val corrected = ProjectMediaRelink.replace(project, target, replacement)
                     if (save(corrected)) {
+                        provisionalCopy = null // Agora pertence ao projeto salvo.
                         feedback = "Arquivo reconectado. Cortes e horários preservados."
                         DiagnosticRecorder.action("media_repair", "source_relinked")
                     } else {
                         feedback = "Não foi possível salvar. O projeto original foi preservado."
                     }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
                 } catch (failure: Exception) {
                     DiagnosticRecorder.exception("media_repair_failure", failure)
-                    feedback = failure.message?.take(180) ?: "Não foi possível recuperar esse arquivo."
+                    feedback = "Não foi possível recuperar esse arquivo. Tente escolhê-lo novamente."
                 } finally {
+                    provisionalCopy?.let { raw ->
+                        ImageClipImport.discardUnused(context.applicationContext,
+                            ImageClipSource(raw, "", "image/png"))
+                    }
                     busy = false
                 }
             }

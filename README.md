@@ -1,3 +1,11 @@
+# Uai Cortes · v0.1.246 — Fotos e projetos com mídia ausente
+
+A importação de fotos agora tenta reconhecer o formato pelos dados decodificados quando a galeria retorna MIME genérico ou não fornece metadados. A validação ainda limita imagens a 24 MiB e 24 megapixels, rejeita formatos não suportados e cancela cópias de forma segura ao sair da tela. Nenhum original é apagado.
+
+Quando um projeto encontra fontes inacessíveis, é apresentado um aviso com a opção **Reparar mídias** que abre o assistente já existente. Ele permite localizar novamente arquivos e preservar os ajustes existentes. A recuperação de fotos descarta a cópia privada provisória se não conseguir salvar o projeto. A checagem de acesso também aceita provedores que permitem abrir uma mídia por stream, mesmo sem descritor de arquivo.
+
+O relatório diagnóstico opcional inclui a contagem (não a identidade) das mídias inacessíveis. Mensagens de importação evitam detalhes privados de provedores externos. Esta é uma versão de código-fonte; validar no APK real os provedores de galeria, o acesso após reiniciar e a reprodução da timeline. As diferenças visuais de legendas na exportação ainda precisam de comparação física de quadros.
+
 # Uai Cortes · v0.1.245 — Atualizações, legendas e exportação
 
 A tela Atualizações agora oferece **Pausar / Retomar / Parar** o download do APK. Retomar usa Range somente quando o servidor retorna intervalo correto; em outro caso reinicia sem reaproveitar um arquivo incompatível. A instalação continua dependendo de verificação SHA-256 e consentimento do Android.

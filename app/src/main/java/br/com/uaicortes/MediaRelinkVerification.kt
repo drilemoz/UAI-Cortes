@@ -12,19 +12,23 @@ internal object MediaRelinkVerification {
         withContext(Dispatchers.IO) {
             require(uri.scheme == "content") { "Selecione a mídia pelo armazenamento Android." }
             val resolver = context.contentResolver
-            val mime = resolver.getType(uri)?.lowercase().orEmpty()
-            require(mime.startsWith(target.mimePrefix)) {
-                "O tipo não corresponde ao original (${target.mimePrefix.removeSuffix("/")})."
+            // Fotos podem vir de provedores que informam MIME genérico.
+            // Para imagens, a inspeção de cabeçalho abaixo verifica os bytes reais.
+            if (target.mimePrefix != "image/") {
+                val mime = resolver.getType(uri)?.lowercase().orEmpty()
+                require(mime.startsWith(target.mimePrefix)) {
+                    "O tipo não corresponde ao original (${target.mimePrefix.removeSuffix("/")})."
+                }
             }
-            resolver.openFileDescriptor(uri, "r")?.use { descriptor ->
-                require(descriptor.statSize != 0L) { "O arquivo escolhido está vazio." }
-            } ?: error("O arquivo não pode ser aberto.")
             if (target.mimePrefix == "image/") {
                 // Reutiliza a validação de tamanho, dimensões e formato da importação normal.
                 val source = ImageClipImport.inspect(context, uri)
                 // Uma cópia privada evita depender de uma concessão temporária da galeria.
                 ImageClipImport.copyIntoProject(context, source).uri
             } else {
+                resolver.openFileDescriptor(uri, "r")?.use { descriptor ->
+                    require(descriptor.statSize != 0L) { "O arquivo escolhido está vazio." }
+                } ?: error("O arquivo não pode ser aberto.")
                 val length = verifiedMediaDuration(context, uri)
                 require(length > 0L) { "Não foi possível verificar a duração do arquivo." }
                 require(length >= target.minimumSourceEndMs) {

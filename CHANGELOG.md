@@ -1,3 +1,12 @@
+# Uai Cortes 0.1.246 (2026-11-09)
+
+- Importação de imagem: valida dimensões por BitmapFactory e identifica MIME pelos bytes decodificados; admite provedores sem MIME ou SIZE válidos; bloqueia conteúdos não suportados sem confiar apenas na declaração do provedor.
+- Cópia privada: verifica cancelamento durante blocos de 32 KiB e antes da publicação do arquivo; mantém rollback de .partial e cópia final em falha.
+- Erros: importação diferencia arquivos inacessíveis/permissões e usa textos estáticos sem revelar mensagens arbitrárias de provedores; cancelamentos não geram toasts enganosos.
+- Recuperação: aviso com botão Reparar mídias leva ao fluxo já existente; evita repetir aviso para o mesmo projeto na sessão. As cópias provisórias de foto são descartadas quando salvar o vínculo falhar.
+- Diagnóstico: evento MEDIA com contagem agregada de mídias inacessíveis, sem URI, nome ou conteúdo; categorias genéricas de erros da importação e fallback de leitura por stream em provedores virtuais.
+- Mantidos schema 4, editor, legendas rosa, atualizador, exportação, vozes e cinco APKs Release. Versão-fonte 0.1.246/versionCode 247. CI/Gradle e aparelhos físicos pendentes.
+
 # Uai Cortes 0.1.245 (2026-11-09)
 
 - GitHub Updates: pausa retém APK parcial, retomada condicional com validação HTTP 206 Content-Range e SHA-256 do arquivo inteiro, parada descarta parcial, reinício manual gera transferência limpa. UI informa progresso/velocidade e estado.
