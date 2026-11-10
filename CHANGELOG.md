@@ -1,3 +1,10 @@
+# Uai Cortes v0.1.272 — ElevenLabs integrada às configurações
+
+- Nova entrada ElevenLabs na Central de Integrações com chave própria protegida por Android Keystore, operações de salvar/colar/copiar/mostrar/importar/remover e ajuda oficial.
+- Teste não oneroso da autorização da chave via GET /v1/user e catálogo paginado GET /v2/voices. O teste de usuário pode exigir escopo específico; HTTP 403 não comprova chave inválida.
+- Prévia MP3 opcional com voz da conta e confirmação explícita antes de gerar via ElevenLabs TTS. Reprodução e exportação SAF, sem alterar projetos ou integrar automaticamente ao estúdio de narração.
+- Proteção contra redirects e respostas excessivas, sem retry de POST, limitação de texto e exclusão do segredo de backup. Testes locais e instrumentados de rede reais seguem etapas separadas.
+
 # Uai Cortes 0.1.271 (2026-11-10)
 
 - Revisado o detector de áudio necessário no MP4: PiP vídeo sem faixa sonora não exige áudio no exportado; a origem PiP é consultada por `MediaExtractor` antes de criar a faixa adicional.

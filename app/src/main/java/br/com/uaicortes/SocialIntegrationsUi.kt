@@ -157,7 +157,8 @@ private fun SocialGuideSection(guide: SocialIntegrationGuide, showDeveloper: Boo
 /** Tela de serviços sem misturar cadastro local, credenciais de desenvolvedor e autorização de usuário. */
 @Composable
 internal fun SocialApiCenterScreen(
-    back: () -> Unit, openGemini: () -> Unit, openSocial: () -> Unit, openPolly: () -> Unit
+    back: () -> Unit, openGemini: () -> Unit, openSocial: () -> Unit, openPolly: () -> Unit,
+    openElevenLabs: () -> Unit
 ) {
     val context = LocalContext.current
     val activity = context as? ComponentActivity
@@ -249,6 +250,8 @@ internal fun SocialApiCenterScreen(
                 IntegrationRow(Icons.Default.AutoAwesome, "Google Gemini", "Chaves, modelos e testes", openGemini)
                 IntegrationRow(Icons.Default.RecordVoiceOver, "Amazon Polly",
                     "Chaves AWS, testar vozes, consumo em caracteres", openPolly)
+                IntegrationRow(Icons.Default.GraphicEq, "ElevenLabs",
+                    "API Key, teste de conexão, catálogo de vozes e prévia MP3", openElevenLabs)
                 Text("REDES SOCIAIS", style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 listOf(SocialDestination.YOUTUBE, SocialDestination.FACEBOOK_PAGE,

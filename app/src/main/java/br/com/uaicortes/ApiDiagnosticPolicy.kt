@@ -3,7 +3,7 @@ package br.com.uaicortes
 /** Taxonomia fechada para não salvar parâmetros privados em diagnósticos compartilháveis. */
 internal object ApiDiagnosticPolicy {
     private val safe = Regex("[A-Za-z0-9_.-]{1,48}")
-    private val services = setOf("gemini", "youtube", "tiktok", "meta")
+    private val services = setOf("gemini", "youtube", "tiktok", "meta", "elevenlabs")
     private val outcomes = setOf("ok", "http_error", "network_uncertain", "invalid_response", "cancelled", "unknown")
     fun httpStatus(status: String): Int? {
         val value = when {

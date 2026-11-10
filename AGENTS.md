@@ -1,3 +1,11 @@
+# v0.1.272 — ElevenLabs nas Integrações e APIs
+
+- Base v0.1.271/versionCode 272; nova v0.1.272/versionCode 273. Incluir ElevenLabs na Central de APIs, como Gemini e Polly, com tela própria e retorno à Central.
+- Salvar API Key do usuário somente com AES-GCM/Android Keystore; nunca fixar no APK, registro de diagnóstico, CI, projetos ou backup. Opções colar, ver/ocultar, copiar, salvar, importar e remover com confirmação.
+- Teste GET /v1/user e vozes GET /v2/voices com paginação não geram áudio. Escopos/limites/403 dependem da chave fornecida pelo usuário.
+- Prévia POST /v1/text-to-speech com eleven_multilingual_v2 e MP3 requer confirmação explícita de possíveis créditos, sem retry automático; áudio privado em cache e exportação via SAF.
+- Preservar Gemini, Amazon Polly, projetos schema 4, cinco APKs assinados, configuração das redes sociais e exportador Media3. Executar validação, testes Kotlin/Android, Gradle CI e testes físicos. Não prometer geração sem credenciais reais.
+
 # v0.1.271 — revisão do som PiP e legendas na borda da timeline
 
 - Base 0.1.270/versionCode 271; atual 0.1.271/versionCode 272. Evitar falsas exigências de áudio ao exportar PiPs de vídeo sem faixa sonora.

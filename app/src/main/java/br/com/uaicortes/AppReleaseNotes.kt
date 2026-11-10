@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.271"
-    const val VERSION_CODE = 272
+    const val VERSION_NAME = "0.1.272"
+    const val VERSION_CODE = 273
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.272", listOf(
+            ReleaseFeature("elevenlabs-api-config-272", "ElevenLabs nas Integrações e APIs",
+                "Tela independente para salvar, mostrar, ocultar, colar, copiar, importar e remover a chave protegida no Android Keystore, além de ajuda com links oficiais.", "check"),
+            ReleaseFeature("elevenlabs-test-voices-272", "Teste de conexão e catálogo de vozes",
+                "Consulta a conta e as vozes disponíveis na API, com paginação. Nenhum áudio é gerado durante esses testes; permissões restritas podem exigir ajustes da chave.", "check"),
+            ReleaseFeature("elevenlabs-preview-mp3-272", "Prévia de fala MP3 com confirmação",
+                "Permite gerar, ouvir e salvar uma prévia MP3 após confirmar possível consumo de créditos. Não muda automaticamente a narração ou o projeto; testes reais de rede exigem chave do usuário.", "check")
+        )),
         ReleaseSummary("0.1.271", listOf(
             ReleaseFeature("export-pip-audio-probe-271", "Som do PiP verificado na mídia de origem",
                 "Vídeos PiP sem faixa de áudio não geram trilhas sonoras artificiais nem impedem uma exportação válida. Áudio real do PiP continua no MP4 quando detectado.", "check"),

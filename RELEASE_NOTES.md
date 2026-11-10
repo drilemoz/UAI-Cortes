@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.272 — ElevenLabs nas configurações
+
+- ElevenLabs: configuração de API Key criptografada, botões para colar, salvar, mostrar/ocultar, copiar, importar, remover e ajuda oficial.
+- Conexão: teste de conta e consulta paginada às vozes sem gerar áudio.
+- Prévia opcional: geração MP3 com confirmação de possíveis créditos, reprodução e salvamento no armazenamento escolhido.
+- Não integra automaticamente ElevenLabs ao editor de narrações; permanece separado de Gemini e Polly.
+- Compilação Gradle/Android e teste físico real com API Key ainda precisam ser confirmados.
+
 # Uai Cortes · versão 0.1.271 — revisão da exportação com PiP e legendas
 
 - Exportações com PiPs sem som não precisam mais de uma faixa de áudio inexistente; o aplicativo verifica as trilhas de origem antes de montar a mixagem. Vídeos PiP com áudio habilitado continuam usando sua faixa real.
