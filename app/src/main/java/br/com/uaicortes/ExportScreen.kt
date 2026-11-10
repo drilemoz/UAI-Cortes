@@ -152,6 +152,14 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
         }
     }
     val bitratePreset = ExportBitratePreset.fromId(bitratePresetName)
+    val subtitleSummary = remember(p.subtitles, p.clips) {
+        ExportSubtitlePolicy.summarize(p.subtitles, p.durationMs)
+    }
+    val activeAudios = remember(p.audioTracks, p.clips) { ExportAudioPolicy.activeExtraTracks(p) }
+    val musicEnabled = p.music?.let { ExportAudioPolicy.audible(it.volume) } == true
+    val pipAudios = p.overlays.count {
+        !it.isImage && !it.muted && ExportAudioPolicy.audible(it.volume)
+    }
     var sourceShortSide by remember(p.id, p.clips) { mutableStateOf<Int?>(null) }
     // Só consulta metadados locais em IO: não bloqueia a tela e não faz upload da mídia.
     LaunchedEffect(p.id, p.clips) {
@@ -347,10 +355,24 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                     }
                     }
                 }
-                Text("Guias ilustrativas não entram no MP4; confira o arquivo final. " +
-                    "A interface das plataformas muda e a prévia de efeitos pode ser aproximada.",
+                Text("Esta prévia reproduz os clipes, mas NÃO a mixagem final de narração, música e áudios extras. " +
+                    "Guias não entram no MP4. Confira o som e as legendas no arquivo salvo.",
                     style=MaterialTheme.typography.labelSmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Spacer(Modifier.height(12.dp))
+            CompactExportLabel("Áudio e legendas na exportação", Icons.Default.Subtitles)
+            Text("${activeAudios.size} faixa(s) extras ativas · " +
+                "música ${if(musicEnabled) "ligada" else "desligada"} · $pipAudios PiP(s) com áudio habilitado*",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("${subtitleSummary.valid} legenda(s) com intervalo visível · " +
+                "som original conforme o volume de cada clipe. *Trilha do PiP será conferida na exportação.",
+                style=MaterialTheme.typography.bodySmall,
+                color=MaterialTheme.colorScheme.onSurfaceVariant)
+            subtitleSummary.warnings.forEach { warning ->
+                Text("Atenção: $warning", style=MaterialTheme.typography.bodySmall,
+                    color=MaterialTheme.colorScheme.error)
             }
             Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
@@ -478,6 +500,16 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                         Spacer(Modifier.width(9.dp))
                         Text(safeName, fontWeight = FontWeight.SemiBold,
                             maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
+                    HorizontalDivider()
+                    Text("Som: ${activeAudios.size} faixa(s) adicional(is), " +
+                        "${if (musicEnabled) "música ativa" else "música ausente/silenciada"}, " +
+                        "$pipAudios PiP(s) com áudio habilitado (origem será verificada).", style=MaterialTheme.typography.bodySmall)
+                    Text("Legendas: ${subtitleSummary.valid} visíveis no intervalo do vídeo.",
+                        style=MaterialTheme.typography.bodySmall)
+                    subtitleSummary.warnings.forEach { warning ->
+                        Text("Atenção: $warning", style=MaterialTheme.typography.bodySmall,
+                            color=MaterialTheme.colorScheme.error)
                     }
                     HorizontalDivider()
                     Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {

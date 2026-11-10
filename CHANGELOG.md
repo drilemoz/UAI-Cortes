@@ -1,3 +1,20 @@
+# Uai Cortes 0.1.271 (2026-11-10)
+
+- Revisado o detector de áudio necessário no MP4: PiP vídeo sem faixa sonora não exige áudio no exportado; a origem PiP é consultada por `MediaExtractor` antes de criar a faixa adicional.
+- O controle de volume não é mais tratado como evidência de áudio no arquivo PiP; faixa de som só é adicionada quando existe na origem e está habilitada.
+- Corrigidos avisos de legendas que começam antes de zero, mas seguem visíveis no primeiro quadro. Sobreposições usam início visível a partir de 0 ms.
+- Testes Kotlin e Android instrumentado para esses casos, fixture de MP4 sem áudio e validação estrutural. Build Android e teste de audição/legendas reais permanecem pendentes.
+- Versão 0.1.271/versionCode 272, preservando schema e integrações anteriores.
+
+# Uai Cortes 0.1.270 (2026-11-10)
+
+- Corrigida a inclusão de trilhas extras silenciadas e música de volume zero na composição de exportação.
+- Recortes de áudio passam por `ExportAudioPolicy.window` com duração real verificada, início da fonte, posição na timeline e lacunas. Falha de metadados não gera corte silencioso de 1000 ms.
+- `ExportMp4Inspector` verifica contêiner temporário e arquivo publicado; em falha após cópia, remove o destino do MediaStore, informa erro e preserva mídia original.
+- Diagnóstico do MP4 mostra faixa de áudio encontrada ou ausente e duração medida; não infere volume nem qualidade sonora.
+- Avisos prévios de colisões/tempos de legendas e contagem das faixas com som na tela de exportação; prévia esclarece suas limitações.
+- Novos testes Kotlin, instrumentado e contrato Python. Versão 0.1.270/versionCode 271; build Android e validação visual/sonora em dispositivo seguem pendentes.
+
 # Uai Cortes 0.1.269 (2026-11-09)
 
 - Editor de Áudio: integrado `DeviceMediaBrowser` com `GalleryScope.VIDEOS`, seleção única e importação pela galeria visual. OpenDocument permanece em Arquivos do Android; áudios comuns continuam usando o seletor de áudio.

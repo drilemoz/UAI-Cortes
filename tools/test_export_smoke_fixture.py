@@ -21,4 +21,14 @@ if shutil.which('ffprobe'):
     assert any(s.get('codec_type') == 'video' and s.get('codec_name') == 'h264' for s in streams)
     assert any(s.get('codec_type') == 'audio' and s.get('codec_name') == 'aac' for s in streams)
     assert 1.5 <= float(info['format']['duration']) <= 1.7
+video_only = root/'app/src/androidTest/assets/export_smoke_video_only.mp4'
+assert video_only.is_file() and video_only.stat().st_size > 1000
+assert 'pipAudioProbeDifferentiatesVideoOnlyFromVideoWithAudio' in text
+if shutil.which('ffprobe'):
+    result = subprocess.run(['ffprobe', '-v', 'error', '-show_entries',
+       'stream=codec_type', '-of', 'json', str(video_only)],
+       capture_output=True, text=True, check=True)
+    solo = json.loads(result.stdout)['streams']
+    assert any(s.get('codec_type') == 'video' for s in solo)
+    assert not any(s.get('codec_type') == 'audio' for s in solo)
 print('OK: fixture real H.264/AAC, teste Android com Media3 e limpeza de MediaStore')

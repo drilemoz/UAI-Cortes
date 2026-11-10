@@ -93,7 +93,7 @@ for token in ['ClipSheetAction(', 'TimelineTimedRow(', 'internal fun SubtitleScr
     assert token in ui, token
 assert 'TimedSubtitleOverlay' in fx and 'ClipFadeEffect' in fx
 assert 'EditFeatures.parseSrt' in ui and 'setRemoveVideo(true)' in extract
-assert 'ClipAudioBindings.resolved(project).forEach' in source and 'TimedSubtitleOverlay(project.subtitles' in source
+assert 'ExportAudioPolicy.activeExtraTracks(project)' in source and 'TimedSubtitleOverlay(project.subtitles' in source
 print('OK: v0.1.24 funcionalidades estruturais, schema 4, SRT, fades e extração M4A')
 
 # Regressões detectadas no build GitHub Actions 15 (não valida tipos Kotlin).
@@ -123,8 +123,8 @@ assert 'j.optLong("sourceStartMs", 0L)' in model
 assert 'AudioTrackTiming.valid(' in ui and 'Salvar corte' in ui and 'Ouvir corte' in ui
 assert 'sourceStartMs=editSourceStart,durationMs=editDuration' in ui
 assert 'audio.sourceStartMs' in ui and 'sourceStartMs+(projectMs-startMs)' in ui
-assert '.setStartPositionMs(sourceStart)' in source
-assert '.setEndPositionMs(sourceStart + playable)' in source
+assert '.setStartPositionMs(window.sourceStartMs)' in source
+assert '.setEndPositionMs(window.sourceStartMs + window.playableMs)' in source
 assert 'MIN_TRIM_MS = 250L' in logic and 'fun initialRange(' in logic
 print('OK: v0.1.24 recorte de áudio, persistência legado, prévia e exportação com deslocamento de origem')
 
@@ -897,7 +897,7 @@ assert 'clip_audio' in nav and '"clip_audio" -> project?.let' in main
 assert 'onClipAudio(active.id)' in editor and 'ClipAudioBindings.cloneAttached(' in editor
 assert 'clipId: String? = null' in model and 'clipSourceAnchorMs: Long = 0L' in model
 assert '.put("clipId", clipId)' in model and 'j.optString("clipId")' in model
-assert 'ClipAudioBindings.resolved(project).forEach' in source
+assert 'ExportAudioPolicy.activeExtraTracks(project)' in source
 assert 'ClipAudioBindings.resolved(p).forEach' in editor
 assert 'ClipAudioBindings.resolved(p).filter { (it.kind == VoiceIaPolicy.KIND) == voiceTrack }.forEach' in (root/'app/src/main/java/br/com/uaicortes/EditorTimelineUi.kt').read_text()
 assert 'ClipAudioTiming.resolve(' in binding and 'fun resolve(' in timing

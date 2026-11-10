@@ -23,7 +23,11 @@ internal data class ExportQualityReport(
     val destinationLabel: String? = null,
     val savedFileWidth: Int = 0,
     val savedFileHeight: Int = 0,
-    val savedRotationDegrees: Int? = null
+    val savedRotationDegrees: Int? = null,
+    val verifiedAudioTrack: Boolean? = null,
+    val verifiedDurationMs: Long = 0L,
+    val requiredExternalAudio: Boolean = false,
+    val subtitleOverlapCount: Int = 0
 ) {
     /** Dimensões de exibição do MP4 salvo, considerando sua rotação; fallback no Media3. */
     val displayDimensions: Pair<Int, Int>? get() {
@@ -93,6 +97,15 @@ internal data class ExportQualityReport(
             add("Tempo de cópia para a galeria: ${formatElapsed(galleryCopyElapsedMs)}")
         add("Codec de vídeo: ${videoMimeType?.takeIf { it.isNotBlank() } ?: "Não informado"}")
         if (audioBitrateBps > 0) add("Bitrate de áudio medido: ${audioBitrateBps / 1000} kb/s")
+        verifiedAudioTrack?.let { audio ->
+            add("Faixa de áudio no MP4 salvo: ${if (audio) "encontrada" else "ausente"}" +
+                if (requiredExternalAudio) " · exigida para este projeto" else "")
+        }
+        if (verifiedDurationMs > 0L)
+            add("Duração do MP4 salvo: ${formatElapsed(verifiedDurationMs)}")
+        if (subtitleOverlapCount > 0)
+            add("Aviso: $subtitleOverlapCount sobreposição(ões) de legenda; a primeira ativa prevalece.")
+        add("Faixa de áudio presente não comprova volume nem sincronização; ouça o MP4 final.")
         encoderName?.takeIf { it.isNotBlank() }?.let { add("Codificador: $it") }
         if (fellBackInResolution) add("Aviso: o aparelho/exportador usou uma resolução diferente da solicitada.")
         add("Os valores são da exportação local, antes da recompressão das redes sociais.")

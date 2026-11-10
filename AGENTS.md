@@ -1,3 +1,19 @@
+# v0.1.271 — revisão do som PiP e legendas na borda da timeline
+
+- Base 0.1.270/versionCode 271; atual 0.1.271/versionCode 272. Evitar falsas exigências de áudio ao exportar PiPs de vídeo sem faixa sonora.
+- Usar `ExportMp4Inspector.sourceHasAudio()` para verificar a presença real de trilha no PiP antes de compor a faixa de áudio. O controle de volume sozinho não comprova presença de áudio.
+- Legenda com `startMs < 0` e `endMs > 0` aparece no início da composição: não classificá-la como invisível. Preservar prioridade da primeira cue ativa e não alterar tempos do usuário.
+- Testes: fixture H.264 sem áudio, instrumentado de presença de faixa, testes unitários Kotlin e contratos Python. Compilação Android e escuta real seguem pendentes.
+- Manter projetos schema 4, recursos existentes, 5 APKs assinados, versionamento sequencial, validação e empacotamento oficial.
+
+# v0.1.270 — validação de exportação, áudio e legendas
+
+- Base 0.1.269/versionCode 270; atual 0.1.270/versionCode 271. Preservar projeto schema 4, cinco APKs Release, assinatura, originais, editor, PiP, captura de quadros, download e integrações sociais.
+- Ignorar áudio extra/música com volume zero e evitar `mediaDuration()` de 1000 ms na exportação. Tempo de áudio deve vir de metadados verificáveis e ser limitado pela origem/timeline; sem metadados informar erro, nunca truncar silenciosamente.
+- Conferir faixas do MP4 temporário e da cópia final no MediaStore, com rollback se arquivo inválido. Presença de áudio não comprova que seja audível. Nunca alegar que testes estáticos validam codificadores ou pixels.
+- Mostrar na confirmação contagem de faixas ativas e avisos de sobreposição/limite de legendas, preservando a prioridade atual da primeira cue ativa. A prévia não é uma simulação da mixagem final.
+- Rodar validações Python e Kotlin direcionadas, compilar Android e testar renderização/legendas/som em aparelho após CI. Empacotar apenas com `tools/package_source.py`.
+
 # v0.1.269 — Galeria integrada no Editor de Áudio, ação de áudio por clipe restaurada
 
 - Base 0.1.268/versionCode 269; atual 0.1.269/versionCode 270. Manter sincronização de versões, cinco variantes de APK Release, assinatura e schema dos projetos.

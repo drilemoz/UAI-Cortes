@@ -24,6 +24,40 @@ import java.util.concurrent.atomic.AtomicReference
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class ExportPipelineSmokeAndroidTest {
+    @Test fun pipAudioProbeDifferentiatesVideoOnlyFromVideoWithAudio() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val fixtures = listOf("export_smoke_16x9.mp4" to true,
+            "export_smoke_video_only.mp4" to false)
+        fixtures.forEach { (name, expected) ->
+            val file = File.createTempFile("uai-pip-probe-", ".mp4", context.cacheDir)
+            try {
+                instrumentation.context.assets.open(name).use { source ->
+                    file.outputStream().use { source.copyTo(it) }
+                }
+                assertEquals("Leitura de áudio para $name", expected,
+                    ExportMp4Inspector.sourceHasAudio(context, Uri.fromFile(file)))
+            } finally { file.delete() }
+        }
+    }
+
+    /** Confere contêiner e presença das faixas, não prova áudio audível nem pixels de legenda. */
+    @Test fun inspectorRecognizesRealVideoAndAudioFromFixture() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val file = File.createTempFile("uai-mp4-inspector-", ".mp4", context.cacheDir)
+        try {
+            instrumentation.context.assets.open("export_smoke_16x9.mp4").use { input ->
+                file.outputStream().use { input.copyTo(it) }
+            }
+            val streams = ExportMp4Inspector.inspectFile(context, file)
+            ExportMp4Inspector.requirePlayable(streams, expectedAudio = true)
+            assertTrue(streams.video)
+            assertTrue(streams.audio)
+            assertTrue(streams.durationMs > 0L)
+        } finally { file.delete() }
+    }
+
     /** Exercita a composição multi-input e o efeito global de legenda/água.
      * O sucesso do MP4 NÃO prova a ordem visual dos pixels; isso exige inspeção
      * de quadros no aparelho, inclusive sobreposições de duas janelas PiP.

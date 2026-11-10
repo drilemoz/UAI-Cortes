@@ -152,10 +152,12 @@ class ExportEngine(private val context: Context) {
         project.overlays.forEachIndexed { index, overlay ->
             checkReadable(overlay.uri, "PiP ${index + 1}")
         }
-        ClipAudioBindings.resolved(project).forEachIndexed { index, audio ->
-            if (audio.volume > 0f) checkReadable(audio.uri, "Áudio ${index + 1}")
+        ExportAudioPolicy.activeExtraTracks(project).forEachIndexed { index, audio ->
+            checkReadable(audio.uri, "Áudio ${index + 1}")
         }
-        project.music?.takeIf { it.volume > 0f }?.let { checkReadable(it.uri, "Música") }
+        project.music?.takeIf { ExportAudioPolicy.audible(it.volume) }?.let {
+            checkReadable(it.uri, "Música")
+        }
         require(context.cacheDir.usableSpace >= 32L * 1024L * 1024L) {
             "Pouco espaço livre para gerar o MP4 temporário. Libere armazenamento e tente novamente."
         }
@@ -219,6 +221,21 @@ class ExportEngine(private val context: Context) {
         cancel()
         validateSources(project)
         val pipsTopFirst = ExportLayerOrder.media3TopFirst(project.overlays.take(OverlayPlacement.MAX_PIPS))
+        // Alguns MP4s PiP são somente vídeo; não criar trilha sonora artificial
+        // nem exigir AAC no MP4 salvo quando a origem não oferece áudio.
+        val pipAudioAvailability = mutableMapOf<String, Boolean>()
+        pipsTopFirst.filter { !it.isImage && !it.muted && ExportAudioPolicy.audible(it.volume) }
+            .forEachIndexed { index, pip ->
+                pipAudioAvailability.getOrPut(pip.uri) {
+                    try { ExportMp4Inspector.sourceHasAudio(context, Uri.parse(pip.uri)) }
+                    catch (error: Exception) {
+                        throw IllegalStateException(
+                            "Não foi possível inspecionar o áudio do PiP ${index + 1}.", error)
+                    }
+                }
+            }
+        val expectedAudio = ExportAudioPolicy.hasRequiredAudio(project) ||
+            pipAudioAvailability.values.any { it }
         val postCompositionText = pipsTopFirst.isNotEmpty()
         var globalStartMs = 0L
         val mainItems = project.clips.mapIndexed { index, clip ->
@@ -316,7 +333,8 @@ class ExportEngine(private val context: Context) {
         }
         sequences += mainSequence
         for (pip in pipsTopFirst) {
-            if (pip.isImage || pip.muted || pip.volume <= 0f) continue
+            if (pip.isImage || pip.muted || !ExportAudioPolicy.audible(pip.volume) ||
+                pipAudioAvailability[pip.uri] != true) continue
             val media = MediaItem.Builder().setUri(pip.uri).setClippingConfiguration(
                 MediaItem.ClippingConfiguration.Builder()
                         .setStartPositionMs(pip.sourceStartMs)
@@ -327,26 +345,34 @@ class ExportEngine(private val context: Context) {
                 .setEffects(Effects(listOf(GainProcessor(pip.volume)), emptyList())).build())
             sequences += audioTrack.build()
         }
-        ClipAudioBindings.resolved(project).forEach { audio ->
-            val start = audio.startMs.coerceIn(0L, project.durationMs)
-            val sourceDuration = mediaDuration(context, Uri.parse(audio.uri))
-            val sourceStart = audio.sourceStartMs.coerceIn(0L, sourceDuration)
-            val length = audio.durationMs.takeIf { it > 0 } ?: (sourceDuration - sourceStart)
-            val playable = minOf(length, sourceDuration - sourceStart, project.durationMs - start)
-            if (playable > 0) {
-                val track = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_AUDIO))
-                if (start > 0) track.addGap(start * 1000L)
-                track.addItem(EditedMediaItem.Builder(MediaItem.Builder().setUri(audio.uri)
-                    .setClippingConfiguration(MediaItem.ClippingConfiguration.Builder()
-                        .setStartPositionMs(sourceStart)
-                        .setEndPositionMs(sourceStart + playable).build()).build())
-                    .setEffects(Effects(listOf(voiceProcessors(audio.volume, audio.voiceTone)), emptyList())).build())
-                val trailing = project.durationMs - start - playable
-                if (trailing > 0) track.addGap(trailing * 1000L)
-                sequences += track.build()
+        // Duração desconhecida não deve virar 1000 ms. Rejeitar com erro claro
+        // antes de iniciar o Transformer, mantendo a origem e o projeto intactos.
+        val activeAudio = ExportAudioPolicy.activeExtraTracks(project)
+        val inspectedAudioDurations = mutableMapOf<String, Long>()
+        activeAudio.forEachIndexed { index, audio ->
+            val sourceDuration = inspectedAudioDurations.getOrPut(audio.uri) {
+                verifiedMediaDuration(context, Uri.parse(audio.uri))
             }
+            require(sourceDuration > 0L) {
+                "Não foi possível verificar a duração do áudio ${index + 1}. " +
+                    "Selecione novamente um arquivo de áudio compatível antes de exportar."
+            }
+            val window = ExportAudioPolicy.window(audio.startMs, audio.sourceStartMs,
+                audio.durationMs, sourceDuration, project.durationMs)
+            require(window != null) {
+                "O corte do áudio ${index + 1} está fora da origem ou do vídeo. Revise o áudio."
+            }
+            val track = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_AUDIO))
+            if (window.timelineStartMs > 0L) track.addGap(window.timelineStartMs * 1000L)
+            track.addItem(EditedMediaItem.Builder(MediaItem.Builder().setUri(audio.uri)
+                .setClippingConfiguration(MediaItem.ClippingConfiguration.Builder()
+                    .setStartPositionMs(window.sourceStartMs)
+                    .setEndPositionMs(window.sourceStartMs + window.playableMs).build()).build())
+                .setEffects(Effects(listOf(voiceProcessors(audio.volume, audio.voiceTone)), emptyList())).build())
+            if (window.trailingMs > 0L) track.addGap(window.trailingMs * 1000L)
+            sequences += track.build()
         }
-        project.music?.let { music ->
+        project.music?.takeIf { ExportAudioPolicy.audible(it.volume) }?.let { music ->
             val track = EditedMediaItem.Builder(MediaItem.fromUri(music.uri))
                 .setEffects(Effects(listOf(GainProcessor(music.volume)), emptyList())).build()
             sequences += EditedMediaItemSequence.withAudioFrom(listOf(track))
@@ -451,17 +477,28 @@ class ExportEngine(private val context: Context) {
                         val copyStartedAtMs = SystemClock.elapsedRealtime()
                         var copyElapsedMs = -1L
                         var galleryGeometry: Triple<Int, Int, Int?>? = null
+                        var savedStreams: ExportMp4Inspector.Streams? = null
                         var saveError: Exception? = null
                         try {
+                            // Recusar contêiner incompleto antes de publicar.
+                            ExportMp4Inspector.requirePlayable(
+                                ExportMp4Inspector.inspectFile(context, target), expectedAudio)
                             savedUri = saveToGallery(target, requestedName)
                             copyElapsedMs = (SystemClock.elapsedRealtime() - copyStartedAtMs)
                                 .coerceAtLeast(0L)
-                            // Verificar MP4 salvo em IO, sem bloquear a thread de interface.
-                            galleryGeometry = savedUri?.let { uri ->
-                                runCatching { savedMp4Geometry(context, uri) }.getOrNull()
-                            }
+                            // Verificar também o arquivo efetivamente salvo no MediaStore.
+                            savedStreams = ExportMp4Inspector.inspectSaved(context, requireNotNull(savedUri))
+                            ExportMp4Inspector.requirePlayable(requireNotNull(savedStreams), expectedAudio)
+                            galleryGeometry = runCatching {
+                                savedMp4Geometry(context, requireNotNull(savedUri))
+                            }.getOrNull()
                         } catch (e: Exception) {
-                            DiagnosticRecorder.exception("export_gallery", e)
+                            // Não deixar uma exportação parcial como se tivesse dado certo.
+                            savedUri?.let { uri ->
+                                runCatching { context.contentResolver.delete(uri, null, null) }
+                            }
+                            savedUri = null
+                            DiagnosticRecorder.exception("export_verify", e)
                             saveError = e
                         } finally {
                             target.delete()
@@ -475,7 +512,12 @@ class ExportEngine(private val context: Context) {
                                         galleryCopyElapsedMs = copyElapsedMs,
                                         savedFileWidth = galleryGeometry?.first ?: 0,
                                         savedFileHeight = galleryGeometry?.second ?: 0,
-                                        savedRotationDegrees = galleryGeometry?.third
+                                        savedRotationDegrees = galleryGeometry?.third,
+                                        verifiedAudioTrack = savedStreams?.audio,
+                                        verifiedDurationMs = savedStreams?.durationMs ?: 0L,
+                                        requiredExternalAudio = expectedAudio,
+                                        subtitleOverlapCount = ExportSubtitlePolicy.summarize(
+                                            project.subtitles, project.durationMs).overlaps
                                     ))
                                 }
                                     ?: onError("Não foi possível confirmar o vídeo salvo.")

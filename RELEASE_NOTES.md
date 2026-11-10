@@ -1,3 +1,17 @@
+# Uai Cortes · versão 0.1.271 — revisão da exportação com PiP e legendas
+
+- Exportações com PiPs sem som não precisam mais de uma faixa de áudio inexistente; o aplicativo verifica as trilhas de origem antes de montar a mixagem. Vídeos PiP com áudio habilitado continuam usando sua faixa real.
+- Avisos sobre legendas iniciadas antes do começo do projeto foram ajustados para não tratar como invisível um texto que ainda aparece no primeiro quadro.
+- Testes de regressão foram ampliados; ainda é necessário confirmar compilação e resultado no aparelho, inclusive audibilidade e sincronização.
+
+# Uai Cortes · versão 0.1.270 — exportação mais confiável de som e legendas
+
+- Ao exportar, faixas de áudio ou música silenciadas são ignoradas. Narrações e áudios vinculados mantêm seu tempo de origem e posição no vídeo; arquivos sem duração verificável são sinalizados para evitar cortes inesperados.
+- Antes da publicação na galeria, o app verifica se há vídeo, duração válida e uma faixa de áudio quando alguma narração ou música foi escolhida. A cópia é checada novamente e arquivos inválidos são descartados.
+- A tela mostra quantidade de áudios ativos, música e PiPs com som, além de avisos quando legendas se sobrepõem ou saem do tempo do vídeo.
+- A prévia de enquadramento não representa toda a mixagem final. Ainda é necessário ouvir e assistir ao MP4; a checagem técnica não comprova sincronismo ou aparência das legendas.
+- Mantidos projetos, assinatura, editor e compatibilidade do formato de arquivos. Compilação Android e testes físicos permanecem necessários.
+
 # Uai Cortes · versão 0.1.269 — galeria no Editor de Áudio e narração por clipe
 
 - Ao tocar em **Importar vídeo** no Editor de Áudio, abre a galeria visual do UaiCortes, mostrando apenas vídeos, com miniaturas, pastas, pesquisa e seleção única. O seletor de arquivos do Android permanece como alternativa.

@@ -16,11 +16,27 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.269"
-    const val VERSION_CODE = 270
+    const val VERSION_NAME = "0.1.271"
+    const val VERSION_CODE = 272
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.271", listOf(
+            ReleaseFeature("export-pip-audio-probe-271", "Som do PiP verificado na mídia de origem",
+                "Vídeos PiP sem faixa de áudio não geram trilhas sonoras artificiais nem impedem uma exportação válida. Áudio real do PiP continua no MP4 quando detectado.", "check"),
+            ReleaseFeature("export-negative-subtitles-271", "Avisos temporais de legendas corrigidos",
+                "Legendas que começam antes de zero, mas permanecem visíveis no primeiro quadro, deixam de ser classificadas erroneamente como invisíveis.", "check"),
+            ReleaseFeature("export-pip-probe-tests-271", "Testes de regressão ampliados",
+                "Foram adicionadas verificações de PiP sem som e legendas na borda da timeline. A escuta e a renderização em Android ainda exigem teste no aparelho.", "check")
+        )),
+        ReleaseSummary("0.1.270", listOf(
+            ReleaseFeature("export-audio-window-270", "Áudios extras sem cortes artificiais",
+                "A exportação ignora músicas e faixas silenciadas. Quando a duração da narração não é verificável, informa o problema em vez de cortá-la como se tivesse um segundo.", "check"),
+            ReleaseFeature("export-file-verified-270", "MP4 conferido antes e depois de salvar",
+                "Confere faixas de vídeo, duração e presença de áudio quando há narração ou música ativa. Não publica arquivo incompleto como exportação concluída; não substitui ouvir e assistir ao resultado.", "check"),
+            ReleaseFeature("export-subtitle-warning-270", "Alertas de legenda e mistura de áudio",
+                "A tela informa quais áudios estão ativos e alerta sobre legendas sobrepostas ou fora do tempo. A prévia não promete mixagem completa; vídeos originais e projetos são preservados.", "check")
+        )),
         ReleaseSummary("0.1.269", listOf(
             ReleaseFeature("audio-editor-video-gallery-269", "Galeria de vídeos no Editor de Áudio",
                 "Importar vídeo abre a galeria interna de miniaturas, pastas e pesquisa, com apenas vídeos e seleção única. A opção Arquivos do Android continua disponível.", "check"),

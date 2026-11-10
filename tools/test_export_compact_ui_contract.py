@@ -17,7 +17,7 @@ assert 'configureExportPreviewFrame' in s and 'AspectRatioFrameLayout.RESIZE_MOD
 assert 'if(destination.isVertical && showFrameGuides)' in s
 assert 'guideKind != "UI"' in s and 'guideKind != "TEXT"' in s
 assert 'ExportFrameIllustration(false)' in s and 'ExportFrameIllustration(true)' in s
-assert 'As margens reais variam' in s and 'Guias ilustrativas não entram no MP4' in s
+assert 'As margens reais variam' in s and 'Guias não entram no MP4' in s
 assert 'if(it) previewExpanded=true' in s
 assert s.index('Column(Modifier.weight(1f).verticalScroll') < s.index('Surface(shadowElevation=8.dp')
 assert s.index('Surface(shadowElevation=8.dp') < s.index('if(framingHelpExpanded)')
