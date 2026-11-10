@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.268"
-    const val VERSION_CODE = 269
+    const val VERSION_NAME = "0.1.269"
+    const val VERSION_CODE = 270
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.269", listOf(
+            ReleaseFeature("audio-editor-video-gallery-269", "Galeria de vídeos no Editor de Áudio",
+                "Importar vídeo abre a galeria interna de miniaturas, pastas e pesquisa, com apenas vídeos e seleção única. A opção Arquivos do Android continua disponível.", "check"),
+            ReleaseFeature("linked-clip-audio-direct-269", "Áudio exclusivo do clipe novamente acessível",
+                "Ao tocar em um clipe, Adicionar ou Editar áudio somente deste clipe aparece diretamente no menu, sem precisar abrir Editar. Duplicar, mover e volume continuam nas opções do clipe.", "check"),
+            ReleaseFeature("clip-timeline-gestures-269", "Arrastar clipes continua independente do toque",
+                "O menu abre apenas com toque curto; segurar e arrastar continua reposicionando o clipe na linha do tempo sem alterar sua mídia original.", "check")
+        )),
         ReleaseSummary("0.1.268", listOf(
             ReleaseFeature("ci225-snapshot-near-end-test-268", "CI 225: teste de quadro próximo do fim corrigido",
                 "O teste unitário agora considera a janela deslocada para trás quando o quadro está no final do clipe, preservando a renderização Media3 e os limites da fonte.", "check"),

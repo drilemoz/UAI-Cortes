@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.269 — galeria no Editor de Áudio e narração por clipe
+
+- Ao tocar em **Importar vídeo** no Editor de Áudio, abre a galeria visual do UaiCortes, mostrando apenas vídeos, com miniaturas, pastas, pesquisa e seleção única. O seletor de arquivos do Android permanece como alternativa.
+- Ao tocar em um clipe da linha do tempo, o menu Cortar/Editar/Excluir volta a mostrar a opção **Adicionar áudio somente a este clipe** (ou Editar, quando já tiver áudio vinculado).
+- Editar conserva Duplicar, mover antes/depois e Volume. Pressionar e arrastar o clipe continua funcionando sem abrir menu.
+- Arquivos originais e projetos existentes são preservados. Compilação Android e teste no aparelho ainda dependem da execução do GitHub Actions.
+
 # Uai Cortes · versão 0.1.268 — CI 225: teste de quadros corrigido
 
 - Ajustado o teste de captura de quadros perto do fim para refletir a janela temporal usada pelo compositor.

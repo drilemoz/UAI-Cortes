@@ -1,3 +1,10 @@
+# Uai Cortes · v0.1.269 — galeria integrada ao Editor de Áudio e áudio por clipe restaurado
+
+- Editor de Áudio: botão **Importar vídeo** em destaque no topo abre a galeria interna do UaiCortes, com apenas vídeos, miniaturas, pastas, busca e seleção única. Seletor de documentos Android permanece como alternativa, e importação de áudio puro é mantida.
+- Editor de vídeo: ao tocar no clipe, o menu Cortar/Editar/Excluir mostra diretamente **Adicionar/Editar áudio somente deste clipe**. O botão não fica mais escondido dentro de Editar.
+- O submenu Editar conserva Duplicar, Mover antes, Mover depois e Volume do clipe. Segurar e arrastar na linha do tempo continua independente do toque curto.
+- A importação e os controles não modificam arquivos originais. Compilação Android e testes físicos ainda são necessários.
+
 # Uai Cortes · v0.1.268 — CI 225: regressão de captura no fim de clipe
 
 - Workflow 225 concluiu a validação Python e compilou Kotlin, mas um dos 714 testes unitários falhou por expectativa obsoleta do instante relativo da captura próxima ao fim.

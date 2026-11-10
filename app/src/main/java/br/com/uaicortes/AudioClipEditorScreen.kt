@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -62,6 +63,7 @@ internal fun AudioClipEditorScreen(onBack: () -> Unit) {
     var showExitConfirmation by remember { mutableStateOf(false) }
     var repeatSelection by remember { mutableStateOf(false) }
     var pendingSelection by remember { mutableStateOf<Pair<Long,Long>?>(null) }
+    var videoGalleryOpen by rememberSaveable { mutableStateOf(false) }
 
     DisposableEffect(player, exporter) {
         onDispose { player.release(); exporter.cancel() }
@@ -71,7 +73,7 @@ internal fun AudioClipEditorScreen(onBack: () -> Unit) {
     fun exit() {
         if (processing) showExitConfirmation = true else onBack()
     }
-    BackHandler { exit() }
+    BackHandler { if (videoGalleryOpen) videoGalleryOpen = false else exit() }
 
     fun changeSource(uri: Uri, fromVideo: Boolean) {
         if (processing) return
@@ -176,12 +178,38 @@ internal fun AudioClipEditorScreen(onBack: () -> Unit) {
     }
 
     val ready = source != null && !checking && AudioClipSelectionPolicy.valid(durationMs, startMs, endMs)
-    Column(Modifier.fillMaxSize().statusBarsPadding()) {
+    if (videoGalleryOpen) {
+        // Mesma galeria usada nas ferramentas rápidas: somente vídeos, com miniaturas,
+        // busca, pastas, permissão de mídia e seleção única. SAF é alternativa.
+        DeviceMediaBrowser(
+            onBack = { videoGalleryOpen = false },
+            onSelect = { chosen ->
+                chosen.firstOrNull()?.takeUnless { it.isImage }?.let { media ->
+                    videoGalleryOpen = false
+                    changeSource(media.uri, fromVideo = true)
+                }
+            },
+            openDocuments = {
+                videoGalleryOpen = false
+                pickVideo.launch(arrayOf("video/*"))
+            },
+            scope = GalleryScope.VIDEOS,
+            allowMultiple = false
+        )
+    } else Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Heading("Editor de Áudio", ::exit)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text("Corte um áudio ou extraia a trilha sonora de um vídeo. Funciona offline.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Button(onClick = { if (!processing) { stop(); videoGalleryOpen = true } },
+                enabled = !processing,
+                shape = UaiShapes.button,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
+                Icon(Icons.Default.VideoLibrary, null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(if (sourceIsVideo && source != null) "Trocar vídeo" else "Importar vídeo")
+            }
             Surface(color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .55f),
                 shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -203,21 +231,13 @@ internal fun AudioClipEditorScreen(onBack: () -> Unit) {
                             }
                         }
                     }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { pickAudio.launch(arrayOf("audio/*")) },
-                            enabled = !processing, modifier = Modifier.weight(1f),
-                            contentPadding = PaddingValues(horizontal = 8.dp)) {
-                            Icon(Icons.Default.AudioFile, null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Áudio", maxLines = 1)
-                        }
-                        OutlinedButton(onClick = { pickVideo.launch(arrayOf("video/*")) },
-                            enabled = !processing, modifier = Modifier.weight(1f),
-                            contentPadding = PaddingValues(horizontal = 8.dp)) {
-                            Icon(Icons.Default.Movie, null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("De vídeo", maxLines = 1)
-                        }
+                    OutlinedButton(onClick = { pickAudio.launch(arrayOf("audio/*")) },
+                        enabled = !processing, modifier = Modifier.fillMaxWidth(),
+                        shape = UaiShapes.button) {
+                        Icon(Icons.Default.AudioFile, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (source != null && !sourceIsVideo) "Trocar arquivo de áudio"
+                            else "Importar arquivo de áudio")
                     }
                     if (sourceIsVideo && source != null) {
                         Text("Trilha sonora do vídeo selecionada para edição. A exportação gera somente áudio M4A; o vídeo original permanece intacto.",

@@ -1,3 +1,11 @@
+# v0.1.269 — Galeria integrada no Editor de Áudio, ação de áudio por clipe restaurada
+
+- Base 0.1.268/versionCode 269; atual 0.1.269/versionCode 270. Manter sincronização de versões, cinco variantes de APK Release, assinatura e schema dos projetos.
+- Editor de Áudio usa a galeria interna com `GalleryScope.VIDEOS` e seleção única. A opção Arquivos do Android continua permitindo escolher `video/*`; `audio/*` permanece separado para arquivos de áudio.
+- O botão de adicionar/editar áudio somente ao clipe fica visível no menu principal do clipe aberto por toque curto, sem depender de expandir Editar; ClipAudioScreen permanece funcional.
+- Preservar as ações Cortar/Editar/Excluir, Duplicar/Antes/Depois, volume e principalmente o gesto de segurar e arrastar o clipe livremente.
+- Teste obrigatório: `python3 tools/test_audio_clip_gallery_269_contract.py`, além dos testes de galeria, recorte de áudio, toque/arrasto e `tools/validate_source.py`.
+
 # v0.1.268 — CI 225: teste unitário de captura próximo ao fim
 
 - Workflow 225: validação Python passou e Kotlin compilou, mas `:app:testDebugUnitTest` reprovou `FrameSnapshotTimingTest.nearEndNeverExceedsOriginal` (713/714 testes aprovados). A expectativa de `frameAtMs == 500` ficou obsoleta após v0.1.266 mudar a janela para 1600 ms e deslocá-la para trás próximo do fim do clipe.

@@ -598,6 +598,17 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                         deletionRequested = active.id
                     }
                 }
+                // A narração vinculada ao clipe era acessível diretamente antes da
+                // simplificação do menu. Não a esconder dentro do submenu "Editar".
+                OutlinedButton(onClick = { clipMenuId = null; onClipAudio(active.id) },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    shape = UaiShapes.button) {
+                    Icon(Icons.Default.Mic, null, Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (p.audioTracks.any { it.clipId == active.id })
+                        "Editar áudio somente deste clipe"
+                        else "Adicionar áudio somente a este clipe")
+                }
                 if (showClipDetails && !active.isImage) {
                     HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
                     Text("Opções do clipe",fontWeight=FontWeight.SemiBold)
@@ -618,13 +629,6 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                             val list=p.clips.toMutableList();java.util.Collections.swap(list,idx,idx+1)
                             commit(list,"Clipe movido")
                         }
-                    }
-                    OutlinedButton(onClick={ clipMenuId=null; onClipAudio(active.id) },
-                        modifier=Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.Mic, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(if (p.audioTracks.any { it.clipId == active.id })
-                            "Editar áudio deste clipe" else "Adicionar áudio somente a este clipe")
                     }
                     Text("Volume apenas deste clipe: ${(active.volume*100).toInt()}%")
                     Slider(value=active.volume.coerceIn(0f,1f), onValueChange={ v ->

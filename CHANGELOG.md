@@ -1,3 +1,11 @@
+# Uai Cortes 0.1.269 (2026-11-09)
+
+- Editor de Áudio: integrado `DeviceMediaBrowser` com `GalleryScope.VIDEOS`, seleção única e importação pela galeria visual. OpenDocument permanece em Arquivos do Android; áudios comuns continuam usando o seletor de áudio.
+- Menu de clipe: o botão de adicionar/editar áudio vinculado voltou a ficar visível imediatamente, sem expandir Editar. `ClipAudioScreen` e associação ao ID do clipe foram preservados.
+- Controles Duplicar/Antes/Depois/Volume permanecem no submenu Editar; toque abre menu e arrastar permanece independente.
+- Criado contrato de regressão para galeria exclusiva de vídeos, opções de clipe e gestos da linha do tempo.
+- Gradle, CI, metadados e notas atualizados para 0.1.269/versionCode 270. Build Android completo e teste físico pendentes.
+
 # Uai Cortes 0.1.268 (2026-11-09)
 
 - CI 225: corrigido o teste `FrameSnapshotTimingTest.nearEndNeverExceedsOriginal` que exigia `frameAtMs == 500` mesmo quando a janela de renderização é deslocada para trás perto do fim do clipe.
