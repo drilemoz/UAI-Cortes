@@ -1,5 +1,6 @@
 # Uai Cortes 0.1.273 (2026-11-10)
 
+- Corrigido o workflow 230: `ExportPipelineSmokeAndroidTest.kt` usava `assertEquals` sem importar `org.junit.Assert.assertEquals`, quebrando `:app:compileDebugAndroidTestKotlin`.
 - Corrigido o travamento do workflow 229 em `test_export_audio_subtitle_271_review.py`: o contrato deixou de comparar versão fixa.
 - Publicação: retirados os botões redundantes de envio; confirmação única dos canais selecionados, com checagem de duplicidade/status anterior.
 - Uploads YouTube sequenciais, com OAuth independente e validação de ID antes de cada envio; erros de autorização não desaparecem no topo de um formulário oculto.
