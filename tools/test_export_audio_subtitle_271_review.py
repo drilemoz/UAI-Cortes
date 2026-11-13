@@ -18,5 +18,6 @@ assert 'cue.startMs.coerceAtLeast(0L)' in s
 assert 'pipAudioProbeDifferentiatesVideoOnlyFromVideoWithAudio' in t
 assert (r/'app/src/androidTest/assets/export_smoke_video_only.mp4').is_file()
 from check_version_sync import check
-assert check(r)==('0.1.271',272)
+version, code = check(r)
+assert int(version.rsplit('.', 1)[-1]) >= 271 and code >= 272
 print('OK: revisão 0.1.271 — PiP sem áudio, cue negativa visível, versionamento')

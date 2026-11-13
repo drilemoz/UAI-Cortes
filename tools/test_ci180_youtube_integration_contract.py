@@ -11,14 +11,14 @@ dashboard = '\n'.join((src/name).read_text(encoding='utf-8') for name in ('Socia
 center = (src / 'SocialIntegrationsUi.kt').read_text(encoding='utf-8')
 auth = (src / 'YouTubeAuthorizationUi.kt').read_text(encoding='utf-8')
 
-# Publicar é uma ação explícita: somente canal vinculado e sem envio concorrente.
-assert 'Text("Enviar ao YouTube pela API")' in dashboard
-assert 'enabled = !youtubeBusy && account.remoteChannelId.isNotBlank()' in dashboard
-assert 'uploadToConfirm = publication' in dashboard
-assert 'YouTubeSocialApi.upload(context, token, marked,' in dashboard
+# A confirmação do lote é explícita; OAuth por canal e estado seguro continuam obrigatórios.
+assert 'Confirmar e iniciar envios' in dashboard
+assert 'authorizeYouTube.forUpload(account.googleAccountEmail.ifBlank { null })' in dashboard
+assert 'YouTubeSocialApi.upload(context, token, review,' in dashboard
 assert 'require(channel.id == account.remoteChannelId)' in dashboard
 assert 'SocialPublicationPolicy.markUploadReview(source)' in dashboard
 assert 'SocialPublicationPolicy.confirmApiUpload(' in dashboard
+assert 'page = "uploading"' in dashboard and 'page = "result"' in dashboard
 
 # A Central testa a conta com autorização Google real, sem persistir token OAuth.
 assert center.count('internal fun SocialApiCenterScreen(') == 1

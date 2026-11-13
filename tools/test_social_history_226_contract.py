@@ -24,7 +24,7 @@ assert 'channel.id == account.remoteChannelId' in screen
 assert 'store.save(next); data = next' in screen
 assert 'SocialPublicationPolicy.applyYouTubeState(it, remote)' in screen
 assert 'SocialPublicationHistoryUi(' in screen
-assert 'YouTubeSocialApi.upload(context, token, marked' in screen
+assert 'YouTubeSocialApi.upload(context, token, review' in screen
 assert 'SocialPublicationPolicy.markUploadReview(source)' in screen
 assert 'SocialPublicationPolicy.confirmApiUpload(' in screen
 # Sem chamadas periódicas da API ou reenvio oculto na UI do histórico.

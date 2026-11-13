@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.272"
-    const val VERSION_CODE = 273
+    const val VERSION_NAME = "0.1.273"
+    const val VERSION_CODE = 274
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.273", listOf(
+            ReleaseFeature("publish-batch-confirm-273", "Confirmação única dos destinos",
+                "Selecione dois canais e avance para uma única revisão antes de autorizar cada conta. Sem botões individuais repetidos após Continuar.", "check"),
+            ReleaseFeature("publish-batch-progress-273", "Progresso individual e tempo restante",
+                "Fila sequencial do YouTube com percentual de bytes confirmados, velocidade suavizada, tempo estimado e autorização de cada canal. Mantenha o aplicativo aberto.", "check"),
+            ReleaseFeature("publish-batch-results-273", "Relatório final por canal e correção do CI",
+                "Cada canal recebe resultado independente, links do Studio e relatório privado recuperável. Corrigido teste obsoleto que barrava o build 229 na validação Python.", "check")
+        )),
         ReleaseSummary("0.1.272", listOf(
             ReleaseFeature("elevenlabs-api-config-272", "ElevenLabs nas Integrações e APIs",
                 "Tela independente para salvar, mostrar, ocultar, colar, copiar, importar e remover a chave protegida no Android Keystore, além de ajuda com links oficiais.", "check"),

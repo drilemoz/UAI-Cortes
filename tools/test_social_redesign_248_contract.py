@@ -23,7 +23,7 @@ assert 'accountsOnly: Boolean = false' in dash and 'if (activePlatform == "youtu
 assert 'if (accountsOnly && manageAccounts)' in dash
 assert 'Minhas contas e canais' in settings and '"social_accounts"' in main
 assert '"Novidades","Mudanças' not in settings and 'Ver histórico de versões' not in new
-assert 'UaiActionDialog(' in export and 'UaiActionDialog(' in publish
+assert 'UaiActionDialog(' in export and 'Confirmar e iniciar envios' in publish
 assert 'Confirmar exportação' not in export and 'AlertDialog(onDismissRequest = { if (!youtubeBusy) uploadToConfirm' not in publish
 from check_version_sync import check
 assert json.loads((p/'github-manager.json').read_text())['android']['versionCode']==check(p)[1]

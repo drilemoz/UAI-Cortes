@@ -1,3 +1,11 @@
+# Uai Cortes · v0.1.273 — publicação multicanal com etapas e resultado
+
+- Publicar vídeo agora usa seleção -> confirmação única -> fila de envios YouTube -> relatório por destino, sem solicitar repetidamente os mesmos botões.
+- A tela informa estado de autorização, identidade do canal, percentual confirmado, velocidade e tempo restante estimado; relatório resumido é salvo de forma privada.
+- O upload atual é vinculado à tela, exigindo manter o aplicativo aberto: não prometer foreground service, retomada automática ou envio após encerrar o processo.
+- Corrigido teste de regressão da v0.1.271 que abortava o workflow 229 ao exigir versionName fixo, apesar da atualização 0.1.272.
+- Ainda pendem CI Android real e validação OAuth/upload em dois canais físicos, inclusive em caso de interrupção.
+
 # Uai Cortes v0.1.272 — Integração ElevenLabs
 
 A Central Integrações e APIs agora inclui ElevenLabs, ao lado de Gemini e Amazon Polly. Permite configurar chave privada no Android, testar acesso e carregar vozes disponíveis, além de gerar prévia MP3 mediante confirmação explícita de consumo potencial de créditos. A configuração não muda automaticamente a narração de projetos existentes. O app exige conexão e chave com permissões compatíveis; nunca compartilhe a chave.

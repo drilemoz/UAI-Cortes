@@ -1,3 +1,12 @@
+# v0.1.273 — publicação em lote com resultado verificável
+
+- Base v0.1.272/versionCode 273; atual v0.1.273/versionCode 274. Manter esquema de projeto de vídeo 4 e SocialStore schema 1, cinco APKs e assinatura.
+- Primeiro apresentar uma confirmação única dos destinos previamente selecionados; depois autorizar cada canal YouTube e acompanhar em página própria, fila sequencial, bytes confirmados/ETA.
+- Identidade do canal deve coincidir antes de marcar upload; persistir UPLOAD_REVIEW antes do POST e CONFIRMED_BY_API somente após ID válido da API. Nunca reenvie automaticamente se a conclusão for incerta.
+- Salvar relatório de último lote com AtomicFile privado, sem tokens, URIs de sessão ou e-mails de contas. Outras redes continuam com fluxo OAuth/compartilhamento específico.
+- Manter o app aberto durante upload: não alegar garantia em segundo plano; futura migração para trabalho de longa duração exige serviço apropriado, persistência de sessões e tratamento de token.
+- Corrigir regressão do build 229 causada por teste de versionName exato da v0.1.271. Testes de contrato não substituem Gradle/Android real.
+
 # v0.1.272 — ElevenLabs nas Integrações e APIs
 
 - Base v0.1.271/versionCode 272; nova v0.1.272/versionCode 273. Incluir ElevenLabs na Central de APIs, como Gemini e Polly, com tela própria e retorno à Central.

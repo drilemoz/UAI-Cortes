@@ -1,3 +1,11 @@
+# Uai Cortes · versão 0.1.273 — confirmação e acompanhamento dos envios
+
+- Seleção de 1 ou mais canais e confirmação unificada sem botões repetidos após Continuar.
+- YouTube: autorização Google por canal, validação da identidade, envio sequencial, porcentagem confirmada, velocidade média e tempo restante estimado.
+- Relatório final independente por destino, armazenamento local do último relatório e atalhos para o YouTube Studio; sem reenvio automático de operações de resultado incerto.
+- Erros visíveis na própria tela de acompanhamento, corrigindo o aparente botão sem reação; manutenção dos fluxos de redes não YouTube.
+- Build 229: contrato de versão legado corrigido; validação física e Gradle completo pendentes.
+
 # Uai Cortes · versão 0.1.272 — ElevenLabs nas configurações
 
 - ElevenLabs: configuração de API Key criptografada, botões para colar, salvar, mostrar/ocultar, copiar, importar, remover e ajuda oficial.

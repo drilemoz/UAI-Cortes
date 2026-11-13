@@ -21,15 +21,16 @@ assert 'val name = publication.title.trim()' in api
 assert 'Text("Título no YouTube")' in ui
 assert 'Text("Privacidade no YouTube"' in ui
 assert 'Text("Continuar para enviar")' not in ui or '"Continuar para enviar"' in ui
-assert 'if (onlyAccount?.destination == SocialDestination.YOUTUBE' in ui
-assert 'uploadToConfirm = onlyPost' in ui
-assert 'activeUploadId == publication.id' in ui and 'youtubeBusy' in ui
-assert 'Envio sem confirmação. Confira o YouTube Studio' in ui
-assert 'uploadedResult = confirmed' in ui and 'Vídeo recebido pelo YouTube' in ui
+assert 'page = "confirm"' in ui
+assert 'Confirmar e iniciar envios' in ui
+assert 'page = "uploading"' in ui and 'page = "result"' in ui
+assert 'Aguardando autorização Google' in ui and 'Sem confirmação' in ui
 assert 'https://studio.youtube.com/video/' in ui
 assert 'require(channel.id == account.remoteChannelId)' in ui
 assert 'SocialPublicationPolicy.markUploadReview(source)' in ui
 assert 'SocialPublicationPolicy.confirmApiUpload(' in ui
+assert 'UploadRateEstimator' in ui and 'UploadReceiptFormat.eta' in ui
+
 assert '"Publicar vídeo"' in saved and 'Text("Compartilhar")' in saved
 assert 'onSocialPublish(uri, displayedName, currentDraft())' in saved
 assert 'MediaMetadataRetriever' in engine and 'savedMp4Geometry(' in engine

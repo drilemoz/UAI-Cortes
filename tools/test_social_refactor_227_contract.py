@@ -33,7 +33,7 @@ assert 'A autorização será conferida ao publicar' in account
 assert 'expandedPublicationId' in history and 'Ações e detalhes' in history
 assert history.index('SocialPublicationStatus.UPLOAD_REVIEW ->') < history.index('if (expandedPublicationId == publication.id)')
 assert 'SocialPublicationHistoryUi(' in dash
-assert 'YouTubeSocialApi.upload(context, token, marked' in publish
+assert 'YouTubeSocialApi.upload(context, token, review' in publish
 assert 'SocialPublicationPolicy.markUploadReview(source)' in publish
 assert 'SocialPublicationPolicy.confirmApiUpload(' in publish
 assert 'require(channel.id == account.remoteChannelId)' in publish

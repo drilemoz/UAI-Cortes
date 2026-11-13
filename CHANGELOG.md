@@ -1,3 +1,13 @@
+# Uai Cortes 0.1.273 (2026-11-10)
+
+- Corrigido o travamento do workflow 229 em `test_export_audio_subtitle_271_review.py`: o contrato deixou de comparar versão fixa.
+- Publicação: retirados os botões redundantes de envio; confirmação única dos canais selecionados, com checagem de duplicidade/status anterior.
+- Uploads YouTube sequenciais, com OAuth independente e validação de ID antes de cada envio; erros de autorização não desaparecem no topo de um formulário oculto.
+- Progresso por canal com bytes confirmados da API, percentual, taxa suavizada e tempo restante aproximado; resultado final inclui link Studio e status específico.
+- Último relatório privado via AtomicFile, sem OAuth, tokens ou URI recuperável; uploads incertos não são repetidos automaticamente.
+- Outras redes mantêm confirmação individual necessária via API ou compartilhamento. Fonte sem novos serviços de background; mantenha a tela ativa enquanto envia.
+- Testes unitários/contratos e CI ainda precisam de build Android e upload real para validação final.
+
 # Uai Cortes v0.1.272 — ElevenLabs integrada às configurações
 
 - Nova entrada ElevenLabs na Central de Integrações com chave própria protegida por Android Keystore, operações de salvar/colar/copiar/mostrar/importar/remover e ajuda oficial.

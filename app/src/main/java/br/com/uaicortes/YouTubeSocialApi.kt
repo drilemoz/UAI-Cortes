@@ -278,6 +278,15 @@ internal object YouTubeSocialApi {
         return fromColumn ?: context.contentResolver.openFileDescriptor(uri, "r")?.use { it.statSize } ?: -1L
     }
 
+    /** Pré-checagem antes de marcar UPLOAD_REVIEW: evita bloquear reenvio por arquivo ausente. */
+    internal fun uploadSize(context: Context, uri: Uri): Long {
+        val size = sizeOf(context, uri)
+        require(size > 0L) {
+            "O vídeo precisa ter tamanho conhecido e maior que zero para envio."
+        }
+        return size
+    }
+
     private fun readExactly(input: java.io.InputStream, buffer: ByteArray, length: Int) {
         var at = 0
         while (at < length) {
@@ -297,10 +306,7 @@ internal object YouTubeSocialApi {
         require(privacy in setOf("private", "unlisted", "public"))
         require(SocialPublicationPolicy.isShareableVideo(publication.videoUri))
         val uri = Uri.parse(publication.videoUri)
-        val size = sizeOf(context, uri)
-        require(size in 1L..2_147_483_647L) {
-            "O vídeo precisa ter tamanho conhecido entre 1 byte e 2 GiB para este envio."
-        }
+        val size = uploadSize(context, uri)
         val name = publication.title.trim().take(100).ifBlank { suggestedVideoTitle(publication.videoName) }
         val description = listOf(publication.description.trim(), publication.hashtags.trim())
             .filter { it.isNotEmpty() }.joinToString("\n\n").take(4800)
