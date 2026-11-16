@@ -135,7 +135,11 @@ internal fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
             val textWeight = if (cue.bold) FontWeight.Bold else FontWeight.Normal
             val fontStyle = if (cue.italic) androidx.compose.ui.text.font.FontStyle.Italic
                 else androidx.compose.ui.text.font.FontStyle.Normal
-            val outlineWidthPx = with(density) { cue.outlineWidth.dp.toPx() } * fontScale
+            // Contorno proporcional ao tamanho do texto da prévia. Com dp fixo ele ficava
+            // grosso demais no quadro pequeno e cobria a caixa rosa da palavra ativa
+            // (modelo "Karaokê rosa do vídeo"), que só aparecia dentro do diálogo.
+            val outlineWidthPx = minOf(with(density) { cue.outlineWidth.dp.toPx() } * fontScale,
+                with(density) { previewFontSp.sp.toPx() } * 0.07f)
             val shadowPx = with(density) { cue.shadowOffsetDp.dp.toPx() } * fontScale
             val alignment = when (SubtitleStyles.normalizeAlignment(cue.textAlignment)) {
                 SubtitleStyles.ALIGN_LEFT -> TextAlign.Left

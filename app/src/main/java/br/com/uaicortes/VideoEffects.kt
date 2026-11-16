@@ -279,10 +279,12 @@ class TimedSubtitleOverlay(
             .setIncludePad(true)
             .setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE)
             .build() else layout
-        val target = cachedBitmap?.takeIf { it.width == tightWidth && it.height == finalLayout.height }
-            ?: Bitmap.createBitmap(tightWidth, finalLayout.height.coerceAtLeast(2), Bitmap.Config.ARGB_8888)
+        // Sempre um Bitmap NOVO quando o conteúdo muda. Redesenhar a mesma instância
+        // pode deixar a textura do overlay desatualizada no GL (o Media3 compara a
+        // referência do Bitmap), causando quadros com texto antigo ("piscada").
+        // Nunca reciclar o anterior: o Media3 ainda pode estar usando-o.
+        val target = Bitmap.createBitmap(tightWidth, finalLayout.height.coerceAtLeast(2), Bitmap.Config.ARGB_8888)
         val canvas = Canvas(target)
-        canvas.drawColor(Color.TRANSPARENT, android.graphics.PorterDuff.Mode.CLEAR)
         finalLayout.draw(canvas)
         cachedBitmap = target
         cachedKey = contentKey
