@@ -1,3 +1,10 @@
+# v0.1.291 — Editor sem módulo social
+
+- Base v0.1.290/versionCode 291; nova v0.1.291/versionCode 292. Preservar schema 4, assinatura e cinco variantes da automação de build.
+- Retirar rotas, clientes, SDKs e configuração de build de redes sociais. Não remover Gemini, Polly, ElevenLabs ou seus fluxos de edição.
+- Manter saída Original/Vertical, compartilhamento padrão do Android, metadados locais de descrição e compatibilidade de leitura. Não apagar catálogos antigos do aparelho nem revogar contas remotas.
+- Notas históricas de versões anteriores não representam recursos ativos.
+
 # v0.1.290 — Pistas vazias compactas
 
 - Base v0.1.289/versionCode 290, nova v0.1.290/versionCode 291. Preservar schema 4, exportação e assinatura.

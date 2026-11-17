@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""v215: grupos sociais e tempo manual. Testes estáticos não substituem build Android."""
+"""v215: grupos por duração e tempo manual. Testes estáticos não substituem build Android."""
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 src=root/'app/src/main/java/br/com/uaicortes'
@@ -25,7 +25,6 @@ for token in [
     'options.chunked(2)',
     'maxWidth < 330.dp || LocalDensity.current.fontScale >= 1.3f',
     'QuickDurationGroupChip("Personalizado"',
-    'não garante monetização ou alcance',
     'Esta divisão gerará ${parts.size} arquivos de vídeo',
     'splitEngine.start(Uri.parse(sourceText), sourceName, parts, audioMode,',
 ]: assert token in ui, token
@@ -37,4 +36,5 @@ for token in ['MAX_CUSTOM_MS = 86_399_000L', 'MAX_PARTS = 180',
 assert 'GalleryVideoSaver.save(context, output, fileName,' in engine
 assert 'onSaved(QuickSplitSavedFile(' in engine
 assert 'VideoProject(' not in ui
-print('OK: presets sociais, personalizado estrito, preview, acessibilidade e limites preservados')
+assert all(name not in ui for name in ('YouTube', 'TikTok', 'Reels', 'Shorts'))
+print('OK: presets de duração, personalizado estrito, preview, acessibilidade e limites preservados')

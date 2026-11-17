@@ -35,7 +35,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.IOException
 
-/** Vídeo salvo no MediaStore: publicação opcional, sem modificar o arquivo exportado. */
+/** Vídeo salvo no MediaStore: ações locais sem modificar o arquivo exportado. */
 @Composable
 internal fun VideoSavedDialog(
     uri: Uri, name: String, editLabel: String,
@@ -44,7 +44,6 @@ internal fun VideoSavedDialog(
     videoContext: String = "",
     initialPublicationDraft: VideoPublicationDraft? = null,
     onPublicationDraftSave: ((VideoPublicationDraft) -> Boolean)? = null,
-    onSocialPublish: ((Uri, String, VideoPublicationDraft) -> Unit)? = null,
     onEdit: (VideoPublicationDraft) -> Unit, onClose: () -> Unit,
     closeLabel: String = "Fechar"
 ) {
@@ -228,16 +227,6 @@ internal fun VideoSavedDialog(
                     style = MaterialTheme.typography.bodySmall) }
                 }
                 Spacer(Modifier.height(10.dp))
-                if (onSocialPublish != null) {
-                    Button(onClick = {
-                        if (persistDraft()) onSocialPublish(uri, displayedName, currentDraft())
-                    }, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                        shape = UaiShapes.button) {
-                        Icon(Icons.Default.CloudUpload, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Publicar vídeo")
-                    }
-                }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick={
                         runCatching {
@@ -303,7 +292,7 @@ internal fun VideoSavedDialog(
                 color = MaterialTheme.colorScheme.surface) {
                 Column(Modifier.fillMaxSize().navigationBarsPadding().padding(14.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text("Descrição para publicar", style = MaterialTheme.typography.titleMedium,
+                        Text("Descrição e hashtags", style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                         IconButton(onClick = { if (persistDraft()) showCaptionDialog = false }) {
                             Icon(Icons.Default.Close, "Fechar descrição")

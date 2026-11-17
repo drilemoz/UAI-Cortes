@@ -46,10 +46,6 @@ class MainActivity : ComponentActivity() {
         DiagnosticRecorder.initialize(applicationContext)
         setContent { UaiApp() }
     }
-    @Deprecated("Callback do SDK Meta")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
-        super.onActivityResult(requestCode, resultCode, data); SocialMetaAuth.onActivityResult(requestCode, resultCode, data)
-    }
 }
 /** Observa falhas de reprodução em todos os players sem capturar caminhos de mídia. */
 internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
@@ -104,8 +100,6 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
         }
     }
     var screen by workspace::screen
-    var pendingSocialVideoUri by rememberSaveable { mutableStateOf("") }; var pendingSocialVideoName by rememberSaveable { mutableStateOf("") }
-    var pendingSocialDescription by rememberSaveable { mutableStateOf("") }; var pendingSocialHashtags by rememberSaveable { mutableStateOf("") }
     val activeProjectId = projectSession.activeProjectId
     val projects = projectSession.projects
     val project = projectSession.project
@@ -163,11 +157,6 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     val palette = if (dark) darkColorScheme(primary = Color(0xFF72A5FF), background = if(theme=="AMOLED") Color.Black else Ink,
         surface = if(theme=="AMOLED") Color.Black else Color(0xFF202124))
     else lightColorScheme(primary = Blue, background = LightBg, surface = Color.White)
-    fun openSocialPublish(uri: Uri?, name: String = "", draft: VideoPublicationDraft? = null) {
-        pendingSocialVideoUri = uri?.toString().orEmpty(); pendingSocialVideoName = name
-        pendingSocialDescription = draft?.description.orEmpty(); pendingSocialHashtags = draft?.hashtags.orEmpty()
-        previous = screen; screen = "social_publish"
-    }
     fun write(p: VideoProject): Boolean = try {
         projectSession.stage(ClipAudioBindings.pruneDeleted(p))
         DiagnosticRecorder.action(screen, "project_draft_changed")
@@ -475,7 +464,6 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     onBack = ::back,
                     onOrderChanged = { reordered -> animationImages.clear();animationImages.addAll(reordered) },
                     onSaveDraft = { chosen, opts -> animationDraftStore.save(chosen,opts) },
-                    onSocialPublish = { uri, name, draft -> openSocialPublish(uri, name.ifBlank { "Vídeo animado.mp4" }, draft) },
                     onUseInEditor = { uri, publicationDraft ->
                         val duration = mediaDuration(context, uri)
                         if (duration > 0L) {
@@ -502,14 +490,9 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 "projects" -> ProjectsScreen(projects, { back() }, { openProject(it.id) },
                     { pendingProjectRename = it; projectRenameInput = it.title },
                     { pendingProjectDelete = it }, onTab = { screen = it })
-                "social" -> SocialDashboardScreen({ screen = it }, { openSocialPublish(null) }, { previous = "social"; screen = "api_center" })
-                "social_accounts" -> SocialDashboardScreen({ screen = it }, { openSocialPublish(null) },
-                    { previous = "social_accounts"; screen = "api_center" }, accountsOnly = true)
-                "social_publish" -> SocialPublishScreen(pendingSocialVideoUri.takeIf(String::isNotBlank)?.let(Uri::parse),
-                    pendingSocialVideoName, VideoPublicationDraft(pendingSocialDescription, pendingSocialHashtags), { screen = "social" })
                 "settings" -> SettingsScreen(::back, { previous = "settings"; screen = it }, { screen = it })
-                "api_center" -> SocialApiCenterScreen(::back,
-                    { previous = "api_center"; screen = "gemini_settings" }, { screen = "social" },
+                "api_center" -> VoiceServicesScreen(::back,
+                    { previous = "api_center"; screen = "gemini_settings" },
                     { previous = "api_center"; screen = "polly_settings" }, { previous = "api_center"; screen = "elevenlabs_settings" })
                 "updates" -> GitHubUpdatesScreen(githubUpdates, ::back)
                 "whats_new" -> WhatsNewScreen(::back)
@@ -694,7 +677,6 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 "export" -> project?.let { current -> ExportScreen(current, store.quality(), ::back,
                     onPublicationDraftSave = { draft -> projectSession.project?.takeIf { it.id == current.id }
                         ?.let { write(it.copy(publicationDraft = draft)) } ?: false },
-                    onSocialPublish = { uri, name, draft -> openSocialPublish(uri, name.ifBlank { "Vídeo exportado.mp4" }, draft) },
                     onComplete = { leaveEditor("save") }) }
             }
         }

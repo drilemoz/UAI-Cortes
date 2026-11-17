@@ -39,7 +39,5 @@ for token in ('"rate_limit"', '"remote_uncertain"', '"not_provided"',
     assert token in policy,token
 assert 'DiagnosticRecorder.api("gemini"' in ledger
 assert 'DiagnosticRecorder.api("gemini"' in (src/'GeminiBatchClient.kt').read_text()
-assert 'DiagnosticRecorder.api("youtube"' in (src/'YouTubeSocialApi.kt').read_text()
-assert 'DiagnosticRecorder.api(' in (src/'SocialExternalApis.kt').read_text()
 assert 'schemaVersion", 4' in (src/'ProjectStore.kt').read_text()
 print('OK: v0.1.172 timeline unificada, importação por galeria privada, diagnóstico API e compatibilidade')

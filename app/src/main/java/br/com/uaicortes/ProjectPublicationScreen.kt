@@ -62,7 +62,7 @@ internal fun ProjectPublicationScreen(
                 Icon(Icons.Default.ArrowBack, contentDescription = "Voltar ao editor")
             }
             Column(Modifier.weight(1f)) {
-                Text("Descrição para publicar", style = MaterialTheme.typography.titleLarge)
+                Text("Descrição e hashtags", style = MaterialTheme.typography.titleLarge)
                 Text(project.title, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }

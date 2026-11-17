@@ -5,7 +5,7 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 code = root / 'app/src/main/java/br/com/uaicortes'
 read = lambda file: (code / file).read_text(encoding='utf-8')
-center = read('SocialIntegrationsUi.kt')
+center = read('VoiceServicesScreen.kt')
 main = read('MainActivity.kt')
 nav = read('EditorNavigation.kt')
 creds = read('ElevenLabsCredentials.kt')
@@ -14,7 +14,7 @@ ui = read('ElevenLabsSettingsScreen.kt')
 
 assert 'ElevenLabs' in center and 'openElevenLabs' in center
 assert '"elevenlabs_settings" -> ElevenLabsSettingsScreen(::back)' in main
-assert '"elevenlabs_settings" -> "api_center"' in nav
+assert '"polly_settings", "elevenlabs_settings" -> "api_center"' in nav
 assert 'AndroidKeyStore' in creds and 'AES/GCM/NoPadding' in creds
 assert 'elevenlabs_secret_local' in creds and 'putString("sealed", sealed)' in creds
 assert 'instanceFollowRedirects = false' in api and 'xi-api-key' in api

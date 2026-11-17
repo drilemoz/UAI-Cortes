@@ -13,7 +13,7 @@ c=(src/'ExportTaskCoordinator.kt').read_text()
 assert 'quality in listOf(360, 480, 720, 1080)' in c
 q=(src/'VideoExportQuality.kt').read_text()
 assert all(f'{n} -> when (preset)' in q for n in (360,480,720,1080))
-d=(src/'SocialExportPreset.kt').read_text()
+d=(src/'VideoExportFormatPolicy.kt').read_text()
 assert 'shortSide in listOf(360, 480, 720, 1080)' in d
 assert 'val vertical = ' in d
 p=(src/'ExportProgressUi.kt').read_text()

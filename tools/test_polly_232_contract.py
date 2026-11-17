@@ -10,7 +10,7 @@ creds = read('PollyCredentials.kt')
 ui = read('PollySettingsScreen.kt')
 ledger = read('PollyUsage.kt')
 main = read('MainActivity.kt')
-center = read('SocialIntegrationsUi.kt')
+center = read('VoiceServicesScreen.kt')
 assert 'polly_settings' in main and 'PollySettingsScreen(::back)' in main
 assert 'Amazon Polly' in center and 'openPolly' in center
 assert 'AndroidKeyStore' in creds and 'AES/GCM/NoPadding' in creds

@@ -49,8 +49,7 @@ import kotlin.math.abs
 internal fun AnimateImagesScreen(
     selected: List<Uri>, onChoose: () -> Unit, onBack: () -> Unit,
     onOrderChanged: (List<Uri>) -> Unit, onUseInEditor: (Uri, VideoPublicationDraft) -> Boolean,
-    onSaveDraft: (List<Uri>, ImageAnimationOptions) -> Boolean,
-    onSocialPublish: (Uri, String, VideoPublicationDraft) -> Unit
+    onSaveDraft: (List<Uri>, ImageAnimationOptions) -> Boolean
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -482,10 +481,6 @@ internal fun AnimateImagesScreen(
     }
     animationVm.savedVideo?.let { uri ->
         VideoSavedDialog(uri=uri,name="",editLabel="Editar com áudio, legendas e PiP",
-            onSocialPublish = { video, name, draft ->
-                animationVm.dismissSaved()
-                onSocialPublish(video, name, draft)
-            },
             onEdit={ draft -> if (onUseInEditor(uri, draft)) animationVm.dismissSaved() },
             onClose={ animationVm.dismissSaved() })
     }

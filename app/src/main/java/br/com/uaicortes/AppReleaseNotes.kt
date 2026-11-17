@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.290"
-    const val VERSION_CODE = 291
+    const val VERSION_NAME = "0.1.291"
+    const val VERSION_CODE = 292
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.291", listOf(
+            ReleaseFeature("editor-without-social-291", "Exportação sem publicação integrada",
+                "Redes, contas, métricas e publicação direta foram retiradas. Salvar no aparelho e exportar em 9:16 continuam disponíveis.", "check"),
+            ReleaseFeature("voice-services-291", "Gemini, Polly e ElevenLabs em IA e voz",
+                "Acesse os serviços de voz e legendas pelas Configurações. O editor e os projetos existentes continuam compatíveis.", "check")
+        )),
         ReleaseSummary("0.1.290", listOf(
             ReleaseFeature("editor-empty-tracks-290", "Pistas vazias no fim da linha do tempo",
                 "Os atalhos de Foto, PiP, Áudio e outras mídias continuam acessíveis. Pistas preenchidas ficam acima; Música vazia fica por último.", "check"),

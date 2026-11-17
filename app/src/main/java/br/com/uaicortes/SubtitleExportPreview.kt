@@ -98,7 +98,7 @@ private fun SubtitlePreviewRender(project: VideoProject, cursorMs: Long, quality
         progress = null
         try {
             engine.start(project, quality, "preview-legendas.mp4",
-                destination = if (vertical) ExportDestination.SHORTS else ExportDestination.ORIGINAL,
+                destination = if (vertical) ExportDestination.VERTICAL else ExportDestination.ORIGINAL,
                 onSuccess = { _, _ -> }, onError = { error = it },
                 onPreviewReady = { ready -> file = ready })
             while (file == null && error == null) {

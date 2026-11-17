@@ -1,14 +1,18 @@
 package br.com.uaicortes
 
-/** Preferências de saída, não certificação/garantia de aceitação por uma plataforma. */
+/** Proporção da saída local, independente de destino de publicação. */
 internal enum class ExportDestination(val label: String) {
-    ORIGINAL("Original"), SHORTS("Shorts"), REELS("Reels"), TIKTOK("TikTok");
+    ORIGINAL("Original"), VERTICAL("Vertical 9:16");
 
-    val isVertical: Boolean get() = this != ORIGINAL
+    val isVertical: Boolean get() = this == VERTICAL
 
     companion object {
         fun fromId(value: String?): ExportDestination =
-            values().firstOrNull { it.name == value } ?: ORIGINAL
+            when (value) {
+                // Estados salvos por versões anteriores usavam estes identificadores para 9:16.
+                VERTICAL.name, "SHORTS", "REELS", "TIKTOK" -> VERTICAL
+                else -> ORIGINAL
+            }
     }
 }
 
@@ -23,7 +27,7 @@ internal enum class VerticalFrameMode(val label: String) {
 }
 
 /** Regras puras de resolução, compartilhadas por interface, exportador e testes. */
-internal object SocialExportPolicy {
+internal object VideoExportFormatPolicy {
     fun dimensions(destination: ExportDestination, shortSide: Int): Pair<Int, Int>? {
         require(shortSide in listOf(360, 480, 720, 1080)) { "Resolução não suportada: $shortSide" }
         // A dimensão vertical solicitada deve ser par para codificação H.264.

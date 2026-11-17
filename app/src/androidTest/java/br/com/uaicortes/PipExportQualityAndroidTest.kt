@@ -64,7 +64,7 @@ class PipExportQualityAndroidTest {
                 engine = ExportEngine(context)
                 try {
                     engine!!.start(project, width, "Uai_PiP_Pixels_$width.mp4",
-                        destination = ExportDestination.SHORTS,
+                        destination = ExportDestination.VERTICAL,
                         onSuccess = { uri, _ -> result.set(uri); done.countDown() },
                         onError = { message -> error.set(message); done.countDown() })
                 } catch (failure: Exception) {

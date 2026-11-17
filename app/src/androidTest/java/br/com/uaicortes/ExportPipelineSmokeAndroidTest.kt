@@ -118,15 +118,15 @@ class ExportPipelineSmokeAndroidTest {
 
     /** Vídeo 16:9 convertido explicitamente para Shorts em 9:16 com corte central.
      * Compilar o teste no CI não o executa: requer encoder H.264 e OpenGL reais. */
-    @Test fun exportSocialPortraitWithCenterCropProducesPortraitMp4() {
-        exportSocialPortrait(VerticalFrameMode.CENTER_CROP)
+    @Test fun exportVerticalPortraitWithCenterCropProducesPortraitMp4() {
+        exportVerticalPortrait(VerticalFrameMode.CENTER_CROP)
     }
 
-    @Test fun exportSocialPortraitWithFitProducesPortraitMp4() {
-        exportSocialPortrait(VerticalFrameMode.FIT)
+    @Test fun exportVerticalPortraitWithFitProducesPortraitMp4() {
+        exportVerticalPortrait(VerticalFrameMode.FIT)
     }
 
-    private fun exportSocialPortrait(mode: VerticalFrameMode) {
+    private fun exportVerticalPortrait(mode: VerticalFrameMode) {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         val input = File.createTempFile("uai-social-smoke-", ".mp4", context.cacheDir)
@@ -149,7 +149,7 @@ class ExportPipelineSmokeAndroidTest {
                 try {
                     engine!!.start(project, 720, "UaiCortes_Test_Social_${mode.name}.mp4",
                         preset=ExportBitratePreset.COMPACT,
-                        destination=ExportDestination.SHORTS, frameMode=mode,
+                        destination=ExportDestination.VERTICAL, frameMode=mode,
                         onSuccess={ uri, report ->
                             if (report.fellBackInResolution)
                                 error.set("Saída diferente dos 720×1280 solicitados: ${report.resolution}")

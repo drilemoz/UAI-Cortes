@@ -213,7 +213,7 @@ class ExportEngine(private val context: Context) {
         require(!isSavingToGallery) { "Aguarde a conclusão do salvamento anterior." }
         require(project.clips.isNotEmpty()) { "Projeto sem vídeos" }
         val bitrateBps = VideoExportQuality.videoBitrateBps(height, preset)
-        val portraitSize = SocialExportPolicy.dimensions(destination, height)
+        val portraitSize = VideoExportFormatPolicy.dimensions(destination, height)
         require(context.cacheDir.usableSpace > VideoExportQuality.minimumFreeBytes(
             project.durationMs, height, true, preset)) {
             "Espaço livre insuficiente para exportar em ${height}p no perfil ${preset.label}. " +

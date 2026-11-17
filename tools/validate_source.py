@@ -799,7 +799,7 @@ assert 'ReleaseHighlights(AppReleaseNotes.forAbout())' in home
 assert 'ReleaseHighlights(AppReleaseNotes.forWhatsNew())' in news
 assert 'markViewed()' in main and 'WhatsNewScreen(::back)' in main
 assert 'if (whatsNewSeen.shouldOpen())' in main and 'screen = "whats_new"' in main
-assert '"whats_new"' in nav and '"whats_new"' in main and 'Minhas contas e canais' in home
+assert '"whats_new"' in nav and '"whats_new"' in main and 'IA e voz' in home
 assert 'putStringSet' in seen and '.commit()' in seen
 assert (root/'app/src/test/java/br/com/uaicortes/WhatsNewReleaseNotesTest.kt').exists()
 print('OK: v0.1.69 / versionCode 74, tela Novidades uma vez e fonte única com Sobre')

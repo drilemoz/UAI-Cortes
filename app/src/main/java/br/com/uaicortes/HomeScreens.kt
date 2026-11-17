@@ -195,7 +195,6 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
     Row(Modifier.fillMaxWidth().navigationBarsPadding().height(72.dp)
         .background(MaterialTheme.colorScheme.surface), horizontalArrangement=Arrangement.SpaceEvenly) {
         listOf(Triple("home",Icons.Default.Home,"Início"),Triple("projects",Icons.Default.Folder,"Projetos"),
-            Triple("social",Icons.Default.Public,"Redes"),
             Triple("settings",Icons.Default.Settings,"Ajustes")).forEach { (page,icon,label) ->
             Column(Modifier.weight(1f).fillMaxHeight().clickable {onTab(page)},horizontalAlignment=Alignment.CenterHorizontally,
                 verticalArrangement=Arrangement.Center) {
@@ -284,16 +283,14 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
             .padding(horizontal=18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Heading("Configurações",back)
-        ItemCard(Icons.Default.People,"Minhas contas e canais",
-            "Gerenciar YouTube e páginas do Facebook") { onClick("social_accounts") }
         ItemCard(Icons.Default.Tune,"Geral","Qualidade e armazenamento") {onClick("general")}
         ItemCard(Icons.Default.Backup,"Salvamento e segurança",
             "Cópias automáticas, restauração e backup externo") { onClick("backup_settings") }
         ItemCard(Icons.Default.Palette,"Tela","Sistema, claro, escuro e AMOLED") {onClick("appearance")}
         ItemCard(Icons.Default.RecordVoiceOver,"Reconhecimento de voz",
             "Instalar modelo offline de legendas em português") { onClick("speech_model") }
-        ItemCard(Icons.Default.SettingsEthernet,"Central de APIs e Contas",
-            "Gemini, YouTube, Facebook, TikTok e Kwai") { onClick("api_center") }
+        ItemCard(Icons.Default.SettingsEthernet,"IA e voz",
+            "Google Gemini, Amazon Polly e ElevenLabs") { onClick("api_center") }
         ItemCard(Icons.Default.AutoAwesome,"Google Gemini — API de IA",
             "Chave, vozes e narrações") { onClick("gemini_settings") }
         ItemCard(Icons.Default.BugReport,"Diagnóstico","Capturar erros e toques, exportar relatório") {onClick("diagnostics")}

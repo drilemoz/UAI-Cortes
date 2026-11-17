@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.291 — Editor sem módulo social
+
+- **Editor sem módulo social:** retirados aba Redes, contas, métricas, histórico integrado, botão Publicar vídeo e integrações de envio e autenticação.
+- **IA e voz:** Google Gemini, Amazon Polly e ElevenLabs continuam acessíveis. Legendas, sincronia labial, dublagem e Estúdio de Voz não foram removidos.
+- **Exportação local:** Original e Vertical 9:16 continuam. Abrir ou compartilhar pelo Android não usa integração de rede social do app. Descrições e hashtags continuam como dados locais do projeto.
+
 # Uai Cortes · versão 0.1.290 — Pistas vazias compactas
 
 - **Linha do tempo:** pistas preenchidas no topo e pistas vazias compactas com atalhos abaixo. Música vazia vai para a última posição. A ordem usa somente as alterações aplicadas, sem mudar durante a edição de um clipe.

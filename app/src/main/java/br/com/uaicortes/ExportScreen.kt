@@ -92,7 +92,6 @@ private fun ExportFrameIllustration(crop: Boolean) {
 @Composable
 internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
     onPublicationDraftSave: (VideoPublicationDraft) -> Boolean,
-    onSocialPublish: (Uri, String, VideoPublicationDraft) -> Unit,
     onComplete: () -> Boolean) {
     val context=LocalContext.current
     val exportVm: ExportTaskViewModel = viewModel()
@@ -245,18 +244,18 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
             Row(horizontalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.fillMaxWidth()) {
                 listOf(
                     Triple(ExportDestination.ORIGINAL,Icons.Default.Movie,"Original"),
-                    Triple(ExportDestination.SHORTS,Icons.Default.Videocam,"Vertical 9:16")
+                    Triple(ExportDestination.VERTICAL,Icons.Default.Videocam,"Vertical 9:16")
                 ).forEach { (item, icon, label) ->
                     CompactExportOption(label,icon,destination.isVertical==item.isVertical,!working,
                         Modifier.weight(1f).height(62.dp)) {
                         if (destination.isVertical != item.isVertical) {
                             destinationId=item.name
-                            bitratePresetName=SocialExportPolicy.recommendedBitrate(item).name
+                            bitratePresetName=VideoExportFormatPolicy.recommendedBitrate(item).name
                         }
                     }
                 }
             }
-            Text(if(destination.isVertical) "Para Shorts, Reels e TikTok" else "Mantém a proporção do vídeo",
+            Text(if(destination.isVertical) "Proporção vertical 9:16" else "Mantém a proporção do vídeo",
                 fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier=Modifier.padding(top=4.dp))
             Spacer(Modifier.height(10.dp))
@@ -429,7 +428,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
         Surface(shadowElevation=8.dp,color=MaterialTheme.colorScheme.surface) {
             Column(Modifier.fillMaxWidth().navigationBarsPadding()
                 .padding(horizontal=16.dp,vertical=7.dp)) {
-                Text("${SocialExportPolicy.requestedLabel(destination,quality)} · " +
+                Text("${VideoExportFormatPolicy.requestedLabel(destination,quality)} · " +
                     "${VideoExportQuality.videoBitrateBps(quality,bitratePreset)/1_000_000} Mb/s · MP4",
                     fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -566,7 +565,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                             color=MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign=TextAlign.Center, maxLines=2,
                             overflow=TextOverflow.Ellipsis)
-                        Text("${SocialExportPolicy.requestedLabel(destination,exportState.quality)} · " +
+                        Text("${VideoExportFormatPolicy.requestedLabel(destination,exportState.quality)} · " +
                             "${bitratePreset.label} · MP4",
                             style=MaterialTheme.typography.labelMedium,
                             color=MaterialTheme.colorScheme.onSurfaceVariant)
@@ -668,10 +667,6 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
             },
             initialPublicationDraft=p.publicationDraft,
             onPublicationDraftSave=onPublicationDraftSave,
-            onSocialPublish = { uri, name, draft ->
-                exportVm.dismissSaved()
-                onSocialPublish(uri, name, draft)
-            },
             onEdit={ _ -> exportVm.dismissSaved();back()},
             closeLabel="Concluir",
             onClose={ if (onComplete()) exportVm.dismissSaved() })

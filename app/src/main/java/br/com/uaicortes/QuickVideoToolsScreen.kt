@@ -40,17 +40,17 @@ private data class QuickDurationPreset(val label: String, val hint: String, val 
 private val secondsPresets = listOf(
     QuickDurationPreset("9,5 s", "Clipes rápidos", QuickVideoSplitPolicy.SHORT_MS),
     QuickDurationPreset("10 s", "Clipes rápidos", QuickVideoSplitPolicy.TEN_SECONDS_MS),
-    QuickDurationPreset("30 s", "Reels e Shorts", QuickVideoSplitPolicy.THIRTY_SECONDS_MS),
+    QuickDurationPreset("30 s", "Clipes de 30 segundos", QuickVideoSplitPolicy.THIRTY_SECONDS_MS),
     QuickDurationPreset("60 s", "Vídeos curtos", QuickVideoSplitPolicy.ONE_MINUTE_MS)
 )
 private val minutesPresets = listOf(
     QuickDurationPreset("1 min", "Clipes de um minuto", QuickVideoSplitPolicy.ONE_MINUTE_MS),
-    QuickDurationPreset("1 min 05 s", "TikTok: acima de 1 min", QuickVideoSplitPolicy.ONE_MINUTE_FIVE_MS),
+    QuickDurationPreset("1 min 05 s", "Um minuto e cinco segundos", QuickVideoSplitPolicy.ONE_MINUTE_FIVE_MS),
     QuickDurationPreset("2 min", "Tutoriais curtos", QuickVideoSplitPolicy.TWO_MINUTES_MS),
-    QuickDurationPreset("2 min 59 s", "Shorts: margem até 3 min", QuickVideoSplitPolicy.SHORTS_MARGIN_MS),
+    QuickDurationPreset("2 min 59 s", "Logo abaixo de três minutos", QuickVideoSplitPolicy.SHORTS_MARGIN_MS),
     QuickDurationPreset("3 min", "Vídeos de até 3 minutos", QuickVideoSplitPolicy.THREE_MINUTES_MS),
-    QuickDurationPreset("4 min", "YouTube tradicional", QuickVideoSplitPolicy.FOUR_MINUTES_MS),
-    QuickDurationPreset("8 min", "YouTube: anúncios intermediários*", QuickVideoSplitPolicy.EIGHT_MINUTES_MS)
+    QuickDurationPreset("4 min", "Trechos de quatro minutos", QuickVideoSplitPolicy.FOUR_MINUTES_MS),
+    QuickDurationPreset("8 min", "Trechos de oito minutos", QuickVideoSplitPolicy.EIGHT_MINUTES_MS)
 )
 
 /** Tela independente: arquivos originais e projetos nunca são modificados. */
@@ -479,11 +479,6 @@ internal fun QuickVideoToolsScreen(mode: QuickToolMode, onBack: () -> Unit) {
                             }
                         }
                     }
-                    Text("*8 minutos permite anúncios intermediários no YouTube para canais/vídeos elegíveis; " +
-                        "a duração, sozinha, não garante monetização ou alcance.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {

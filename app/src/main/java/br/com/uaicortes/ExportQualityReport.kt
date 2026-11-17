@@ -108,6 +108,6 @@ internal data class ExportQualityReport(
         add("Faixa de áudio presente não comprova volume nem sincronização; ouça o MP4 final.")
         encoderName?.takeIf { it.isNotBlank() }?.let { add("Codificador: $it") }
         if (fellBackInResolution) add("Aviso: o aparelho/exportador usou uma resolução diferente da solicitada.")
-        add("Os valores são da exportação local, antes da recompressão das redes sociais.")
+        add("Os valores correspondem ao MP4 exportado no aparelho.")
     }
 }

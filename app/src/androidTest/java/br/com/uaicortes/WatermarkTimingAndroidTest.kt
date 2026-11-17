@@ -56,7 +56,7 @@ class WatermarkTimingAndroidTest {
                 engine = ExportEngine(context)
                 try {
                     engine!!.start(project, 720, "Uai_Marca_Duracao_$withPip.mp4",
-                        destination = ExportDestination.SHORTS,
+                        destination = ExportDestination.VERTICAL,
                         onSuccess = { uri, _ -> saved.set(uri); done.countDown() },
                         onError = { message -> error.set(message); done.countDown() })
                 } catch (failure: Exception) {

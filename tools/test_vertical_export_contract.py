@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Verificações estruturais da saída social, não substituem Media3 em Android."""
+"""Verificações estruturais da saída vertical, não substituem Media3 em Android."""
 from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 s = root / 'app/src/main/java/br/com/uaicortes'
-policy = (s/'SocialExportPreset.kt').read_text()
+policy = (s/'VideoExportFormatPolicy.kt').read_text()
 engine = (s/'ExportEngine.kt').read_text()
 vm = (s/'ExportTaskViewModel.kt').read_text()
 ui = (s/'ExportScreen.kt').read_text()
 report = (s/'ExportQualityReport.kt').read_text()
-assert all(k in policy for k in ('ORIGINAL', 'SHORTS', 'REELS', 'TIKTOK'))
+assert 'ORIGINAL("Original"), VERTICAL("Vertical 9:16")' in policy
+assert 'VERTICAL.name, "SHORTS", "REELS", "TIKTOK" -> VERTICAL' in policy
 assert 'shortSide to vertical' in policy and 'val vertical =' in policy
 assert 'shortSide in listOf(360, 480, 720, 1080)' in policy
 assert 'ExportBitratePreset.COMPACT' in policy
@@ -25,6 +26,6 @@ assert 'showFrameGuides' in ui
 assert 'requestFrameWidth' not in engine
 assert 'requestedFrameWidth' in report and 'requestedFrameHeight' in report
 assert 'destinationLabel' in report
-assert (root/'app/src/test/java/br/com/uaicortes/SocialExportPolicyTest.kt').exists()
-assert 'exportSocialPortrait' in (root/'app/src/androidTest/java/br/com/uaicortes/ExportPipelineSmokeAndroidTest.kt').read_text()
-print('OK: destinos sociais, 9:16, fit/crop explícitos, prévia, bitrate e diagnóstico')
+assert (root/'app/src/test/java/br/com/uaicortes/VideoExportFormatPolicyTest.kt').exists()
+assert 'exportVerticalPortrait' in (root/'app/src/androidTest/java/br/com/uaicortes/ExportPipelineSmokeAndroidTest.kt').read_text()
+print('OK: formatos original e 9:16, fit/crop explícitos, prévia, bitrate e diagnóstico')
