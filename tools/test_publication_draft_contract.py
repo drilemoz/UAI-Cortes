@@ -10,7 +10,6 @@ saved = (s/'VideoSavedDialog.kt').read_text()
 editor = (s/'EditorScreen.kt').read_text()
 publication = (s/'ProjectPublicationScreen.kt').read_text()
 nav = (s/'EditorNavigation.kt').read_text()
-images = (s/'AnimateImagesScreen.kt').read_text()
 assert 'val publicationDraft: VideoPublicationDraft? = null' in model
 assert '.put("publicationDraft", publicationDraft?.json())' in model
 assert 'VideoPublicationDraft.read(j.optJSONObject("publicationDraft"))' in model
@@ -24,8 +23,6 @@ assert 'LaunchedEffect(uri, description, hashtags)' in saved
 assert 'delay(650)' in saved
 assert 'if (persistDraft()) onClose()' in saved
 assert 'if(persistDraft()) onEdit(currentDraft())' in saved or 'if (persistDraft()) onEdit(currentDraft())' in saved
-assert 'onUseInEditor(uri, draft)' in images and 'if (onUseInEditor(uri, draft)) animationVm.dismissSaved()' in images
-assert 'publicationDraft=publicationDraft.takeUnless' in main
 assert 'Triple("Descrição", Icons.Default.Description, "publication")' not in editor
 assert 'Triple("Vozes IA", Icons.Default.RecordVoiceOver, "voices")' in editor
 assert '"publication"' in nav and '"publication" ->' not in nav
@@ -35,4 +32,4 @@ assert 'delay(650)' in publication
 assert 'if (persist()) back()' in publication
 assert 'MAX_CHARACTERS' in (s/'VideoCaptionPolicy.kt').read_text()
 assert (root/'app/src/test/java/br/com/uaicortes/ProjectPublicationDraftTest.kt').exists()
-print('OK: rascunho persistente por ID, editor reutilizável, backup/JSON legado, animação e validação de 100 caracteres')
+print('OK: rascunho persistente por ID, editor reutilizável, backup/JSON legado e validação de 100 caracteres')

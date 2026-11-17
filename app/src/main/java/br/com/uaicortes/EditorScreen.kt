@@ -529,7 +529,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             })
         Spacer(Modifier.height(2.dp));HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
         // Vídeo e Foto abrem a galeria; PiP é inserido nas abas de Camadas.
-        // Animar imagens e Prompt Flow são ferramentas independentes acessíveis pela Home,
+        // Ferramentas independentes ficam na Home,
         // não operações da linha do tempo do projeto em edição.
         // Salvar permanece no cabeçalho; aqui ficam apenas ações relacionadas ao editor.
         val actions = remember { listOf(

@@ -12,8 +12,8 @@ import re
 import shutil
 import subprocess
 
-VERSION = '0.1.295'
-VERSION_CODE = 296
+VERSION = '0.1.296'
+VERSION_CODE = 297
 APP_ID = 'br.com.uaicortes'
 TARGET_SDK = '36'
 ABI_NAMES = {

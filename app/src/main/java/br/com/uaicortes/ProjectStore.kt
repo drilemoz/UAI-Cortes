@@ -264,7 +264,8 @@ data class VideoProject(
     val lastTrimCutClipId: String? = null, val lastTrimCutSourceMs: Long? = null,
     val textWatermark: TextWatermark? = null,
     val publicationDraft: VideoPublicationDraft? = null,
-    val flowPromptDraft: FlowPromptDraft? = null,
+    /** Payload legado preservado sem reativar o módulo de cenas. */
+    val legacySceneDraftJson: String? = null,
     val subtitleSpeakers: List<SubtitleSpeaker> = emptyList(),
     val voiceIaVoices: VoiceIaVoiceAssignments = VoiceIaVoiceAssignments(),
     val subtitleSpeakerStyles: Map<String, SubtitleCue> = emptyMap(),
@@ -283,7 +284,7 @@ data class VideoProject(
         .put("lastTrimCutClipId", lastTrimCutClipId).put("lastTrimCutSourceMs", lastTrimCutSourceMs)
         .put("textWatermark", textWatermark?.json())
         .put("publicationDraft", publicationDraft?.json())
-        .put("flowPromptDraft", flowPromptDraft?.json())
+        .put("flowPromptDraft", legacySceneDraftJson?.let { raw -> runCatching { JSONObject(raw) }.getOrNull() })
         .put("subtitleSpeakers", JSONArray().also { a -> subtitleSpeakers.take(16).forEach { a.put(it.json()) } })
         .put("voiceIaVoices", voiceIaVoices.json())
         .put("subtitleSpeakerStyles", SubtitleSpeakerStyles.json(subtitleSpeakerStyles))
@@ -315,7 +316,7 @@ data class VideoProject(
                 if (j.isNull("lastTrimCutSourceMs")) null else j.optLong("lastTrimCutSourceMs"),
                 j.optJSONObject("textWatermark")?.let(TextWatermark::read),
                 VideoPublicationDraft.read(j.optJSONObject("publicationDraft")),
-                FlowPromptDraft.read(j.optJSONObject("flowPromptDraft")),
+                j.optJSONObject("flowPromptDraft")?.toString(),
                 j.optJSONArray("subtitleSpeakers")?.let { arr ->
                     (0 until minOf(arr.length(), 16)).mapNotNull { index ->
                         runCatching { SubtitleSpeaker.read(arr.getJSONObject(index)) }.getOrNull()

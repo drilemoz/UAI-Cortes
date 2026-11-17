@@ -26,7 +26,7 @@ internal class GeminiBatchStore(context: Context) {
                             val sceneIndex = ref.optInt("scene", -1)
                             val sha = ref.optString("sha")
                             if (sceneIndex in 0..11 && sha.matches(Regex("[a-f0-9]{64}")))
-                                FlowBatchSceneRef(sceneIndex, sha) else null
+                                LegacyBatchSceneRef(sceneIndex, sha) else null
                         }
                     }
                 } ?: emptyList()
@@ -52,7 +52,7 @@ internal class GeminiBatchStore(context: Context) {
 
     /** Grava antes do POST. Se a resposta se perder, não reenvia automaticamente. */
     @Synchronized fun start(profileId: String, projectId: String, model: String, count: Int,
-        flowProjectId: String = "", flowScenes: List<FlowBatchSceneRef> = emptyList()): GeminiBatchRecord {
+        flowProjectId: String = "", flowScenes: List<LegacyBatchSceneRef> = emptyList()): GeminiBatchRecord {
         require(profileId.isNotBlank())
         require(count in 2..GeminiBatchPolicy.MAX_ITEMS)
         require(flowProjectId.isBlank() ||

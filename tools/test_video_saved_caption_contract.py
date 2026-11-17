@@ -7,7 +7,6 @@ ui = (source/'VideoSavedDialog.kt').read_text()
 client = (source/'GeminiVideoCaptionClient.kt').read_text()
 policy = (source/'VideoCaptionPolicy.kt').read_text()
 export = (source/'ExportScreen.kt').read_text()
-images = (source/'AnimateImagesScreen.kt').read_text()
 assert 'videoContext: String = ""' in ui and 'showGeminiConsent' in ui
 assert 'Gerar descrição com IA' in ui and 'Autorizar geração' in ui
 assert 'GeminiCredentialStore(context).read()' in ui
@@ -16,7 +15,6 @@ assert 'VideoCaptionPolicy.isValid(description, hashtags)' in ui
 assert 'exportDetails.forEach' in ui and 'if (showDetails)' in ui
 assert 'context.contentResolver.loadThumbnail' in ui
 assert 'qualityReport=qualityReport' in export and 'videoContext=remember' in export
-assert 'VideoSavedDialog(uri=uri,name=""' in images
 assert 'x-goog-api-key' in client and 'responseMimeType' in client
 assert 'generateContent' in client and 'GeminiKeyParser.validate(key)' in client
 assert 'MAX_CHARACTERS = 100' in policy and 'words.size == 5' in policy

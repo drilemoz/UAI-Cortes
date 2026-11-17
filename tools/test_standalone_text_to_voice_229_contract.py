@@ -12,7 +12,7 @@ policy=(code/'StandaloneVoiceTextPolicy.kt').read_text()
 # v0.1.243: atalho mudou de ItemCard para HomeActionTile na faixa rolável.
 # Exigir rota do atalho atual sem restaurar o cartão antigo.
 assert 'HomeActionTile("Texto para Voz", Icons.Default.GraphicEq, onTextToVoice,' in home
-assert 'HomePrimaryActions(onCreate, onAnimate, onFlow = onFlow,' in home
+assert 'HomePrimaryActions(onCreate,' in home
 assert 'onVoiceCenter = onVoiceCenter, onTextToVoice = onTextToVoice,' in home
 assert 'horizontalScroll(rememberScrollState())' in home
 assert 'onTextToVoice = { navTo("text_to_voice") }' in main

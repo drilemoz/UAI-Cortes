@@ -16,13 +16,11 @@ assert all(f'Triple("{label}"' in bar for label in (
 assert "Marca d'água" not in bar
 # O atalho Descrição foi removido da barra: o texto é editado após salvar o MP4.
 assert 'Triple("Descrição", Icons.Default.Description, "publication")' not in bar
-# Permanecem na página inicial como funcionalidades independentes.
-assert 'HomePrimaryActions(onCreate, onAnimate, onFlow = onFlow,' in home
-assert '"flow_workspace" -> FlowWorkspaceScreen(::back)' in main
-assert '"animate" -> AnimateImagesScreen(' in main
-assert 'onFlow = { navTo("flow_workspace") }' in main
+# A Home mantém apenas os atalhos ativos.
+assert 'HomePrimaryActions(onCreate,' in home
 # Sem regressão na edição convencional ou nas cópias de mídia.
 assert 'UnifiedEditorTimeline(' in editor
 assert 'onAddVideo=onAddVideo,onAddImage=onAddImage' in editor
 assert 'Icon(Icons.Default.Save, "Salvar projeto e sair")' in editor
-print('OK: Animar imagens e Prompt Flow disponíveis só como ferramentas separadas da Home')
+assert '"animate"' not in main and '"flow_workspace"' not in main and '"flow_prompt"' not in main
+print('OK: editor e atalhos ativos preservados sem os módulos removidos')

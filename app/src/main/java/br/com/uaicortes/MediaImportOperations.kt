@@ -15,10 +15,6 @@ internal object MediaImportRules {
             sources.size - valid.size)
     }
 
-    /** Imagens duplicadas e itens acima do limite não entram na seleção. */
-    fun images(current: List<String>, incoming: List<String>, max: Int = ImageAnimationPlan.MAX_IMAGES): List<String> =
-        (current + incoming).filter(String::isNotBlank).distinct().take(max)
-
     /** Áudio usa início no projeto, mas mantém offset de origem independente. */
     fun audio(uri: String, title: String, sourceDurationMs: Long,
               projectDurationMs: Long, cursorMs: Long): AudioTrack? {

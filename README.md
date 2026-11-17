@@ -1,4 +1,11 @@
-# Uai Cortes · v0.1.295 — Legendas e prévias mais precisas
+# Uai Cortes · v0.1.296 — Editor sem os módulos de cenas e animação de imagens
+
+- Removidos Estúdio de Cenas e Animar Imagens, incluindo telas, atalhos, rotas e código exclusivo. A galeria de fotos do editor, legendas, marca d’água, exportação e Estúdio de Voz continuam.
+- A atualização não apaga vídeos, projetos ou arquivos antigos. Rascunhos exclusivos dos módulos removidos podem permanecer no aparelho, mas não abrem mais no app. Metadados legados embutidos em projetos do editor continuam no JSON.
+
+Validação em [docs/VALIDATION_0.1.296.md](docs/VALIDATION_0.1.296.md).
+
+## v0.1.295 — Legendas e prévias mais precisas
 
 - **Legendas:** novo estilo Uma palavra por vez, sem tarja ou caixa alta automática. Usa horários individuais; quando não existem, mostra que a sincronia é estimada. Karaokê e efeitos legados mantidos.
 - **Prévias:** a legenda ao vivo usa a posição real do player. O loop da junção mantém narração, música e tempos originais da montagem. Original, 9:16 Ajustar e 9:16 Preencher estão disponíveis. A renderização da prévia de junção pode levar mais tempo em projetos longos.

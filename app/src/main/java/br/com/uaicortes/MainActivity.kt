@@ -19,7 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -88,7 +87,6 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     DisposableEffect(mediaTaskCoordinator) {
         onDispose { mediaTaskCoordinator.cancel() }
     }
-    val animationDraftStore = remember { ImageAnimationDraftStore(context.applicationContext) }
     var diagnosticsEnabled by remember { mutableStateOf(DiagnosticRecorder.isEnabled()) }
     var theme by remember { mutableStateOf(store.theme()) }
     val workspace = rememberSaveable(saver = EditorWorkspaceState.Saver) {
@@ -128,15 +126,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     var selectedOverlayId by workspace::selectedOverlayId
     var mediaAction by rememberSaveable { mutableStateOf("add") }
     var previous by workspace::previous
-    val animationImages = rememberSaveable(saver = listSaver<androidx.compose.runtime.snapshots.SnapshotStateList<Uri>, String>(
-        save = { images -> images.take(ImageAnimationPlan.MAX_IMAGES).map(Uri::toString) },
-        restore = { values -> mutableStateListOf<Uri>().also { list ->
-            list.addAll(values.filter(String::isNotBlank).map(Uri::parse).distinct())
-        } }
-    )) { mutableStateListOf<Uri>() }
-    var animationDestination by rememberSaveable { mutableStateOf("new") }
     LaunchedEffect(project) {
-        if (project == null && animationDestination == "append") animationDestination = "new"
         workspace.reconcile(project, mediaOrigin, mediaAction)
     }
     var pendingOverlap by remember { mutableStateOf<OverlapConfirmation?>(null) }
@@ -311,13 +301,6 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
             screen = "editor"
         }
     }
-    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        uris.forEach(mediaController::persistReadAccess)
-        val images = MediaImportRules.images(animationImages.map(Uri::toString), uris.map(Uri::toString))
-        animationImages.clear()
-        animationImages.addAll(images.map(Uri::parse))
-        if (uris.isNotEmpty()) screen = "animate"
-    }
     val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         importVideoClips(uris, persistDocumentAccess = true)
     }
@@ -383,7 +366,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 android.widget.Toast.LENGTH_SHORT).show()
         }
         DiagnosticRecorder.action(screen, "back")
-        val destination = EditorNavigation.back(screen, previous, mediaOrigin, animationDestination)
+        val destination = EditorNavigation.back(screen, previous, mediaOrigin)
         if (screen == "editor" && destination == "home") {
             if (projectSession.hasPendingChanges) {
                 pendingExitEditor = true
@@ -438,19 +421,12 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
         Surface(modifier = Modifier.fillMaxSize().then(tapMonitor), color = MaterialTheme.colorScheme.background) {
             when (screen) {
                 "home" -> MainHome(projects, onCreate = { newProjectName = "Meu vídeo"; pendingNewProjectName = true },
-                    onAnimate = {
-                        animationDestination = "new"
-                        animationImages.clear()
-                        animationImages.addAll(animationDraftStore.load()?.images.orEmpty())
-                        screen = "animate"
-                    },
                     onOpen = { openProject(it.id) },
                     onRename = { pendingProjectRename = it; projectRenameInput = it.title },
                     onDelete = { pendingProjectDelete = it },
                     onDeleteAll = { pendingDeleteAll = true },
                     onSettings = { previous = "home"; screen = "settings" },
                     onTab = { if (it == "settings") previous = "home"; screen = it },
-                    onFlow = { navTo("flow_workspace") },
                     onVoiceCenter = { navTo("voice_center") },
                     onTextToVoice = { navTo("text_to_voice") },
                     onQuickSplit = { navTo("quick_split") },
@@ -459,35 +435,6 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 "quick_split" -> QuickVideoToolsScreen(QuickToolMode.SPLIT_VIDEO, ::back)
                 "quick_audio" -> QuickVideoToolsScreen(QuickToolMode.EXTRACT_AUDIO, ::back)
                 "edit_audio" -> AudioClipEditorScreen(::back)
-                "flow_workspace" -> FlowWorkspaceScreen(::back)
-                "animate" -> AnimateImagesScreen(animationImages.toList(),
-                    onChoose = { openGallery("animate","animate_images") },
-                    onBack = ::back,
-                    onOrderChanged = { reordered -> animationImages.clear();animationImages.addAll(reordered) },
-                    onSaveDraft = { chosen, opts -> animationDraftStore.save(chosen,opts) },
-                    onUseInEditor = { uri, publicationDraft ->
-                        val duration = mediaDuration(context, uri)
-                        if (duration > 0L) {
-                            val clip = Clip(uri=uri.toString(),title="Vídeo animado",sourceDurationMs=duration)
-                            val target = if(animationDestination=="append") project ?: VideoProject()
-                                else VideoProject()
-                            val edited = target.copy(clips=target.clips+clip,
-                                publicationDraft=publicationDraft.takeUnless {
-                                    it.description.isBlank() && it.hashtags.isBlank()
-                                } ?: target.publicationDraft)
-                            val accepted = if (animationDestination == "append") write(edited)
-                                else { projectSession.beginNew(edited); true }
-                            if (accepted) {
-                                selectedClip=clip.id
-                                screen="editor"
-                                true
-                            } else false
-                        } else {
-                            android.widget.Toast.makeText(context,"MP4 ainda não está disponível",
-                                android.widget.Toast.LENGTH_LONG).show()
-                            false
-                        }
-                    })
                 "projects" -> ProjectsScreen(projects, { back() }, { openProject(it.id) },
                     { pendingProjectRename = it; projectRenameInput = it.title },
                     { pendingProjectDelete = it }, onTab = { screen = it })
@@ -529,12 +476,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     onSelected = { selectedClip = it }, onPosition = { positionMs = it }, onBack = ::back,
                     onEdit = {
                         if (it == "transition") transitionPanelOpen = true
-                        else if (it == "animate") {
-                            animationDestination = "append"
-                            animationImages.clear()
-                            animationImages.addAll(animationDraftStore.load()?.images.orEmpty())
-                            screen = "animate"
-                        } else {
+                        else {
                             if (it == "voices") selectedVoiceCueId = null
                             navTo(it)
                         }
@@ -623,16 +565,6 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     }) }
                 "media" -> DeviceMediaBrowser(::back, onSelect = { chosen ->
                     when (mediaAction) {
-                        "animate_images" -> {
-                            val images = MediaImportRules.images(animationImages.map(Uri::toString),
-                                chosen.filter { it.isImage }.map { it.uri.toString() })
-                            animationImages.clear()
-                            animationImages.addAll(images.map(Uri::parse))
-                            if (animationImages.size == ImageAnimationPlan.MAX_IMAGES)
-                                android.widget.Toast.makeText(context,"Limite de 80 imagens por animação",
-                                    android.widget.Toast.LENGTH_LONG).show()
-                            screen="animate"
-                        }
                         "new", "append" -> importVideoClips(chosen.map { it.uri }, persistDocumentAccess = false)
                         "image_insert" -> {
                             chosen.firstOrNull()?.let { incomingMainImage = it.uri }
@@ -650,17 +582,16 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     }
                 }, openDocuments = {
                     when (mediaAction) {
-                        "animate_images" -> imagePicker.launch(arrayOf("image/*"))
                         "image_insert" -> mainImageDocumentPicker.launch(arrayOf("image/*"))
                         "new", "append" -> videoPicker.launch(arrayOf("video/*"))
                         "audio_extract" -> externalVideoPicker.launch(arrayOf("video/*"))
                         else -> overlayPicker.launch(arrayOf("image/*", "video/*"))
                     }
                 }, scope = when (mediaAction) {
-                    "animate_images", "image_insert" -> GalleryScope.IMAGES_ONLY
+                    "image_insert" -> GalleryScope.IMAGES_ONLY
                     "new", "append", "audio_extract" -> GalleryScope.VIDEOS
                     else -> GalleryScope.IMAGES_AND_VIDEOS
-                }, allowMultiple = mediaAction == "new" || mediaAction == "append" || mediaAction == "animate_images")
+                }, allowMultiple = mediaAction == "new" || mediaAction == "append")
                 "transition" -> project?.let { TransitionScreen(it, ::back, { write(it) }, selectedBoundary) }
                 "autosubtitle" -> project?.let { current -> AutoSubtitleScreen(current, ::back,
                     onManageModel = { previous = "autosubtitle"; screen = "speech_model" },
@@ -674,9 +605,6 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 "subtitles" -> project?.let { SubtitleScreen(it, ::back, { write(it) }, selectedSubtitleId, initialPositionMs = positionMs,
                     onSaveEditor = { if (write(it)) screen = "editor" },
                     onAutoSubtitles = { screen = "autosubtitle" }) }
-                "flow_prompt" -> project?.let { current -> FlowPromptScreen(current,
-                    onSave = { draft -> projectSession.project?.takeIf { it.id == current.id }
-                        ?.let { write(it.copy(flowPromptDraft = draft)) } ?: false }, back = ::back) }
                 "publication" -> project?.let { current -> ProjectPublicationScreen(current,
                     onSave = { draft -> projectSession.project?.takeIf { it.id == current.id }
                         ?.let { write(it.copy(publicationDraft = draft)) } ?: false }, back = ::back) }

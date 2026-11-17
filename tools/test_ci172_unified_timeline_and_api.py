@@ -24,7 +24,7 @@ for token in ('mainSpans(clips: List<Clip>, image: Boolean)', 'clip.isImage == i
 assert 'MainImageInsertionUi(project, screen, mediaAction, selectedClip,' in activity
 assert 'openGallery("editor", "image_insert")' in activity
 assert '"image_insert" -> {' in activity
-assert '"animate_images", "image_insert" -> GalleryScope.IMAGES_ONLY' in activity
+assert '"image_insert" -> GalleryScope.IMAGES_ONLY' in activity
 assert 'mainImageDocumentPicker.launch(arrayOf("image/*"))' in activity
 assert 'picker.launch(arrayOf("image/*"))' not in image
 assert 'ImageClipImport.copyIntoProject' in image

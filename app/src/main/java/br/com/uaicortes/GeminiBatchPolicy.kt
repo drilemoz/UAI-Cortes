@@ -40,5 +40,8 @@ internal data class GeminiBatchRecord(
     val localId: String, val profileId: String, val projectId: String,
     val model: String, val count: Int, val remoteName: String,
     val state: String, val createdAtMs: Long,
-    val flowProjectId: String = "", val flowScenes: List<FlowBatchSceneRef> = emptyList()
+    val flowProjectId: String = "", val flowScenes: List<LegacyBatchSceneRef> = emptyList()
 )
+
+/** Metadados históricos de solicitações antigas de cenas. Não iniciam nenhum fluxo. */
+internal data class LegacyBatchSceneRef(val index: Int, val fingerprint: String)

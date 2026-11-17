@@ -340,7 +340,7 @@ assert '.setDurationUs(pip.durationMs * 1000L)' not in source
 assert 'validateSources(project)' in source and 'checkReadable(clip.uri' in source
 saver=(root/'app/src/main/java/br/com/uaicortes/GalleryVideoSaver.kt').read_text()
 assert 'GalleryVideoSaver.save(context, file, fileName)' in source
-assert 'GalleryVideoSaver.save(' in (root/'app/src/main/java/br/com/uaicortes/ImageAnimationEngine.kt').read_text()
+assert 'VideoSavedDialog(uri=savedUri' in ui
 assert 'copied == source.length()' in saver and 'source.isFile && source.length() > 0L' in saver
 assert 'IS_PENDING, 0' in saver and 'resolver.delete(target, null, null)' in saver
 assert 'describeExportError(exportException)' in source and 'error.errorCode' in source
@@ -511,47 +511,6 @@ assert 'ClipMotionTransitionEffect(' in source and 'MatrixTransformation' in mot
 assert 'ZOOM_IN' in (root/'app/src/main/java/br/com/uaicortes/TransitionEffects.kt').read_text()
 print('OK: v0.1.52, ASR offline Vosk, tutorial/modelo, movimento em Media3, confirmação e miniaturas')
 
-# v0.1.52: animação offline de imagens, sem modelos/APIs externas.
-anim=(root/'app/src/main/java/br/com/uaicortes/AnimateImagesScreen.kt').read_text()
-engine=(root/'app/src/main/java/br/com/uaicortes/ImageAnimationEngine.kt').read_text()
-plan=(root/'app/src/main/java/br/com/uaicortes/ImageAnimationPlan.kt').read_text()
-assert '"animate" -> AnimateImagesScreen' in ui
-assert 'animationImages.addAll(animationDraftStore.load()?.images.orEmpty())' in ui
-assert 'GalleryScope.IMAGES_ONLY' in browser and 'READ_MEDIA_IMAGES' in browser
-assert 'setImageDurationMs(options.durationMs)' in engine and 'setFrameRate(options.fps)' in engine
-assert 'AnimatedImageMatrix' in engine and 'MatrixTransformation' in engine
-assert 'ImageAnimationPlan.frame' in anim and 'ImageAnimationPlan.frame' in engine
-assert 'MediaStore.Video.Media.IS_PENDING' in saver and 'VIDEO_H264' in engine
-assert 'Cancelar exportação' in anim and 'onUseInEditor' in anim and 'onOrderChanged' in anim
-assert 'MAX_IMAGES = 80' in plan and 'secondsPerImage: Int = 5' in plan
-print('OK: v0.1.64 / versionCode 74, animar imagens offline, galeria, preview, MP4 e integração')
-
-# Regressão do NullPointerException do progresso em Animar Imagens.
-anim=(root/'app/src/main/java/br/com/uaicortes/AnimateImagesScreen.kt').read_text()
-progress_ui=(root/'app/src/main/java/br/com/uaicortes/AnimationProgressUi.kt').read_text()
-assert 'progress!!' not in anim
-assert 'val fixedProgress=AnimationProgressUi.fraction(progress)' in anim
-assert 'LinearProgressIndicator(progress={ stableFraction }' in anim and 'fixedProgress.coerceIn(0f, 1f)' in anim
-assert 'stageHeight' in anim and 'BoxWithConstraints(' in anim
-assert 'detectDragGestures(' in anim and 'listState.scrollBy(' in anim
-assert 'Text("Ver prévia",' in anim and 'O Uai Cortes está preparando seu vídeo' in anim
-assert 'fun fraction(value:Int?):Float?' in progress_ui
-assert (root/'app/src/test/java/br/com/uaicortes/AnimationProgressUiTest.kt').is_file()
-print('OK: progresso seguro, preview proporcional e arrasto em tempo real')
-
-# v0.1.52: guarda rascunho separado, confirma saída e compartilha sucesso do editor.
-draft=(root/'app/src/main/java/br/com/uaicortes/ImageAnimationDraftStore.kt').read_text()
-saved_dialog=(root/'app/src/main/java/br/com/uaicortes/VideoSavedDialog.kt').read_text()
-assert 'SharedPreferences' not in draft or 'getSharedPreferences' in draft
-assert all(t in draft for t in ['fun load()', 'fun save(', 'ImageAnimationDraftCodec.prepareWrite(', 'editor.commit()'])
-assert all(t in (root/'app/src/main/java/br/com/uaicortes/ImageAnimationDraftCodec.kt').read_text() for t in ['images', 'secondsPerImage', 'transition'])
-assert all(t in anim for t in ['Voltar à tela inicial?', 'confirmExit', 'VideoSavedDialog(', 'onSaveDraft(', 'EditorOptionRow(', 'Text("Rascunho"'])
-assert 'progress!!' not in anim and 'onUseInEditor(uri, draft)' in anim
-assert 'VideoSavedDialog(uri=savedUri' in ui
-assert (root/'app/src/test/java/br/com/uaicortes/ImageAnimationDraftRulesTest.kt').is_file()
-print('OK: v0.1.64 / versionCode 74, rascunho, voltar, sucesso compartilhado e ajustes padronizados')
-
-
 # v0.1.56: contratos de modularização e serviços compartilhados.
 app_files = root/'app/src/main/java/br/com/uaicortes'
 # v194: fluxo de importação de vídeo tem estado de confirmação no activity; diálogo e política
@@ -571,7 +530,7 @@ assert 'object ProjectCollectionCodec' in codec and 'fun recover(primary: String
 assert '.putString(backupKey, safePrevious)' in codec and '.commit()' in codec
 assert 'persist(readForMutation().filterNot' in codec
 assert 'GalleryVideoSaver.save(context, file, fileName)' in source
-assert 'GalleryVideoSaver.save(' in engine
+assert 'VideoSavedDialog(uri=savedUri' in ui
 assert "IS_PENDING, 1" in saver and "IS_PENDING, 0" in saver
 assert 'projectCollectionCodecRoundTrip' in (root/'app/src/test/java/br/com/uaicortes/ProjectStoreTest.kt').read_text()
 print('OK: v0.1.64 / 65, modularização, estado transitório, MediaStore único e backup fail-closed')
@@ -595,7 +554,6 @@ assert 'projectController.' not in main
 assert 'controller.load(restoredId)' in session
 assert (root/'app/src/test/java/br/com/uaicortes/ProjectSessionCoordinatorTest.kt').exists()
 assert 'EditorNavigation.back(' in main and 'workspace.reconcile(project, mediaOrigin, mediaAction)' in main
-assert 'listSaver<androidx.compose.runtime.snapshots.SnapshotStateList<Uri>, String>' in main
 assert 'val Saver: Saver<EditorWorkspaceState, ArrayList<String>>' in state
 assert 'fun reconcile(project: VideoProject?' in state and 'snapshotTokens()' in state
 assert 'fun restoreRoute(' in nav and 'fun back(' in nav
@@ -618,20 +576,17 @@ for name in ['ProjectOperationsTest.kt', 'OverlayOperationsTest.kt', 'MediaImpor
     assert (root/'app/src/test/java/br/com/uaicortes'/name).exists()
 print('OK: v0.1.64 / 65, controllers projetos/PiP/importação e testes')
 
-# v0.1.56: o Media3 recebe solicitação explícita de bitrate nos dois exportadores.
+# v0.1.56: o Media3 recebe solicitação explícita de bitrate na exportação.
 quality=(root/'app/src/main/java/br/com/uaicortes/VideoExportQuality.kt').read_text()
-animator=(root/'app/src/main/java/br/com/uaicortes/ImageAnimationEngine.kt').read_text()
 export_ui=(root/'app/src/main/java/br/com/uaicortes/ExportScreen.kt').read_text()
 assert '720 -> when (preset)' in quality and '1080 -> when (preset)' in quality
 assert 'ExportBitratePreset.HIGH -> 8_000_000' in quality and 'ExportBitratePreset.HIGH -> 18_000_000' in quality
 assert '.setRequestedVideoEncoderSettings(' in source and '.setEncoderFactory(encoderFactory)' in source
-assert '.setRequestedVideoEncoderSettings(' in animator and '.setEncoderFactory(encoderFactory)' in animator
-assert 'Bitmap.CompressFormat.PNG' in animator and 'image-%03d.png' in animator
 assert 'estimatedMiBPerMinute(' in export_ui and '1080' in (root/'app/src/main/java/br/com/uaicortes/ProjectStore.kt').read_text()
 assert (root/'app/src/test/java/br/com/uaicortes/VideoExportQualityTest.kt').exists()
 print('OK: v0.1.56, qualidade explícita 720p/1080p, armazenamento temporário e testes')
 
-assert 'minimumFreeBytes(' in quality and 'minimumFreeBytes(' in source and 'minimumFreeBytes(' in animator
+assert 'minimumFreeBytes(' in quality and 'minimumFreeBytes(' in source
 print('OK: reserva preventiva de espaço do vídeo e cópia MediaStore')
 
 # v0.1.57: regressão do workflow 50 e refatoração de importação.
@@ -707,25 +662,6 @@ assert 'isSavingToGallery = true' in engine and 'if (isSavingToGallery) return' 
 assert (root/'app/src/test/java/br/com/uaicortes/ExportTaskCoordinatorTest.kt').exists()
 print('OK: v0.1.64 ViewModel de exportação, tickets, progresso real, cancelamento e salvamento protegido')
 
-# v0.1.64: Animar Imagens usa o mesmo coordenador da exportação e guarda o
-# motor Media3 no ViewModel, sem Jobs/Transformer em remember ou Bundle.
-image_vm = (app_files/'ImageAnimationTaskViewModel.kt').read_text()
-assert 'val animationVm: ImageAnimationTaskViewModel = viewModel()' in anim
-assert 'animationVm.start(images.toList(),options)' in anim
-assert 'animationVm.cancel()' in anim
-assert 'animationVm.savedVideo?.let' in anim
-assert 'ImageAnimationEngine(context.applicationContext)' not in anim
-assert 'DisposableEffect(Unit)' not in anim
-assert 'private val tasks = ExportTaskCoordinator()' in image_vm
-assert 'activeEngine = engine' in image_vm and 'ImageAnimationEngine(' in image_vm
-assert 'override fun onCleared()' in image_vm and 'viewModelScope.launch' in image_vm
-assert 'tasks.saving(ticket)' in image_vm and 'tasks.success(ticket)' in image_vm
-assert 'engine.isSaving' not in anim
-assert 'preparing = false' in (app_files/'ImageAnimationEngine.kt').read_text()
-assert 'if (!preparing) cleanup()' in (app_files/'ImageAnimationEngine.kt').read_text()
-assert (root/'app/src/test/java/br/com/uaicortes/ImageAnimationTaskFlowTest.kt').is_file()
-print('OK: v0.1.64 ViewModel Animar Imagens, fases comuns, reinício isolado e cancelamento seguro')
-
 # v0.1.64: timeline centralizada, velocidade pequena no VM, restauro de seek.
 playback=(root/'app/src/main/java/br/com/uaicortes/TimelinePlaybackCoordinator.kt').read_text()
 playback_vm=(root/'app/src/main/java/br/com/uaicortes/EditorPlaybackViewModel.kt').read_text()
@@ -759,19 +695,6 @@ assert 'catalogAlertDismissed' in main and 'CatalogStorageWarning(' in main and 
 assert 'onSaveHome = { if (write(p)) leaveEditor("save") }' in main
 assert (root/'app/src/test/java/br/com/uaicortes/ProjectCatalogRecoveryTest.kt').exists()
 print('OK: v0.1.69 / versionCode 74, recuperação de backup, aviso e escrita protegida')
-
-# v0.1.69: codec fail-closed, backup do Animar Imagens e permissões de leitura.
-codec=(app_files/'ImageAnimationDraftCodec.kt').read_text()
-draft=(app_files/'ImageAnimationDraftStore.kt').read_text()
-access=(app_files/'ImageDraftMediaAccess.kt').read_text()
-anim=(app_files/'AnimateImagesScreen.kt').read_text()
-assert all(t in codec for t in ['enum class ImageDraftStatus', 'PRIMARY, BACKUP, DAMAGED', 'fun inspect(', 'fun prepareWrite(', 'fun decode(', 'fun encode('])
-assert all(t in draft for t in ['ImageAnimationDraftCodec.prepareWrite(', 'fun resetDamaged()', 'editor.commit()', 'backupKey'])
-assert all(t in access for t in ['Dispatchers.IO', 'openFileDescriptor(', 'ensureActive()'])
-assert all(t in anim for t in ['inaccessible(', 'unavailableImages', 'ImageDraftStatus.DAMAGED', 'requestDraftReset', 'allImagesReadable'])
-assert (root/'app/src/test/java/br/com/uaicortes/ImageAnimationDraftCodecTest.kt').is_file()
-assert 'uris.forEach(mediaController::persistReadAccess)' in main
-print('OK: v0.1.69 / versionCode 74, backup fail-closed e validação de permissão de fotos')
 
 # v0.1.69: novos fluxos de Home, galeria, nomes, PiP e modelo Vosk.
 home=(root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
@@ -1069,20 +992,6 @@ runpy.run_path(str(root/'tools/ci72_media3_optin_test.py'), run_name='__main__')
 assert 'ReleaseSummary("0.1.86", listOf(' in notes
 print('OK: v0.1.86 CI72: lint Media3 com opt-in local nos spans de legendas')
 
-# v0.1.87: opções de movimento reais e rascunhos compatíveis.
-anim_screen = (root/'app/src/main/java/br/com/uaicortes/AnimateImagesScreen.kt').read_text()
-anim_plan = (root/'app/src/main/java/br/com/uaicortes/ImageAnimationPlan.kt').read_text()
-anim_engine = (root/'app/src/main/java/br/com/uaicortes/ImageAnimationEngine.kt').read_text()
-anim_codec = (root/'app/src/main/java/br/com/uaicortes/ImageAnimationDraftCodec.kt').read_text()
-assert 'ImageMotionUi.choices' in anim_screen and 'ModalBottomSheet(' in anim_screen
-assert 'ImageAnimationPlan.frame(currentIndex,localFraction,options.intensity,options.motion)' in anim_screen
-assert 'ImageAnimationPlan.frame(index, fraction, intensity, motion)' in anim_engine
-assert 'options.motion' in anim_engine and 'motion = opts.optString("motion", "auto")' in anim_codec
-assert '.put("motion", options.motion)' in anim_codec
-assert 'Gerar MP4' in anim_screen and 'Rascunho' in anim_screen
-assert 'ReleaseSummary("0.1.87", listOf(' in notes
-print('OK: v0.1.87 animação de imagens: controles, preview e rascunhos legados')
-
 # v0.1.89: persistência e recuperação configurável; não altera o esquema dos projetos.
 backup=(root/'app/src/main/java/br/com/uaicortes/ProjectBackups.kt').read_text()
 backup_ui=(root/'app/src/main/java/br/com/uaicortes/ProjectBackupSettingsScreen.kt').read_text()
@@ -1113,8 +1022,6 @@ assert 'SubtitleTextCasePolicy.display(cue.text, cue.textCase)' in sub_animation
 assert 'SubtitleWordEffects.colors(active.copy(text=rendered' in fx and 'frame.highlightColorOverride ?: active.highlightColor' in fx
 assert 'SubtitleStyleGallery(draft,onChange)' in (app_files/'SubtitleVisualEditor.kt').read_text() and 'SubtitleWordColorEditor(draft,onChange)' in (app_files/'SubtitleVisualEditor.kt').read_text()
 assert 'val presets = listOf(' in styles and 'Itálico amarelo' in styles
-assert '"animate" -> if (animationDestination == "append") "editor" else "home"' in nav and 'onBack = ::back,' in main
-assert 'fun goBack()' in (app_files/'AnimateImagesScreen.kt').read_text()
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleWordEffectsTest.kt').is_file()
 assert (root/'docs/VALIDATION_0.1.89.md').is_file()
 print('OK: v0.1.89 galeria de legendas, Vosk por palavra, estilos no MP4 e Voltar para Home')
@@ -1270,7 +1177,7 @@ from check_version_sync import check
 assert check(root) == (current_version, current_code)
 home = (root/'app/src/main/java/br/com/uaicortes/HomeScreens.kt').read_text()
 assert 'internal fun HomePrimaryActions(' in home
-assert 'HomePrimaryActions(onCreate, onAnimate, onFlow = onFlow,' in home
+assert 'HomePrimaryActions(onCreate,' in home
 assert 'OutlinedButton(onClick = onUpdates' in home
 assert 'AppVersionLabel()' in home and home.count('AppVersionLabel()') >= 3
 assert 'Testar visual da Home' not in home
@@ -1327,21 +1234,6 @@ assert 'https://github.com/$repo/releases' in update_manager
 assert (root/'app/src/test/java/br/com/uaicortes/GitHubUpdateDiagnosticsTest.kt').is_file()
 assert (root/'docs/VALIDATION_0.1.104.md').is_file()
 print('OK: v0.1.104 GitHub erros categorizados, navegador de fallback e confirmações mantidas')
-
-# v0.1.105: painel principal lê a foto real, sem usar thumbnail quadrada de 640 px.
-preview_screen=(root/'app/src/main/java/br/com/uaicortes/AnimateImagesScreen.kt').read_text()
-preview_decode=(root/'app/src/main/java/br/com/uaicortes/ImageAnimationPreviewDecoder.kt').read_text()
-preview_sizing=(root/'app/src/main/java/br/com/uaicortes/ImagePreviewSizing.kt').read_text()
-assert 'ImageAnimationPreviewDecoder.decode(context, uri, selectedPreviewQuality)' in preview_screen
-assert 'readPreviewThumbnail(context,uri,640)' not in preview_screen
-assert 'Rápida' in preview_sizing and 'Equilibrada' in preview_sizing and 'Alta' in preview_sizing
-assert '320.dp' in preview_screen and '380.dp' in preview_screen
-assert 'AnimationFrameImage(previewImage?.bitmap' in preview_screen
-assert 'expandedPreview' in preview_screen and 'Ampliar' in preview_screen
-assert 'ExifInterface' in preview_decode and 'BitmapFactory.decodeStream' in preview_decode
-assert (root/'app/src/test/java/br/com/uaicortes/ImagePreviewSizingTest.kt').is_file()
-assert (root/'docs/VALIDATION_0.1.105.md').is_file()
-print('OK: v0.1.105 prévia proporcional, qualidade configurável e ampliação, exportação preservada')
 
 # v0.1.106: seleção compacta, sem janelas sobrepostas nem inferência de gênero.
 voice_ui = (app_files/'GeminiNarrationUi.kt').read_text()

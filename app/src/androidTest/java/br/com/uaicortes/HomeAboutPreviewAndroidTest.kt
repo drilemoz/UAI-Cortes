@@ -19,17 +19,14 @@ class HomeAboutPreviewAndroidTest {
 
     @Test fun homeAndAboutReuseVersionAndPrimaryActionsWithoutSideEffects() {
         var createCalls = 0
-        var animateCalls = 0
-        var flowCalls = 0
         var updatesCalls = 0
         rule.setContent {
             var route by remember { mutableStateOf("home") }
             MaterialTheme {
                 if (route == "home") {
-                    MainHome(emptyList(), onCreate = { createCalls++ }, onAnimate = { animateCalls++ },
+                    MainHome(emptyList(), onCreate = { createCalls++ },
                         onOpen = {}, onRename = {}, onDelete = {}, onDeleteAll = {},
-                        onSettings = { route = "about" }, onTab = {},
-                        onFlow = { flowCalls++ })
+                        onSettings = { route = "about" }, onTab = {})
                 } else {
                     AboutScreen(back = { route = "home" }, onUpdates = { updatesCalls++ })
                 }
@@ -38,8 +35,8 @@ class HomeAboutPreviewAndroidTest {
         val version = "Versão ${AppReleaseNotes.VERSION_NAME} (${AppReleaseNotes.VERSION_CODE})"
         rule.onNodeWithText(version).assertExists()
         rule.onNodeWithText("Novo projeto").assertExists()
-        rule.onNodeWithText("Animar fotos").assertExists()
-        rule.onNodeWithText("Estúdio de Cenas").assertExists()
+        rule.onNodeWithText("Animar fotos").assertDoesNotExist()
+        rule.onNodeWithText("Estúdio de Cenas").assertDoesNotExist()
         rule.onNodeWithContentDescription("Configurações").performClick()
         rule.onNodeWithText(version).assertExists()
         rule.onNodeWithText("Verificar atualizações").performClick()
@@ -47,31 +44,27 @@ class HomeAboutPreviewAndroidTest {
         rule.onNodeWithText("Testar visual da Home").assertDoesNotExist()
         rule.runOnIdle {
             org.junit.Assert.assertEquals(0, createCalls)
-            org.junit.Assert.assertEquals(0, animateCalls)
-            org.junit.Assert.assertEquals(0, flowCalls)
             org.junit.Assert.assertEquals(1, updatesCalls)
         }
     }
 
-    @Test fun eightHomeShortcutsScrollAndKeepIndividualNavigation() {
-        val calls = IntArray(8)
+    @Test fun sixHomeShortcutsScrollAndKeepIndividualNavigation() {
+        val calls = IntArray(6)
         rule.setContent {
             MaterialTheme {
                 HomePrimaryActions(
                     onCreate = { calls[0]++ },
-                    onAnimate = { calls[1]++ },
-                    onFlow = { calls[2]++ },
-                    onVoiceCenter = { calls[3]++ },
-                    onTextToVoice = { calls[4]++ },
-                    onEditAudio = { calls[5]++ },
-                    onQuickAudio = { calls[6]++ },
-                    onQuickSplit = { calls[7]++ })
+                    onVoiceCenter = { calls[1]++ },
+                    onTextToVoice = { calls[2]++ },
+                    onEditAudio = { calls[3]++ },
+                    onQuickAudio = { calls[4]++ },
+                    onQuickSplit = { calls[5]++ })
             }
         }
-        listOf("Novo projeto", "Animar fotos", "Estúdio de Cenas", "Vozes Google",
+        listOf("Novo projeto", "Vozes Google",
             "Texto para Voz", "Editar áudio", "Extrair áudio", "Dividir vídeo").forEach { label ->
             rule.onNodeWithText(label).performScrollTo().performClick()
         }
-        rule.runOnIdle { org.junit.Assert.assertArrayEquals(IntArray(8) { 1 }, calls) }
+        rule.runOnIdle { org.junit.Assert.assertArrayEquals(IntArray(6) { 1 }, calls) }
     }
 }

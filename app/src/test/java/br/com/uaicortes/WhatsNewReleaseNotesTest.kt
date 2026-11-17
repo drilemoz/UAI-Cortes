@@ -60,8 +60,8 @@ class WhatsNewReleaseNotesTest {
     @Test fun whatsNewReturnPathIsSafeForAutomaticAndManualEntry() {
         assertEquals("whats_new", EditorNavigation.knownRoute("whats_new"))
         assertEquals("whats_new", EditorNavigation.restoreRoute("whats_new", false, "home", "new"))
-        assertEquals("home", EditorNavigation.back("whats_new", "home", "home", "new"))
-        assertEquals("settings", EditorNavigation.back("whats_new", "settings", "home", "new"))
-        assertEquals("about", EditorNavigation.back("whats_new", "about", "home", "new"))
+        assertEquals("home", EditorNavigation.back("whats_new", "home", "home"))
+        assertEquals("settings", EditorNavigation.back("whats_new", "settings", "home"))
+        assertEquals("about", EditorNavigation.back("whats_new", "about", "home"))
     }
 }

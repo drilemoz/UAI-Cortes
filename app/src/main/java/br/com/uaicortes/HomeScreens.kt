@@ -104,19 +104,15 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
     }
 }
 
-/** Oito ferramentas independentes em uma faixa horizontal, inclusive em telas estreitas. */
-@Composable internal fun HomePrimaryActions(onCreate: () -> Unit, onAnimate: () -> Unit,
-    preview: Boolean = false, onFlow: () -> Unit = {}, onVoiceCenter: () -> Unit = {},
+/** Seis ferramentas independentes em uma faixa horizontal, inclusive em telas estreitas. */
+@Composable internal fun HomePrimaryActions(onCreate: () -> Unit,
+    preview: Boolean = false, onVoiceCenter: () -> Unit = {},
     onTextToVoice: () -> Unit = {}, onEditAudio: () -> Unit = {}, onQuickAudio: () -> Unit = {},
     onQuickSplit: () -> Unit = {}) {
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.Top) {
         HomeActionTile("Novo projeto", Icons.Default.AddCircleOutline, onCreate,
-            enabled = !preview, modifier = Modifier.width(126.dp))
-        HomeActionTile("Animar fotos", Icons.Default.AutoAwesomeMotion, onAnimate,
-            enabled = !preview, modifier = Modifier.width(126.dp))
-        HomeActionTile("Estúdio de Cenas", Icons.Default.MovieFilter, onFlow,
             enabled = !preview, modifier = Modifier.width(126.dp))
         HomeActionTile("Vozes Google", Icons.Default.RecordVoiceOver, onVoiceCenter,
             enabled = !preview, modifier = Modifier.width(126.dp))
@@ -131,10 +127,10 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
     }
 }
 
-@Composable internal fun MainHome(projects: List<VideoProject>, onCreate: () -> Unit, onAnimate: () -> Unit,
+@Composable internal fun MainHome(projects: List<VideoProject>, onCreate: () -> Unit,
     onOpen: (VideoProject)->Unit, onRename: (VideoProject)->Unit,
     onDelete: (VideoProject)->Unit, onDeleteAll: ()->Unit,
-    onSettings: ()->Unit, onTab:(String)->Unit, onFlow: () -> Unit = {},
+    onSettings: ()->Unit, onTab:(String)->Unit,
     onVoiceCenter: () -> Unit = {}, onQuickSplit: () -> Unit = {},
     onQuickAudio: () -> Unit = {}, onTextToVoice: () -> Unit = {},
     onEditAudio: () -> Unit = {}) {
@@ -151,7 +147,7 @@ internal fun Heading(title: String, back: () -> Unit, accessory: @Composable (()
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal=20.dp)) {
             Spacer(Modifier.height(8.dp))
-            HomePrimaryActions(onCreate, onAnimate, onFlow = onFlow,
+            HomePrimaryActions(onCreate,
                 onVoiceCenter = onVoiceCenter, onTextToVoice = onTextToVoice,
                 onEditAudio = onEditAudio, onQuickAudio = onQuickAudio, onQuickSplit = onQuickSplit)
             Spacer(Modifier.height(6.dp))

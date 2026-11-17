@@ -15,10 +15,6 @@ for token in ('val chip = RoundedCornerShape(6.dp)',
 assert 'MaterialTheme(colorScheme = palette, shapes = UaiShapes.theme)' in (src/'MainActivity.kt').read_text()
 
 required = {
-    'FlowStudioScreen.kt': ('shape = UaiShapes.button', 20),
-    'FlowBatchUi.kt': ('UaiShapes.button', 6),
-    'FlowStudioWizardUi.kt': ('UaiShapes.button', 6),
-    'FlowPromptScreen.kt': ('UaiShapes.button', 6),
     'VoiceIaScreen.kt': ('UaiShapes.dialog', 1),
     'GeminiVoiceCenterScreen.kt': ('UaiShapes.card', 1),
     'SubtitleSpeakersUi.kt': ('UaiShapes.dialog', 1),
@@ -30,7 +26,6 @@ required = {
     'ExportScreen.kt': ('UaiShapes.card', 3),
     'VideoSavedDialog.kt': ('UaiShapes.dialog', 1),
     'HomeScreens.kt': ('UaiShapes.card', 2),
-    'AnimateImagesScreen.kt': ('UaiShapes.sheet', 1),
     'EditorScreen.kt': ('UaiShapes.sheet', 1),
     'QuickVideoToolsScreen.kt': ('UaiShapes.button', 3),
 }
@@ -45,4 +40,4 @@ assert 'RoundedCornerShape(3.dp)' in (src/'VoiceIaScreen.kt').read_text()  # bar
 assert 'shape = UaiShapes.sheet' in (src/'PipScreen.kt').read_text()
 assert 'class QuickVideoSplitPolicy' not in (src/'QuickVideoToolsScreen.kt').read_text()
 assert tuple(map(int, (root/'VERSION').read_text().strip().split('.'))) >= (0, 1, 200)
-print('OK: escala, 18 módulos e elementos especiais preservados a partir da v0.1.200')
+print('OK: escala, módulos ativos e elementos especiais preservados a partir da v0.1.200')

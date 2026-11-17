@@ -12,10 +12,6 @@ class MediaImportOperationsTest {
         assertEquals(2, batch.rejected)
         assertEquals(listOf("content://a", "content://b"), batch.clips.map { it.uri })
     }
-    @Test fun imagesAreUniqueAndDoNotExceedLimit() {
-        assertEquals(listOf("a","b","c"), MediaImportRules.images(listOf("a","b"), listOf("b","c","d"), 3))
-        assertEquals(emptyList<String>(), MediaImportRules.images(emptyList(), listOf("a"), 0))
-    }
     @Test fun audioHonorsSourceLengthAndProjectBounds() {
         val track = MediaImportRules.audio("sound", "Som", 7000, 10000, 8000)!!
         assertEquals(8000L, track.startMs)

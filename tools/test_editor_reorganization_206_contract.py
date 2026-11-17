@@ -19,5 +19,4 @@ assert all(route in timeline for route in (
     'TimelineKind.MAIN_VIDEO -> onAddVideo()', 'TimelineKind.MAIN_IMAGE -> onAddImage()',
     'TimelineKind.PIP -> onOpenPiP()',
 ))
-assert '"animate" -> if (animationDestination == "append") "editor" else "home"' in nav
 print('OK: atalhos exclusivos do editor, salvar fixo, atalhos de inserção e rotas legadas preservados')

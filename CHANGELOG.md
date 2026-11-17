@@ -1,3 +1,8 @@
+# Uai Cortes 0.1.296 (2026-11-17)
+
+- Removidos Estúdio de Cenas e Animar Imagens, incluindo telas, atalhos, rotas e código exclusivo. A galeria de fotos do editor, legendas, marca d’água, exportação e Estúdio de Voz continuam.
+- A atualização não apaga vídeos, projetos ou arquivos antigos. Rascunhos exclusivos dos módulos removidos podem permanecer no aparelho, mas não abrem mais no app. Metadados legados embutidos em projetos do editor continuam no JSON.
+
 # Uai Cortes 0.1.295 (2026-11-17)
 
 - **Legendas:** novo estilo Uma palavra por vez, sem tarja ou caixa alta automática. Usa horários individuais; quando não existem, mostra que a sincronia é estimada. Karaokê e efeitos legados mantidos.

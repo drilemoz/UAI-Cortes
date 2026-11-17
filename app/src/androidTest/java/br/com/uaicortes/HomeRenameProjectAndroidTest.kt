@@ -27,7 +27,7 @@ class HomeRenameProjectAndroidTest {
             var selected by remember { mutableStateOf<VideoProject?>(null) }
             var value by remember { mutableStateOf("") }
             MaterialTheme {
-                MainHome(listOf(base), onCreate = {}, onAnimate = {}, onOpen = {},
+                MainHome(listOf(base), onCreate = {}, onOpen = {},
                     onRename = { selected = it; value = it.title }, onDelete = {},
                     onDeleteAll = {}, onSettings = {}, onTab = {})
                 selected?.let { project ->

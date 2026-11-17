@@ -1,3 +1,9 @@
+# v0.1.296 — Remoção de duas ferramentas independentes
+
+- Base v0.1.295/versionCode 296, nova v0.1.296/versionCode 297. Preservar schema 4, assinatura e cinco variantes.
+- Remover a UI, navegação e implementação exclusiva de Estúdio de Cenas e Animar Imagens. Não apagar arquivos antigos nem remover a importação de fotos, os efeitos de legendas, a exportação ou o Estúdio de Voz.
+- Campos de cenas já incorporados ao JSON de projetos continuam opacos. Não reativar serviços de geração de cenas nem migrar ou apagar arquivos dos módulos removidos.
+
 # v0.1.295 — Relógio da prévia, palavra ativa e ações compactas
 
 - Base v0.1.294/versionCode 295, nova v0.1.295/versionCode 296. Preservar schema 4, assinatura e cinco variantes.

@@ -15,18 +15,17 @@ assert 'total_cached_tokens' in ledger and 'thoughtsTokenCount' in ledger
 assert '90L * 24L' in ledger and 'gemini_usage_local_v1' in ledger
 assert 'safeRecord' in ledger and 'storageLock' in ledger
 assert all(x not in ledger for x in ['put("prompt"','put("secret"','put("audio"','put("apiKey"'])
-for name in ('narracao','legendas','descricao','flow'):
+for name in ('narracao','legendas','descricao'):
     assert name in tts+asr+caption
 assert 'safeRecord' in tts and 'safeRecord' in asr and 'safeRecord' in caption
 assert 'status = if (status == 429)' in caption
 assert 'GeminiUsagePanel()' in settings
 assert 'GeminiUsageHint(' in ui
 assert 'Consumo da IA' in ui and 'Ver limites e créditos no Google' in ui
-assert 'countCaptionInput' in caption and 'countFlowInput' in caption
+assert 'countCaptionInput' in caption
 assert ':countTokens' in caption and 'requestJsonOnce' in caption
 assert 'Conferir tokens de entrada' in (s/'VideoSavedDialog.kt').read_text()
-assert 'Conferir tokens de entrada' in (s/'FlowPromptScreen.kt').read_text()
-for file in ('VideoSavedDialog.kt','FlowPromptScreen.kt','AutoSubtitleScreen.kt','GeminiNarrationUi.kt'):
+for file in ('VideoSavedDialog.kt','AutoSubtitleScreen.kt','GeminiNarrationUi.kt'):
     assert 'GeminiUsageHint(' in (s/file).read_text(),file
 assert 'não representam saldo nem fatura oficial do Google' in ui
 for name in ('gemini_backup_rules.xml','gemini_data_extraction_rules.xml'):
