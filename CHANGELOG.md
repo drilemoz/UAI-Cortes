@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.281 (2026-11-17)
+
+- **PiP:** seletores em uma linha com o botão de adicionar. Painel em lista para posição, tamanho, duração e opacidade, com uma seção por vez. Mídia e som do PiP de vídeo no menu de opções.
+- **Prévia de Camadas:** ocupa a altura livre sem cortar o quadro. Ampliação mantém os controles de reprodução e dá mais espaço ao vídeo.
+- **Marca d’água:** paleta de cores, entrada hexadecimal opcional e seis fontes com amostra do próprio texto. Estilo recolhe tamanho, opacidade, contorno, sombra e padrões.
+- **Duração da marca:** projeto inteiro ou clipe específico. O vínculo acompanha o clipe ao ser reordenado. Projetos antigos continuam com a marca no projeto inteiro.
+
 # Uai Cortes 0.1.280 (2026-11-17)
 
 - **Áudio no editor:** escolha um arquivo, confira duração e alcance, informe o início e ajuste o volume. A faixa toca sem reiniciar entre clipes. Se o projeto acabar antes do áudio, o pop-up avisa quanto cabe. O arquivo original é preservado.

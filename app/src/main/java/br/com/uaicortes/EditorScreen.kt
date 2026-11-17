@@ -73,6 +73,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     var previewVolume by remember(p.id) { mutableFloatStateOf(1f) }
     var previewVolumeMenu by remember { mutableStateOf(false) }
     var editorMoreMenu by remember(p.id) { mutableStateOf(false) }
+    val watermarkCue = remember(p.clips, p.textWatermark) { p.textWatermark?.toSubtitle(p.clips) }
     val activeFrameIndex = AdaptiveVideoLayout.activeClipIndex(p.clips.map { it.durationMs }, currentMs)
     val activeFrame = p.clips.getOrNull(activeFrameIndex)
     val activeFrameUri = activeFrame?.takeUnless { it.isImage }?.uri
@@ -323,7 +324,8 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 SubtitlePreviewPolicy.firstAt(p.subtitles, currentMs)?.let { cue ->
                     SubtitleOverlayOnFrame(cue, editable = false, playbackMs=currentMs)
                 }
-                p.textWatermark?.toSubtitle(p.durationMs)?.let { watermark ->
+                watermarkCue
+                    ?.takeIf { currentMs >= it.startMs && currentMs < it.endMs }?.let { watermark ->
                     SubtitleOverlayOnFrame(watermark, editable = false, playbackMs=currentMs)
                 }
             }

@@ -27,8 +27,14 @@ data class Overlay(val uri:String,val startAtMs:Long,val durationMs:Long,
 data class SubtitleWordTiming(val startMs:Long,val endMs:Long)
 data class SubtitleCue(val text:String,val startMs:Long,val endMs:Long,
     val wordTimings:List<SubtitleWordTiming> = emptyList())
-data class TextWatermark(val label:String="watermark") {
-    fun toSubtitle(durationMs: Long):SubtitleCue = SubtitleCue(label,0L,durationMs)
+data class TextWatermark(val label:String="watermark", val clipId:String?=null) {
+    fun toSubtitle(clips:List<Clip>):SubtitleCue? {
+        val first=if (clipId==null) 0 else clips.indexOfFirst { it.id==clipId }
+        if (first<0) return null
+        val start=clips.take(first).sumOf { it.durationMs }
+        val length=if (clipId==null) clips.sumOf { it.durationMs } else clips[first].durationMs
+        return SubtitleCue(label,start,start+length)
+    }
 }
 data class ClipTransition(val kind:String="corte",val durationMs:Long=0L)
 data class VideoProject(val clips:List<Clip>,val overlays:List<Overlay> = emptyList(),
@@ -81,7 +87,12 @@ fun main() {
     check(!FrameSnapshotProject.prepare(plain.copy(textWatermark=TextWatermark()),5100L,720)!!.directSourceFrame)
     val clip2=Clip(uri="content://second",id="b",endMs=5000)
     check(FrameSnapshotProject.prepare(plain.copy(clips=listOf(clip,clip2)),6000L,720)!!.sourceFrame.uri=="content://v")
-    println("OK: 10 verificações Kotlin/JVM do snapshot real (original, PiP, legenda, marca, borda)")
+    val scoped=plain.copy(clips=listOf(clip,clip2),textWatermark=TextWatermark(clipId=clip2.id))
+    check(FrameSnapshotProject.prepare(scoped,5400L,720)!!.directSourceFrame)
+    check(FrameSnapshotProject.prepare(scoped,6000L,720)!!.directSourceFrame)
+    val scopedFrame=FrameSnapshotProject.prepare(scoped,7000L,720)!!
+    check(!scopedFrame.directSourceFrame && scopedFrame.project.textWatermark?.clipId==clip2.id)
+    println("OK: verificações Kotlin/JVM do snapshot real (original, PiP, legenda, marca, borda)")
 }
 '''
     with tempfile.TemporaryDirectory(prefix='uaicortes-snapshot-266-') as tmp:

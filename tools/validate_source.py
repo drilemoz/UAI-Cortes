@@ -46,7 +46,7 @@ assert 'overlays: List<Overlay>' in model and 'optJSONObject("pip")' in model
 assert 'schemaVersion' in model and 'JSONArray()' in model and 'overlapWith' in model
 assert 'OverlayTimeline(' in ui and 'p.overlays.forEach' in ui
 assert 'ModalBottomSheet(' in ui and 'rememberModalBottomSheetState(skipPartiallyExpanded = true)' in ui
-assert 'dragHandle = null' in ui and 'onDismissRequest = { expanded = null }' in ui
+assert 'dragHandle = null' in ui and 'onDismissRequest = ::closePanel' in ui
 assert 'scrimColor = Color.Black.copy(alpha = 0.12f)' in ui
 assert 'Modifier.weight(1f).height(58.dp)' in ui  # v0.1.199: controles PiP compactos
 assert 'options.chunked(2)' not in (root/'app/src/main/java/br/com/uaicortes/PipScreen.kt').read_text() and 'AnimatedVisibility(' not in ui
@@ -275,7 +275,7 @@ layout=(root/'app/src/main/java/br/com/uaicortes/AdaptiveVideoLayout.kt').read_t
 assert 'fun inline(' in layout and 'fun fit(' in layout and 'fun activeClipIndex(' in layout
 assert 'InlineVideoPreview(aspect, maxHeightDp' in ui
 assert 'AndroidView(factory = { ctx -> previewPlayer(ctx)' in trim_screen # nova prévia de cortes preenche espaço útil
-assert 'InlineVideoPreview(canvasAspect, maxHeightDp = if (previewExpanded) null else 250f)' in ui
+assert 'LayerPreviewFrame(canvasAspect, Modifier.weight(1f))' in ui
 assert 'InlineVideoPreview(previewAspect)' in ui
 assert 'val previewAspect = if (destination.isVertical) 9f / 16f else exportPreviewAspect' in ui
 assert 'val fit=AdaptiveVideoLayout.fit(' in ui
@@ -482,8 +482,8 @@ assert '.put("textWatermark", textWatermark?.json())' in model
 assert 'j.optJSONObject("textWatermark")?.let(TextWatermark::read)' in model
 assert '"watermark" -> project?.let' in ui and 'internal fun TextWatermarkScreen(' in ui
 assert 'Triple("Camadas", Icons.Default.Layers, "pip")' in ui and 'LayersTabs("watermark")' in ui
-assert 'p.textWatermark?.toSubtitle(p.durationMs)' in ui
-assert 'project.textWatermark?.toSubtitle(project.durationMs)' in source
+assert 'p.textWatermark?.toSubtitle(p.clips)' in ui
+assert 'project.textWatermark?.toSubtitle(project.clips)' in source
 assert 'textLayers += TimedSubtitleOverlay(listOf(watermarkCue), globalStartMs)' in source
 assert 'OverlayEffect(textLayers)' in source
 assert (root/'app/src/test/java/br/com/uaicortes/TextWatermarkTest.kt').exists()

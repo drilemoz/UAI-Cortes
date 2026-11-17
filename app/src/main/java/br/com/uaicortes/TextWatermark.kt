@@ -2,7 +2,7 @@ package br.com.uaicortes
 
 import org.json.JSONObject
 
-/** Marca de texto persistida separadamente das legendas; vale para o projeto inteiro.
+/** Marca de texto persistida separadamente das legendas. Sem clipe vinculado, vale para o projeto inteiro.
  * Coordenadas normalizadas no quadro do vídeo, não na tela do aparelho.
  */
 data class TextWatermark(
@@ -16,7 +16,8 @@ data class TextWatermark(
     val outlineWidth: Int = 0,
     val outlineColor: Int = 0xFF000000.toInt(),
     val shadowOffsetDp: Int = 0,
-    val shadowColor: Int = 0xFF000000.toInt()
+    val shadowColor: Int = 0xFF000000.toInt(),
+    val clipId: String? = null
 ) {
     fun normalized(): TextWatermark = copy(
         text = text.trim().take(80),
@@ -32,14 +33,29 @@ data class TextWatermark(
         shadowColor = SubtitleStyles.normalizeShadowColor(shadowColor)
     )
 
-    fun toSubtitle(durationMs: Long): SubtitleCue? {
+    fun toSubtitle(durationMs: Long): SubtitleCue? =
+        if (clipId == null) cueFor(0L, durationMs) else null
+
+    /** Vínculo por ID: sobrevive a cortes e reordenação. Clipe ausente nunca vira "projeto inteiro". */
+    internal fun toSubtitle(clips: List<Clip>): SubtitleCue? {
+        val target = clipId ?: return toSubtitle(clips.sumOf { it.durationMs })
+        var offset = 0L
+        for (clip in clips) {
+            val end = offset + clip.durationMs
+            if (clip.id == target) return cueFor(offset, end)
+            offset = end
+        }
+        return null
+    }
+
+    private fun cueFor(startMs: Long, endMs: Long): SubtitleCue? {
         val w = normalized()
-        if (w.text.isEmpty() || durationMs <= 0L) return null
+        if (w.text.isEmpty() || endMs <= startMs) return null
         val alpha = (w.opacity * 255f + 0.5f).toInt().coerceIn(0, 255)
         val actualColor = (w.color and 0x00FFFFFF) or (alpha shl 24)
         return SubtitleCue(
             id = "watermark-text",
-            text = w.text, startMs = 0L, endMs = durationMs,
+            text = w.text, startMs = startMs, endMs = endMs,
             color = actualColor, sizeSp = w.sizeSp,
             x = w.x, y = w.y,
             backgroundColor = SubtitleStyles.NO_BACKGROUND,
@@ -56,6 +72,7 @@ data class TextWatermark(
         .put("y", w.y.toDouble()).put("fontFamily", w.fontFamily)
         .put("outlineWidth", w.outlineWidth).put("outlineColor", w.outlineColor)
         .put("shadowOffsetDp", w.shadowOffsetDp).put("shadowColor", w.shadowColor)
+        .put("clipId", w.clipId)
     }
 
     companion object {
@@ -70,7 +87,8 @@ data class TextWatermark(
             outlineWidth = json.optInt("outlineWidth", 0),
             outlineColor = json.optInt("outlineColor", 0xFF000000.toInt()),
             shadowOffsetDp = json.optInt("shadowOffsetDp", 0),
-            shadowColor = json.optInt("shadowColor", 0xFF000000.toInt())
+            shadowColor = json.optInt("shadowColor", 0xFF000000.toInt()),
+            clipId = json.optString("clipId").takeIf { it.isNotBlank() && it != "null" }
         ).normalized()
     }
 }

@@ -9,5 +9,5 @@ internal class WatermarkDefaultsStore(context: Context) {
         runCatching { TextWatermark.read(JSONObject(it)) }.getOrNull()
     }
     fun save(value: TextWatermark): Boolean = prefs.edit()
-        .putString("preset", value.normalized().json().toString()).commit()
+        .putString("preset", value.copy(clipId = null).normalized().json().toString()).commit()
 }

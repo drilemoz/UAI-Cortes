@@ -4,6 +4,7 @@ import androidx.annotation.OptIn
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -12,13 +13,18 @@ import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.delay
 
 @OptIn(UnstableApi::class)
 @kotlin.OptIn(ExperimentalMaterial3Api::class)
@@ -32,20 +38,63 @@ internal fun TextWatermarkScreen(p: VideoProject, back: () -> Unit, atMs: Long,
     var previewExpanded by remember(p.id) { mutableStateOf(false) }
     var guides by remember(p.id) { mutableStateOf(false) }
     var removeConfirm by remember(p.id) { mutableStateOf(false) }
-    var message by remember(p.id) { mutableStateOf("") }
     val player = remember(p.id) { diagnosticPlayer(context) }
-    val previewMs = atMs.coerceIn(0L, (p.durationMs - 1L).coerceAtLeast(0L))
-    val index = AdaptiveVideoLayout.activeClipIndex(p.clips.map(Clip::durationMs), previewMs)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val total = p.durationMs
+    val lengths = remember(p.clips) { p.clips.map(Clip::durationMs) }
+    val periods = remember(lengths) { PipTimePresets.clipPeriods(lengths) }
+    var previewMs by remember(p.id) { mutableLongStateOf(atMs.coerceIn(0L, total)) }
+    var playing by remember(player) { mutableStateOf(false) }
+    val frameMs = previewMs.coerceIn(0L, (total - 1L).coerceAtLeast(0L))
+    val index = AdaptiveVideoLayout.activeClipIndex(lengths, frameMs)
     val clip = p.clips.getOrNull(index)
     val aspect = remember(clip?.uri, clip?.isImage) {
         clip?.let { mediaAspect(context, it.uri, it.isImage) } ?: 16f / 9f
     }
+    val cue = remember(draft, p.clips) { draft.toSubtitle(p.clips) }
+    val scopeIndex = p.clips.indexOfFirst { it.id == draft.clipId }
+    val validScope = draft.clipId == null || scopeIndex >= 0
+    val scopeCaption = when {
+        draft.clipId == null -> "Projeto todo"
+        scopeIndex >= 0 -> "Clipe ${scopeIndex + 1}"
+        else -> "Revisar"
+    }
+    fun seek(value: Long) {
+        val target = value.coerceIn(0L, (total - 1L).coerceAtLeast(0L))
+        val clipIndex = AdaptiveVideoLayout.activeClipIndex(lengths, target)
+        val period = periods.getOrNull(clipIndex) ?: return
+        previewMs = target
+        player.seekTo(clipIndex, target - period.startMs)
+    }
+    DisposableEffect(player, lifecycleOwner) {
+        val listener = object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) { playing = isPlaying }
+            override fun onPlaybackStateChanged(state: Int) {
+                if (state == Player.STATE_ENDED) previewMs = total
+            }
+        }
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE) player.pause()
+        }
+        player.addListener(listener)
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            player.removeListener(listener)
+        }
+    }
     DisposableEffect(player) { onDispose { player.release() } }
-    LaunchedEffect(p.clips, previewMs) {
-        player.setMediaItems(p.clips.map(ClipMediaItems::playback))
+    LaunchedEffect(p.clips, player) {
         if (p.clips.isNotEmpty()) {
+            player.setMediaItems(p.clips.map(ClipMediaItems::playback))
             player.prepare()
-            seekProjectPosition(player, p.clips, previewMs)
+            seek(previewMs)
+        }
+    }
+    LaunchedEffect(p.clips, player, playing) {
+        while (playing && player.isPlaying) {
+            previewMs = projectPosition(player, p.clips, total)
+            delay(100L)
         }
     }
     if (removeConfirm) AlertDialog(onDismissRequest = { removeConfirm = false },
@@ -57,62 +106,87 @@ internal fun TextWatermarkScreen(p: VideoProject, back: () -> Unit, atMs: Long,
         }) { Text("Remover") } },
         dismissButton = { TextButton(onClick = { removeConfirm = false }) { Text("Cancelar") } })
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-        Heading("Camadas", back)
-        tabs()
-        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
-            .padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Prévia", fontWeight = FontWeight.SemiBold)
-                TextButton(onClick = { previewExpanded = !previewExpanded },
-                    contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp)) {
-                    Icon(if (previewExpanded) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-                        contentDescription = null, modifier = Modifier.size(19.dp))
-                    Text(if (previewExpanded) "Reduzir" else "Ampliar", fontSize = 12.sp)
-                }
+        if (!previewExpanded) {
+            Heading("Camadas", back)
+            tabs()
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Prévia", fontWeight = FontWeight.SemiBold)
+            TextButton(onClick = { previewExpanded = !previewExpanded },
+                contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp)) {
+                Icon(if (previewExpanded) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
+                    contentDescription = null, modifier = Modifier.size(19.dp))
+                Text(if (previewExpanded) "Reduzir" else "Ampliar", fontSize = 12.sp)
             }
-            InlineVideoPreview(aspect, maxHeightDp = if (previewExpanded) null else 200f) {
-                AndroidView(factory = { ctx -> previewPlayer(ctx).apply {
-                    this.player = player
-                    useController = false
-                } }, update = { it.player = player }, modifier = Modifier.fillMaxSize())
-                p.overlays.forEach { layer ->
-                    if (previewMs >= layer.startAtMs && previewMs - layer.startAtMs < layer.durationMs) {
-                        key(layer.id) {
-                            PipLayer(layer, previewMs - layer.startAtMs, false, editable = false,
-                                onUpdate = {})
-                        }
+        }
+        LayerPreviewFrame(aspect, Modifier.weight(1f).padding(horizontal = 14.dp)) {
+            AndroidView(factory = { ctx -> previewPlayer(ctx).apply {
+                this.player = player
+                useController = false
+            } }, update = { it.player = player }, modifier = Modifier.fillMaxSize())
+            p.overlays.forEach { layer ->
+                if (frameMs >= layer.startAtMs && frameMs - layer.startAtMs < layer.durationMs) {
+                    key(layer.id) {
+                        PipLayer(layer, frameMs - layer.startAtMs, playing, editable = false,
+                            onUpdate = {})
                     }
                 }
-                if (guides) Box(Modifier.fillMaxSize().padding(12.dp)
-                    .border(1.dp, Color.White.copy(alpha = .70f), RoundedCornerShape(5.dp)))
-                draft.toSubtitle(p.durationMs)?.let { watermark ->
-                    SubtitleOverlayOnFrame(watermark, editable = true, playbackMs = previewMs,
-                        onPositionCommit = { x, y -> draft = draft.copy(x = x, y = y) })
+            }
+            if (guides) Box(Modifier.fillMaxSize().padding(12.dp)
+                .border(1.dp, Color.White.copy(alpha = .70f), RoundedCornerShape(5.dp)))
+            cue?.takeIf { frameMs >= it.startMs && frameMs < it.endMs }?.let { watermark ->
+                SubtitleOverlayOnFrame(watermark, editable = true, playbackMs = frameMs,
+                    onPositionCommit = { x, y -> draft = draft.copy(x = x, y = y) })
+            }
+        }
+        Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("${displayEditableTime(previewMs)} / ${displayEditableTime(total)}",
+                    style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = {
+                    if (player.isPlaying || player.playWhenReady) player.pause()
+                    else {
+                        if (player.playbackState == Player.STATE_ENDED) seek(0L)
+                        player.play()
+                    }
+                }, enabled = total > 0L) {
+                    Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow, null,
+                        modifier = Modifier.size(20.dp))
+                    Text(if (playing) "Pausar" else "Reproduzir")
                 }
             }
-            Text(if (draft.text.isBlank()) "Toque em Texto para criar a marca d'água."
-                else "Arraste a marca na prévia ou toque em Posição.",
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                listOf(
-                    Triple("text", "Texto", Icons.Default.Edit),
-                    Triple("position", "Posição", Icons.Default.OpenWith),
-                    Triple("size", "Tamanho", Icons.Default.AspectRatio),
-                    Triple("style", "Aparência", Icons.Default.Palette)
-                ).forEach { (id, label, icon) ->
-                    LayerTool(label, icon, Modifier.weight(1f)) { panel = id }
-                }
-            }
-            Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = UaiShapes.item) {
-                Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp)) {
-                    WatermarkStepSlider("Opacidade (%)", (draft.opacity * 100).toInt(), 0, 100) {
-                        draft = draft.copy(opacity = it / 100f)
+            if (total > 0L) Slider(
+                value = previewMs.coerceIn(0L, total).toFloat(),
+                onValueChange = { player.pause(); seek(it.toLong()) },
+                valueRange = 0f..total.toFloat(),
+                modifier = Modifier.fillMaxWidth().height(36.dp)
+                    .semantics { contentDescription = "Posição da prévia" })
+            if (!previewExpanded) {
+                if (!validScope) Text("O clipe da marca foi removido. Escolha outra duração.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                else if (draft.text.isNotBlank() && cue != null && (frameMs < cue.startMs || frameMs >= cue.endMs))
+                    Text("Neste trecho a marca d'água não aparece.", style = MaterialTheme.typography.bodySmall)
+                Row(Modifier.fillMaxWidth().padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    listOf(
+                        Triple("text", "Texto", Icons.Default.Edit),
+                        Triple("position", "Posição", Icons.Default.OpenWith),
+                        Triple("duration", "Duração", Icons.Default.Schedule),
+                        Triple("style", "Estilo", Icons.Default.Palette)
+                    ).forEach { (id, label, icon) ->
+                        LayerTool(label, icon, Modifier.weight(1f),
+                            value = if (id == "duration") scopeCaption else null) {
+                            player.pause()
+                            panel = id
+                        }
                     }
                 }
             }
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp),
+        if (!previewExpanded) Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedButton(onClick = { removeConfirm = true }, enabled = p.textWatermark != null,
                 modifier = Modifier.weight(1f).height(48.dp), shape = UaiShapes.button) {
@@ -121,11 +195,12 @@ internal fun TextWatermarkScreen(p: VideoProject, back: () -> Unit, atMs: Long,
             Button(onClick = {
                 val safe = draft.normalized()
                 onApply(p.copy(textWatermark = safe.takeIf { it.text.isNotBlank() }))
-            }, modifier = Modifier.weight(1f).height(48.dp), shape = UaiShapes.button) {
+            }, enabled = validScope, modifier = Modifier.weight(1f).height(48.dp), shape = UaiShapes.button) {
                 Icon(Icons.Default.Check, null, Modifier.size(18.dp)); Text(" Aplicar")
             }
         }
     }
+    androidx.activity.compose.BackHandler(enabled = previewExpanded && panel == null) { previewExpanded = false }
     panel?.let { current ->
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         val height = (LocalConfiguration.current.screenHeightDp * .64f).dp
@@ -139,8 +214,8 @@ internal fun TextWatermarkScreen(p: VideoProject, back: () -> Unit, atMs: Long,
                     Text(when (current) {
                         "text" -> "Texto da marca d'água"
                         "position" -> "Alinhar posição"
-                        "size" -> "Tamanho do texto"
-                        else -> "Aparência"
+                        "duration" -> "Duração da marca"
+                        else -> "Estilo da marca"
                     }, modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
                     IconButton(onClick = { panel = null }) { Icon(Icons.Default.Close, "Fechar painel") }
                 }
@@ -179,50 +254,24 @@ internal fun TextWatermarkScreen(p: VideoProject, back: () -> Unit, atMs: Long,
                             }
                         }
                     }
-                    "size" -> WatermarkStepSlider("Tamanho", draft.sizeSp, 12, 36) {
-                        draft = draft.copy(sizeSp = it)
-                    }
-                    else -> {
-                        Text("Cor", style = MaterialTheme.typography.titleSmall)
-                        listOf("Branco" to -1, "Amarelo" to 0xFFFFFF00.toInt(),
-                            "Preto" to 0xFF000000.toInt(), "Azul" to 0xFF3399FF.toInt(),
-                            "Vermelho" to 0xFFFF4444.toInt()).chunked(3).forEach { group ->
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                group.forEach { (label, color) -> FilterChip(
-                                    selected = draft.color == color,
-                                    onClick = { draft = draft.copy(color = color) },
-                                    label = { Text(label, fontSize = 11.sp) }) }
+                    "duration" -> {
+                        WatermarkDurationChoice("Projeto inteiro", draft.clipId == null,
+                            displayEditableTime(total)) {
+                            draft = draft.copy(clipId = null)
+                            panel = null
+                        }
+                        p.clips.forEachIndexed { i, item ->
+                            val name = if (!item.isImage && i == 0) "Só no 1º vídeo"
+                                else "${i + 1}º clipe · ${if (item.isImage) "foto" else "vídeo"}"
+                            WatermarkDurationChoice(name, draft.clipId == item.id,
+                                "${displayEditableTime(item.durationMs)} · ${item.title}") {
+                                draft = draft.copy(clipId = item.id)
+                                periods.getOrNull(i)?.let { seek(it.startMs) }
+                                panel = null
                             }
                         }
-                        Text("Fonte", style = MaterialTheme.typography.titleSmall)
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            listOf("Moderna" to SubtitleStyles.FONT_SANS,
-                                "Serif" to SubtitleStyles.FONT_SERIF,
-                                "Mono" to SubtitleStyles.FONT_MONO).forEach { (label, font) ->
-                                FilterChip(selected = draft.fontFamily == font,
-                                    onClick = { draft = draft.copy(fontFamily = font) },
-                                    label = { Text(label) })
-                            }
-                        }
-                        WatermarkStepSlider("Contorno", draft.outlineWidth, 0, 4) {
-                            draft = draft.copy(outlineWidth = it)
-                        }
-                        WatermarkStepSlider("Sombra", draft.shadowOffsetDp, 0, 6) {
-                            draft = draft.copy(shadowOffsetDp = it)
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(onClick = {
-                                val model = savedPresets.load()
-                                message = if (model != null) { draft = model; "Padrão carregado." }
-                                    else "Nenhum padrão salvo neste aparelho."
-                            }, modifier = Modifier.weight(1f)) { Text("Usar padrão", fontSize = 12.sp) }
-                            OutlinedButton(onClick = {
-                                message = if (savedPresets.save(draft)) "Padrão salvo localmente."
-                                    else "Falha ao salvar o padrão."
-                            }, modifier = Modifier.weight(1f)) { Text("Salvar padrão", fontSize = 12.sp) }
-                        }
-                        if (message.isNotBlank()) Text(message, style = MaterialTheme.typography.bodySmall)
                     }
+                    else -> WatermarkStylePanel(draft, { draft = it }, savedPresets)
                 }
                 Spacer(Modifier.height(8.dp))
             }
@@ -231,7 +280,20 @@ internal fun TextWatermarkScreen(p: VideoProject, back: () -> Unit, atMs: Long,
 }
 
 @Composable
-private fun WatermarkStepSlider(title: String, value: Int, min: Int, max: Int,
+private fun WatermarkDurationChoice(label: String, selected: Boolean, detail: String, onSelect: () -> Unit) {
+    Row(Modifier.fillMaxWidth().selectable(selected, role = Role.RadioButton, onClick = onSelect)
+        .heightIn(min = 48.dp).padding(horizontal = 8.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        RadioButton(selected = selected, onClick = null)
+        Column(Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.titleSmall)
+            Text(detail, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+internal fun WatermarkStepSlider(title: String, value: Int, min: Int, max: Int,
     onChange: (Int) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -242,7 +304,7 @@ private fun WatermarkStepSlider(title: String, value: Int, min: Int, max: Int,
             IconButton(onClick = { onChange((value - 1).coerceAtLeast(min)) }, enabled = value > min,
                 modifier = Modifier.size(40.dp)) { Icon(Icons.Default.Remove, "Diminuir $title") }
             Slider(value = value.toFloat(), valueRange = min.toFloat()..max.toFloat(),
-                steps = (max-min-1).coerceAtLeast(0),
+                steps = if (max - min <= 30) (max - min - 1).coerceAtLeast(0) else 0,
                 onValueChange = { onChange(it.toInt().coerceIn(min, max)) },
                 modifier = Modifier.weight(1f))
             IconButton(onClick = { onChange((value + 1).coerceAtMost(max)) }, enabled = value < max,

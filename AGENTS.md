@@ -1,3 +1,10 @@
+# v0.1.281 — Camadas compactas
+
+- Base v0.1.280/versionCode 281; atual v0.1.281/versionCode 282. Preservar schema 4, cinco APKs, assinatura e menu rápido de áudio.
+- `TextWatermark.clipId` opcional: ausente = projeto inteiro; vinculado acompanha o clipe. Se o clipe for removido, não ampliar a marca para o restante do projeto. Padrões locais não guardam o vínculo. Prévia e exportação usam o mesmo intervalo.
+- PiP mantém a margem nos atalhos e fontes originais. Compactar a UI sem alterar composição de mídia. Tamanho manual, Ajustar/Preencher, posições, som e duração continuam funcionais.
+- Validar timing do texto com e sem PiP e o recorte usado na captura de quadros. Android real separado da validação estrutural.
+
 # v0.1.280 — Áudio e Camadas
 
 - Base v0.1.279/versionCode 280. Nova v0.1.280/versionCode 281. Preservar schema 4, cinco APKs Release e assinatura.

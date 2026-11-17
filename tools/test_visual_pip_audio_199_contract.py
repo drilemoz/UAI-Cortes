@@ -20,7 +20,7 @@ assert 'MaterialTheme(colorScheme = palette, shapes = UaiShapes.theme)' in main
 assert 'UaiShapes.button' in exit_ui and 'height(64.dp)' in exit_ui
 assert 'EditorExitAction("Descartar"' in exit_ui and 'onDecision("save")' in exit_ui
 assert 'onDecision("discard")' in exit_ui and 'onContinue()' in exit_ui
-assert 'InlineVideoPreview(canvasAspect, maxHeightDp = if (previewExpanded) null else 250f)' in pip
+assert 'LayerPreviewFrame(canvasAspect, Modifier.weight(1f))' in pip
 assert 'LayerTool(label, icon, Modifier.weight(1f)' in pip
 assert 'modifier.height(58.dp)' in layer_tools
 assert 'shape = UaiShapes.sheet' in pip

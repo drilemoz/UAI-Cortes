@@ -10,18 +10,14 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.common.MediaItem
-import androidx.annotation.OptIn
 import kotlinx.coroutines.delay
 
 // Extraído da MainActivity na v0.1.53 para reutilização de componentes.
@@ -47,9 +43,27 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
         canvasClip?.let { mediaAspect(context,it.uri,it.isImage) } ?: 16f/9f
     }
     var expanded by remember(p.id) { mutableStateOf<String?>(null) }
+    var panelVisible by remember(p.id) { mutableStateOf(false) }
+    var optionsVisible by remember(p.id) { mutableStateOf(false) }
+    var showTimePresets by remember(p.id) { mutableStateOf(false) }
+    val tools = listOf(
+        Triple("position", "Posição", Icons.Default.OpenWith),
+        Triple("size", "Tamanho", Icons.Default.AspectRatio),
+        Triple("duration", "Duração", Icons.Default.Schedule),
+        Triple("opacity", "Opacidade", Icons.Default.Opacity)
+    )
+    fun openPanel(section: String) {
+        player.pause()
+        expanded = section
+        panelVisible = true
+    }
+    fun closePanel() {
+        panelVisible = false
+        showTimePresets = false
+        expanded = null
+    }
     var previewExpanded by remember(p.id) { mutableStateOf(false) }
     var showPipHelp by remember(p.id) { mutableStateOf(false) }
-    var showTimePresets by remember { mutableStateOf(false) }
     val overlaySourceDuration by produceState<Long?>(null, pip?.uri, pip?.isImage) {
         value = if (pip == null || pip.isImage) null else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             verifiedMediaDuration(context, android.net.Uri.parse(pip.uri)).takeIf { it > 0L }
@@ -76,6 +90,9 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
     var manual by remember(pip?.id) {
         mutableStateOf(pip?.let { (it.scale * 100f).toInt().toString() } ?: "30")
     }
+    LaunchedEffect(panelVisible, expanded) {
+        if (panelVisible && expanded == "size" && pip != null) manual = (pip.scale * 100f).toInt().toString()
+    }
     DisposableEffect(player) { onDispose { player.release() } }
     LaunchedEffect(p.clips) {
         if (p.clips.isNotEmpty()) {
@@ -92,7 +109,7 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
             previewTime = pip.startAtMs
             seekProjectPosition(player, p.clips, previewTime)
         }
-        expanded = null
+        closePanel()
     }
     LaunchedEffect(player, p.clips) {
         while (true) {
@@ -102,42 +119,50 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
         }
     }
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-        Heading("Camadas", back)
-        tabs()
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
-            .padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("PiPs · ${p.overlays.size} de 4", fontWeight = FontWeight.SemiBold)
-                TextButton(onClick = { choose(false) },
-                    enabled = p.overlays.size < OverlayPlacement.MAX_PIPS) {
-                    Icon(Icons.Default.Add, null)
-                    Text(" Adicionar PiP")
-                }
-            }
-            if (p.overlays.isEmpty()) {
-                Text("Adicione até quatro imagens ou vídeos para sobrepor ao projeto.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            } else {
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (!previewExpanded) {
+            Heading("Camadas", back)
+            tabs()
+        }
+        Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (!previewExpanded) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                if (p.overlays.isEmpty()) Text("Adicione uma imagem ou vídeo", Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodySmall)
+                else Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     p.overlays.forEachIndexed { index, item ->
-                        val selected = pip?.id == item.id
-                        OutlinedButton(onClick = { onSelect(item.id) },
-                            border = BorderStroke(if (selected) 2.dp else 1.dp,
-                                if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
-                            shape = UaiShapes.chip,
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)) {
-                            Icon(if (item.isImage) Icons.Default.Image else Icons.Default.Videocam,
-                                null, Modifier.size(18.dp))
-                            Text(" PiP ${index + 1}")
-                            if (selected) Icon(Icons.Default.Check, null, Modifier.size(16.dp))
-                        }
+                        FilterChip(selected = pip?.id == item.id, onClick = { onSelect(item.id) },
+                            label = { Text("PiP ${index + 1}", fontSize = 12.sp, maxLines = 1) })
                     }
                 }
+                IconButton(onClick = { player.pause(); choose(false) },
+                    enabled = p.overlays.size < OverlayPlacement.MAX_PIPS) {
+                    Icon(Icons.Default.Add, "Adicionar PiP")
+                }
+                if (pip != null) Box {
+                    IconButton(onClick = { optionsVisible = true }) {
+                        Icon(Icons.Default.MoreVert, "Mais opções do PiP selecionado")
+                    }
+                    DropdownMenu(expanded = optionsVisible, onDismissRequest = { optionsVisible = false }) {
+                        DropdownMenuItem(text = { Text("Trocar mídia") }, onClick = {
+                            optionsVisible = false
+                            player.pause()
+                            choose(true)
+                        })
+                        if (!pip.isImage) DropdownMenuItem(text = { Text("Som do PiP") }, onClick = {
+                            optionsVisible = false
+                            openPanel("sound")
+                        })
+                    }
+                }
+            }
+            if (pip != null) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Prévia", fontWeight = FontWeight.SemiBold)
+                    Text("Prévia", Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+                    if (!previewExpanded) IconButton(onClick = { showPipHelp = !showPipHelp }) {
+                        Icon(Icons.Default.HelpOutline, "Ajuda dos controles", Modifier.size(18.dp))
+                    }
                     TextButton(onClick = { previewExpanded = !previewExpanded },
                         contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp)) {
                         Icon(if (previewExpanded) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
@@ -146,7 +171,7 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                         Text(if (previewExpanded) "Reduzir" else "Ampliar", fontSize = 12.sp)
                     }
                 }
-                InlineVideoPreview(canvasAspect, maxHeightDp = if (previewExpanded) null else 250f) {
+                LayerPreviewFrame(canvasAspect, Modifier.weight(1f)) {
                     AndroidView(factory = { previewPlayer(it).apply {
                         this.player = player
                         useController = false
@@ -173,30 +198,13 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                             seekProjectPosition(player, p.clips, ms)
                         }, modifier = Modifier.weight(1f))
                     }
-                    Box {
-                        TextButton(onClick={showTimePresets=true}, enabled=pip != null,
-                            contentPadding=PaddingValues(horizontal=4.dp)) {
-                            Icon(Icons.Default.Schedule, "Aplicar duração a clipe", Modifier.size(20.dp))
-                            Icon(Icons.Default.ArrowDropDown, null)
-                        }
-                        DropdownMenu(expanded=showTimePresets, onDismissRequest={showTimePresets=false}) {
-                            PipTimePresets.clipPeriods(p.clips.map { it.durationMs }).forEachIndexed { index, period ->
-                                DropdownMenuItem(text={Text("Aplicar ao ${index+1}º vídeo (${formatMs(period.durationMs)})")},
-                                    onClick={applyPreset(period)})
-                            }
-                            DropdownMenuItem(text={Text("Aplicar ao projeto inteiro")},
-                                onClick={applyPreset(PipTimePresets.Period(0L,p.durationMs))})
-                            DropdownMenuItem(text={Text("Do cursor até o fim")},
-                                onClick={applyPreset(PipTimePresets.Period(previewTime,p.durationMs))})
-                        }
-                    }
                     TextButton(onClick = {
                         if (player.isPlaying) player.pause() else player.play()
                         playing = player.isPlaying
                     }, contentPadding = PaddingValues(horizontal = 2.dp)) {
                         Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                             "Reproduzir ou pausar vídeo")
-                        Text(if (playing) "Pausar" else "Play", fontSize = 12.sp)
+                        Text(if (playing) "Pausar" else "Reproduzir", fontSize = 12.sp)
                     }
                 }
                 Slider(value = previewTime.toFloat().coerceIn(0f, total.toFloat()),
@@ -205,70 +213,21 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                         seekProjectPosition(player, p.clips, previewTime)
                     }, valueRange = 0f..total.toFloat(),
                     modifier = Modifier.fillMaxWidth().height(36.dp))
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Arraste ou pince o PiP na prévia",
-                        modifier = Modifier.weight(1f), fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    IconButton(onClick = { showPipHelp = !showPipHelp }, modifier = Modifier.size(40.dp)) {
-                        Icon(Icons.Default.HelpOutline, "Ajuda dos controles", Modifier.size(18.dp))
-                    }
-                }
-                if (showPipHelp) Text("Toque no horário para digitar. Use Posição, Tamanho, Duração ou Mídia para ajustes detalhados.",
+                if (!previewExpanded && showPipHelp) Text(
+                    "Arraste ou pince o PiP. Toque no horário para digitar ou abra um ajuste abaixo.",
                     fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                // Quatro ferramentas compactas na MESMA linha; os ajustes ficam em um sheet inferior.
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    listOf(
-                        Triple("position", "Posição", Icons.Default.OpenWith),
-                        Triple("size", "Tamanho", Icons.Default.AspectRatio),
-                        Triple("duration", "Duração", Icons.Default.Schedule),
-                        Triple("media", "Mídia", Icons.Default.PermMedia)
-                    ).forEach { (key, label, icon) ->
-                        LayerTool(label, icon, Modifier.weight(1f), enabled = pip != null) { expanded = key }
-                    }
-                }
-                // Opacidade é independente do volume e persiste na prévia e no compositor MP4.
-                if (pip != null) {
-                    Surface(color=MaterialTheme.colorScheme.surfaceVariant,
-                        shape=UaiShapes.item) {
-                        Column(Modifier.fillMaxWidth().padding(horizontal=12.dp,vertical=8.dp),
-                            verticalArrangement=Arrangement.spacedBy(2.dp)) {
-                            Row(verticalAlignment=Alignment.CenterVertically) {
-                                Icon(Icons.Default.Opacity,"Transparência do PiP",
-                                    modifier=Modifier.size(20.dp),
-                                    tint=MaterialTheme.colorScheme.primary)
-                                Spacer(Modifier.width(9.dp))
-                                Text("Opacidade do PiP",modifier=Modifier.weight(1f),fontSize=13.sp)
-                                Text("${(pip.opacity.coerceIn(0f,1f)*100).toInt()}%",
-                                    fontSize=12.sp,fontWeight=FontWeight.SemiBold)
-                            }
-                            Slider(value=pip.opacity.coerceIn(0f,1f),
-                                onValueChange={ value -> onChange(pip.copy(opacity=value)) },
-                                valueRange=0f..1f,
-                                modifier=Modifier.fillMaxWidth().height(40.dp).padding(horizontal=8.dp))
+                if (!previewExpanded) Row(Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    tools.forEach { (key, label, icon) ->
+                        LayerTool(label, icon, Modifier.weight(1f),
+                            value = if (key == "opacity") "${(pip.opacity * 100).toInt()}%" else null) {
+                            openPanel(key)
                         }
                     }
                 }
-                // Som é independente dos demais controles e das demais sobreposições.
-                if (pip != null && !pip.isImage) {
-                    Surface(color = MaterialTheme.colorScheme.surface, shape = UaiShapes.card) {
-                        Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(if (pip.muted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
-                                    "Som deste PiP", tint = MaterialTheme.colorScheme.primary)
-                                Spacer(Modifier.width(10.dp))
-                                Text("Som do PiP selecionado", modifier = Modifier.weight(1f))
-                                Switch(checked = !pip.muted,
-                                    onCheckedChange = { onChange(pip.copy(muted = !it)) })
-                            }
-                            if (!pip.muted) Slider(value = pip.volume.coerceIn(0f, 1f),
-                                onValueChange = { onChange(pip.copy(volume = it)) }, valueRange = 0f..1f)
-                        }
-                    }
-                }
-                
             }
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp),
+        if (!previewExpanded) Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedButton(onClick = { pip?.let { onRemove(it.id) } }, enabled = pip != null,
                 modifier = Modifier.weight(1f).height(48.dp),
@@ -283,13 +242,14 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
             }
         }
     }
+    androidx.activity.compose.BackHandler(enabled = previewExpanded && !panelVisible) { previewExpanded = false }
     // ModalBottomSheet ocupa a parte inferior e fica POR CIMA dos botões.
     // A altura é limitada para preservar a visualização do vídeo na parte superior.
-    if (expanded != null && pip != null) {
+    if (panelVisible && pip != null) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         val sheetHeight = (LocalConfiguration.current.screenHeightDp * 0.64f).dp
         ModalBottomSheet(
-            onDismissRequest = { expanded = null },
+            onDismissRequest = ::closePanel,
             sheetState = sheetState,
             shape = UaiShapes.sheet,
             containerColor = MaterialTheme.colorScheme.surface,
@@ -303,165 +263,174 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                 .padding(horizontal = 16.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(when (expanded) {
-                        "position" -> Icons.Default.OpenWith
-                        "size" -> Icons.Default.AspectRatio
-                        "duration" -> Icons.Default.Schedule
-                        else -> Icons.Default.PermMedia
-                    }, null, tint = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(10.dp))
-                    Text(when (expanded) {
-                        "position" -> "Alinhar posição"
-                        "size" -> "Tamanho do PiP"
-                        "duration" -> "Duração do PiP"
-                        else -> "Selecionar mídia"
-                    }, style = MaterialTheme.typography.titleLarge,
-                        modifier = Modifier.weight(1f))
-                    IconButton(onClick = { expanded = null }) {
-                        Icon(Icons.Default.Close, "Fechar painel")
-                    }
+                    Text(if (expanded == "sound") "Som do PiP" else
+                        "Ajustes • PiP ${p.overlays.indexOfFirst { it.id == pip.id } + 1}",
+                        style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                    IconButton(onClick = ::closePanel) { Icon(Icons.Default.Close, "Fechar painel") }
                 }
-                                when (expanded) {
-                                    "position" -> {
-                                        Text("Escolha um dos nove pontos. Os atalhos deixam um espaço até a borda. Para sobrepor ou reposicionar PiPs em conflito, revise a confirmação.",
-                                            style = MaterialTheme.typography.bodySmall)
-                                        val names = listOf("Superior esquerdo", "Superior central", "Superior direito",
-                                            "Meio esquerdo", "Centro", "Meio direito",
-                                            "Inferior esquerdo", "Inferior central", "Inferior direito")
-                                        val icons = listOf(Icons.Default.NorthWest, Icons.Default.North,
-                                            Icons.Default.NorthEast, Icons.Default.West, Icons.Default.CenterFocusStrong,
-                                            Icons.Default.East, Icons.Default.SouthWest, Icons.Default.South,
-                                            Icons.Default.SouthEast)
-                                        if (pip != null) for (row in 0..2) {
-                                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                for (col in 0..2) {
-                                                    val i = row * 3 + col
-                                                    OutlinedButton(onClick = {
-                                                        val (wf, hf) = OverlayEditorLogic.dimensions(
-                                                            pip.scale, sourceAspect, canvasAspect,pip.fitMode)
-                                                        val (x, y) = OverlayEditorLogic.quickPreset(row, col, wf, hf, canvasAspect)
-                                                        onChange(pip.copy(x = x, y = y))
-                                                    }, modifier = Modifier.weight(1f).height(50.dp)
-                                                        .semantics { contentDescription = names[i] },
-                                                        shape = RoundedCornerShape(12.dp),
-                                                        contentPadding = PaddingValues(0.dp)) {
-                                                        Icon(icons[i], null)
-                                                    }
-                                                }
+                if (expanded != "sound") tools.forEach { (key, label, _) ->
+                    val value = when (key) {
+                        "size" -> "${(pip.scale * 100).toInt()}%"
+                        "duration" -> displayEditableTime(pip.durationMs)
+                        "opacity" -> "${(pip.opacity * 100).toInt()}%"
+                        else -> null
+                    }
+                    LayerOptionRow(label, value, expanded == key) {
+                        if (key == "size" && expanded != key) manual = (pip.scale * 100f).toInt().toString()
+                        expanded = if (expanded == key) null else key
+                    }
+                    if (expanded == key) {
+                        when (key) {
+                            "position" -> {
+                                Text("Escolha um dos nove pontos. Os atalhos deixam um espaço até a borda. Para sobrepor ou reposicionar PiPs em conflito, revise a confirmação.",
+                                    style = MaterialTheme.typography.bodySmall)
+                                val names = listOf("Superior esquerdo", "Superior central", "Superior direito",
+                                    "Meio esquerdo", "Centro", "Meio direito",
+                                    "Inferior esquerdo", "Inferior central", "Inferior direito")
+                                val icons = listOf(Icons.Default.NorthWest, Icons.Default.North,
+                                    Icons.Default.NorthEast, Icons.Default.West, Icons.Default.CenterFocusStrong,
+                                    Icons.Default.East, Icons.Default.SouthWest, Icons.Default.South,
+                                    Icons.Default.SouthEast)
+                                if (pip != null) for (row in 0..2) {
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        for (col in 0..2) {
+                                            val i = row * 3 + col
+                                            OutlinedButton(onClick = {
+                                                val (wf, hf) = OverlayEditorLogic.dimensions(
+                                                    pip.scale, sourceAspect, canvasAspect,pip.fitMode)
+                                                val (x, y) = OverlayEditorLogic.quickPreset(row, col, wf, hf, canvasAspect)
+                                                onChange(pip.copy(x = x, y = y))
+                                            }, modifier = Modifier.weight(1f).height(50.dp)
+                                                .semantics { contentDescription = names[i] },
+                                                shape = RoundedCornerShape(12.dp),
+                                                contentPadding = PaddingValues(0.dp)) {
+                                                Icon(icons[i], null)
                                             }
-                                        }
-                                    }
-                                    "size" -> {
-                                        if (pip != null) {
-                                            Text("Tamanho: ${(pip.scale * 100f).toInt()}%",
-                                                fontWeight = FontWeight.Medium)
-                                            listOf(5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 90, 100, 125, 150).chunked(4).forEach { row ->
-                                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                                                    row.forEach { percent ->
-                                                        OutlinedButton(onClick = {
-                                                            val scale = percent / 100f
-                                                            onChange(pip.copy(scale = scale))
-                                                            manual = percent.toString()
-                                                        }, modifier = Modifier.weight(1f),
-                                                            shape = RoundedCornerShape(10.dp),
-                                                            contentPadding = PaddingValues(0.dp),
-                                                            border = BorderStroke(if ((pip.scale * 100f).toInt() == percent) 2.dp else 1.dp,
-                                                                MaterialTheme.colorScheme.primary)) {
-                                                            Text("$percent%")
-                                                        }
-                                                    }
-                                                    repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
-                                                }
-                                            }
-                                            Text("Enquadramento",fontWeight=FontWeight.Medium)
-                                            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                                                FilterChip(selected=pip.fitMode==OverlayEditorLogic.FIT,
-                                                    onClick={onChange(pip.copy(fitMode=OverlayEditorLogic.FIT))},
-                                                    label={Text("Ajustar")})
-                                                FilterChip(selected=pip.fitMode==OverlayEditorLogic.FILL,
-                                                    onClick={onChange(pip.copy(fitMode=OverlayEditorLogic.FILL))},
-                                                    label={Text("Preencher")})
-                                            }
-                                            Text("Preencher amplia a imagem sem deformar, recortando as bordas.",
-                                                style=MaterialTheme.typography.bodySmall)
-                                            Slider(value = pip.scale.coerceIn(.05f, 1.50f),
-                                                onValueChange = {
-                                                    onChange(pip.copy(scale = it))
-                                                    manual = (it * 100f).toInt().toString()
-                                                }, valueRange = .05f..1.50f)
-                                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                OutlinedTextField(value = manual, onValueChange = { value ->
-                                                    if (value.length <= 3 && value.all(Char::isDigit)) manual = value
-                                                }, modifier = Modifier.weight(1f), singleLine = true,
-                                                    label = { Text("Porcentagem manual") }, suffix = { Text("%") },
-                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                                    isError = manual.isNotBlank() && OverlayEditorLogic.parsePercentage(manual) == null)
-                                                Button(onClick = {
-                                                    OverlayEditorLogic.parsePercentage(manual)?.let {
-                                                        onChange(pip.copy(scale = it))
-                                                    }
-                                                }, enabled = OverlayEditorLogic.parsePercentage(manual) != null) {
-                                                    Icon(Icons.Default.Check, null)
-                                                    Text(" Usar")
-                                                }
-                                            }
-                                            Text("De 5% a 150%; acima de 100% o excedente pode ser recortado.",
-                                                style = MaterialTheme.typography.bodySmall)
-                                        }
-                                    }
-                                    "duration" -> {
-                                        if (pip != null) {
-                                            val end = (pip.startAtMs + pip.durationMs).coerceAtMost(total)
-                                            val minLength = minOf(500L, total)
-                                            // A edição por horários deve respeitar também o recorte
-                                            // da origem feito com as alças da timeline.
-                                            val sourceRemaining = if (pip.isImage) total else
-                                                (overlaySourceDuration?.minus(pip.sourceStartMs)
-                                                    ?.coerceAtLeast(minLength) ?: pip.durationMs)
-                                            fun limitedEnd(at: Long): Long =
-                                                minOf(total,at+sourceRemaining)
-                                                    .coerceAtLeast(at+minLength).coerceAtMost(total)
-                                            Row(Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                                verticalAlignment = Alignment.CenterVertically) {
-                                                TimeDigitsField("Início", pip.startAtMs, total,
-                                                    valid={it in 0L..(end-minLength).coerceAtLeast(0L)},
-                                                    onCommit={ typed -> onChange(pip.copy(
-                                                        startAtMs=typed,durationMs=minOf(end,limitedEnd(typed))-typed)) },
-                                                    modifier=Modifier.weight(1f),compact=true)
-                                                TimeDigitsField("Fim", end, total,
-                                                    valid={it in (pip.startAtMs+minLength).coerceAtMost(total)..limitedEnd(pip.startAtMs)},
-                                                    onCommit={ typed -> onChange(pip.copy(
-                                                        durationMs=typed-pip.startAtMs)) },
-                                                    modifier=Modifier.weight(1f),compact=true)
-                                            }
-                                            Text("Intervalo selecionado: ${formatPipMs(pip.durationMs)}",
-                                                style=MaterialTheme.typography.bodySmall)
-                                            if (total > minLength) RangeSlider(
-                                                value=pip.startAtMs.toFloat().coerceIn(0f,total.toFloat())..
-                                                    end.toFloat().coerceIn(0f,total.toFloat()),
-                                                onValueChange={ range ->
-                                                    val begin=range.start.toLong().coerceIn(0L,total-minLength)
-                                                    val finish=range.endInclusive.toLong().coerceIn(begin+minLength,total)
-                                                    onChange(pip.copy(startAtMs=begin,
-                                                        durationMs=minOf(finish,limitedEnd(begin))-begin))
-                                                },
-                                                valueRange=0f..total.toFloat())
-                                            Text("Toque em Início ou Fim para digitar; use a barra para ajustar ambos.",
-                                                style=MaterialTheme.typography.bodySmall)
-                                        }
-                                    }
-                                    "media" -> {
-                                        Text("Troque somente a mídia do PiP selecionado.",
-                                            style = MaterialTheme.typography.bodySmall)
-                                        Button(onClick = { expanded = null; choose(true) }, modifier = Modifier.fillMaxWidth()) {
-                                            Icon(Icons.Default.PermMedia, null)
-                                            Text(" Escolher imagem ou vídeo")
                                         }
                                     }
                                 }
-                Button(onClick = { expanded = null },
+                            }
+                            "size" -> {
+                                if (pip != null) {
+                                    Text("Enquadramento",fontWeight=FontWeight.Medium)
+                                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                                        FilterChip(selected=pip.fitMode==OverlayEditorLogic.FIT,
+                                            onClick={onChange(pip.copy(fitMode=OverlayEditorLogic.FIT))},
+                                            label={Text("Ajustar")})
+                                        FilterChip(selected=pip.fitMode==OverlayEditorLogic.FILL,
+                                            onClick={onChange(pip.copy(fitMode=OverlayEditorLogic.FILL))},
+                                            label={Text("Preencher")})
+                                    }
+                                    Slider(value = pip.scale.coerceIn(.05f, 1.50f),
+                                        onValueChange = {
+                                            onChange(pip.copy(scale = it))
+                                            manual = (it * 100f).toInt().toString()
+                                        }, valueRange = .05f..1.50f)
+                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        OutlinedTextField(value = manual, onValueChange = { value ->
+                                            if (value.length <= 3 && value.all(Char::isDigit)) manual = value
+                                        }, modifier = Modifier.weight(1f), singleLine = true,
+                                            label = { Text("Tamanho manual") }, suffix = { Text("%") },
+                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                            isError = manual.isNotBlank() && OverlayEditorLogic.parsePercentage(manual) == null)
+                                        Button(onClick = {
+                                            OverlayEditorLogic.parsePercentage(manual)?.let {
+                                                onChange(pip.copy(scale = it))
+                                            }
+                                        }, enabled = OverlayEditorLogic.parsePercentage(manual) != null) {
+                                            Icon(Icons.Default.Check, null)
+                                            Text(" Usar")
+                                        }
+                                    }
+                                    Text("5% a 150%. Preencher pode recortar as bordas.",
+                                        style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                            "duration" -> {
+                                if (pip != null) {
+                                    Box {
+                                        OutlinedButton(onClick = { showTimePresets = true }) {
+                                            Text("Aplicar a")
+                                            Icon(Icons.Default.ArrowDropDown, null)
+                                        }
+                                        DropdownMenu(expanded = showTimePresets,
+                                            onDismissRequest = { showTimePresets = false }) {
+                                            DropdownMenuItem(text = { Text("Projeto inteiro") },
+                                                onClick = { applyPreset(PipTimePresets.Period(0L, total)) })
+                                            PipTimePresets.clipPeriods(p.clips.map { it.durationMs })
+                                                .forEachIndexed { i, period ->
+                                                    DropdownMenuItem(text = {
+                                                        Text("${i + 1}º clipe · ${displayEditableTime(period.durationMs)}")
+                                                    }, onClick = { applyPreset(period) })
+                                                }
+                                            DropdownMenuItem(text = { Text("Do cursor até o fim") },
+                                                enabled = total - previewTime >= 500L,
+                                                onClick = { applyPreset(PipTimePresets.Period(previewTime, total)) })
+                                        }
+                                    }
+                                    val end = (pip.startAtMs + pip.durationMs).coerceAtMost(total)
+                                    val minLength = minOf(500L, total)
+                                    // A edição por horários deve respeitar também o recorte
+                                    // da origem feito com as alças da timeline.
+                                    val sourceRemaining = if (pip.isImage) total else
+                                        (overlaySourceDuration?.minus(pip.sourceStartMs)
+                                            ?.coerceAtLeast(minLength) ?: pip.durationMs)
+                                    fun limitedEnd(at: Long): Long =
+                                        minOf(total,at+sourceRemaining)
+                                            .coerceAtLeast(at+minLength).coerceAtMost(total)
+                                    Row(Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically) {
+                                        TimeDigitsField("Início", pip.startAtMs, total,
+                                            valid={it in 0L..(end-minLength).coerceAtLeast(0L)},
+                                            onCommit={ typed -> onChange(pip.copy(
+                                                startAtMs=typed,durationMs=minOf(end,limitedEnd(typed))-typed)) },
+                                            modifier=Modifier.weight(1f),compact=true)
+                                        TimeDigitsField("Fim", end, total,
+                                            valid={it in (pip.startAtMs+minLength).coerceAtMost(total)..limitedEnd(pip.startAtMs)},
+                                            onCommit={ typed -> onChange(pip.copy(
+                                                durationMs=typed-pip.startAtMs)) },
+                                            modifier=Modifier.weight(1f),compact=true)
+                                    }
+                                    Text("Intervalo selecionado: ${formatPipMs(pip.durationMs)}",
+                                        style=MaterialTheme.typography.bodySmall)
+                                    if (total > minLength) RangeSlider(
+                                        value=pip.startAtMs.toFloat().coerceIn(0f,total.toFloat())..
+                                            end.toFloat().coerceIn(0f,total.toFloat()),
+                                        onValueChange={ range ->
+                                            val begin=range.start.toLong().coerceIn(0L,total-minLength)
+                                            val finish=range.endInclusive.toLong().coerceIn(begin+minLength,total)
+                                            onChange(pip.copy(startAtMs=begin,
+                                                durationMs=minOf(finish,limitedEnd(begin))-begin))
+                                        },
+                                        valueRange=0f..total.toFloat())
+                                    Text("Toque em Início ou Fim para digitar; use a barra para ajustar ambos.",
+                                        style=MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                            "opacity" -> {
+                                Text("Opacidade do PiP", style = MaterialTheme.typography.bodySmall)
+                                Slider(value = pip.opacity.coerceIn(0f, 1f),
+                                    onValueChange = { value -> onChange(pip.copy(opacity=value)) },
+                                    valueRange = 0f..1f)
+                            }
+                        }
+                    }
+                }
+                if (expanded == "sound" && !pip.isImage) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Som do PiP selecionado", Modifier.weight(1f))
+                        Switch(checked = !pip.muted,
+                            onCheckedChange = { onChange(pip.copy(muted = !it)) })
+                    }
+                    if (!pip.muted) {
+                        Text("Volume: ${(pip.volume * 100).toInt()}%")
+                        Slider(value = pip.volume.coerceIn(0f, 1f),
+                            onValueChange = { onChange(pip.copy(volume = it)) }, valueRange = 0f..1f)
+                    }
+                }
+                Button(onClick = ::closePanel,
                     modifier = Modifier.fillMaxWidth(),
                     shape = UaiShapes.item) {
                     Icon(Icons.Default.Check, null)

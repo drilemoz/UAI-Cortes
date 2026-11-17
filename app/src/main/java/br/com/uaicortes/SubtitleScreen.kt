@@ -56,12 +56,23 @@ import kotlinx.coroutines.delay
 
 // Extraído da MainActivity na v0.1.53 para reutilização de componentes.
 
-internal fun subtitleFont(family: String): FontFamily = when (SubtitleStyles.normalizeFont(family)) {
-    SubtitleStyles.FONT_SERIF -> FontFamily.Serif
-    SubtitleStyles.FONT_MONO -> FontFamily.Monospace
-    SubtitleStyles.FONT_CURSIVE -> FontFamily.Cursive
-    else -> FontFamily.SansSerif
+private val nativeSubtitleFonts by lazy {
+    listOf(SubtitleStyles.FONT_CONDENSED, SubtitleStyles.FONT_HEAVY).associateWith { family ->
+        List(4) { style ->
+            FontFamily(android.graphics.Typeface.create(SubtitleStyles.androidFamily(family), style))
+        }
+    }
 }
+
+internal fun subtitleFont(family: String, bold: Boolean = false, italic: Boolean = false): FontFamily =
+    when (SubtitleStyles.normalizeFont(family)) {
+        SubtitleStyles.FONT_SERIF -> FontFamily.Serif
+        SubtitleStyles.FONT_MONO -> FontFamily.Monospace
+        SubtitleStyles.FONT_CURSIVE -> FontFamily.Cursive
+        SubtitleStyles.FONT_CONDENSED, SubtitleStyles.FONT_HEAVY ->
+            nativeSubtitleFonts.getValue(family)[(if (bold) 1 else 0) + (if (italic) 2 else 0)]
+        else -> FontFamily.SansSerif
+    }
 
 /** Quadro sem barras pretas adicionais: respeita a proporção original e a
  * altura disponível em cada aparelho. Mantém overlays no mesmo referencial
@@ -85,12 +96,7 @@ internal fun previewSubtitleScale(cue: SubtitleCue, widthPx: Int, textSizePx: Fl
     if (widthPx <= 0 || textSizePx <= 0f || !textSizePx.isFinite()) return 1f
     val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
         textSize = textSizePx
-        typeface = android.graphics.Typeface.create(when (SubtitleStyles.normalizeFont(cue.fontFamily)) {
-            SubtitleStyles.FONT_SERIF -> "serif"
-            SubtitleStyles.FONT_MONO -> "monospace"
-            SubtitleStyles.FONT_CURSIVE -> "cursive"
-            else -> "sans-serif"
-        }, when { cue.bold && cue.italic -> android.graphics.Typeface.BOLD_ITALIC
+        typeface = android.graphics.Typeface.create(SubtitleStyles.androidFamily(cue.fontFamily), when { cue.bold && cue.italic -> android.graphics.Typeface.BOLD_ITALIC
             cue.italic -> android.graphics.Typeface.ITALIC
             cue.bold -> android.graphics.Typeface.BOLD
             else -> android.graphics.Typeface.NORMAL })
@@ -131,7 +137,7 @@ internal fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
             val fontScale=previewSubtitleScale(cue,textLimitPx,
                 with(density) { proportionalSizeSp.sp.toPx() })
             val previewFontSp=proportionalSizeSp * fontScale
-            val family = subtitleFont(cue.fontFamily)
+            val family = subtitleFont(cue.fontFamily, cue.bold, cue.italic)
             val textWeight = if (cue.bold) FontWeight.Bold else FontWeight.Normal
             val fontStyle = if (cue.italic) androidx.compose.ui.text.font.FontStyle.Italic
                 else androidx.compose.ui.text.font.FontStyle.Normal

@@ -10,7 +10,8 @@ test = (root/'app/src/test/java/br/com/uaicortes/SubtitleTypographyTest.kt').rea
 preview = (root/'app/src/main/java/br/com/uaicortes/SubtitleScreen.kt').read_text()
 assert 'FONT_CURSIVE = "cursive"' in source
 assert 'FONT_CURSIVE to "Cursiva"' in source
-assert 'value == FONT_CURSIVE' in source
+allowed = source.split('fun normalizeFont', 1)[1].split('fun androidFamily', 1)[0]
+assert 'FONT_CURSIVE' in allowed and 'else -> FONT_SANS' in allowed
 assert 'listOf("sans", "serif", "mono", "cursive")' in test
 assert 'assertEquals("cursive", SubtitleStyles.normalizeFont("cursive"))' in test
 assert 'fun cursiveTypographySurvivesProjectRoundTrip()' in test

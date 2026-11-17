@@ -237,6 +237,7 @@ class ExportEngine(private val context: Context) {
         val expectedAudio = ExportAudioPolicy.hasRequiredAudio(project) ||
             pipAudioAvailability.values.any { it }
         val postCompositionText = pipsTopFirst.isNotEmpty()
+        val watermark = project.textWatermark?.toSubtitle(project.clips)
         var globalStartMs = 0L
         val mainItems = project.clips.mapIndexed { index, clip ->
             val item = ClipMediaItems.playback(clip)
@@ -292,7 +293,9 @@ class ExportEngine(private val context: Context) {
                 val textLayers = mutableListOf<androidx.media3.effect.TextureOverlay>()
                 if (project.subtitles.isNotEmpty())
                     textLayers += TimedSubtitleOverlay(project.subtitles, globalStartMs)
-                project.textWatermark?.toSubtitle(project.durationMs)?.let { watermarkCue ->
+                watermark?.takeIf {
+                    it.startMs < globalStartMs + clip.durationMs && it.endMs > globalStartMs
+                }?.let { watermarkCue ->
                     textLayers += TimedSubtitleOverlay(listOf(watermarkCue), globalStartMs)
                 }
                 if (textLayers.isNotEmpty()) videoEffects += OverlayEffect(textLayers)
@@ -388,7 +391,7 @@ class ExportEngine(private val context: Context) {
                 val textLayers = mutableListOf<androidx.media3.effect.TextureOverlay>()
                 if (project.subtitles.isNotEmpty())
                     textLayers += TimedSubtitleOverlay(project.subtitles, 0L)
-                project.textWatermark?.toSubtitle(project.durationMs)?.let { watermarkCue ->
+                watermark?.let { watermarkCue ->
                     textLayers += TimedSubtitleOverlay(listOf(watermarkCue), 0L)
                 }
                 if (textLayers.isNotEmpty()) setEffects(Effects(emptyList(),

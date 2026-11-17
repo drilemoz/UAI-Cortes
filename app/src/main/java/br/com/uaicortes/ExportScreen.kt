@@ -121,6 +121,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
             delay(100)
         }
     }
+    val watermarkCue = remember(p.clips, p.textWatermark) { p.textWatermark?.toSubtitle(p.clips) }
     val exportPreviewClip = p.clips.getOrNull(exportClipIndex)
     val exportPreviewAspect=remember(exportPreviewClip?.uri, exportPreviewClip?.isImage) {
         exportPreviewClip?.let { mediaAspect(context,it.uri,it.isImage) } ?: 16f/9f
@@ -364,7 +365,8 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                         p.subtitles.firstOrNull { cue ->
                             exportPreviewMs>=cue.startMs && exportPreviewMs<cue.endMs && cue.text.isNotBlank()
                         }?.let { cue -> SubtitleOverlayOnFrame(cue,editable=false,playbackMs=exportPreviewMs) }
-                        p.textWatermark?.toSubtitle(p.durationMs)?.let { watermark ->
+                        watermarkCue
+                            ?.takeIf { exportPreviewMs >= it.startMs && exportPreviewMs < it.endMs }?.let { watermark ->
                             SubtitleOverlayOnFrame(watermark,editable=false,playbackMs=exportPreviewMs)
                         }
                         if(destination.isVertical && showFrameGuides) {

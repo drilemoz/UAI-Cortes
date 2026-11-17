@@ -70,13 +70,14 @@ internal object FrameSnapshotProject {
             atMs >= pip.startAtMs && atMs < pip.startAtMs + pip.durationMs
         }
         val hasActiveSubtitle = SubtitlePreviewPolicy.firstAt(project.subtitles, atMs) != null
-        val hasWatermark = project.textWatermark?.toSubtitle(project.durationMs) != null
+        val hasWatermark = project.textWatermark?.toSubtitle(listOf(clip)) != null
         val directSourceFrame = !hasActivePip && !hasActiveSubtitle && !hasWatermark
         val shortSide = FrameSnapshotTiming.snapshotTier(sourceShortSide)
         return FrameSnapshotJob(
             project.copy(clips = listOf(clip.copy(startMs = slice.startMs,
                 endMs = slice.endMs, volume = 0f, voiceTone = VoiceTone())),
                 overlays = overlays, subtitles = titles,
+                textWatermark = project.textWatermark.takeIf { hasWatermark },
                 transitions = emptyList(), music = null, audioTracks = emptyList()),
             slice.frameAtMs,
             shortSide,

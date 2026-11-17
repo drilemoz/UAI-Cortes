@@ -58,12 +58,7 @@ class SubtitleOutlineSpan(
         // Tamanho efetivo aplicado ao texto (base 100 px + RelativeSizeSpan).
         // Não multiplicar duas vezes quando StaticLayout passa paint já dimensionado.
         outline.textSize = TextOverlay.TEXT_SIZE_PIXELS * relativeSize
-        val systemFamily = when (SubtitleStyles.normalizeFont(family)) {
-            SubtitleStyles.FONT_SERIF -> "serif"
-            SubtitleStyles.FONT_MONO -> "monospace"
-            SubtitleStyles.FONT_CURSIVE -> "cursive"
-            else -> "sans-serif"
-        }
+        val systemFamily = SubtitleStyles.androidFamily(family)
         outline.typeface = Typeface.create(systemFamily, when {
             bold && italic -> Typeface.BOLD_ITALIC
             bold -> Typeface.BOLD
@@ -104,12 +99,7 @@ class SubtitleShadowSpan(
         textPaint.style = Paint.Style.FILL
         val density = (paint as? TextPaint)?.density ?: 1f
         textPaint.textSize = TextOverlay.TEXT_SIZE_PIXELS * relativeSize
-        textPaint.typeface = Typeface.create(when (SubtitleStyles.normalizeFont(family)) {
-            SubtitleStyles.FONT_SERIF -> "serif"
-            SubtitleStyles.FONT_MONO -> "monospace"
-            SubtitleStyles.FONT_CURSIVE -> "cursive"
-            else -> "sans-serif"
-        }, when {
+        textPaint.typeface = Typeface.create(SubtitleStyles.androidFamily(family), when {
             bold && italic -> Typeface.BOLD_ITALIC
             bold -> Typeface.BOLD
             italic -> Typeface.ITALIC
@@ -149,12 +139,7 @@ class SubtitleActiveWordBadgeSpan(
         val font = Paint(paint).apply {
             isAntiAlias=true
             textSize=TextOverlay.TEXT_SIZE_PIXELS*relativeSize
-            typeface=Typeface.create(when(SubtitleStyles.normalizeFont(family)) {
-                SubtitleStyles.FONT_SERIF->"serif"
-                SubtitleStyles.FONT_MONO->"monospace"
-                SubtitleStyles.FONT_CURSIVE->"cursive"
-                else->"sans-serif"
-            },when {
+            typeface=Typeface.create(SubtitleStyles.androidFamily(family),when {
                 bold && italic->Typeface.BOLD_ITALIC
                 bold->Typeface.BOLD
                 italic->Typeface.ITALIC
@@ -329,12 +314,7 @@ class TimedSubtitleOverlay(
                 active.bold -> Typeface.BOLD
                 else -> Typeface.ITALIC
             }), 0, text.length, 0)
-            val family = when (SubtitleStyles.normalizeFont(active.fontFamily)) {
-                SubtitleStyles.FONT_SERIF -> "serif"
-                SubtitleStyles.FONT_MONO -> "monospace"
-                SubtitleStyles.FONT_CURSIVE -> "cursive"
-                else -> "sans-serif"
-            }
+            val family = SubtitleStyles.androidFamily(active.fontFamily)
             text.setSpan(TypefaceSpan(family), 0, text.length, 0)
             frame.highlighted?.takeIf { it.first >= 0 && it.last < text.length }?.let { selected ->
                 if (frame.boldActiveWord) text.setSpan(StyleSpan(if(active.italic)

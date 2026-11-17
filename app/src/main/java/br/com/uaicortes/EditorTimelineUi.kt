@@ -648,12 +648,12 @@ internal fun PipLayer(pip: Overlay, timeMs: Long, playing: Boolean,
                 .width(pipWidth).height(pipHeight)
                 .then(if (editable) Modifier.border(2.dp, Color(0xFF5796FF), RoundedCornerShape(6.dp))
                     else Modifier)
-                .then(if (editable) Modifier.pointerInput(pip.uri) {
+                .then(if (editable) Modifier.pointerInput(pip.uri, canvasW, canvasH) {
                     detectTransformGestures { _, pan, zoom, _ ->
                         val live = currentPip
                         val (wf, hf) = OverlayEditorLogic.dimensions(
                             (live.scale * zoom).coerceIn(.05f, 1.50f), sourceAspect,
-                            canvasW.toFloat() / canvasH,pip.fitMode)
+                            canvasW.toFloat() / canvasH, live.fitMode)
                         currentUpdate(live.copy(
                             scale = (live.scale * zoom).coerceIn(.05f, 1.50f),
                             x = OverlayEditorLogic.clampCenter(live.x + pan.x / canvasW, wf),

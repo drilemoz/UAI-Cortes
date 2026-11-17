@@ -17,12 +17,27 @@ object SubtitleStyles {
     const val FONT_SERIF = "serif"
     const val FONT_MONO = "mono"
     const val FONT_CURSIVE = "cursive"
+    const val FONT_CONDENSED = "condensed"
+    const val FONT_HEAVY = "heavy"
     val fonts: List<Pair<String, String>> = listOf(
         FONT_SANS to "Moderna", FONT_SERIF to "Serifada",
         FONT_MONO to "Monoespaçada", FONT_CURSIVE to "Cursiva"
     )
-    fun normalizeFont(value: String): String =
-        if (value == FONT_SERIF || value == FONT_MONO || value == FONT_CURSIVE) value else FONT_SANS
+    val watermarkFonts = fonts + listOf(FONT_CONDENSED to "Condensada", FONT_HEAVY to "Pesada")
+
+    fun normalizeFont(value: String): String = when (value) {
+        FONT_SERIF, FONT_MONO, FONT_CURSIVE, FONT_CONDENSED, FONT_HEAVY -> value
+        else -> FONT_SANS
+    }
+
+    fun androidFamily(value: String): String = when (normalizeFont(value)) {
+        FONT_SERIF -> "serif"
+        FONT_MONO -> "monospace"
+        FONT_CURSIVE -> "cursive"
+        FONT_CONDENSED -> "sans-serif-condensed"
+        FONT_HEAVY -> "sans-serif-black"
+        else -> "sans-serif"
+    }
 
     // Defaults keep pre-v0.1.29 text unchanged when deserializing existing projects.
     const val ALIGN_LEFT = "left"

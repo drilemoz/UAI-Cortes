@@ -5,11 +5,12 @@ r=Path(__file__).resolve().parents[1]
 p=r/'app/src/main/java/br/com/uaicortes'
 get=lambda name:(p/name).read_text()
 ui=get('TextWatermarkScreen.kt')
+style=get('WatermarkStylePanel.kt')
 mark=get('TextWatermark.kt')
 assert 'SubtitleOverlayOnFrame(watermark, editable = true' in ui
 assert 'onPositionCommit = { x, y -> draft = draft.copy(x = x, y = y) }' in ui
-assert 'WatermarkStepSlider("Opacidade (%)"' in ui
-assert 'WatermarkStepSlider("Tamanho"' in ui
+assert 'WatermarkStepSlider("Opacidade (%)"' in style
+assert 'WatermarkStepSlider("Tamanho"' in style
 assert 'removeConfirm' in ui and 'guides' in ui
 assert 'WatermarkDefaultsStore(context)' in ui
 assert 'opacity.coerceIn(0f, 1f)' in mark
