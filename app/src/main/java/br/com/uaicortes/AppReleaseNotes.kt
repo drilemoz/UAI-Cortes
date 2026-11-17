@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.296"
-    const val VERSION_CODE = 297
+    const val VERSION_NAME = "0.1.297"
+    const val VERSION_CODE = 298
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.297", listOf(
+            ReleaseFeature("transition-dialogue-297", "Transições mais simples",
+                "Quatro opções, Aplicar a todos perto do som e proteção contra movimento extra de clipes com áudio nas transições.", "check")
+        )),
         ReleaseSummary("0.1.296", listOf(
             ReleaseFeature("remove-creation-modules-296", "Estúdio de Cenas e Animar Imagens removidos",
                 "O editor de vídeo, a importação de fotos, as legendas e as ferramentas de áudio e voz continuam. A atualização não apaga projetos nem MP4s.", "check")

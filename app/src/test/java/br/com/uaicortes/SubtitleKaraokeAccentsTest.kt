@@ -55,6 +55,7 @@ class SubtitleKaraokeAccentsTest {
         assertNotNull(f.highlighted)
         assertTrue(c.wordTimings.isEmpty())
         assertEquals(25,SubtitleStyles.presets.size)
-        assertEquals(28,SubtitleAnimations.choices.size)
+        assertTrue(SubtitleAnimations.choices.any { it.first == SubtitleAnimations.KARAOKE_UNDERLINE })
+        assertTrue(SubtitleAnimations.choices.any { it.first == SubtitleAnimations.SINGLE_WORD })
     }
 }

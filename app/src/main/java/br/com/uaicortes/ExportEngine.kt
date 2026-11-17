@@ -230,11 +230,12 @@ class ExportEngine(private val context: Context) {
         require(!isSavingToGallery) { "Aguarde a conclusão do salvamento anterior." }
         cancel()
         val joins = JunctionTransitionPlan.project(project)
-        fun begin(held: Map<JunctionTransitionPlan.Side, File>, canvas: Pair<Int, Int>?) =
+        fun begin(preparedJoins: List<JunctionTransitionPlan.Join>,
+                  held: Map<JunctionTransitionPlan.Side, File>, canvas: Pair<Int, Int>?) =
             startPrepared(project, height, fileName, preset, destination, frameMode, onSaving,
-                onSuccess, onError, onRenderedFrame, onPreviewReady, joins, held, canvas)
+                onSuccess, onError, onRenderedFrame, onPreviewReady, preparedJoins, held, canvas)
         if (joins.isEmpty()) {
-            begin(emptyMap(), null)
+            begin(joins, emptyMap(), null)
             return
         }
         require(context.cacheDir.usableSpace > VideoExportQuality.minimumFreeBytes(
@@ -245,15 +246,24 @@ class ExportEngine(private val context: Context) {
         preparingTransitions = CoroutineScope(Dispatchers.Main.immediate).launch {
             var handedOff = false
             try {
-                val (held, canvas) = withContext(Dispatchers.IO) {
+                val (preparedJoins, held, canvas) = withContext(Dispatchers.IO) {
                     val first = project.clips.first()
                     val geometry = VideoExportFormatPolicy.dimensions(destination, height)
                         ?: transitionOutputSize(originalAspectOverride
                             ?: mediaAspect(context, first.uri, first.isImage), height)
-                    JunctionTransitionFrames.prepare(context, joins, dir, height) to geometry
+                    // Inspect each source once. A source that cannot yet be inspected
+                    // falls back to a still for the transition, not a guess at dialogue timing.
+                    val audioSources = mutableMapOf<String, Boolean>()
+                    val prepared = JunctionTransitionPlan.holdAudioBackedImages(joins) { clip ->
+                        audioSources.getOrPut(clip.uri) {
+                            runCatching { ExportMp4Inspector.sourceHasAudio(context, Uri.parse(clip.uri)) }
+                                .getOrDefault(true)
+                        }
+                    }
+                    Triple(prepared, JunctionTransitionFrames.prepare(context, prepared, dir, height), geometry)
                 }
                 preparingTransitions = null
-                begin(held, canvas)
+                begin(preparedJoins, held, canvas)
                 handedOff = true
             } catch (cancelled: CancellationException) {
                 throw cancelled

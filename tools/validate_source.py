@@ -451,7 +451,7 @@ assert 'fun composeValues(' in trans_fx and 'fun intensity(' in trans_fx
 for kind in ('Flash branco','Flash preto','Fade azul','Fade dourado','Preto e branco','Sépia'):
     assert kind in trans_fx, kind
 assert 'fun apply(' in trans_batch and 'if (applyAll) joins' in trans_batch
-assert 'TransitionBatch.apply(p, safeBoundary, kind, durationMs, applyAll)' in ui
+assert 'TransitionBatch.apply(p, safeBoundary, kind, durationMs, useAll)' in ui
 assert 'Aplicar a todas as junções' in ui and 'Text("Aplicar")' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/TransitionEffectsTest.kt').exists()
 assert (root/'app/src/test/java/br/com/uaicortes/TransitionBatchTest.kt').exists()

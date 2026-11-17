@@ -1,4 +1,12 @@
-# Uai Cortes · v0.1.296 — Editor sem os módulos de cenas e animação de imagens
+# Uai Cortes · v0.1.297 — Transições simplificadas
+
+- **Transições:** Corte direto, Dissolver, Empurrão lateral e Fade preto. Aplicar a todos fica ao lado do botão de som. Efeitos antigos em projetos existentes continuam sendo renderizados.
+- **Diálogo:** o lado de apoio de Dissolver e Empurrão usa um quadro junto ao corte quando a mídia tem áudio, para não exibir movimento de fala deslocado fora do trecho principal. Não altera a posição do áudio, os trechos nem a duração da montagem.
+- **Build 253:** atualizados os quatro testes de legenda que ainda exigiam a contagem anterior à inclusão de Uma palavra por vez.
+
+Validação em [docs/VALIDATION_0.1.297.md](docs/VALIDATION_0.1.297.md).
+
+## v0.1.296 — Editor sem os módulos de cenas e animação de imagens
 
 - Removidos Estúdio de Cenas e Animar Imagens, incluindo telas, atalhos, rotas e código exclusivo. A galeria de fotos do editor, legendas, marca d’água, exportação e Estúdio de Voz continuam.
 - A atualização não apaga vídeos, projetos ou arquivos antigos. Rascunhos exclusivos dos módulos removidos podem permanecer no aparelho, mas não abrem mais no app. Metadados legados embutidos em projetos do editor continuam no JSON.

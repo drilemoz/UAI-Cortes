@@ -54,6 +54,20 @@ internal object JunctionTransitionPlan {
         }
     }
 
+    /** A clip's primary track remains timed to its audio. Only its image
+     * on the opposite side of the cut is held for clips with audible content. */
+    fun holdAudioBackedImages(joins: List<Join>, hasAudio: (Clip) -> Boolean): List<Join> {
+        return joins.map { join ->
+            fun hold(side: Side, at: Long): Side =
+                if (side.heldFrame || side.clip.isImage || !hasAudio(side.clip)) side
+                else side.copy(sourceStartMs = at, heldFrame = true)
+            val lead = join.incoming.clip
+            val tail = join.outgoing.clip
+            join.copy(incoming = hold(join.incoming, lead.startMs), outgoing = hold(join.outgoing,
+                maxOf(tail.startMs, tail.endMs - 1L)))
+        }
+    }
+
     fun placement(joins: List<Join>, atUs: Long): Placement {
         // Windows are sorted and cannot overlap because each consumes at most half a clip.
         var lo = 0

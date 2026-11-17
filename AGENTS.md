@@ -1,3 +1,10 @@
+# v0.1.297 — Transições simplificadas e correção do build 253
+
+- Base v0.1.296/versionCode 297, nova v0.1.297/versionCode 298. Preservar schema 4, assinatura e cinco variantes.
+- Preservar formatos de efeitos antigos na leitura/exportação sem oferecer o menu Mais efeitos. Aplicar a todos fica ao lado do som e só grava após Aplicar.
+- Em efeitos compostos, substituir só o lado de apoio de fontes com áudio por quadro de borda. Não reposicionar áudio nem aplicar compensação global. Não inferir a causa de sincronia labial de um MP4 sem a fonte correspondente.
+- Os testes de legenda devem validar os recursos e a integridade do catálogo, sem pressupor quantidades anteriores à inclusão do estilo single_word.
+
 # v0.1.296 — Remoção de duas ferramentas independentes
 
 - Base v0.1.295/versionCode 296, nova v0.1.296/versionCode 297. Preservar schema 4, assinatura e cinco variantes.

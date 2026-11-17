@@ -1,3 +1,9 @@
+# Uai Cortes 0.1.297 (2026-11-17)
+
+- **Transições:** Corte direto, Dissolver, Empurrão lateral e Fade preto. Aplicar a todos fica ao lado do botão de som. Efeitos antigos em projetos existentes continuam sendo renderizados.
+- **Diálogo:** o lado de apoio de Dissolver e Empurrão usa um quadro junto ao corte quando a mídia tem áudio, para não exibir movimento de fala deslocado fora do trecho principal. Não altera a posição do áudio, os trechos nem a duração da montagem.
+- **Build 253:** atualizados os quatro testes de legenda que ainda exigiam a contagem anterior à inclusão de Uma palavra por vez.
+
 # Uai Cortes 0.1.296 (2026-11-17)
 
 - Removidos Estúdio de Cenas e Animar Imagens, incluindo telas, atalhos, rotas e código exclusivo. A galeria de fotos do editor, legendas, marca d’água, exportação e Estúdio de Voz continuam.

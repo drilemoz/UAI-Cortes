@@ -65,7 +65,6 @@ internal fun TransitionScreen(p: VideoProject, back: () -> Unit, update: (VideoP
             var durationMs by remember(p.id, from.id, to.id) {
                 mutableLongStateOf(stored?.durationMs ?: 300L)
             }
-            var showMore by remember { mutableStateOf(false) }
             var applyAll by remember { mutableStateOf(false) }
             var audioOn by remember { mutableStateOf(false) }
             var outputMode by remember { mutableStateOf(PreviewOutputMode.ORIGINAL) }
@@ -77,8 +76,10 @@ internal fun TransitionScreen(p: VideoProject, back: () -> Unit, update: (VideoP
                 }
             }
             val modern = JunctionTransitionPlan.contains(kind)
+            val selectable = modern || kind == TransitionEffects.CUT || kind == TransitionEffects.BLACK
+            val useAll = applyAll && selectable
             val join = JunctionTransitionPlan.boundary(from, to, from.durationMs, kind, durationMs)
-            val allValid = !modern || !applyAll || p.clips.zipWithNext().all { (a, b) ->
+            val allValid = !modern || !useAll || p.clips.zipWithNext().all { (a, b) ->
                 JunctionTransitionPlan.boundary(a, b, a.durationMs, kind, durationMs) != null
             }
             val valid = (!modern || join != null) && allValid
@@ -110,32 +111,35 @@ internal fun TransitionScreen(p: VideoProject, back: () -> Unit, update: (VideoP
                     val renderAspect = aspect
                     if ((!modern || join != null) && renderAspect != null) {
                         key(p, safeBoundary, kind, durationMs, renderAspect, outputMode) {
-                            TransitionVideoPreview(p, safeBoundary, kind, durationMs, renderAspect, outputMode, audioOn) {
-                                audioOn = it
-                            }
+                            TransitionVideoPreview(p, safeBoundary, kind, durationMs, renderAspect, outputMode,
+                                audioOn = audioOn, onAudio = { audioOn = it },
+                                applyAll = useAll, onApplyAll = { applyAll = it }, canApplyAll = selectable)
                         }
                     } else if (modern && join == null) {
                         Text("Os clipes são curtos demais para esta transição.",
                             color = MaterialTheme.colorScheme.error)
                     }
-                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(kind == TransitionEffects.CUT, { kind = TransitionEffects.CUT },
-                            label = { Text("Corte direto") })
+                            label = { Text("Corte direto") }, modifier = Modifier.weight(1f))
                         FilterChip(kind == JunctionTransitionPlan.DISSOLVE, {
                             kind = JunctionTransitionPlan.DISSOLVE
                             durationMs = stored?.takeIf { it.kind == kind }?.durationMs ?: 300L
-                        }, label = { Text("Dissolver") })
+                        }, label = { Text("Dissolver") }, modifier = Modifier.weight(1f))
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(kind in listOf(JunctionTransitionPlan.PUSH_LEFT, JunctionTransitionPlan.PUSH_RIGHT), {
                             kind = stored?.kind?.takeIf { it == JunctionTransitionPlan.PUSH_LEFT ||
                                 it == JunctionTransitionPlan.PUSH_RIGHT } ?: JunctionTransitionPlan.PUSH_LEFT
                             durationMs = stored?.takeIf { it.kind == kind }?.durationMs ?: 250L
-                        }, label = { Text("Empurrão lateral") })
+                        }, label = { Text("Empurrão lateral") }, modifier = Modifier.weight(1f))
                         FilterChip(kind == TransitionEffects.BLACK, {
                             kind = TransitionEffects.BLACK
                             durationMs = stored?.takeIf { it.kind == kind }?.durationMs ?: 400L
-                        }, label = { Text("Fade preto") })
+                        }, label = { Text("Fade preto") }, modifier = Modifier.weight(1f))
                     }
+                    if (!selectable) Text("Efeito antigo mantido nesta junção até você escolher outro.",
+                        style = MaterialTheme.typography.bodySmall)
                     if (kind == JunctionTransitionPlan.PUSH_LEFT || kind == JunctionTransitionPlan.PUSH_RIGHT) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilterChip(kind == JunctionTransitionPlan.PUSH_LEFT,
@@ -144,7 +148,7 @@ internal fun TransitionScreen(p: VideoProject, back: () -> Unit, update: (VideoP
                                 { kind = JunctionTransitionPlan.PUSH_RIGHT }, label = { Text("Para direita") })
                         }
                     }
-                    if (kind != TransitionEffects.CUT) {
+                    if (selectable && kind != TransitionEffects.CUT) {
                         Text(TransitionEffects.description(kind), style = MaterialTheme.typography.bodySmall)
                         val effective = join?.durationMs ?: if (!modern)
                             2L * EditFeatures.transitionMs(ClipTransition(from.id, to.id, kind,
@@ -157,45 +161,27 @@ internal fun TransitionScreen(p: VideoProject, back: () -> Unit, update: (VideoP
                             onValueChange = { slidingMs = it }, onValueChangeFinished = {
                                 durationMs = ((slidingMs.toLong() + 5L) / 10L) * 10L
                             })
-                        if (join?.usesHold == true) Text(
-                            "Sem sobra de vídeo num dos lados. Um quadro de apoio é usado nesse lado.",
+                        if (modern) Text(
+                            "Para não adiantar ou repetir movimentos de fala, clipes com áudio usam quadros de apoio.",
                             style = MaterialTheme.typography.bodySmall)
                     }
                     Text("Mantém a duração, as legendas e os áudios no mesmo horário.",
                         style = MaterialTheme.typography.bodySmall)
                     if (modern) Text("As transições combinadas são exportadas em SDR.",
                         style = MaterialTheme.typography.bodySmall)
-                    TextButton(onClick = { showMore = !showMore }) {
-                        Text(if (showMore) "Recolher efeitos" else "Mais efeitos")
-                    }
-                    if (showMore) {
-                        for (row in TransitionEffects.names.filter {
-                            it != TransitionEffects.CUT && it != TransitionEffects.BLACK
-                        }.chunked(2)) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                for (effect in row) FilterChip(kind == effect, {
-                                    kind = effect
-                                    durationMs = stored?.takeIf { it.kind == kind }?.durationMs ?: 350L
-                                }, label = { Text(effect) }, modifier = Modifier.weight(1f))
-                            }
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(applyAll, { applyAll = it })
-                            Text("Aplicar também às outras junções")
-                        }
-                    }
                 }
                 if (!allValid) Text("Há junções curtas demais. Aplique somente nesta junção.",
                     color = MaterialTheme.colorScheme.error)
                 if (saveFailed) Text("Não foi possível salvar. Tente novamente.",
                     color = MaterialTheme.colorScheme.error)
                 Button(onClick = {
-                    val amended = TransitionBatch.apply(p, safeBoundary, kind, durationMs, applyAll)
+                    val amended = if (!selectable) p
+                        else TransitionBatch.apply(p, safeBoundary, kind, durationMs, useAll)
                     if (amended == p || update(amended)) back() else saveFailed = true
                 }, enabled = valid, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                     Icon(Icons.Default.Check, null)
                     Spacer(Modifier.width(8.dp))
-                    Text(if (applyAll) "Aplicar a todas as junções" else "Aplicar nesta junção")
+                    Text(if (useAll) "Aplicar a todas as junções" else "Aplicar nesta junção")
                 }
             }
         }

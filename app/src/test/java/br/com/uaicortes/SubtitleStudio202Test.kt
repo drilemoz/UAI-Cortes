@@ -6,7 +6,8 @@ import org.junit.Test
 
 class SubtitleStudio202Test {
     @Test fun curatedPresetsPreserveContentAndTime() {
-        assertEquals(9, SubtitleStudioPresets.recommended.size)
+        assertTrue(SubtitleStudioPresets.recommended.any { it.animation == SubtitleAnimations.SINGLE_WORD })
+        assertTrue(SubtitleStudioPresets.recommended.any { it.animation == SubtitleAnimations.KARAOKE_BADGE })
         val input=SubtitleCue(id="original",text="Você é o agiota?",startMs=350,endMs=1700,
             speakerId="cliente", wordTimings=listOf(SubtitleWordTiming(350,650)))
         SubtitleStudioPresets.recommended.forEach { preset ->

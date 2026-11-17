@@ -34,7 +34,9 @@ import kotlinx.coroutines.delay
 @OptIn(UnstableApi::class)
 @Composable
 internal fun TransitionVideoPreview(project: VideoProject, boundary: Int, kind: String, durationMs: Long,
-                                    canvasAspect: Float, outputMode: PreviewOutputMode, audioOn: Boolean, onAudio: (Boolean) -> Unit) {
+                                    canvasAspect: Float, outputMode: PreviewOutputMode,
+                                    audioOn: Boolean, onAudio: (Boolean) -> Unit,
+                                    applyAll: Boolean, onApplyAll: (Boolean) -> Unit, canApplyAll: Boolean) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val job = remember(project, boundary, kind, durationMs) {
@@ -145,7 +147,9 @@ internal fun TransitionVideoPreview(project: VideoProject, boundary: Int, kind: 
             Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
                 if (playing) "Pausar prévia" else "Reproduzir prévia")
         }
-        Text("Prévia em loop", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
+        Text("Prévia", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
+        FilterChip(selected = applyAll, onClick = { onApplyAll(!applyAll) },
+            enabled = canApplyAll, label = { Text("Aplicar a todos", maxLines = 1) })
         IconButton(onClick = { onAudio(!audioOn) }) {
             Icon(if (audioOn) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
                 if (audioOn) "Silenciar mixagem" else "Ouvir mixagem")

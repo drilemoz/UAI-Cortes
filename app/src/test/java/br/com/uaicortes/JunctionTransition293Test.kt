@@ -25,6 +25,28 @@ class JunctionTransition293Test {
         assertEquals(3600L, updated.durationMs)
     }
 
+    @Test fun audioBackedSupportUsesTheAdjacentStillWithNoTimingOrAudioChange() {
+        val a = clip("a", 100L, 1200L, 2200L)
+        val b = clip("b", 400L, 1500L, 2100L)
+        val cut = a.durationMs
+        val join = requireNotNull(JunctionTransitionPlan.boundary(a, b, cut,
+            JunctionTransitionPlan.DISSOLVE, 300L))
+        assertFalse(join.usesHold)
+        val protected = JunctionTransitionPlan.holdAudioBackedImages(listOf(join)) { it.id == a.id }.single()
+        assertEquals(join.incoming, protected.incoming)
+        assertTrue(protected.outgoing.heldFrame)
+        assertEquals(a.endMs - 1L, protected.outgoing.sourceStartMs)
+        assertEquals(join.outgoing.timelineStartMs, protected.outgoing.timelineStartMs)
+        assertEquals(join.outgoing.lengthMs, protected.outgoing.lengthMs)
+        assertEquals(a, protected.outgoing.clip)
+        val both = JunctionTransitionPlan.holdAudioBackedImages(listOf(join)) { true }.single()
+        assertEquals(b.startMs, both.incoming.sourceStartMs)
+        assertTrue(both.incoming.heldFrame)
+        assertEquals(join.cutMs, both.cutMs)
+        assertEquals(join.startMs, both.startMs)
+        assertEquals(join.endMs, both.endMs)
+    }
+
     @Test fun fullLengthClipsUseHeldEdgesInsteadOfConsumingTheVisibleTimeline() {
         val p = VideoProject(clips = listOf(clip("a"), clip("b")))
         val join = JunctionTransitionPlan.project(
