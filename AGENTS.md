@@ -1,3 +1,10 @@
+# v0.1.286 — Estúdio de Voz
+
+- Base v0.1.285/versionCode 286, nova v0.1.286/versionCode 287. Preservar schema 4, assinatura e cinco APKs do CI.
+- Sugestão local de interpretação não envia texto nem muda o roteiro. Uso da IA de texto e da síntese exige ação confirmada e mantém modelo/voz separados.
+- Em narração por cenas, guardar cada WAV antes da próxima chamada. Duração da fala é medida. Arquivos prontos não podem ser truncados nem deslocados para passar na janela. 429 genérico não equivale a cota diária.
+- A montagem usa o WAV local e insere com início zero no modo de clipes do projeto. Verificar em Android os cortes com fala curta e ouvir as amostras de 7/10 s.
+
 # v0.1.285 — Linha do tempo compacta
 
 - Base v0.1.284/versionCode 285, nova v0.1.285/versionCode 286. Preservar schema 4, assinatura e variantes do CI.

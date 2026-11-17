@@ -16,7 +16,7 @@ internal class StandaloneVoiceLibrary(private val root: File) {
 
     internal data class Info(val title: String = "", val voiceName: String = "",
         val excerpt: String = "", val style: String = "", val durationMs: Long = 0L,
-        val favorite: Boolean = false)
+        val favorite: Boolean = false, val startsAtZero: Boolean = false)
 
     private val validName = Regex("voz_[0-9]{8}_[0-9]{6}_[a-f0-9-]{36}\\.wav")
     private fun valid(file: File): Boolean = runCatching {
@@ -40,7 +40,7 @@ internal class StandaloneVoiceLibrary(private val root: File) {
                 p.getProperty("voice", "").take(120), p.getProperty("excerpt", "").take(120),
                 p.getProperty("style", "").take(60),
                 p.getProperty("duration", "0").toLongOrNull()?.coerceIn(0, 3600000) ?: 0,
-                p.getProperty("favorite") == "true")
+                p.getProperty("favorite") == "true", p.getProperty("startsAtZero") == "true")
         }.getOrNull()
     }
 
@@ -53,6 +53,7 @@ internal class StandaloneVoiceLibrary(private val root: File) {
             setProperty("style", info.style.take(60))
             setProperty("duration", info.durationMs.coerceIn(0, 3600000).toString())
             setProperty("favorite", info.favorite.toString())
+            setProperty("startsAtZero", info.startsAtZero.toString())
         }
         val target = infoFile(file)
         val part = File(root, "${target.name}.part")

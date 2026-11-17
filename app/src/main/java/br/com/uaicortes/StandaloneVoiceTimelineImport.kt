@@ -13,7 +13,10 @@ internal object StandaloneVoiceTimelineImport {
         onSuccess: () -> Unit): (suspend (File) -> Boolean)? {
         if (active?.clips?.isNotEmpty() != true) return null
         return { file ->
-            val ok = add(context, file, active, cursor, { latest() === active }, persist)
+            val start = withContext(Dispatchers.IO) {
+                if (StandaloneVoiceLibrary(context).info(file)?.startsAtZero == true) 0L else cursor
+            }
+            val ok = add(context, file, active, start, { latest() === active }, persist)
             if (ok) onSuccess()
             ok
         }

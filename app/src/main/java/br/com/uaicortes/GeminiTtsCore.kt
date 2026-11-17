@@ -112,8 +112,9 @@ internal class GeminiTtsClient(context: Context? = null) {
     private val usage = context?.let { GeminiUsageLedger(it) }
     private val active = AtomicReference<HttpURLConnection?>(null)
     fun cancel() { active.getAndSet(null)?.disconnect() }
-    private suspend fun request(path: String, key: String, body: JSONObject? = null, max: Int = 1024 * 1024): JSONObject =
-        if (failover == null) requestOnce(path, key, body, max)
+    private suspend fun request(path: String, key: String, body: JSONObject? = null, max: Int = 1024 * 1024,
+        useFailover: Boolean = true): JSONObject =
+        if (failover == null || !useFailover) requestOnce(path, key, body, max)
         else failover.run(key, body?.optString("model").orEmpty()) { credential ->
             requestOnce(path, credential, body, max)
         }
@@ -140,20 +141,29 @@ internal class GeminiTtsClient(context: Context? = null) {
                 val status = conn.responseCode
                 coroutineContext.ensureActive()
                 if (status !in 200..299) {
+                    var dailyQuota = false
                     val safeCode = runCatching {
                         val error = conn.errorStream?.use { stream -> readLimit(stream, 64 * 1024) }
                         JSONObject(error?.toString(Charsets.UTF_8) ?: "{}").optJSONObject("error")?.let { e ->
                             val codes = mutableListOf(e.optString("status"))
                             val details = e.optJSONArray("details")
                             if (details != null) for (i in 0 until details.length()) {
-                                details.optJSONObject(i)?.optString("reason")?.let { codes += it }
+                                val detail = details.optJSONObject(i) ?: continue
+                                codes += detail.optString("reason")
+                                if (status == 429 && detail.optString("@type").endsWith("/google.rpc.QuotaFailure")) {
+                                    val violations = detail.optJSONArray("violations")
+                                    if (violations != null) for (j in 0 until violations.length()) {
+                                        val violation = violations.optJSONObject(j) ?: continue
+                                        dailyQuota = dailyQuota || isDailyTtsQuotaId(violation.optString("quotaId"))
+                                    }
+                                }
                             }
                             codes.joinToString(" ")
                         }
                     }.getOrNull().orEmpty()
                     if (path == "interactions") usage?.safeRecord(key, body?.optString("model").orEmpty(),
                         "narracao", status = if (status == 429) "429" else "erro_$status", latencyMs = elapsedMs())
-                    throw GeminiApiError(status, safeCode)
+                    throw GeminiApiError(status, safeCode, dailyQuota)
                 }
                 val result = conn.inputStream.use { readLimit(it, max) }
                 coroutineContext.ensureActive()
@@ -195,7 +205,8 @@ internal class GeminiTtsClient(context: Context? = null) {
 
     suspend fun voices(key: String): List<GeminiVoice> = voicesWithDiagnosis(key).voices
     suspend fun synthesize(key: String, model: String, voice: String, style: String, text: String,
-                           languageMode: String = GeminiSpeechLanguage.PORTUGUESE_BR): GeminiWave {
+                           languageMode: String = GeminiSpeechLanguage.PORTUGUESE_BR,
+                           useFailover: Boolean = true): GeminiWave {
         GeminiModels.requireSupported(model)
         require(voice.isNotBlank() && voice.length <= 150) { "Selecione uma voz disponível." }
         require(text.isNotBlank() && text.length <= 4000) { "Digite entre 1 e 4.000 caracteres." }
@@ -207,7 +218,7 @@ internal class GeminiTtsClient(context: Context? = null) {
                 .put("content", JSONArray().put(content))))
             .put("response_format", JSONObject().put("type", "audio").put("mime_type", "audio/wav"))
             .put("generation_config", JSONObject().put("speech_config", JSONArray().put(JSONObject().put("voice", voice))))
-        val result = request("interactions", key, body, 44 * 1024 * 1024)
+        val result = request("interactions", key, body, 44 * 1024 * 1024, useFailover)
         val steps = result.optJSONArray("steps") ?: throw IOException("Resposta sem etapas de áudio.")
         var encoded: String? = null
         var mime = ""
@@ -230,7 +241,13 @@ internal class GeminiTtsClient(context: Context? = null) {
     }
 }
 
-internal class GeminiApiError(val http: Int, private val status: String): IOException(messageFor(http, status)) {
+/** Only a structured quota ID can distinguish a daily limit from a generic 429. */
+internal fun isDailyTtsQuotaId(id: String): Boolean =
+    Regex("per[_ -]?day|daily|requests[_ -]?per[_ -]?d(?![a-z])", RegexOption.IGNORE_CASE).containsMatchIn(id)
+
+internal class GeminiApiError(val http: Int, status: String, val dailyQuota: Boolean = false) :
+    IOException(if (http == 429 && dailyQuota) "Cota diária Gemini esgotada para este projeto/modelo."
+        else messageFor(http, status)) {
     companion object {
         internal fun messageFor(http: Int, status: String): String = when {
             http == 401 || status.contains("UNAUTHENTICATED") || status.contains("API_KEY_INVALID") || status.contains("API_KEY_EXPIRED") -> "Chave inválida ou revogada (401)."

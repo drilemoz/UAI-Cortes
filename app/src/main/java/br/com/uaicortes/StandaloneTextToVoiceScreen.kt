@@ -38,7 +38,10 @@ internal class StandaloneVoiceDraft {
     val text = mutableStateOf("")
     val model = mutableStateOf(GeminiModels.LITE)
     val voice = mutableStateOf<GeminiVoice?>(null)
-    val style = mutableStateOf("Neutra")
+    val style = mutableStateOf(VoiceStudioPlan.AUTO)
+    val mode = mutableStateOf(VoiceStudioMode.CONTINUOUS)
+    val tone = mutableStateOf<Pair<String, String>?>(null)
+    val frozenWindows = mutableStateOf<List<Long>>(emptyList())
     val language = mutableStateOf(GeminiSpeechLanguage.PORTUGUESE_BR)
     val generated = mutableStateOf<File?>(null)
     val feedback = mutableStateOf("")
@@ -48,11 +51,31 @@ internal class StandaloneVoiceDraft {
 /** Estúdio autônomo: só insere na timeline após confirmação explícita do usuário. */
 @Composable
 internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSettings: () -> Unit,
-    draft: StandaloneVoiceDraft, onAddToEditor: (suspend (File) -> Boolean)? = null) {
+    draft: StandaloneVoiceDraft, projectClipWindows: List<Long> = emptyList(), onAddToEditor: (suspend (File) -> Boolean)? = null) {
     val ctx = LocalContext.current
     val clipboard = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
     val client = remember(ctx) { GeminiTtsClient(ctx) }
+    val textClient = remember(ctx) { GeminiVideoCaptionClient(ctx) }
+    val batchDraft = remember(ctx) { StandaloneVoiceDraftStore(ctx, batch = true) }
+    val textPrefs = remember(ctx) { ctx.getSharedPreferences("voice_studio_text", android.content.Context.MODE_PRIVATE) }
+    var textModel by remember {
+        mutableStateOf(textPrefs.getString("model", null)?.takeIf(GeminiCaptionModelPolicy::validId).orEmpty())
+    }
+    var textModels by remember { mutableStateOf<List<GeminiCaptionModel>>(emptyList()) }
+    var modelChooser by remember { mutableStateOf(false) }
+    var scriptAction by remember { mutableStateOf<VoiceStudioTextAction?>(null) }
+    var proposedText by remember { mutableStateOf<String?>(null) }
+    var proposedTone by remember { mutableStateOf<VoiceStudioTone?>(null) }
+    var configured by remember { mutableStateOf(false) }
+    var storedBatchAvailable by remember { mutableStateOf(false) }
+    var restoreBatch by remember { mutableStateOf(false) }
+    var sceneWork by remember { mutableStateOf(false) }
+    var sceneReview by remember { mutableStateOf(false) }
+    var previewRequested by remember { mutableStateOf(false) }
+    var retryScene by remember { mutableStateOf<Int?>(null) }
+    var playedFile by remember { mutableStateOf<File?>(null) }
+    var shortPreview by remember { mutableStateOf<File?>(null) }
     val credentials = remember(ctx) { GeminiCredentialStore(ctx) }
     val pacing = remember(ctx) { GeminiLocalPacing(ctx) }
     val library = remember(ctx) { StandaloneVoiceLibrary(ctx) }
@@ -73,6 +96,9 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
         if (!chooseVoice) localVoiceAliases = withContext(Dispatchers.IO) { GeminiVoiceAliases(ctx).load() }
     }
     var style by draft.style
+    var mode by draft.mode
+    var selectedTone by draft.tone
+    var frozenWindows by draft.frozenWindows
     var language by draft.language
     var styleMenu by remember { mutableStateOf(false) }
     var technicalExpanded by remember { mutableStateOf(false) }
@@ -104,13 +130,18 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
     LaunchedEffect(library) {
         reloadLibrary()
         storedDraftAvailable = withContext(Dispatchers.IO) { draftStore.exists() }
+        storedBatchAvailable = withContext(Dispatchers.IO) { batchDraft.exists() }
+        configured = withContext(Dispatchers.IO) { !credentials.read().isNullOrBlank() }
     }
     DisposableEffect(client, player) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) { playing = isPlaying }
         }
         player.addListener(listener)
-        onDispose { job?.cancel(); client.cancel(); player.removeListener(listener); player.release() }
+        onDispose {
+            job?.cancel(); client.cancel(); textClient.cancel(); player.removeListener(listener); player.release()
+            shortPreview?.delete()
+        }
     }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("audio/wav")) { uri ->
         val file = exportFile
@@ -128,20 +159,206 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
             } catch (_: Exception) { feedback = "Falha ao exportar WAV. O original continua salvo no aplicativo." }
         }
     }
-    fun playFile(file: File) {
+    fun play(file: File, select: Boolean) {
         if (!file.isFile) { feedback = "Áudio não encontrado no aparelho."; return }
-        if (playing && generated == file) { player.pause(); return }
+        if (playing && playedFile == file) { player.pause(); return }
         player.setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
         player.prepare()
         player.play()
-        generated = file
+        playedFile = file
+        if (select) generated = file
     }
+    fun playFile(file: File) = play(file, true)
     fun saveExternally(file: File) {
         exportFile = file
         val title = audioInfo[file.absolutePath]?.title.orEmpty()
             .replace(Regex("[^\\p{L}\\p{N} _-]"), "").trim().take(50)
             .ifBlank { "UaiCortes-voz" }
         picker.launch("$title.wav")
+    }
+
+    val tone = remember(text, selectedTone) {
+        VoiceStudioPlan.tones.firstOrNull { selectedTone?.first == text && it.preset == selectedTone?.second }
+            ?: VoiceStudioPlan.suggest(text)
+    }
+    val interpretation = if (style == VoiceStudioPlan.AUTO)
+        GeminiNarrationStyling.instruction(tone.preset) + ". " + tone.guidance
+        else GeminiNarrationStyling.instruction(style)
+    val projectWindows = frozenWindows.ifEmpty { projectClipWindows }
+    val scenes = remember(text, mode, projectWindows, style, tone) {
+        VoiceStudioPlan.scenes(text, mode, projectWindows, style, tone)
+    }
+    val batch = remember(text, model, voice?.id, interpretation, language, scenes) {
+        VoiceStudioBatch(ctx.filesDir, VoiceStudioBatch.identity(text, model, voice?.id.orEmpty(),
+            interpretation, language, scenes))
+    }
+    var ready by remember(batch) { mutableStateOf<List<Pair<File, Long>?>>(emptyList()) }
+    LaunchedEffect(batch, busy) {
+        if (!busy && scenes.isNotEmpty()) ready = withContext(Dispatchers.IO) { batch.completed(scenes) }
+    }
+
+    fun snapshot() = StandaloneVoiceDraftStore.Snapshot(text, model, voice, style, language, mode,
+        tone.preset, if (mode == VoiceStudioMode.PROJECT) projectWindows.take(VoiceStudioPlan.MAX_SCENES) else emptyList())
+
+    fun restore(value: StandaloneVoiceDraftStore.Snapshot) {
+        text = value.text; model = value.model; voice = value.voice
+        style = value.style; language = value.language; mode = value.mode
+        selectedTone = value.text to value.tonePreset
+        frozenWindows = value.windows
+    }
+
+    fun openTextModels() {
+        modelChooser = true
+        busy = true
+        feedback = ""
+        stage = "Consultando modelos de texto..."
+        job = scope.launch {
+            try {
+                val key = withContext(Dispatchers.IO) { credentials.read() } ?: throw IOException("Sem chave.")
+                textModels = textClient.listModels(key)
+                if (textModels.none { it.id == textModel }) {
+                    textModel = textModels.first().id
+                    textPrefs.edit().putString("model", textModel).apply()
+                }
+            } catch (cancel: CancellationException) { throw cancel }
+            catch (_: Exception) { feedback = "Não foi possível consultar os modelos Gemini. Verifique a API." }
+            finally { busy = false; stage = "" }
+        }
+    }
+
+    fun runScriptAction(action: VoiceStudioTextAction, brief: String) {
+        val original = text
+        val input = if (action == VoiceStudioTextAction.WRITE) brief else original
+        val requested = textModel
+        scriptAction = null
+        busy = true
+        stage = "Consultando IA do roteiro..."
+        feedback = ""
+        job = scope.launch {
+            try {
+                val key = withContext(Dispatchers.IO) { credentials.read() } ?: throw IOException("Sem chave.")
+                val resolvedModel = requested.ifBlank {
+                    textClient.listModels(key).also { textModels = it }.first().id.also {
+                        textModel = it
+                        textPrefs.edit().putString("model", it).apply()
+                    }
+                }
+                val prompt = when (action) {
+                    VoiceStudioTextAction.TONE -> "Classifique o texto para interpretação em voz alta. " +
+                        "Retorne apenas um JSON com o campo tone igual a uma destas opções: " +
+                        VoiceStudioPlan.tones.joinToString(" | ") { it.preset } + "."
+                    VoiceStudioTextAction.WRITE -> "Escreva um roteiro pronto para narrar, em português brasileiro, " +
+                        "a partir do pedido fornecido. Não adicione informações factuais não fornecidas. " +
+                        "Retorne apenas JSON com o campo text, até 4000 caracteres, sem instruções de leitura."
+                    VoiceStudioTextAction.REVISE -> "Revise o texto em português brasileiro para leitura em voz alta. " +
+                        "Preserve história, personagens e sentido; ajuste fluidez, pontuação e pausas. " +
+                        "Retorne apenas JSON com o campo text, até 4000 caracteres, sem instruções de leitura."
+                }
+                val answer = textClient.generateStudioJson(key, "$prompt\nConteúdo de referência:\n$input", resolvedModel,
+                    if (action == VoiceStudioTextAction.TONE) "voice_studio_tone" else "voice_studio_text")
+                if (action == VoiceStudioTextAction.TONE) {
+                    proposedTone = VoiceStudioPlan.tones.firstOrNull { it.preset.equals(answer.optString("tone").trim(), true) }
+                        ?: throw IOException("Tom não reconhecido.")
+                } else {
+                    proposedText = answer.optString("text").trim().takeIf { it.isNotBlank() &&
+                        it.length <= StandaloneVoiceTextPolicy.MAX_CHARS } ?: throw IOException("Roteiro vazio ou longo.")
+                }
+            } catch (cancel: CancellationException) { throw cancel }
+            catch (e: Exception) {
+                feedback = if (e is GeminiHttpException && e.statusCode == 429)
+                    "Limite da IA de roteiro atingido. O texto original foi preservado."
+                else "Não foi possível obter uma sugestão. O texto original foi preservado."
+            } finally { busy = false; stage = "" }
+        }
+    }
+
+    fun infoFor(wave: GeminiWave, startsAtZero: Boolean): StandaloneVoiceLibrary.Info =
+        StandaloneVoiceLibrary.Info(
+            title = "Narração ${DateFormat.getDateTimeInstance(DateFormat.SHORT,
+                DateFormat.SHORT).format(Date())}",
+            voiceName = voice?.let { GeminiVoiceAliases.title(it, localVoiceAliases) }.orEmpty(),
+            excerpt = text.trim().replace(Regex("\\s+"), " ").take(120),
+            style = if (style == VoiceStudioPlan.AUTO) tone.label else style,
+            durationMs = wave.durationMs, startsAtZero = startsAtZero)
+
+    fun errorFor(error: Exception): String = when (error) {
+        is GeminiConfiguredDailyLimit -> error.message.orEmpty()
+        is GeminiApiError -> if (error.http == 429 && error.dailyQuota)
+            "Cota diária Gemini esgotada para este projeto/modelo."
+        else if (error.http == 429) "O Gemini limitou as solicitações. A resposta não confirmou cota diária."
+        else GeminiVoiceCatalog.safeMessage(error)
+        else -> GeminiVoiceCatalog.safeMessage(error)
+    }
+
+    fun runScenes(regenerate: Int? = null, assemble: Boolean = false) {
+        if (busy || scenes.isEmpty() || (!assemble && (!configured || voice == null))) return
+        val request = snapshot()
+        val plan = scenes
+        busy = true
+        feedback = ""
+        apiUsage = ""
+        sceneWork = true
+        stage = if (assemble) "Montando WAV local..." else "Preparando trechos..."
+        job = scope.launch {
+            var current = ready
+            try {
+                current = withContext(Dispatchers.IO) { batch.completed(plan) }
+                if (assemble) {
+                    if (current.any { it == null }) throw IOException("Ainda há trechos pendentes.")
+                    if (current.indices.any { current[it]!!.second > plan[it].windowMs })
+                        throw IOException("Ajuste os trechos que passam da janela antes de montar.")
+                    val wave = withContext(Dispatchers.IO) { batch.assemble(plan, current) }
+                    val info = infoFor(wave, request.mode == VoiceStudioMode.PROJECT)
+                    val file = withContext(Dispatchers.IO) { library.save(wave, info) }
+                    reloadLibrary()
+                    sceneReview = false
+                    feedback = "WAV montado localmente, sem nova chamada à API."
+                    playFile(file)
+                } else {
+                    val pending = regenerate?.let { listOf(it) } ?: plan.indices.filter { current[it] == null }
+                    if (pending.isEmpty()) return@launch
+                    val key = withContext(Dispatchers.IO) { credentials.read() }
+                        ?: throw IOException("Configure a API Gemini.")
+                    if (!withContext(Dispatchers.IO) { batchDraft.save(request) })
+                        throw IOException("Não foi possível salvar o plano no aparelho.")
+                    storedBatchAvailable = true
+                    for (i in pending) {
+                        val scene = plan[i]
+                        val previous = current[i]?.second
+                        pacing.beforeRequest(request.model) { wait ->
+                            stage = "Cena ${i + 1} · aguardando limite local (${wait / 1000}s)."
+                        }
+                        stage = "Gerando cena ${i + 1} de ${plan.size}..."
+                        val goal = scene.windowMs.coerceIn(NarrationDurationAssist.MIN_TARGET_MS,
+                            NarrationDurationAssist.MAX_TARGET_MS)
+                        val directions = "$interpretation. ${NarrationDurationAssist.instruction(goal)}" +
+                            if ((previous ?: 0L) > scene.windowMs)
+                                " A tentativa anterior ficou longa. Fale um pouco mais rápido, mantendo a clareza."
+                            else ""
+                        val wave = client.synthesize(key, request.model, request.voice!!.id, directions,
+                            scene.text, request.language, useFailover = false)
+                        if (regenerate != null && previous != null && previous > scene.windowMs &&
+                            wave.durationMs > scene.windowMs && wave.durationMs >= previous) {
+                            feedback = "A nova tentativa não encurtou a fala. O melhor trecho foi mantido."
+                            return@launch
+                        }
+                        // Uma resposta recebida deve ser gravada antes de iniciar outra solicitação.
+                        val written = withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) {
+                            batch.save(i, wave)
+                            batch.existing(i)
+                        }
+                        current = current.mapIndexed { index, old -> if (i == index) written else old }
+                        ready = current
+                    }
+                    feedback = "${current.count { it != null }} de ${plan.size} trechos prontos. Confira as durações."
+                }
+            } catch (cancel: CancellationException) {
+                feedback = "Geração interrompida. Os trechos gravados ficaram salvos."
+                throw cancel
+            } catch (error: Exception) {
+                feedback = "${errorFor(error)} ${current.count { it != null }} de ${plan.size} trechos salvos."
+            } finally { busy = false; stage = ""; sceneWork = false }
+        }
     }
 
     BackHandler(enabled = busy && !chooseVoice) { confirmExit = true }
@@ -152,13 +369,13 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
             selectedVoiceId = voice?.id,
             initialModel = model,
             onModelChange = { model = it },
-            styleInstruction = GeminiNarrationStyling.instruction(style),
+            styleInstruction = interpretation,
             onChoose = { selected -> voice = selected; chooseVoice = false; feedback = "" }
         )
         return
     }
 
-    val durationEstimate = remember(text) { StandaloneVoiceTextPolicy.durationRangeSeconds(text) }
+    val durationEstimate = remember(text, style, tone) { VoiceStudioPlan.plannedSeconds(text, style, tone) }
     val visibleSaved = remember(savedFiles, audioInfo, favoritesOnly, showAllSaved) {
         savedFiles.filter { !favoritesOnly || audioInfo[it.absolutePath]?.favorite == true }
             .take(if (showAllSaved) 100 else 5)
@@ -214,15 +431,17 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
                             Icon(Icons.Default.ContentPaste, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(4.dp)); Text("Colar")
                         }
-                        Spacer(Modifier.weight(1f))
-                        Text(if (durationEstimate.last == 0) "Duração: —"
-                            else "~${durationEstimate.first}–${durationEstimate.last}s (estimativa)",
+                        VoiceStudioScriptMenu(configured, textModel, !busy, text.isNotBlank(),
+                            onOpenGeminiSettings, ::openTextModels) { scriptAction = it }
+                    }
+                    if (durationEstimate > 0) {
+                        Text("Planeje ${VoiceStudioPlan.time(durationEstimate)} · estimativa",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = {
-                            val current = StandaloneVoiceDraftStore.Snapshot(text, model, voice, style, language)
+                            val current = snapshot()
                             scope.launch {
                                 val ok = withContext(Dispatchers.IO) { draftStore.save(current) }
                                 storedDraftAvailable = ok || storedDraftAvailable
@@ -237,8 +456,7 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
                             scope.launch {
                                 val loaded = withContext(Dispatchers.IO) { draftStore.load() }
                                 if (loaded != null) {
-                                    text = loaded.text; model = loaded.model; voice = loaded.voice
-                                    style = loaded.style; language = loaded.language
+                                    restore(loaded)
                                     feedback = "Rascunho restaurado."
                                 } else feedback = "Rascunho indisponível."
                             }
@@ -287,13 +505,13 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
                     Text("Interpretação", style = MaterialTheme.typography.labelMedium)
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        listOf("Neutra", "Animada", "Narrador profissional", "Dramática").forEach { preset ->
+                        listOf(VoiceStudioPlan.AUTO, "Neutra", "Animada", "Dramática").forEach { preset ->
                             FilterChip(selected = style == preset, onClick = { style = preset },
                                 enabled = !busy,
                                 label = { Text(if (preset == "Narrador profissional") "Narrador" else preset) })
                         }
                         Box {
-                            FilterChip(selected = style !in listOf("Neutra", "Animada", "Narrador profissional", "Dramática"),
+                            FilterChip(selected = style !in listOf(VoiceStudioPlan.AUTO, "Neutra", "Animada", "Dramática"),
                                 onClick = { styleMenu = true }, enabled = !busy,
                                 label = { Text("Mais estilos") })
                             DropdownMenu(expanded = styleMenu, onDismissRequest = { styleMenu = false }) {
@@ -305,6 +523,16 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
                             }
                         }
                     }
+                    if (style == VoiceStudioPlan.AUTO && text.isNotBlank())
+                        Text("${tone.label} · ${tone.guidance}", style = MaterialTheme.typography.bodySmall)
+                    if (configured && StandaloneVoiceTextPolicy.accepted(text, voice?.id.orEmpty()))
+                        TextButton(onClick = {
+                            if (shortPreview != null && playedFile == shortPreview && playing) player.pause()
+                            else { previewRequested = true; confirm = true }
+                        }, enabled = !busy) {
+                            Text(if (shortPreview != null && playedFile == shortPreview && playing) "Pausar amostra"
+                                else "Ouvir amostra curta")
+                        }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("Idioma da fala", style = MaterialTheme.typography.labelMedium,
                             modifier = Modifier.weight(1f))
@@ -350,6 +578,31 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
                 }
             }
 
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Formato da narração", style = MaterialTheme.typography.titleSmall)
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    VoiceStudioMode.entries.forEach { option ->
+                        FilterChip(selected = mode == option, enabled = !busy &&
+                            (option != VoiceStudioMode.PROJECT || projectClipWindows.isNotEmpty() || frozenWindows.isNotEmpty()),
+                            onClick = {
+                                if (option != mode) frozenWindows = emptyList()
+                                mode = option
+                            }, label = { Text(option.label) })
+                    }
+                }
+                if (mode == VoiceStudioMode.PROJECT && frozenWindows.isNotEmpty() && frozenWindows != projectClipWindows) {
+                    Text("Este lote usa as janelas salvas. Confira a montagem se os clipes mudaram.",
+                        style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = { frozenWindows = emptyList() },
+                        enabled = !busy && projectClipWindows.isNotEmpty()) { Text("Usar clipes atuais") }
+                }
+                if (scenes.isNotEmpty()) TextButton(onClick = { sceneReview = true }) {
+                    Text("Ver cenas · ${ready.count { it != null }} de ${scenes.size} prontas")
+                }
+                if (storedBatchAvailable) TextButton(onClick = { restoreBatch = true }, enabled = !busy) {
+                    Text("Restaurar último lote salvo")
+                }
+            }
             if (feedback.isNotEmpty()) Text(feedback, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary)
             if (apiUsage.isNotEmpty()) Text(apiUsage, style = MaterialTheme.typography.labelSmall,
@@ -359,11 +612,12 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .5f)) {
                     Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Preparando narração", fontWeight = FontWeight.SemiBold)
-                        LinearProgressIndicator(Modifier.fillMaxWidth())
+                        if (scenes.isNotEmpty() && sceneWork)
+                            LinearProgressIndicator(progress = { ready.count { it != null }.toFloat() / scenes.size },
+                                modifier = Modifier.fillMaxWidth())
+                        else LinearProgressIndicator(Modifier.fillMaxWidth())
                         Text(stage.ifBlank { "Processando..." }, style = MaterialTheme.typography.bodySmall)
-                        Text("Progresso indeterminado: a API não informa porcentagem.",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+
                     }
                 }
             }
@@ -371,11 +625,14 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
                 Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = UaiShapes.card) {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Áudio pronto", fontWeight = FontWeight.SemiBold)
+                        audioInfo[generated?.absolutePath]?.durationMs?.takeIf { it > 0 }?.let {
+                            Text("Duração real · ${VoiceStudioPlan.measured(it)}", style = MaterialTheme.typography.bodySmall)
+                        }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(onClick = { generated?.let(::playFile) },
                                 modifier = Modifier.weight(1f), shape = UaiShapes.button) {
-                                Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow, null)
-                                Spacer(Modifier.width(4.dp)); Text(if (playing) "Pausar" else "Ouvir")
+                                Icon(if (playing && playedFile == generated) Icons.Default.Pause else Icons.Default.PlayArrow, null)
+                                Spacer(Modifier.width(4.dp)); Text(if (playing && playedFile == generated) "Pausar" else "Ouvir")
                             }
                             OutlinedButton(onClick = { generated?.let(::saveExternally) },
                                 modifier = Modifier.weight(1f), shape = UaiShapes.button) {
@@ -416,7 +673,7 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
                         tonalElevation = 1.dp) {
                         Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = { playFile(file) }) {
-                                Icon(if (playing && generated == file) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                Icon(if (playing && playedFile == file) Icons.Default.Pause else Icons.Default.PlayArrow,
                                     "Ouvir áudio")
                             }
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -476,13 +733,15 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
             Column(Modifier.fillMaxWidth().navigationBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 8.dp)) {
                 if (busy) OutlinedButton(onClick = {
-                    job?.cancel(); client.cancel()
+                    job?.cancel(); client.cancel(); textClient.cancel()
                     feedback = "Cancelamento solicitado. Uma chamada já enviada pode ter consumido cota."
                 }, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp), shape = UaiShapes.button) {
                     Icon(Icons.Default.Close, null)
                     Spacer(Modifier.width(8.dp)); Text("Cancelar solicitação")
-                } else BlueButton("Gerar áudio", onClick = { confirm = true },
-                    enabled = StandaloneVoiceTextPolicy.accepted(text, voice?.id.orEmpty()),
+                } else BlueButton(if (mode == VoiceStudioMode.CONTINUOUS) "Gerar áudio" else "Revisar cenas",
+                    onClick = { if (mode == VoiceStudioMode.CONTINUOUS) confirm = true else sceneReview = true },
+                    enabled = StandaloneVoiceTextPolicy.accepted(text, voice?.id.orEmpty()) &&
+                        (if (mode == VoiceStudioMode.CONTINUOUS) configured else scenes.isNotEmpty()),
                     modifier = Modifier.fillMaxWidth())
             }
         }
@@ -493,67 +752,141 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
             "pode consumir cota. Nenhuma nova chamada será feita automaticamente.") },
         confirmButton = { TextButton(onClick = {
             confirmExit = false
-            job?.cancel(); client.cancel(); onBack()
+            job?.cancel(); client.cancel(); textClient.cancel(); onBack()
         }) { Text("Sair") } },
         dismissButton = { TextButton(onClick = { confirmExit = false }) { Text("Continuar aqui") } })
-    if (confirm) AlertDialog(onDismissRequest = { confirm = false },
-        title = { Text("Gerar áudio no Gemini?") },
-        text = { Text("A voz escolhida será usada para gerar um WAV. O texto será enviado ao Google. " +
-            "A solicitação poderá consumir tokens/cota ou gerar cobrança. " +
-            "Nenhuma geração é feita automaticamente.") },
+    if (modelChooser) AlertDialog(onDismissRequest = { modelChooser = false },
+        title = { Text("Gemini · modelo de texto") },
+        text = {
+            Column(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())) {
+                if (busy) Text(stage)
+                else if (textModels.isEmpty()) Text(feedback.ifBlank { "Nenhum modelo listado." })
+                textModels.forEach { item ->
+                    TextButton(onClick = {
+                        textModel = item.id; textPrefs.edit().putString("model", item.id).apply()
+                        modelChooser = false
+                    }, enabled = !busy) {
+                        Text(item.label, color = if (textModel == item.id) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface)
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { modelChooser = false }) { Text("Fechar") } })
+    scriptAction?.let { action ->
+        VoiceStudioTextRequest(action, textModel, { scriptAction = null }) { brief -> runScriptAction(action, brief) }
+    }
+    proposedText?.let { proposal ->
+        AlertDialog(onDismissRequest = { proposedText = null }, title = { Text("Sugestão de roteiro") },
+            text = { Text(proposal, Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState())) },
+            confirmButton = { TextButton(onClick = { text = proposal; proposedText = null }) { Text("Usar texto") } },
+            dismissButton = { TextButton(onClick = { proposedText = null }) { Text("Manter original") } })
+    }
+    proposedTone?.let { suggestion ->
+        AlertDialog(onDismissRequest = { proposedTone = null }, title = { Text(suggestion.label) },
+            text = { Text(suggestion.guidance) },
+            confirmButton = { TextButton(onClick = {
+                selectedTone = text to suggestion.preset; style = VoiceStudioPlan.AUTO; proposedTone = null
+            }) { Text("Aplicar interpretação") } },
+            dismissButton = { TextButton(onClick = { proposedTone = null }) { Text("Voltar") } })
+    }
+    if (restoreBatch) AlertDialog(onDismissRequest = { restoreBatch = false },
+        title = { Text("Restaurar lote de narração?") },
+        text = { Text("O roteiro e as opções atuais serão substituídos pelo último lote salvo no aparelho.") },
+        confirmButton = { TextButton(onClick = {
+            restoreBatch = false
+            scope.launch {
+                val previous = withContext(Dispatchers.IO) { batchDraft.load() }
+                if (previous != null) {
+                    restore(previous); feedback = "Lote restaurado."; sceneReview = true
+                } else feedback = "Lote salvo indisponível."
+            }
+        }) { Text("Restaurar") } },
+        dismissButton = { TextButton(onClick = { restoreBatch = false }) { Text("Voltar") } })
+    if (sceneReview && scenes.isNotEmpty()) VoiceStudioSceneReview(scenes, ready, style, tone, busy,
+        if (busy) stage else feedback, configured && voice != null, { sceneReview = false },
+        { job?.cancel(); client.cancel() },
+        {
+            if (ready.count { it != null } == scenes.size) runScenes(assemble = true)
+            else { retryScene = null; confirm = true; sceneReview = false }
+        },
+        { index -> retryScene = index; confirm = true; sceneReview = false },
+        { play(it, false) })
+    if (confirm) AlertDialog(onDismissRequest = { confirm = false; previewRequested = false; retryScene = null },
+        title = { Text(if (previewRequested) "Gerar amostra no Gemini?" else "Gerar áudio no Gemini?") },
+        text = {
+            val details = if (previewRequested) "Apenas um trecho curto será enviado ao Google. "
+                else if (mode == VoiceStudioMode.CONTINUOUS) "O texto será enviado ao Google para gerar um WAV. "
+                else if (retryScene != null) "Somente a cena ${retryScene!! + 1} será solicitada novamente. "
+                else "Serão enviados apenas os trechos pendentes. Cada trecho pronto fica salvo. "
+            Text(details + "A solicitação poderá consumir tokens/cota ou gerar cobrança. " +
+                "Nenhuma geração é feita automaticamente.")
+        },
         confirmButton = { TextButton(onClick = {
             confirm = false
-            if (busy || !StandaloneVoiceTextPolicy.accepted(text, voice?.id.orEmpty())) return@TextButton
-            val requestedText = text
+            if (busy || !configured || !StandaloneVoiceTextPolicy.accepted(text, voice?.id.orEmpty())) return@TextButton
+            val sample = previewRequested
+            previewRequested = false
+            if (!sample && mode != VoiceStudioMode.CONTINUOUS) {
+                val retry = retryScene
+                retryScene = null
+                sceneReview = true
+                runScenes(retry)
+                return@TextButton
+            }
+            val requestedText = if (sample)
+                VoiceStudioPlan.scenes(text, VoiceStudioMode.SEVEN, emptyList(), style, tone).first().text
+                else text
             val requestedVoice = voice!!.id
             val requestedModel = model
-            val requestedStyle = GeminiNarrationStyling.instruction(style)
+            val requestedStyle = interpretation
             val requestedLanguage = language
             busy = true
-            feedback = "Gerando áudio..."
+            feedback = if (sample) "Gerando amostra..." else "Gerando áudio..."
             apiUsage = ""
             job = scope.launch {
                 try {
                     val key = withContext(Dispatchers.IO) { credentials.read() }
-                        ?: throw IllegalStateException("Configure uma chave Gemini em Serviços e APIs.")
-                    stage = "Verificando chave e limite da API..."
+                        ?: throw IOException("Configure uma chave Gemini em Serviços e APIs.")
                     pacing.beforeRequest(requestedModel) { wait ->
                         stage = "Aguardando limite local configurado (${wait / 1000}s)."
                     }
                     val started = System.currentTimeMillis()
                     stage = "Aguardando resposta do Gemini..."
                     val wave = client.synthesize(key, requestedModel, requestedVoice,
-                        requestedStyle, requestedText, requestedLanguage)
-                    stage = "Salvando WAV no armazenamento privado..."
-                    val selectedVoiceName = voice?.let { GeminiVoiceAliases.title(it, localVoiceAliases) }.orEmpty()
-                    val info = StandaloneVoiceLibrary.Info(
-                        title = "Narração ${DateFormat.getDateTimeInstance(DateFormat.SHORT,
-                            DateFormat.SHORT).format(Date())}",
-                        voiceName = selectedVoiceName,
-                        excerpt = requestedText.trim().replace(Regex("\\s+"), " ").take(120),
-                        style = style,
-                        durationMs = wave.durationMs)
-                    val file = withContext(Dispatchers.IO) { library.save(wave, info) }
-                    reloadLibrary()
-                    generated = file
-                    val recorded = withContext(Dispatchers.IO) {
-                        ledger.events().lastOrNull { it.at >= started && it.operation == "narracao" &&
-                            it.model == requestedModel && it.status == "ok" }
+                        requestedStyle, requestedText, requestedLanguage, useFailover = false)
+                    if (sample) {
+                        val old = shortPreview
+                        val file = withContext(Dispatchers.IO) {
+                            File.createTempFile("voice-sample-", ".wav", ctx.cacheDir).apply { writeBytes(wave.bytes) }
+                        }
+                        shortPreview = file
+                        play(file, false)
+                        old?.delete()
+                        feedback = "Amostra pronta. Duração real · ${VoiceStudioPlan.measured(wave.durationMs)}."
+                    } else {
+                        stage = "Salvando WAV no armazenamento privado..."
+                        val info = infoFor(wave, false)
+                        val file = withContext(Dispatchers.IO) { library.save(wave, info) }
+                        reloadLibrary()
+                        val recorded = withContext(Dispatchers.IO) {
+                            ledger.events().lastOrNull { it.at >= started && it.operation == "narracao" &&
+                                it.model == requestedModel && it.status == "ok" }
+                        }
+                        apiUsage = recorded?.tokens?.total?.let { "$it tokens informados pelo Gemini." }
+                            ?: "Consumo real de tokens não informado pela API."
+                        feedback = "Áudio gerado e salvo no aplicativo."
+                        playFile(file)
                     }
-                    apiUsage = recorded?.tokens?.total?.let { "$it tokens informados pelo Gemini." }
-                        ?: "Consumo real de tokens não informado pela API."
-                    feedback = "Áudio gerado e salvo no aplicativo. Duração: ${wave.durationMs / 1000}s."
-                    playFile(file)
                 } catch (e: CancellationException) {
                     feedback = "Solicitação interrompida. Uma chamada já enviada pode consumir cota."
                     throw e
                 } catch (e: Exception) {
-                    feedback = "Não foi possível gerar o áudio: ${GeminiVoiceCatalog.safeMessage(e)} " +
-                        "Se a chamada chegou ao Google, ela pode ter consumido cota."
+                    feedback = "Não foi possível gerar o áudio. ${errorFor(e)}"
                 } finally { busy = false; stage = "" }
             }
         }) { Text("Confirmar e gerar") } },
-        dismissButton = { TextButton(onClick = { confirm = false }) { Text("Voltar") } })
+        dismissButton = { TextButton(onClick = { confirm = false; previewRequested = false; retryScene = null }) { Text("Voltar") } })
     if (renameFile != null) AlertDialog(onDismissRequest = { renameFile = null },
         title = { Text("Renomear áudio") },
         text = { OutlinedTextField(value = renameText,
@@ -573,8 +906,12 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
     if (addToEditorFile != null && onAddToEditor != null) AlertDialog(
         onDismissRequest = { addToEditorFile = null },
         title = { Text("Adicionar ao projeto aberto?") },
-        text = { Text("O WAV será copiado para o armazenamento do projeto e adicionado na linha " +
-            "do tempo. O áudio original da biblioteca continuará salvo.") },
+        text = {
+            val place = if (audioInfo[addToEditorFile?.absolutePath]?.startsAtZero == true)
+                "no início da linha do tempo para acompanhar os clipes"
+                else "na posição atual da linha do tempo"
+            Text("O WAV será copiado para o projeto e adicionado $place. O original continua salvo.")
+        },
         confirmButton = { TextButton(onClick = {
             val file = addToEditorFile
             addToEditorFile = null

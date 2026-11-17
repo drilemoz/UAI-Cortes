@@ -34,7 +34,8 @@ class GoogleVoices255(unittest.TestCase):
         assert 'GeminiSpeechLanguage.style(style, languageMode)' in core
         assert 'GeminiSpeechLanguage.style(styleInstruction, sampleLanguage)' in screen
         assert 'requestedStyle, requestedText, requestedLanguage)' in screen
-        assert 'requestedStyle, requestedText, requestedLanguage)' in stand
+        assert 'requestedStyle, requestedText, requestedLanguage,' in stand
+        assert 'scene.text, request.language, useFailover = false)' in stand
         assert 'GeminiSpeechLanguage.choices.forEach' in screen
         assert 'GeminiSpeechLanguage.choices.forEach' in stand
         assert 'Do not translate' in rules

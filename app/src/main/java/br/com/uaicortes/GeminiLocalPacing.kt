@@ -10,6 +10,9 @@ import kotlin.coroutines.coroutineContext
  * não consulta cotas oficiais, não roda em background e não faz chamadas de rede.
  * O uso fora deste aparelho pode reduzir a capacidade real.
  */
+internal class GeminiConfiguredDailyLimit : IllegalStateException(
+    "Limite diário configurado no app atingido. Verifique a cota do projeto Gemini.")
+
 internal class GeminiLocalPacing(context: Context) {
     private val keys = GeminiCredentialStore(context)
     private val ledger = GeminiUsageLedger(context)
@@ -27,8 +30,7 @@ internal class GeminiLocalPacing(context: Context) {
             val events = ledger.events()
             val forecast = GeminiQuotaPolicy.compute(events, project, model, "narracao", limits)
             if (limits.rpd != null && forecast.remainingToday == 0) {
-                error("O limite diário configurado para este projeto/modelo foi alcançado neste aparelho. " +
-                    "Revise o AI Studio e retome o lote quando houver capacidade.")
+                throw GeminiConfiguredDailyLimit()
             }
             val waitMs = GeminiQuotaPolicy.rpmWaitMs(events, project, model, limits.rpm) ?: break
             onWait(waitMs)

@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.286 (2026-11-17)
+
+- **Estúdio de Voz:** interpretação Automática por padrão, com sugestão local de tom e amostra curta opcional. IA do roteiro usa um modelo Gemini de texto separado do modelo/voz TTS, mediante confirmação. O roteiro só é trocado ao aceitar a proposta.
+- **Tempo:** previsão conservadora arredondada para cima, em segundos ou minutos. Mostra o tempo medido no WAV ao concluir.
+- **Narração por cenas:** janelas de 7 s, 10 s ou dos clipes. Cada trecho fica salvo antes da próxima chamada. Retomar processa só pendências. Trechos maiores que a janela podem ser refeitos, e a montagem local preserva os inícios sem cortar a fala.
+- **Cota:** indica progresso parcial, distingue limite diário configurado no app de 429 genérico e só anuncia cota diária Gemini mediante identificação na resposta.
+
 # Uai Cortes 0.1.285 (2026-11-17)
 
 - **Linha do tempo:** vídeo, imagem e PiP em 34 dp, áudio/música/vozes em 28 dp e legendas em 24 dp. Ícones menores com nomes, transições marcadas no corte e texto da legenda quando selecionada.
