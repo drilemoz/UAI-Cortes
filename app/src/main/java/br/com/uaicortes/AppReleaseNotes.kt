@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.281"
-    const val VERSION_CODE = 282
+    const val VERSION_NAME = "0.1.282"
+    const val VERSION_CODE = 283
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.282", listOf(
+            ReleaseFeature("music-track-282", "Música em uma faixa própria",
+                "Toque em Música ou em Adicionar na linha do tempo. Escolha o arquivo e ajuste início e volume no pop-up, sem alterar o áudio e as vozes já adicionados.", "check"),
+            ReleaseFeature("compact-editor-lanes-282", "Mais espaço na linha do tempo",
+                "As faixas e a régua estão um pouco mais baixas. Os gestos existentes de mover e aparar foram preservados.", "check")
+        )),
         ReleaseSummary("0.1.281", listOf(
             ReleaseFeature("layer-layout-281", "Mais espaço para conferir suas camadas",
                 "Os PiPs ficam em uma única linha. Posição, tamanho, duração e opacidade só abrem quando você precisa. A prévia usa a altura disponível.", "check"),

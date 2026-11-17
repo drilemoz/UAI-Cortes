@@ -30,9 +30,18 @@ internal object ExportAudioPolicy {
         ClipAudioBindings.resolved(project).filter { audible(it.volume) &&
             it.startMs < project.durationMs }
 
+    fun musicWindow(music: Music, projectDurationMs: Long,
+                    sourceDurationMs: Long = music.sourceDurationMs): Window? =
+        if (music.loops && projectDurationMs > 0L) Window(0L, 0L, projectDurationMs, 0L)
+        else window(music.startMs, 0L, music.sourceDurationMs, sourceDurationMs, projectDurationMs)
+
+    fun activeMusic(project: VideoProject): Music? = project.music?.takeIf {
+        audible(it.volume) && musicWindow(it, project.durationMs) != null
+    }
+
     /** A presença real de áudio no PiP deve ser inspecionada no contêiner de origem.
      * Um vídeo PiP sem som, mesmo com volume habilitado, não deve exigir áudio no MP4.
      */
     fun hasRequiredAudio(project: VideoProject): Boolean = activeExtraTracks(project).isNotEmpty() ||
-        project.music?.let { audible(it.volume) } == true
+        activeMusic(project) != null
 }

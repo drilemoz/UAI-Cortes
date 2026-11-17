@@ -13,6 +13,10 @@ assert 'Triple("Prompt Flow"' not in editor
 assert all(item not in editor for item in (
     'Triple("Salvar",', 'Triple("Vídeo +",', 'Triple("Imagem",', 'Triple("PiP",',
 ))
-assert 'when(index) {0->onAddVideo();1->onAddImage();2->onOpenPiP();' in timeline
+assert 'openTrack(index)' in timeline
+assert all(route in timeline for route in (
+    'TimelineKind.MAIN_VIDEO -> onAddVideo()', 'TimelineKind.MAIN_IMAGE -> onAddImage()',
+    'TimelineKind.PIP -> onOpenPiP()',
+))
 assert '"animate" -> if (animationDestination == "append") "editor" else "home"' in nav
 print('OK: atalhos exclusivos do editor, salvar fixo, menu Adicionar e rotas legadas preservados')

@@ -8,7 +8,7 @@ read = lambda name: (src / name).read_text(encoding='utf-8')
 editor = read('EditorScreen.kt')
 quick = read('QuickAudioDialog.kt')
 probe, apply = quick.split('        confirmButton = {', 1)
-assert 'if (key == "audio") openQuickAudio("") else onEdit(key)' in editor
+assert 'if (key == "audio") openQuickAudio("")' in editor
 assert 'onOpenAudio={openQuickAudio("")}' in editor
 assert 'track?.clipId != null || track?.kind == VoiceIaPolicy.KIND' in editor
 assert 'OpenDocument()' in probe and 'media.duration(uri)' in probe

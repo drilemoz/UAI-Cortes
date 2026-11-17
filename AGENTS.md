@@ -1,3 +1,10 @@
+# v0.1.282 — Música e linha do tempo
+
+- Base v0.1.281/versionCode 282; atual v0.1.282/versionCode 283. Preservar schema 4, cinco APKs e assinatura.
+- Música de fundo é um único `VideoProject.music`, separado de `audioTracks`. A janela fica em tempo absoluto. Novas músicas não repetem, e projetos legados mantêm repetição desde zero. Nunca adicione silêncio dentro da sequência repetida.
+- Áudio e Música usam o mesmo pop-up. Só Aplicar substitui o campo e copia a fonte. A faixa de Música abre o pop-up no toque e não tem alças.
+- Áudio no MP4 deve ser validado por amostras decodificadas antes de declarar sincronismo comprovado em Android.
+
 # v0.1.281 — Camadas compactas
 
 - Base v0.1.280/versionCode 281; atual v0.1.281/versionCode 282. Preservar schema 4, cinco APKs, assinatura e menu rápido de áudio.

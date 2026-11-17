@@ -122,7 +122,7 @@ assert '.put("sourceStartMs", sourceStartMs)' in model
 assert 'j.optLong("sourceStartMs", 0L)' in model
 assert 'AudioTrackTiming.valid(' in ui and 'Salvar corte' in ui and 'Ouvir corte' in ui
 assert 'sourceStartMs=editSourceStart,durationMs=editDuration' in ui
-assert 'audio.sourceStartMs' in ui and 'sourceStartMs+(projectMs-startMs)' in ui
+assert 'audio.sourceStartMs' in ui and 'else sourceStartMs + elapsed' in ui
 assert '.setStartPositionMs(window.sourceStartMs)' in source
 assert '.setEndPositionMs(window.sourceStartMs + window.playableMs)' in source
 assert 'MIN_TRIM_MS = 250L' in logic and 'fun initialRange(' in logic

@@ -156,7 +156,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
         ExportSubtitlePolicy.summarize(p.subtitles, p.durationMs)
     }
     val activeAudios = remember(p.audioTracks, p.clips) { ExportAudioPolicy.activeExtraTracks(p) }
-    val musicEnabled = p.music?.let { ExportAudioPolicy.audible(it.volume) } == true
+    val musicEnabled = ExportAudioPolicy.activeMusic(p) != null
     val pipAudios = p.overlays.count {
         !it.isImage && !it.muted && ExportAudioPolicy.audible(it.volume)
     }

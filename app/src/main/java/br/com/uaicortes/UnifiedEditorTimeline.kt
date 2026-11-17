@@ -68,8 +68,8 @@ internal object UnifiedTimelinePolicy {
     }
 }
 
-private val laneHeight = 52.dp
-private val rulerHeight = 30.dp
+private val laneHeight = 44.dp
+private val rulerHeight = 26.dp
 
 /** A área central faz o drag; as alças de 18dp aparecem após seleção.
  * O único commit ocorre em onDragEnd. Tap NÃO navega para outras telas.
@@ -127,9 +127,13 @@ private fun TimelineSegment(span: TimelineVisualSpan, kind: TimelineKind,
             })
         } else Modifier)
         .clickable { onSelect(); onTap() }
-        .semantics { contentDescription = "${span.title}, início ${formatPipMs(span.startMs)}, duração ${formatPipMs(span.durationMs)}. Toque para abrir as ações; segure e arraste o centro para mover e as bordas para aparar." },
+        .semantics {
+            contentDescription = "${span.title}, início ${formatPipMs(span.startMs)}, duração ${formatPipMs(span.durationMs)}. " +
+                (if (editable) "Toque para abrir as ações; arraste o centro para mover e as bordas para aparar."
+                else "Toque para editar.")
+        },
         contentAlignment=Alignment.Center) {
-        if(selected && drawableWidth>=45.dp) {
+        if(editable && selected && drawableWidth>=45.dp) {
             Row(Modifier.fillMaxSize(),verticalAlignment=Alignment.CenterVertically) {
                 Box(Modifier.width(7.dp).fillMaxHeight().background(Color.White.copy(alpha=.94f)))
                 Text(span.title,modifier=Modifier.weight(1f).padding(horizontal=3.dp),
@@ -183,7 +187,7 @@ internal fun UnifiedEditorTimeline(
     onSeek:(Long)->Unit,onClip:(String)->Unit,onSelectClip:(String)->Unit,
     onTransition:(Int)->Unit,onOverlay:(String)->Unit,onSelectOverlay:(String)->Unit,
     onAudio:(String)->Unit,onAddVideo:()->Unit,onAddImage:()->Unit,
-    onOpenPiP:()->Unit,onOpenAudio:()->Unit,onOpenVoice:()->Unit,
+    onOpenPiP:()->Unit,onOpenAudio:()->Unit,onOpenMusic:()->Unit,onOpenVoice:()->Unit,
     onSubtitle:(String)->Unit,onOpenSubtitle:()->Unit,
     onTimelineEdit:(TimelineKind,String,TimelineHandle,Long,Long)->Unit,
     onGestureStart:()->Unit,onGestureEnd:()->Unit,
@@ -200,8 +204,13 @@ internal fun UnifiedEditorTimeline(
     val resolved=ClipAudioBindings.resolved(project)
     val voice=resolved.filter { it.kind==VoiceIaPolicy.KIND }
     val audio=resolved.filter { it.kind!=VoiceIaPolicy.KIND }
-    val audioSpans=audio.map {TimelineVisualSpan(it.id,it.title,it.startMs,it.durationMs)}+
-        (project.music?.let {listOf(TimelineVisualSpan("music",it.title,0L,total))}?:emptyList())
+    val audioSpans=audio.map {TimelineVisualSpan(it.id,it.title,it.startMs,it.durationMs)}
+    val musicSpan = project.music?.let { music ->
+        ExportAudioPolicy.musicWindow(music, project.durationMs)?.let {
+            TimelineVisualSpan("music", music.title.ifBlank { "Música" },
+                it.timelineStartMs, it.playableMs)
+        }
+    }
     val voiceSpans=voice.map {TimelineVisualSpan(it.id,it.title,it.startMs,it.durationMs)}
     val subtitles=project.subtitles.map {TimelineVisualSpan(it.id,it.text,it.startMs,
         (it.endMs-it.startMs).coerceAtLeast(0L))}
@@ -213,15 +222,28 @@ internal fun UnifiedEditorTimeline(
         Triple(Icons.Default.Movie,"Vídeo",Blue),
         Triple(Icons.Default.Image,"Imagem",Color(0xFF9877CB)),
         Triple(Icons.Default.Layers,"PiP",Purple),
-        Triple(Icons.Default.MusicNote,"Áudio",Green),
+        Triple(Icons.Default.GraphicEq,"Áudio",Green),
+        Triple(Icons.Default.MusicNote,"Música",Color(0xFFA25125)),
         Triple(Icons.Default.RecordVoiceOver,"Vozes",Purple),
         Triple(Icons.Default.ClosedCaption,"Legendas",Color(0xFFBE8B36)))
-    val lanes=listOf(video,images,overlays,audioSpans,voiceSpans,subtitles)
+    val lanes=listOf(video,images,overlays,audioSpans,listOfNotNull(musicSpan),voiceSpans,subtitles)
     val kinds=listOf(TimelineKind.MAIN_VIDEO,TimelineKind.MAIN_IMAGE,TimelineKind.PIP,
-        TimelineKind.AUDIO,TimelineKind.VOICE,TimelineKind.SUBTITLE)
-    // Apenas faixas com conteúdo. Vídeo continua como faixa base;
-    // botões de adicionar ficam disponíveis para os tipos ainda vazios.
-    val visibleRows=tracks.indices.filter { it == 0 || lanes[it].isNotEmpty() }
+        TimelineKind.AUDIO,TimelineKind.MUSIC,TimelineKind.VOICE,TimelineKind.SUBTITLE)
+    // Mesmo quando não cabe mais no projeto, a música já instalada pode ser editada.
+    val visibleRows=tracks.indices.filter {
+        it == 0 || lanes[it].isNotEmpty() || (kinds[it] == TimelineKind.MUSIC && project.music != null)
+    }
+    fun openTrack(index: Int) {
+        when (kinds[index]) {
+            TimelineKind.MAIN_VIDEO -> onAddVideo()
+            TimelineKind.MAIN_IMAGE -> onAddImage()
+            TimelineKind.PIP -> onOpenPiP()
+            TimelineKind.AUDIO -> onOpenAudio()
+            TimelineKind.MUSIC -> onOpenMusic()
+            TimelineKind.VOICE -> onOpenVoice()
+            TimelineKind.SUBTITLE -> onOpenSubtitle()
+        }
+    }
     var addMenu by remember(project.id) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().padding(horizontal=10.dp)
         .clip(RoundedCornerShape(12.dp))
@@ -240,8 +262,7 @@ internal fun UnifiedEditorTimeline(
                         DropdownMenuItem(text={Text(track.second)},leadingIcon={Icon(track.first,null)},
                             onClick={
                                 addMenu=false
-                                when(index) {0->onAddVideo();1->onAddImage();2->onOpenPiP();
-                                    3->onOpenAudio();4->onOpenVoice();else->onOpenSubtitle()}
+                                openTrack(index)
                             })
                     }
                 }
@@ -268,10 +289,7 @@ internal fun UnifiedEditorTimeline(
                     val item = tracks[i]
                     Box(Modifier.height(laneHeight).fillMaxWidth().padding(vertical=2.dp)
                         .clip(RoundedCornerShape(7.dp)).background(item.third)
-                        .clickable {
-                            when(i){0->onAddVideo();1->onAddImage();2->onOpenPiP();
-                                3->onOpenAudio();4->onOpenVoice();else->onOpenSubtitle()}
-                        }.semantics {contentDescription="Adicionar ou editar ${item.second}"},
+                        .clickable { openTrack(i) }.semantics {contentDescription="Adicionar ou editar ${item.second}"},
                         contentAlignment=Alignment.Center) {
                         Icon(item.first,item.second,modifier=Modifier.size(20.dp),tint=Color.White)
                     }
@@ -304,7 +322,7 @@ internal fun UnifiedEditorTimeline(
                                         when(item.kind){
                                             TimelineKind.MAIN_VIDEO,TimelineKind.MAIN_IMAGE->onSelectClip(item.id)
                                             TimelineKind.PIP->onSelectOverlay(item.id)
-                                            TimelineKind.AUDIO,TimelineKind.VOICE->{ /* toque apenas seleciona */ }
+                                            TimelineKind.AUDIO,TimelineKind.VOICE,TimelineKind.MUSIC->{ /* toque apenas seleciona */ }
                                             TimelineKind.SUBTITLE->{ /* editar pelo lápis */ }
                                         }
                                     },onEntryTap={ item ->
@@ -312,6 +330,7 @@ internal fun UnifiedEditorTimeline(
                                             TimelineKind.MAIN_VIDEO,TimelineKind.MAIN_IMAGE->onClip(item.id)
                                             TimelineKind.PIP->onOverlay(item.id)
                                             TimelineKind.AUDIO,TimelineKind.VOICE->onAudio(item.id)
+                                            TimelineKind.MUSIC->onOpenMusic()
                                             TimelineKind.SUBTITLE->onSubtitle(item.id)
                                         }
                                     },onEdit={kind,id,handle,delta,target ->
@@ -338,8 +357,7 @@ internal fun UnifiedEditorTimeline(
         // Ações do clipe no próprio toque: não ocupar uma linha com botão "Editar".
         // O gesto de arrastar é tratado separadamente por detectDragGestures e
         // nunca abre o menu enquanto o usuário move o clipe.
-        Text("Toque em um vídeo para Cortar, Editar ou Excluir. Segure e arraste para mover; " +
-            "puxe as bordas para aparar.",
+        Text("Toque para editar. Nas faixas com alças, arraste para mover ou aparar.",
             fontSize=10.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,
             modifier=Modifier.padding(horizontal=4.dp,vertical=2.dp))
     }

@@ -29,22 +29,26 @@ internal fun QuickAudioDialog(
     atMs: Long,
     track: AudioTrack?,
     onDismiss: () -> Unit,
-    onSave: (VideoProject) -> Boolean
+    onSave: (VideoProject) -> Boolean,
+    musicMode: Boolean = false
 ) {
+    val music = if (musicMode) project.music else null
+    val mediaLabel = if (musicMode) "Música" else "Áudio"
+    val initialUri = music?.uri ?: track?.uri
     val context = LocalContext.current
     val media = remember(context) { MediaImportController(context) }
     val scope = rememberCoroutineScope()
     val latestProject by rememberUpdatedState(project)
     val latestSave by rememberUpdatedState(onSave)
-    var uriText by rememberSaveable { mutableStateOf(track?.uri) }
-    var title by rememberSaveable { mutableStateOf(track?.title.orEmpty()) }
-    var audioMs by rememberSaveable { mutableLongStateOf(track?.durationMs ?: 0L) }
-    val initialStartMs = remember { (track?.startMs ?: atMs).coerceIn(0L, project.durationMs) }
+    var uriText by rememberSaveable { mutableStateOf(initialUri) }
+    var title by rememberSaveable { mutableStateOf((music?.title ?: track?.title).orEmpty()) }
+    var audioMs by rememberSaveable { mutableLongStateOf(music?.sourceDurationMs ?: track?.durationMs ?: 0L) }
+    val initialStartMs = remember { (music?.startMs ?: track?.startMs ?: atMs).coerceIn(0L, project.durationMs) }
     var enteredTime by rememberSaveable { mutableStateOf<String?>(null) }
     val initialDigits = NumericTime.fromMs(initialStartMs)
     val startMs = if (enteredTime == null || enteredTime == initialDigits) initialStartMs
         else NumericTime.toMs(enteredTime.orEmpty())
-    var volume by rememberSaveable { mutableFloatStateOf(track?.volume ?: .35f) }
+    var volume by rememberSaveable { mutableFloatStateOf(music?.volume ?: track?.volume ?: if (musicMode) .25f else .35f) }
     var busy by remember { mutableStateOf(false) }
     var error by rememberSaveable { mutableStateOf("") }
     val choose = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -54,7 +58,7 @@ internal fun QuickAudioDialog(
             try {
                 val (name, duration) = withContext(Dispatchers.IO) {
                     media.persistReadAccess(uri)
-                    media.title(uri).ifBlank { "Áudio" } to media.duration(uri)
+                    media.title(uri).ifBlank { mediaLabel } to media.duration(uri)
                 }
                 if (duration < AudioTrackTiming.MIN_TRIM_MS) {
                     error = "Não foi possível ler um áudio com pelo menos 0,25 s."
@@ -73,12 +77,12 @@ internal fun QuickAudioDialog(
             }
         }
     }
-    LaunchedEffect(track?.id) {
-        if (track != null && audioMs <= 0L) {
+    LaunchedEffect(track?.id, initialUri) {
+        if (initialUri != null && audioMs <= 0L) {
             busy = true
             try {
-                audioMs = withContext(Dispatchers.IO) { media.duration(Uri.parse(track.uri)) }
-                    .minus(track.sourceStartMs).coerceAtLeast(0L)
+                audioMs = withContext(Dispatchers.IO) { media.duration(Uri.parse(initialUri)) }
+                    .minus(track?.sourceStartMs ?: 0L).coerceAtLeast(0L)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -90,21 +94,30 @@ internal fun QuickAudioDialog(
         }
     }
     val lengths = project.clips.map(Clip::durationMs)
-    val window = startMs?.let { QuickAudioPlacement.resolve(lengths, it, audioMs) }
+    val legacyLoop = music != null && music.loops && startMs == 0L && uriText == music.uri
+    val window = startMs?.let {
+        QuickAudioPlacement.resolve(lengths, it, if (legacyLoop) project.durationMs else audioMs)
+    }
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
         shape = UaiShapes.dialog,
-        title = { Text(if (track == null) "Adicionar áudio" else "Editar áudio") },
+        title = {
+            Text(if (musicMode) (if (music == null) "Adicionar música" else "Editar música")
+                else (if (track == null) "Adicionar áudio" else "Editar áudio"))
+        },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (track == null) OutlinedButton(onClick = { choose.launch(arrayOf("audio/*")) },
                     enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-                    Text(if (uriText == null) "Escolher áudio" else "Trocar áudio")
+                    Text(if (musicMode) (if (uriText == null) "Escolher música" else "Trocar música")
+                        else (if (uriText == null) "Escolher áudio" else "Trocar áudio"))
                 }
                 if (uriText != null) {
-                    Text(title.ifBlank { "Áudio" }, style = MaterialTheme.typography.titleSmall,
+                    Text(title.ifBlank { mediaLabel }, style = MaterialTheme.typography.titleSmall,
                         maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text("Duração do áudio: ${formatPipMs(audioMs)}", style = MaterialTheme.typography.bodySmall)
+                    Text("Duração do arquivo: ${formatPipMs(audioMs)}", style = MaterialTheme.typography.bodySmall)
+                    if (legacyLoop) Text("Esta música já estava configurada para repetir desde o início.",
+                        style = MaterialTheme.typography.bodySmall)
                     OutlinedTextField(value = enteredTime ?: initialDigits,
                         onValueChange = { enteredTime = NumericTime.sanitize(it) },
                         label = { Text("Começar em") }, enabled = !busy,
@@ -131,12 +144,16 @@ internal fun QuickAudioDialog(
                 }
                 if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
-                if (track != null) TextButton(onClick = {
+                if (track != null || music != null) TextButton(onClick = {
                     val current = latestProject
-                    if (latestSave(current.copy(audioTracks = current.audioTracks.filterNot { it.id == track.id }))) {
-                        onDismiss()
-                    } else error = "Não foi possível remover a faixa."
-                }, enabled = !busy) { Text("Remover faixa", color = MaterialTheme.colorScheme.error) }
+                    val changed = if (musicMode) current.copy(music = null)
+                        else current.copy(audioTracks = current.audioTracks.filterNot { it.id == track?.id })
+                    if (latestSave(changed)) onDismiss()
+                    else error = "Não foi possível remover a faixa."
+                }, enabled = !busy) {
+                    Text(if (musicMode) "Remover música" else "Remover faixa",
+                        color = MaterialTheme.colorScheme.error)
+                }
             }
         },
         confirmButton = {
@@ -147,13 +164,19 @@ internal fun QuickAudioDialog(
                     busy = true
                     error = ""
                     try {
-                        val savedUri = if (track == null) withContext(Dispatchers.IO) {
+                        val savedUri = if (track == null && selectedUri != initialUri) withContext(Dispatchers.IO) {
                             media.protectedCopy(Uri.parse(selectedUri), project.id, ProjectMediaCopies.Kind.AUDIO).toString()
                         } else selectedUri
                         val current = latestProject
                         if (current.id != project.id || current.clips.map(Clip::durationMs) != lengths ||
+                            (musicMode && current.music?.uri != music?.uri) ||
                             (track != null && current.audioTracks.none { it.id == track.id })) {
                             error = "A linha do tempo mudou. Confira o alcance antes de aplicar."
+                        } else if (musicMode) {
+                            val updated = Music(savedUri, title, volume,
+                                startMs = placement.startMs, sourceDurationMs = audioMs, repeat = legacyLoop)
+                            if (latestSave(current.copy(music = updated))) onDismiss()
+                            else error = "Não foi possível salvar a música."
                         } else {
                             val updated = if (track == null)
                                 AudioTrack(savedUri, title, placement.startMs, placement.durationMs, volume)
@@ -188,35 +211,15 @@ private fun quickAudioCoverage(window: QuickAudioPlacement.Window, clips: List<C
     val last = window.last
     val end = formatPipMs(last.localMs)
     val start = formatPipMs(first.localMs)
+    fun join(index: Int, video: String, photo: String) =
+        "${if (clips[index].isImage) photo else video} ${label(index)}"
     val coverage = if (first.clipIndex == last.clipIndex)
-        "Toca de $start até $end no ${label(first.clipIndex)}."
-    else "Vai de $start do ${label(first.clipIndex)} até $end do ${label(last.clipIndex)}."
+        "Toca de $start até $end ${join(first.clipIndex, "no", "na")}."
+    else "Vai de $start ${join(first.clipIndex, "do", "da")} até $end ${join(last.clipIndex, "do", "da")}."
     return when {
         last.clipIndex == clips.lastIndex -> coverage
-        last.clipIndex == clips.lastIndex - 1 -> "$coverage O ${label(clips.lastIndex)} não recebe este áudio."
-        else -> "$coverage Os clipes seguintes não recebem este áudio."
+        last.clipIndex == clips.lastIndex - 1 -> "$coverage ${join(clips.lastIndex, "O", "A")} não recebe esta faixa."
+        else -> "$coverage Os clipes seguintes não recebem esta faixa."
     }
 }
 
-@Composable
-internal fun QuickMusicVolumeDialog(project: VideoProject, onDismiss: () -> Unit,
-    onSave: (VideoProject) -> Boolean) {
-    val music = project.music ?: return
-    var volume by rememberSaveable { mutableFloatStateOf(music.volume) }
-    var failed by rememberSaveable { mutableStateOf(false) }
-    fun save(changed: VideoProject) {
-        if (onSave(changed)) onDismiss() else failed = true
-    }
-    AlertDialog(onDismissRequest = onDismiss, shape = UaiShapes.dialog, title = { Text("Música") },
-        text = { Column {
-            Text(music.title, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Text("Volume: ${(volume * 100).roundToInt()}%")
-            Slider(volume, { volume = it })
-            TextButton(onClick = { save(project.copy(music = null)) }) { Text("Remover música") }
-            if (failed) Text("Não foi possível salvar a alteração.", color = MaterialTheme.colorScheme.error)
-        } },
-        confirmButton = { Button(onClick = { save(project.copy(music = music.copy(volume = volume))) }) {
-            Text("Aplicar")
-        } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } })
-}

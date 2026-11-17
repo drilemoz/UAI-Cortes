@@ -87,9 +87,20 @@ data class Overlay(
     }
 }
 
-data class Music(val uri: String, val title: String, val volume: Float = 0.35f) {
+/** Música de fundo única. Projetos antigos não tinham duração, nem posição, e repetiam desde zero. */
+data class Music(val uri: String, val title: String, val volume: Float = 0.35f,
+    val startMs: Long = 0L, val sourceDurationMs: Long = 0L, val repeat: Boolean = true) {
+    val loops: Boolean get() = repeat && startMs == 0L
+
     fun json() = JSONObject().put("uri", uri).put("title", title).put("volume", volume.toDouble())
-    companion object { fun read(j: JSONObject) = Music(j.getString("uri"), j.optString("title"), j.optDouble("volume", 0.35).toFloat()) }
+        .put("startMs", startMs).put("sourceDurationMs", sourceDurationMs).put("repeat", repeat)
+
+    companion object {
+        fun read(j: JSONObject) = Music(j.getString("uri"), j.optString("title"),
+            j.optDouble("volume", .35).toFloat().let { if (it.isFinite()) it.coerceIn(0f, 1f) else .35f },
+            j.optLong("startMs").coerceAtLeast(0L), j.optLong("sourceDurationMs").coerceAtLeast(0L),
+            j.optBoolean("repeat", true))
+    }
 }
 
 /** Texto com tempo absoluto na linha do tempo (sem reconhecimento de voz ou serviços externos). */

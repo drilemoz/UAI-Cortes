@@ -4,7 +4,7 @@ package br.com.uaicortes
  * Todas as operações de um gesto são calculadas e persistidas UMA vez, ao soltar.
  */
 internal enum class TimelineHandle { MOVE, LEFT, RIGHT }
-internal enum class TimelineKind { MAIN_VIDEO, MAIN_IMAGE, PIP, AUDIO, VOICE, SUBTITLE }
+internal enum class TimelineKind { MAIN_VIDEO, MAIN_IMAGE, PIP, AUDIO, MUSIC, VOICE, SUBTITLE }
 internal data class TimelineEditResult(val project: VideoProject, val explanation: String = "", val changed: Boolean = false)
 
 internal object TimelineDirectEdit {
@@ -269,6 +269,8 @@ internal object TimelineMagnet {
             TimelineKind.PIP -> project.overlays.firstOrNull {it.id==id}?.let {it.startAtMs to it.durationMs}
             TimelineKind.AUDIO,TimelineKind.VOICE -> ClipAudioBindings.resolved(project)
                 .firstOrNull {it.id==id}?.let {it.startMs to it.durationMs}
+            TimelineKind.MUSIC -> ExportAudioPolicy.musicWindow(
+                project.music ?: return deltaMs, project.durationMs)?.let { it.timelineStartMs to it.playableMs }
             TimelineKind.SUBTITLE -> project.subtitles.firstOrNull {it.id==id}?.let {
                 it.startMs to it.endMs-it.startMs }
         } ?: return deltaMs
@@ -283,6 +285,11 @@ internal object TimelineMagnet {
             ClipAudioBindings.resolved(project).filterNot {it.id==id}.forEach {
                 add(it.startMs);add(it.startMs+it.durationMs) }
             project.subtitles.filterNot {it.id==id}.forEach {add(it.startMs);add(it.endMs)}
+            if (kind != TimelineKind.MUSIC) project.music?.let { music ->
+                ExportAudioPolicy.musicWindow(music, project.durationMs)?.let {
+                    add(it.timelineStartMs); add(it.timelineStartMs + it.playableMs)
+                }
+            }
         }
         return deltaMs+(snap(anchor,targets)-anchor)
     }

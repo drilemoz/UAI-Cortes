@@ -18,7 +18,7 @@ assert 'onAddImage=onAddImage' in editor
 assert 'onAddImage:()->Unit' in timeline
 assert 'Triple(Icons.Default.Image,"Imagem",' in timeline
 assert 'Text("Adicionar",fontSize=11.sp)' in timeline
-assert '1->onAddImage()' in timeline
+assert 'TimelineKind.MAIN_IMAGE -> onAddImage()' in timeline
 assert 'Triple("Imagem", Icons.Default.AddPhotoAlternate, "image")' not in editor
 assert 'MediaPlacementChoices(placement,' in read('MainImageInsertionUi.kt')
 assert all(label in read('MediaInsertionUi.kt') for label in ['"Início"', '"Antes"', '"Depois"', '"Final"'])

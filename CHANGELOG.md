@@ -1,3 +1,9 @@
+# Uai Cortes 0.1.282 (2026-11-17)
+
+- **Música:** opção própria na barra do editor e em Linha do tempo → Adicionar. O pop-up usa o mesmo fluxo do Áudio, com escolha, início, alcance, volume e confirmação. A faixa musical é única e separada de Áudio e Vozes IA.
+- **Posição e mixagem:** a nova música toca uma vez, até onde couber no projeto. Músicas antigas configuradas para repetir desde o início continuam assim se o arquivo e a posição forem mantidos. A prévia e a exportação respeitam a posição.
+- **Linha do tempo:** faixas de 44 dp (antes 52 dp) e régua de 26 dp. Os gestos das demais faixas e o zoom continuam disponíveis. Para reposicionar a música, toque nela e edite o início.
+
 # Uai Cortes 0.1.281 (2026-11-17)
 
 - **PiP:** seletores em uma linha com o botão de adicionar. Painel em lista para posição, tamanho, duração e opacidade, com uma seção por vez. Mídia e som do PiP de vídeo no menu de opções.

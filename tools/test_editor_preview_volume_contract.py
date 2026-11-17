@@ -17,7 +17,7 @@ assert 'volume = if (pip.muted) 0f' in pip
 assert 'previewVolume' not in (b/'ExportEngine.kt').read_text()
 assert 'fun output(sourceVolume: Float, previewVolume: Float)' in policy
 assert '"Ouvir mixagem"' in audio
-assert 'TrackAudioPreview(music.uri, 0L, p.durationMs' in audio
+assert 'MusicAudioPreview(music, p.durationMs' in audio
 assert 'ClipAudioBindings.resolved(p).forEach' in audio
 assert 'mixPlayer.setMediaItems' in audio
 assert (r/'app/src/test/java/br/com/uaicortes/EditorPreviewVolumeTest.kt').is_file()

@@ -73,8 +73,7 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
     }
     // Sincroniza as faixas adicionais com a pré-escuta, sem alterar a mixagem gravada.
     p.music?.let { music ->
-        TrackAudioPreview(music.uri, 0L, p.durationMs, music.volume,
-            mixMs, mixPlaying, 1f, true)
+        MusicAudioPreview(music, p.durationMs, music.volume, mixMs, mixPlaying, 1f)
     }
     ClipAudioBindings.resolved(p).forEach { track ->
         key(track.id) {

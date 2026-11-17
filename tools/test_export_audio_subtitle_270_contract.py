@@ -12,7 +12,7 @@ report=(b/'ExportQualityReport.kt').read_text()
 assert 'ExportAudioPolicy.activeExtraTracks(project)' in e
 assert 'verifiedMediaDuration(context, Uri.parse(audio.uri))' in e
 assert 'mediaDuration(context, Uri.parse(audio.uri))' not in e
-assert 'project.music?.takeIf { ExportAudioPolicy.audible(it.volume) }' in e
+assert 'ExportAudioPolicy.activeMusic(project)' in e
 assert 'require(sourceDuration > 0L)' in e
 assert 'ExportAudioPolicy.window(' in e and '.setEndPositionMs(window.sourceStartMs + window.playableMs)' in e
 assert 'ExportMp4Inspector.requirePlayable(' in e

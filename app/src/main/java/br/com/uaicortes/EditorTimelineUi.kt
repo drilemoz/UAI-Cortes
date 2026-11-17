@@ -70,14 +70,32 @@ internal fun TrackAudioPreview(uri: String, startMs: Long, durationMs: Long,
         player.volume=volume.coerceIn(0f,1f)
         player.setPlaybackParameters(PlaybackParameters(speed))
     }
-    LaunchedEffect(player,projectMs,playing,startMs,durationMs,sourceStartMs) {
-        val within=projectMs>=startMs && projectMs<startMs+durationMs
-        if(!within || !playing) player.pause() else {
-            val wanted=sourceStartMs+(projectMs-startMs).coerceAtLeast(0L)
-            if(kotlin.math.abs(player.currentPosition-wanted)>600L) player.seekTo(wanted)
+    LaunchedEffect(player,projectMs,playing,startMs,durationMs,sourceStartMs,loop) {
+        val within=projectMs>=startMs && projectMs-startMs<durationMs
+        if (!within || !playing) player.pause() else {
+            val elapsed = projectMs - startMs
+            val mediaDuration = player.duration
+            if (loop && mediaDuration <= 0L) {
+                player.play()
+                return@LaunchedEffect
+            }
+            val wanted = if (loop && mediaDuration > 0L) elapsed % mediaDuration
+                else sourceStartMs + elapsed
+            val drift = kotlin.math.abs(player.currentPosition - wanted)
+            val phaseDrift = if (loop && mediaDuration > 0L && drift < mediaDuration)
+                minOf(drift, mediaDuration - drift) else drift
+            if (!player.playWhenReady || phaseDrift > 600L) player.seekTo(wanted)
             player.play()
         }
     }
+}
+
+@Composable
+internal fun MusicAudioPreview(music: Music, projectDurationMs: Long,
+    volume: Float, projectMs: Long, playing: Boolean, speed: Float) {
+    val window = ExportAudioPolicy.musicWindow(music, projectDurationMs) ?: return
+    TrackAudioPreview(music.uri, window.timelineStartMs, window.playableMs, volume,
+        projectMs, playing, speed, music.loops)
 }
 
 @Composable
@@ -171,7 +189,7 @@ internal fun AudioDragSurface(
 @Composable
 internal fun InteractiveAudioTimeline(p: VideoProject,
     onSelectTrack: (String) -> Unit, onMoveTrack: (String, Long) -> Unit,
-    onLegacyClick: () -> Unit, trackKind: String = "audio") {
+    trackKind: String = "audio") {
     val voiceTrack = trackKind == VoiceIaPolicy.KIND
     val trackColor = if (voiceTrack) Purple else Green
     val totalMs = p.durationMs.coerceAtLeast(1L)
@@ -184,13 +202,6 @@ internal fun InteractiveAudioTimeline(p: VideoProject,
             .clip(RoundedCornerShape(3.dp)).background(trackColor.copy(alpha=.14f))) {
             val timelineWidth = maxWidth
             val timelineWidthPx = with(LocalDensity.current) { timelineWidth.toPx() }
-            if (!voiceTrack) p.music?.let { music ->
-                Box(Modifier.fillMaxSize().background(Green.copy(alpha=.16f))
-                    .clickable(onClick=onLegacyClick), contentAlignment=Alignment.CenterStart) {
-                    Text(music.title, modifier=Modifier.padding(start=3.dp),
-                        fontSize=9.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
-                }
-            }
             ClipAudioBindings.resolved(p).filter { (it.kind == VoiceIaPolicy.KIND) == voiceTrack }.forEach { audio ->
                 key(audio.id) {
                     var candidateStart by remember(audio.id, audio.startMs) { mutableLongStateOf(audio.startMs) }

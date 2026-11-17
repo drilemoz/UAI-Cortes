@@ -155,7 +155,7 @@ class ExportEngine(private val context: Context) {
         ExportAudioPolicy.activeExtraTracks(project).forEachIndexed { index, audio ->
             checkReadable(audio.uri, "Áudio ${index + 1}")
         }
-        project.music?.takeIf { ExportAudioPolicy.audible(it.volume) }?.let {
+        ExportAudioPolicy.activeMusic(project)?.let {
             checkReadable(it.uri, "Música")
         }
         require(context.cacheDir.usableSpace >= 32L * 1024L * 1024L) {
@@ -375,11 +375,32 @@ class ExportEngine(private val context: Context) {
             if (window.trailingMs > 0L) track.addGap(window.trailingMs * 1000L)
             sequences += track.build()
         }
-        project.music?.takeIf { ExportAudioPolicy.audible(it.volume) }?.let { music ->
-            val track = EditedMediaItem.Builder(MediaItem.fromUri(music.uri))
-                .setEffects(Effects(listOf(GainProcessor(music.volume)), emptyList())).build()
-            sequences += EditedMediaItemSequence.withAudioFrom(listOf(track))
-                .buildUpon().setIsLooping(true).build()
+        ExportAudioPolicy.activeMusic(project)?.let { music ->
+            val mediaItem = MediaItem.Builder().setUri(music.uri)
+            val gains = Effects(listOf(GainProcessor(music.volume)), emptyList())
+            if (music.loops) {
+                // Compatibilidade: este caso nunca adiciona lacuna à sequência que repete.
+                val track = EditedMediaItem.Builder(mediaItem.build()).setEffects(gains).build()
+                sequences += EditedMediaItemSequence.withAudioFrom(listOf(track))
+                    .buildUpon().setIsLooping(true).build()
+            } else {
+                val sourceDuration = inspectedAudioDurations.getOrPut(music.uri) {
+                    verifiedMediaDuration(context, Uri.parse(music.uri))
+                }
+                require(sourceDuration > 0L) {
+                    "Não foi possível verificar a duração da música. Escolha o arquivo novamente."
+                }
+                val window = requireNotNull(ExportAudioPolicy.musicWindow(music, project.durationMs, sourceDuration)) {
+                    "A música está fora do vídeo. Ajuste a posição antes de exportar."
+                }
+                mediaItem.setClippingConfiguration(MediaItem.ClippingConfiguration.Builder()
+                    .setEndPositionMs(window.playableMs).build())
+                val sequence = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_AUDIO))
+                if (window.timelineStartMs > 0L) sequence.addGap(window.timelineStartMs * 1000L)
+                sequence.addItem(EditedMediaItem.Builder(mediaItem.build()).setEffects(gains).build())
+                if (window.trailingMs > 0L) sequence.addGap(window.trailingMs * 1000L)
+                sequences += sequence.build()
+            }
         }
         // Resolução é ajustada no clipe principal, antes do compositor PiP;
         // quando há PiP, textos passam para os efeitos finais da composição.

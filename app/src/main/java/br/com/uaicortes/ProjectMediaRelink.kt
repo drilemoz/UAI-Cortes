@@ -29,7 +29,8 @@ internal object ProjectMediaRelink {
         }
         project.music?.let { music ->
             add(MediaRelinkEntry("music", "music", music.uri,
-                music.title.ifBlank { "Música" }, "audio/"))
+                music.title.ifBlank { "Música" }, "audio/",
+                if (music.loops) 0L else music.sourceDurationMs))
         }
         project.audioTracks.forEach { audio ->
             add(MediaRelinkEntry("audio", audio.id, audio.uri, audio.title,

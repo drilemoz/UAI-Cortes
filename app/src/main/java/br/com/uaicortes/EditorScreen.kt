@@ -138,8 +138,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         val dismiss = { quickAudioId = null }
         when (id) {
             "" -> QuickAudioDialog(p, quickAudioAtMs, null, dismiss, ::commitWithUndo)
-            "music" -> if (p.music != null) QuickMusicVolumeDialog(p, dismiss, ::commitWithUndo)
-                else LaunchedEffect(id) { dismiss() }
+            "music" -> QuickAudioDialog(p, quickAudioAtMs, null, dismiss, ::commitWithUndo, musicMode = true)
             else -> {
                 val existing = p.audioTracks.firstOrNull { it.id == id }
                 if (existing != null) QuickAudioDialog(p, quickAudioAtMs, existing, dismiss, ::commitWithUndo)
@@ -237,9 +236,8 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         }
         // Separate audio players track the editor playhead without modifying source media.
         p.music?.let { music ->
-            TrackAudioPreview(music.uri, 0L, p.durationMs,
-                EditorPreviewVolume.output(music.volume, previewVolume), currentMs,
-                isPlaying, playbackSpeed, true)
+            MusicAudioPreview(music, p.durationMs, EditorPreviewVolume.output(music.volume, previewVolume),
+                currentMs, isPlaying, playbackSpeed)
         }
         ClipAudioBindings.resolved(p).forEach { audio ->
             key(audio.id) {
@@ -489,7 +487,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 if (track?.clipId != null || track?.kind == VoiceIaPolicy.KIND) onSelectAudio(id)
                 else openQuickAudio(id)
             },onAddVideo=onAddVideo,onAddImage=onAddImage,
-            onOpenPiP=onPiP,onOpenAudio={openQuickAudio("")},
+            onOpenPiP=onPiP,onOpenAudio={openQuickAudio("")},onOpenMusic={openQuickAudio("music")},
             onOpenVoice={onEdit("voices")},onSubtitle=onSelectSubtitle,
             onOpenSubtitle={onEdit("subtitles")},
             onGestureStart={scrubbing=true;player.pause()},
@@ -504,6 +502,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                         canvasAspect=activeFrame?.let {mediaAspect(context,it.uri,it.isImage)}?:9f/16f)
                     TimelineKind.AUDIO,TimelineKind.VOICE -> TimelineDirectEdit.audio(p,id,handle,delta,
                         p.audioTracks.firstOrNull {it.id==id}?.uri?.let(sourceDurations::get))
+                    TimelineKind.MUSIC -> TimelineEditResult(p)
                     TimelineKind.SUBTITLE -> TimelineDirectEdit.subtitle(p,id,handle,delta)
                 }
                 timelineCommit(changed)
@@ -520,8 +519,11 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 }
             },canUndo=timelineUndo.isNotEmpty(),canRedo=timelineRedo.isNotEmpty(),
             isEditable={kind,id ->
-                (kind!=TimelineKind.AUDIO && kind!=TimelineKind.VOICE) ||
-                    (id!="music" && p.audioTracks.firstOrNull {it.id==id}?.clipId==null)
+                when (kind) {
+                    TimelineKind.MUSIC -> false // início e volume são ajustados pelo pop-up.
+                    TimelineKind.AUDIO, TimelineKind.VOICE -> p.audioTracks.firstOrNull { it.id == id }?.clipId == null
+                    else -> true
+                }
             })
         Spacer(Modifier.height(5.dp));HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
         // Vídeo, Imagem e PiP são inseridos em Linha do tempo > Adicionar.
@@ -532,25 +534,32 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             Triple("Cortar", Icons.Default.ContentCut, "trim"),
             Triple("Transição", Icons.Default.Transform, "transition"),
             Triple("Legendas", Icons.Default.ClosedCaption, "subtitles"),
-            Triple("Áudio", Icons.Default.MusicNote, "audio"),
+            Triple("Áudio", Icons.Default.GraphicEq, "audio"),
+            Triple("Música", Icons.Default.MusicNote, "music"),
             Triple("Vozes IA", Icons.Default.RecordVoiceOver, "voices"),
             Triple("Camadas", Icons.Default.Layers, "pip")
         ) }
         val toolsScroll = rememberLazyListState()
-        LazyRow(state = toolsScroll, modifier = Modifier.fillMaxWidth().navigationBarsPadding()
-            .padding(vertical = 10.dp), contentPadding = PaddingValues(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            items(count = actions.size) { index ->
-                val (name, icon, key) = actions[index]
-                Column(Modifier.width(56.dp).clip(RoundedCornerShape(12.dp)).clickable {
-                    if (key == "audio") openQuickAudio("") else onEdit(key)
-                }, horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(Modifier.size(48.dp).clip(RoundedCornerShape(14.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-                        Icon(icon, name, modifier = Modifier.size(22.dp))
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val toolWidth = ((maxWidth - 12.dp - 2.dp * (actions.size - 1)) / actions.size)
+                .coerceIn(48.dp, 56.dp)
+            LazyRow(state = toolsScroll, modifier = Modifier.fillMaxWidth().navigationBarsPadding()
+                .padding(vertical = 8.dp), contentPadding = PaddingValues(horizontal = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                items(count = actions.size) { index ->
+                    val (name, icon, key) = actions[index]
+                    Column(Modifier.width(toolWidth).clip(RoundedCornerShape(12.dp)).clickable {
+                        if (key == "audio") openQuickAudio("")
+                        else if (key == "music") openQuickAudio("music")
+                        else onEdit(key)
+                    }, horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
+                            Icon(icon, name, modifier = Modifier.size(21.dp))
+                        }
+                        Text(name, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
                     }
-                    Text(name, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
                 }
             }
         }
