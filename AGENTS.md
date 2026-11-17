@@ -1,3 +1,8 @@
+# v0.1.278 — correção de CI
+
+- Base v0.1.277/versionCode 278; atual v0.1.278/versionCode 279. `FrameSnapshotProject.kt` é compilado isoladamente no CI com FrameSnapshotTiming, FrameCapturePlan e stubs: não referenciar outras classes do app ali (use FrameSnapshotTiming ou adicione stubs ao teste 266).
+- Testes com kotlinc só rodam no CI (ambiente local pode não ter o compilador).
+
 # v0.1.277 — Exportar simplificado
 
 - Base v0.1.276/versionCode 277; atual v0.1.277/versionCode 278. UI de Exportar: 720p/1080p; ExportDestination continua com SHORTS/REELS/TIKTOK no código (vertical = SHORTS).

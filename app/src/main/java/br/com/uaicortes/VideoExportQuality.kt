@@ -23,14 +23,6 @@ internal object VideoExportQuality {
     /** Quadros fixos: keyframes frequentes evitam que o print caia num quadro P comprimido. */
     const val SNAPSHOT_KEYFRAME_INTERVAL_SECONDS: Float = 0.5f
 
-    /**
-     * Degrau de exportação para o print composto: o menor suportado que não perde detalhe da
-     * fonte (540p vira 720p), entre 480p e 1080p. Antes, valores como 540 ou 576 não tinham
-     * bitrate definido e o print com legenda/PiP falhava.
-     */
-    fun snapshotTier(sourceShortSide: Int): Int =
-        listOf(480, 720, 1080).firstOrNull { sourceShortSide <= it } ?: 1080
-
     fun videoBitrateBps(outputShortSide: Int,
                         preset: ExportBitratePreset = ExportBitratePreset.HIGH): Int = when (outputShortSide) {
         360 -> when (preset) {

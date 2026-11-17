@@ -1,3 +1,8 @@
+# Uai Cortes · versão 0.1.278 — correção do CI do print
+
+- Corrige a falha de compilação do teste do quadro (resolução do print movida para FrameSnapshotTiming).
+- Sem mudança visível; a tela Exportar da 0.1.277 continua igual.
+
 # Uai Cortes · versão 0.1.277 — Exportar mais simples
 
 - Resolução só 720p e 1080p; sem detalhes técnicos.

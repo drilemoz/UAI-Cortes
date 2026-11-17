@@ -9,6 +9,14 @@ internal object FrameSnapshotTiming {
     const val LEAD_MS = 500L
     const val WINDOW_MS = 1_600L
 
+    /**
+     * Degrau de exportação do print composto: o menor suportado que não perde detalhe da fonte
+     * (540p vira 720p), entre 480p e 1080p. Mantido aqui, sem dependências, porque o CI compila
+     * FrameSnapshotProject isoladamente.
+     */
+    fun snapshotTier(sourceShortSide: Int): Int =
+        listOf(480, 720, 1080).firstOrNull { sourceShortSide <= it } ?: 1080
+
     data class Slice(val startMs: Long, val endMs: Long, val frameAtMs: Long) {
         val durationMs: Long get() = endMs - startMs
     }

@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.277"
-    const val VERSION_CODE = 278
+    const val VERSION_NAME = "0.1.278"
+    const val VERSION_CODE = 279
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.278", listOf(
+            ReleaseFeature("ci-snapshot-tier-278", "Correção do CI do print do editor",
+                "A escolha da resolução do print composto foi movida para uma função sem dependências, para o teste isolado de FrameSnapshotProject compilar. Nenhuma mudança visível para o usuário.", "check")
+        )),
         ReleaseSummary("0.1.277", listOf(
             ReleaseFeature("export-simplified-277", "Exportar mais simples",
                 "A tela agora oferece só 720p e 1080p, remove o bloco de detalhes técnicos e troca Shorts/Reels/TikTok por Formato: Original ou Vertical 9:16. A prévia de enquadramento só aparece no formato vertical.", "check")

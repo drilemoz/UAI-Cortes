@@ -1,3 +1,8 @@
+# Uai Cortes 0.1.278 (2026-11-17)
+
+- Correção de CI: `FrameSnapshotProject` referenciava `VideoExportQuality`, que não entra na compilação isolada de `test_frame_snapshot_project_266` (kotlinc no CI): "unresolved reference 'VideoExportQuality'". `snapshotTier` agora vive em `FrameSnapshotTiming`, sem dependências.
+- O contrato 276 passou a proibir `VideoExportQuality` em `FrameSnapshotProject.kt`. Teste kotlinc não roda no ambiente local; foi validado só pelo CI.
+
 # Uai Cortes 0.1.277 (2026-11-17)
 
 - Exportar: só 720p e 1080p na interface (o coordenador segue aceitando 360p/480p de projetos antigos, que abrem em 720p); sem "Detalhes e compatibilidade"; estimativa por projeto e por minuto no rodapé.
