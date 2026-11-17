@@ -1,3 +1,10 @@
+# v0.1.283 — Legendas e sincronia
+
+- Base v0.1.282/versionCode 283; atual v0.1.283/versionCode 284. Preservar schema 4 e assinatura.
+- Novas legendas em tamanho 14 independentemente da origem, preservando tamanho salvo. O ajuste manual continua disponível.
+- A revisão de SRT nunca altera texto, IDs ou horários de trechos sem correspondência. Vosk é local; Gemini só envia o áudio escolhido por ação explícita. A faixa avulsa mantém seu deslocamento no projeto.
+- A prévia de exportação usa o mesmo Transformer, não é publicada no MediaStore e deve ser apagada ao fechar. O preset rosa novo não tem sombra; validar em Android antes de afirmar paridade visual.
+
 # v0.1.282 — Música e linha do tempo
 
 - Base v0.1.281/versionCode 282; atual v0.1.282/versionCode 283. Preservar schema 4, cinco APKs e assinatura.

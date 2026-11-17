@@ -212,7 +212,7 @@ assert all(x in ui for x in [
 ])
 assert all(x in fx for x in ['class SubtitleShadowSpan(', 'class SubtitleLineSpacingSpan(',
     'AlignmentSpan.Standard(layoutAlign)', 'SubtitleStyles.ALIGN_LEFT -> left.toFloat()',
-    'SubtitleStyles.ALIGN_RIGHT -> right - width', 'active.textAlignment,active.italic),0,text.length,0)'])
+    'SubtitleStyles.ALIGN_RIGHT -> right - width', 'active.textAlignment,active.italic,karaoke),0,text.length,0)'])
 assert all(x in styles for x in ['shadowOffsetDp = source.shadowOffsetDp',
     'lineSpacingPercent = source.lineSpacingPercent', 'textAlignment = source.textAlignment',
     'fun normalizeShadowColor(', 'fun normalizeLineSpacing(', 'fun normalizeAlignment('])
@@ -294,12 +294,12 @@ importer_declaration='val importer=rememberLauncherForActivityResult(ActivityRes
 assert subtitle_screen.count(state_declaration)==1, 'searchQuery deve ser declarado uma única vez'
 assert subtitle_screen.index(state_declaration)<subtitle_screen.index(importer_declaration), \
     'searchQuery deve existir antes do callback importer (erro de compilação no workflow 31)'
-assert 'selectedId=cues.first().id\n                    searchQuery=""' in subtitle_screen
+assert 'selectedId = cues.first().id' in subtitle_screen and 'pendingImport = null' in subtitle_screen
 print('OK: regressão workflow 31 — estado da pesquisa declarado antes do callback de importação SRT')
 
 # v0.1.37: pop-up compacto, rascunho isolado e efeitos alinhados com exportador.
 animations=(root/'app/src/main/java/br/com/uaicortes/SubtitleAnimations.kt').read_text()
-assert 'val color: Int = -1, val sizeSp: Int = 12' in model
+assert 'val color: Int = -1, val sizeSp: Int = DEFAULT_SUBTITLE_SIZE_SP' in model
 assert 'j.optInt("sizeSp", 22)' in model
 assert 'val animation: String = SubtitleAnimations.NONE' in model
 assert '.put("animation", animation)' in model
@@ -1139,7 +1139,7 @@ assert 'SubtitleStudioPresets.recommended' in subtitle_gallery and 'SubtitleStyl
 assert 'LazyRow(' in (app_files/'SubtitleVisualEditor.kt').read_text()
 assert 'animation=preset.animation ?: cue.animation' in styles
 assert all(x in sub_animation for x in ['BOUNCE', 'PULSE', 'ZOOM_OUT'])
-assert 'sizeSp = 20' in auto and 'sizeSp=20' in parser
+assert 'sizeSp = DEFAULT_SUBTITLE_SIZE_SP' in auto and 'sizeSp=DEFAULT_SUBTITLE_SIZE_SP' in parser
 assert 'generatedSize' in auto_ui and 'helpPosition' in screen
 assert 'SubtitleAudioCache.getOrPrepare' in remote
 assert (app_files/'SubtitleAudioCache.kt').exists()

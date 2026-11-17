@@ -107,7 +107,7 @@ data class Music(val uri: String, val title: String, val volume: Float = 0.35f,
 data class SubtitleCue(
     val id: String = UUID.randomUUID().toString(),
     val text: String, val startMs: Long, val endMs: Long,
-    val color: Int = -1, val sizeSp: Int = 12, val y: Float = .92f, val x: Float = .5f,
+    val color: Int = -1, val sizeSp: Int = DEFAULT_SUBTITLE_SIZE_SP, val y: Float = .92f, val x: Float = .5f,
     val backgroundColor: Int = SubtitleStyles.DEFAULT_BACKGROUND, val bold: Boolean = true,
     val fontFamily: String = SubtitleStyles.FONT_SANS,
     val outlineWidth: Int = 0, val outlineColor: Int = 0xFF000000.toInt(),

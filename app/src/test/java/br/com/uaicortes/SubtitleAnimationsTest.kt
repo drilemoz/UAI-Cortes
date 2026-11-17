@@ -7,7 +7,7 @@ class SubtitleAnimationsTest {
     private val cue = SubtitleCue(id="a", text="Olá! Bem vindo.",startMs=1000L,endMs=5000L)
 
     @Test fun defaultAndLegacyAnimationAreStable() {
-        assertEquals(12,cue.sizeSp)
+        assertEquals(14,cue.sizeSp)
         assertEquals(SubtitleAnimations.NONE,cue.animation)
         val legacy=cue.json().apply { remove("sizeSp");remove("animation");remove("animationSpeed") }
         val loaded=SubtitleCue.read(legacy)

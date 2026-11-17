@@ -41,7 +41,8 @@ class SubtitleOutlineSpan(
     private val bold: Boolean,
     private val relativeSize: Float,
     private val alignment: String = SubtitleStyles.ALIGN_CENTER,
-    private val italic: Boolean = false
+    private val italic: Boolean = false,
+    private val karaoke: Boolean = false
 ) : LineBackgroundSpan {
     override fun drawBackground(canvas: Canvas, paint: Paint, left: Int, right: Int,
         top: Int, baseline: Int, bottom: Int, text: CharSequence,
@@ -54,10 +55,10 @@ class SubtitleOutlineSpan(
         outline.color = outlineColor
         outline.style = Paint.Style.STROKE
         outline.strokeJoin = Paint.Join.ROUND
-        outline.strokeWidth = widthDp * ((paint as? android.text.TextPaint)?.density ?: 1f) * 2f
-        // Tamanho efetivo aplicado ao texto (base 100 px + RelativeSizeSpan).
-        // Não multiplicar duas vezes quando StaticLayout passa paint já dimensionado.
+        // Tamanho efetivo após o ajuste de largura do TextOverlay.
         outline.textSize = TextOverlay.TEXT_SIZE_PIXELS * relativeSize
+        outline.strokeWidth = if (karaoke) 2f * SubtitleCaptionInk.outlineRadius(widthDp, outline.textSize)
+            else widthDp * ((paint as? TextPaint)?.density ?: 1f) * 2f
         val systemFamily = SubtitleStyles.androidFamily(family)
         outline.typeface = Typeface.create(systemFamily, when {
             bold && italic -> Typeface.BOLD_ITALIC
@@ -84,7 +85,8 @@ class SubtitleShadowSpan(
     private val shadowColor: Int, private val offsetDp: Int,
     private val family: String, private val bold: Boolean,
     private val relativeSize: Float, private val alignment: String,
-    private val italic: Boolean = false
+    private val italic: Boolean = false,
+    private val karaoke: Boolean = false
 ) : LineBackgroundSpan {
     override fun drawBackground(canvas: Canvas, paint: Paint, left: Int, right: Int,
         top: Int, baseline: Int, bottom: Int, text: CharSequence,
@@ -111,7 +113,8 @@ class SubtitleShadowSpan(
             SubtitleStyles.ALIGN_RIGHT -> right - textWidth
             else -> (left + right - textWidth) / 2f
         }
-        val px = offsetDp * density
+        val px = if (karaoke) SubtitleCaptionInk.shadowOffset(offsetDp, textPaint.textSize)
+            else offsetDp * density
         canvas.drawText(text, start, visibleEnd, x + px, baseline + px, textPaint)
     }
 }
@@ -351,14 +354,15 @@ class TimedSubtitleOverlay(
                     active.highlightColor,active.fontFamily,active.bold,active.italic,
                     relativeFontSize,active.textAlignment),0,text.length,0)
             }
+            val karaoke = SubtitleAnimations.isKaraoke(active.animation)
             if (active.shadowOffsetDp > 0)
                 text.setSpan(SubtitleShadowSpan(active.shadowColor, active.shadowOffsetDp,
                     active.fontFamily, active.bold, relativeFontSize, active.textAlignment,
-                    active.italic),0,text.length,0)
+                    active.italic, karaoke),0,text.length,0)
             if (active.outlineWidth > 0)
                 text.setSpan(SubtitleOutlineSpan(active.outlineColor,active.outlineWidth,
                     active.fontFamily,active.bold,relativeFontSize,
-                    active.textAlignment,active.italic),0,text.length,0)
+                    active.textAlignment,active.italic,karaoke),0,text.length,0)
         }
         return text
     }

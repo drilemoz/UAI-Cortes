@@ -207,7 +207,9 @@ class ExportEngine(private val context: Context) {
               frameMode: VerticalFrameMode = VerticalFrameMode.FIT,
               onSaving: () -> Unit = {},
               onSuccess: (Uri, ExportQualityReport) -> Unit, onError: (String) -> Unit,
-              onRenderedFrame: ((File) -> Unit)? = null) {
+              onRenderedFrame: ((File) -> Unit)? = null,
+              onPreviewReady: ((File) -> Unit)? = null) {
+        require(onRenderedFrame == null || onPreviewReady == null)
         require(!isSavingToGallery) { "Aguarde a conclusão do salvamento anterior." }
         require(project.clips.isNotEmpty()) { "Projeto sem vídeos" }
         val bitrateBps = VideoExportQuality.videoBitrateBps(height, preset)
@@ -419,7 +421,7 @@ class ExportEngine(private val context: Context) {
                     listOf(OverlayEffect(textLayers))))
             }
         }.build()
-        val target = File(context.cacheDir, "uai-export-${System.currentTimeMillis()}.mp4")
+        val target = File(context.cacheDir, "uai-export-${java.util.UUID.randomUUID()}.mp4")
         tempFile = target
         val requestedName = fileName.trim().let { if (it.endsWith(".mp4", true)) it else "$it.mp4" }
         // Antes o bitrate ficava totalmente nas configurações automáticas do Media3.
@@ -469,6 +471,17 @@ class ExportEngine(private val context: Context) {
                                 }
                             }
                         }.start()
+                        return
+                    }
+                    if (onPreviewReady != null) {
+                        // Mesmo pipeline do MP4 final, mas o dono do player recebe o arquivo privado.
+                        tempFile = null
+                        transformer = null
+                        if (target.isFile && target.length() > 0L) onPreviewReady(target)
+                        else {
+                            target.delete()
+                            onError("A prévia não produziu um vídeo.")
+                        }
                         return
                     }
                     val encodeElapsedMs = (SystemClock.elapsedRealtime() - encodeStartedAtMs)

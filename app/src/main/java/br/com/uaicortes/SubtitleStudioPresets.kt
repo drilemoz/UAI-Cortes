@@ -6,14 +6,14 @@ import br.com.uaicortes.subtitles.core.SubtitleTextCasePolicy
 internal object SubtitleStudioPresets {
     val recommended: List<SubtitleStylePreset> = listOf(
         SubtitleStylePreset("Karaokê rosa do vídeo", 0xFFFFFFFF.toInt(),
-            SubtitleStyles.NO_BACKGROUND, outlineWidth=4,shadowOffsetDp=2,
+            SubtitleStyles.NO_BACKGROUND, outlineWidth=2,shadowOffsetDp=0,
             highlightColor=0xFFE81050.toInt(),animation=SubtitleAnimations.KARAOKE_BADGE,
             textCase=SubtitleTextCasePolicy.UPPER),
         SubtitleStylePreset("Pop moderno", -1, SubtitleStyles.NO_BACKGROUND,
             outlineWidth=4, shadowOffsetDp=2, highlightColor=0xFFFFD840.toInt(),
             animation=SubtitleAnimations.SOFT_POP, textCase=SubtitleTextCasePolicy.UPPER),
         SubtitleStylePreset("Karaokê limpo", -1, SubtitleStyles.NO_BACKGROUND,
-            outlineWidth=2, shadowOffsetDp=2, highlightColor=0xFF54DAFF.toInt(),
+            outlineWidth=2, shadowOffsetDp=0, highlightColor=0xFF54DAFF.toInt(),
             animation=SubtitleAnimations.KARAOKE, textCase=SubtitleTextCasePolicy.UPPER),
         SubtitleStylePreset("Cinematográfico", 0xFFF8F2E4.toInt(), SubtitleStyles.NO_BACKGROUND,
             bold=false, shadowOffsetDp=3, fontFamily=SubtitleStyles.FONT_SERIF,

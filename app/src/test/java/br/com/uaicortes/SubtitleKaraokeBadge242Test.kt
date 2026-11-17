@@ -11,7 +11,7 @@ class SubtitleKaraokeBadge242Test {
         assertEquals(0xFFE81050.toInt(),preset.highlightColor)
         assertEquals(0xFFFFFFFF.toInt(),preset.foreground)
         assertEquals(SubtitleStyles.NO_BACKGROUND,preset.background)
-        assertEquals(4,preset.outlineWidth)
+        assertEquals(2,preset.outlineWidth)
         assertEquals("upper",preset.textCase)
     }
 

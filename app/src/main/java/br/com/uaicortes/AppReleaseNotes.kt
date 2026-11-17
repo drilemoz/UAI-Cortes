@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.282"
-    const val VERSION_CODE = 283
+    const val VERSION_NAME = "0.1.283"
+    const val VERSION_CODE = 284
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.283", listOf(
+            ReleaseFeature("subtitle-size-283", "Legendas novas em tamanho 14",
+                "Vale para legendas importadas, criadas manualmente e geradas por Gemini ou Vosk. O karaokê novo usa contorno mais leve e não tem sombra.", "check"),
+            ReleaseFeature("subtitle-preview-283", "Prévia da exportação em Legendas",
+                "O menu da prévia tem modos Compacta, Ampliada e Como vai exportar. A última renderiza um MP4 privado e abre em tela cheia.", "check"),
+            ReleaseFeature("srt-speech-283", "Conferência de sincronia ao importar SRT",
+                "Escolha a fala dos clipes ou de uma faixa de áudio. Confira com Vosk ou Gemini, sem reescrever o SRT e sem mudar trechos sem correspondência.", "check")
+        )),
         ReleaseSummary("0.1.282", listOf(
             ReleaseFeature("music-track-282", "Música em uma faixa própria",
                 "Toque em Música ou em Adicionar na linha do tempo. Escolha o arquivo e ajuste início e volume no pop-up, sem alterar o áudio e as vozes já adicionados.", "check"),

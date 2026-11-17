@@ -141,12 +141,12 @@ internal fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
             val textWeight = if (cue.bold) FontWeight.Bold else FontWeight.Normal
             val fontStyle = if (cue.italic) androidx.compose.ui.text.font.FontStyle.Italic
                 else androidx.compose.ui.text.font.FontStyle.Normal
-            // Contorno proporcional ao tamanho do texto da prévia. Com dp fixo ele ficava
-            // grosso demais no quadro pequeno e cobria a caixa rosa da palavra ativa
-            // (modelo "Karaokê rosa do vídeo"), que só aparecia dentro do diálogo.
-            val outlineWidthPx = minOf(with(density) { cue.outlineWidth.dp.toPx() } * fontScale,
-                with(density) { previewFontSp.sp.toPx() } * 0.07f)
-            val shadowPx = with(density) { cue.shadowOffsetDp.dp.toPx() } * fontScale
+            val fontPx = with(density) { previewFontSp.sp.toPx() }
+            val karaoke = SubtitleAnimations.isKaraoke(cue.animation)
+            val outlineWidthPx = if (karaoke) SubtitleCaptionInk.outlineRadius(cue.outlineWidth, fontPx)
+                else minOf(with(density) { cue.outlineWidth.dp.toPx() } * fontScale, fontPx * .07f)
+            val shadowPx = if (karaoke) SubtitleCaptionInk.shadowOffset(cue.shadowOffsetDp, fontPx)
+                else with(density) { cue.shadowOffsetDp.dp.toPx() } * fontScale
             val alignment = when (SubtitleStyles.normalizeAlignment(cue.textAlignment)) {
                 SubtitleStyles.ALIGN_LEFT -> TextAlign.Left
                 SubtitleStyles.ALIGN_RIGHT -> TextAlign.Right
@@ -236,7 +236,7 @@ internal fun SubtitlePositionPreview(p: VideoProject, cue: SubtitleCue?,
     onPrevious: () -> Unit, onNext: () -> Unit,
     hasPrevious: Boolean, hasNext: Boolean, compactPreview: Boolean = true,
     followPlayback: Boolean, onToggleFollow: () -> Unit,
-    onToggleCompact: () -> Unit, onTimelineHelp: () -> Unit,
+    onToggleCompact: () -> Unit, onExportPreview: () -> Unit, onTimelineHelp: () -> Unit,
     zoomFactor: Int, onZoomChange: (Int) -> Unit) {
     val context = LocalContext.current
     val player = remember(p.id) { diagnosticPlayer(context) }
@@ -244,6 +244,7 @@ internal fun SubtitlePositionPreview(p: VideoProject, cue: SubtitleCue?,
     var scrubbing by remember(p.id) { mutableStateOf(false) }
     var scrubMs by remember(p.id) { mutableLongStateOf(0L) }
     var zoomMenuExpanded by remember(p.id) { mutableStateOf(false) }
+    var previewMenu by remember(p.id) { mutableStateOf(false) }
     val latestCursor by rememberUpdatedState(cursorMs)
     DisposableEffect(player) { onDispose { player.release() } }
     LaunchedEffect(player, p.clips.map { Triple(it.uri, it.startMs, it.endMs) },
@@ -361,10 +362,28 @@ internal fun SubtitlePositionPreview(p: VideoProject, cue: SubtitleCue?,
                         else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier=Modifier.size(21.dp))
             }
-            IconButton(onClick=onToggleCompact,modifier=Modifier.size(34.dp)) {
-                Icon(if(compactPreview) Icons.Default.Fullscreen else Icons.Default.FullscreenExit,
-                    if(compactPreview) "Ampliar prévia" else "Compactar prévia",
-                    modifier=Modifier.size(23.dp))
+            Box {
+                IconButton(onClick = { previewMenu = true }, modifier = Modifier.size(34.dp)) {
+                    Icon(if(compactPreview) Icons.Default.Fullscreen else Icons.Default.FullscreenExit,
+                        "Opções da prévia", modifier = Modifier.size(23.dp))
+                }
+                DropdownMenu(expanded = previewMenu, onDismissRequest = { previewMenu = false }) {
+                    DropdownMenuItem(text = { Text("Compacta") }, onClick = {
+                        previewMenu = false
+                        if (!compactPreview) onToggleCompact()
+                    })
+                    DropdownMenuItem(text = { Text("Ampliada") }, onClick = {
+                        previewMenu = false
+                        if (compactPreview) onToggleCompact()
+                    })
+                    DropdownMenuItem(text = { Text("Como vai exportar") }, enabled = p.clips.isNotEmpty(),
+                        onClick = {
+                            previewMenu = false
+                            player.pause()
+                            playing = false
+                            onExportPreview()
+                        })
+                }
             }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal=2.dp),
@@ -461,23 +480,24 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
     }
     // Deve preceder o callback do importador, que limpa a busca após importar SRT.
     var searchQuery by remember(p.id) { mutableStateOf("") }
+    var pendingImport by remember(p.id) { mutableStateOf<List<SubtitleCue>?>(null) }
     val importer=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if(uri!=null) {
-            val loaded=runCatching {
-                context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { reader ->
-                    SubtitleListNavigation.readSrtBounded(reader)
-                }.orEmpty()
+        if (uri != null) scope.launch {
+            try {
+                val cues = withContext(Dispatchers.IO) {
+                    val content = context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)
+                        ?.use { reader -> SubtitleListNavigation.readSrtBounded(reader) }.orEmpty()
+                    EditFeatures.parseSrt(content).filter { it.startMs < p.durationMs }
+                        .map { it.copy(endMs = it.endMs.coerceAtMost(p.durationMs)) }
+                }
+                if (cues.isEmpty()) status = "Nenhuma legenda SRT válida no arquivo"
+                else pendingImport = cues
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                DiagnosticRecorder.exception("srt_import", failure)
+                status = "Não foi possível ler o arquivo."
             }
-            loaded.onSuccess { content ->
-                val cues=EditFeatures.parseSrt(content).filter{it.startMs<p.durationMs}
-                    .map{it.copy(endMs=it.endMs.coerceAtMost(p.durationMs))}
-                if(cues.isNotEmpty()) {
-                    update(p.copy(subtitles=p.subtitles+cues))
-                    selectedId=cues.first().id
-                    searchQuery=""
-                    status="${cues.size} legendas importadas"
-                } else status="Nenhuma legenda SRT válida no arquivo"
-            }.onFailure {DiagnosticRecorder.exception("srt_import", it);status="Não foi possível ler o arquivo: ${it.message}"}
         }
     }
     val sorted = remember(p.subtitles) {
@@ -528,6 +548,7 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
     // A legenda em reprodução é diferente da escolhida para editar.
     val activeCue=SubtitlePreviewPolicy.firstAt(p.subtitles, cursorMs)
     var compactPreview by remember(p.id) { mutableStateOf(true) }
+    var exportPreviewAt by remember(p.id) { mutableStateOf<Long?>(null) }
     var zoomFactor by remember(p.id) { mutableIntStateOf(1) }
     val zoomWindowMs = SubtitleCompactLayout.WINDOW_MS / zoomFactor
     var speakerFilter by remember(p.id) { mutableStateOf<String?>(null) }
@@ -601,6 +622,7 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
             compactPreview = compactPreview,
             followPlayback = followPlayback, onToggleFollow = { followPlayback = !followPlayback },
             onToggleCompact = { compactPreview = !compactPreview },
+            onExportPreview = { exportPreviewAt = cursorMs },
             onTimelineHelp = { helpPosition = true },
             zoomFactor = zoomFactor, onZoomChange = { zoomFactor = it })
         // A faixa mostra TODAS as legendas; filtro/busca só reduzem a lista.
@@ -701,7 +723,7 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                 SubtitleListNavigation.newInterval(p.durationMs,cursorMs)?.let { (start,end) ->
                     val cue=SubtitleAppearancePolicy.generated(
                         SubtitleCue(text="Nova legenda",startMs=start,endMs=end),
-                        SubtitleAppearanceMode.KARAOKE_ROSA,22)
+                        SubtitleAppearanceMode.KARAOKE_ROSA,SubtitleAppearancePolicy.defaultSize())
                     if(update(p.copy(subtitles=p.subtitles+cue))) {
                         batchUndo=null;deletedSnapshot=null
                         searchQuery="";speakerFilter=null;selectedId=cue.id
@@ -809,6 +831,21 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
             }
         }
     }
+    pendingImport?.let { original ->
+        SrtImportReview(p, original, onImport = { cues, report ->
+            val changed = p.subtitles + cues
+            if (update(p.copy(subtitles = changed))) {
+                batchUndo = SubtitleBatchUndo(p.subtitles, changed)
+                batchUndoSpeakerStyles = p.subtitleSpeakerStyles
+                selectedId = cues.first().id
+                searchQuery = ""
+                pendingImport = null
+                status = if (report == null) "${cues.size} legendas importadas"
+                    else "${cues.size} importadas · ${report.adjusted} com horários ajustados"
+            }
+        }, onDismiss = { pendingImport = null })
+    }
+    exportPreviewAt?.let { SubtitleExportPreviewDialog(p, it) { exportPreviewAt = null } }
     speakerPickerCueId?.let { cueId ->
         SubtitleSpeakerPicker(p, cueId, update,
             dismiss = { speakerPickerCueId = null },

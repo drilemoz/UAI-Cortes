@@ -1,3 +1,10 @@
+# Uai Cortes · v0.1.283 — Legendas e sincronia
+
+- **Tamanho:** 14 como padrão de novas legendas manuais, SRT, Vosk e Gemini. Ajustes manuais e tamanho de legendas salvas são preservados.
+- **Prévia:** Compacta, Ampliada e Como vai exportar. O modo em tela cheia usa o exportador real, com MP4 temporário privado, escolha Original/Vertical, Play/Pausa e barra de posição.
+- **SRT:** importar com horários originais ou conferir a fala do vídeo/uma faixa de áudio com Vosk ou Gemini. A importação preserva o texto e os trechos sem correspondência confiável. O uso online é explícito.
+- **Karaokê:** estilos novos com contorno 2 e sombra 0. Espessura e deslocamento de sombra do karaokê passam a ser relativos ao tamanho das letras na prévia e no MP4.
+
 # Uai Cortes · v0.1.282 — Música e linha do tempo
 
 - **Música:** opção própria na barra do editor e em Linha do tempo → Adicionar. O pop-up usa o mesmo fluxo do Áudio, com escolha, início, alcance, volume e confirmação. A faixa musical é única e separada de Áudio e Vozes IA.

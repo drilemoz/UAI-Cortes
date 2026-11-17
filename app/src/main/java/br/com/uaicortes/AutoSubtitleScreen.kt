@@ -57,7 +57,7 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
     var results by remember(project.id) { mutableStateOf<List<SubtitleCue>>(emptyList()) }
     var replace by remember(project.id) { mutableStateOf(false) }
     var appearanceMode by remember(project.id) { mutableStateOf(SubtitleAppearanceMode.KARAOKE_ROSA) }
-    var generatedSize by remember(project.id) { mutableIntStateOf(22) }
+    var generatedSize by remember(project.id) { mutableIntStateOf(SubtitleAppearancePolicy.defaultSize()) }
     var editIndex by remember { mutableStateOf<Int?>(null) }
     var editText by remember { mutableStateOf("") }
     val geminiCheckpoint = remember(context, project.id) {
@@ -277,17 +277,14 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                             item { FilterChip(selected = appearanceMode == SubtitleAppearanceMode.KARAOKE_ROSA,
                                 onClick = {
                                     appearanceMode = SubtitleAppearanceMode.KARAOKE_ROSA
-                                    generatedSize = SubtitleAppearancePolicy.defaultSize(appearanceMode)
                                 }, label = { Text("Rosa do vídeo") }) }
                             item { FilterChip(selected = appearanceMode == SubtitleAppearanceMode.CLASSIC_SRT,
                                 onClick = {
                                     appearanceMode = SubtitleAppearanceMode.CLASSIC_SRT
-                                    generatedSize = SubtitleAppearancePolicy.defaultSize(appearanceMode)
                                 }, label = { Text("Clássica (SRT)") }) }
                             item { FilterChip(selected = appearanceMode == SubtitleAppearanceMode.KARAOKE_IA,
                                 onClick = {
                                     appearanceMode = SubtitleAppearanceMode.KARAOKE_IA
-                                    generatedSize = SubtitleAppearancePolicy.defaultSize(appearanceMode)
                                 }, label = { Text("Karaokê IA") }) }
                         }
                         Text("Rosa do vídeo: letras brancas com contorno preto e tarja rosa móvel na palavra falada. " +

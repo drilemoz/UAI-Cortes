@@ -40,7 +40,7 @@ object EditFeatures {
             val caption = lines.drop(timeIdx + 1).joinToString("\n").take(600).trim()
             if (caption.isNotBlank() && endMs > startMs)
                 result += SubtitleCue(id = UUID.randomUUID().toString(), text = caption,
-                    startMs = startMs, endMs = endMs)
+                    startMs = startMs, endMs = endMs, sizeSp = DEFAULT_SUBTITLE_SIZE_SP)
         }
         return result
     }
