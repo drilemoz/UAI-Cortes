@@ -543,6 +543,25 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
         }
         syncOpen=false
     }
+    var lipSyncCues by remember(p.id, p.clips, p.subtitles, p.transitions, p.overlays) {
+        mutableStateOf<List<SubtitleCue>?>(null)
+    }
+    lipSyncCues?.let { candidates ->
+        SubtitleLipSyncDialog(p, candidates, { lipSyncCues = null }) { changes ->
+            val byId = changes.associateBy { it.before.id }
+            val revised = p.subtitles.map { cue ->
+                byId[cue.id]?.takeIf { it.before == cue }?.after ?: cue
+            }
+            if (revised != p.subtitles && update(p.copy(subtitles = revised))) {
+                batchUndo = SubtitleBatchUndo(p.subtitles, revised)
+                batchUndoSpeakerStyles = null
+                deletedSnapshot = null
+                status = "Sincronia visual aplicada em ${changes.size} legenda(s). Use Desfazer para voltar."
+                changes.firstOrNull()?.let { requestSeek(it.after.startMs) }
+            }
+            lipSyncCues = null
+        }
+    }
     var editorOpen by remember(p.id) { mutableStateOf(false) }
     val selected=p.subtitles.firstOrNull{it.id==selectedId}
     // A legenda em reprodução é diferente da escolhida para editar.
@@ -747,6 +766,13 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                     DropdownMenuItem(text={Text("Gemini IA")},onClick={
                         autoSubtitlesMenu=false;onAutoSubtitles()
                     },leadingIcon={Icon(Icons.Default.AutoAwesome,null)})
+                    DropdownMenuItem(text={Text("Sincronia labial · Gemini")},
+                        enabled=p.subtitles.isNotEmpty() && p.clips.any { !it.isImage }, onClick={
+                            val first = sorted.indexOfFirst { it.id == selectedId }.takeIf { it >= 0 }
+                                ?: sorted.indexOfFirst { it.endMs > cursorMs }.coerceAtLeast(0)
+                            lipSyncCues = sorted.drop(first).take(SubtitleLipSyncPolicy.MAX_CUES)
+                            autoSubtitlesMenu=false
+                        },leadingIcon={Icon(Icons.Default.AutoAwesome,null)})
                     DropdownMenuItem(text={Text("Ajustar sincronia")},enabled=p.subtitles.isNotEmpty(),onClick={
                         autoSubtitlesMenu=false;syncOpen=true
                     },leadingIcon={Icon(Icons.Default.Settings,null)})

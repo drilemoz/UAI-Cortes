@@ -1,3 +1,8 @@
+# Uai Cortes · versão 0.1.287 — Sincronia labial das legendas
+
+- **Sincronia labial** em Legendas → Automáticas. A consulta opcional ao Gemini envia apenas quadros amostrados da faixa principal, mediante ação explícita. Revise até quatro legendas por análise, compare quadros e aceite somente as sugestões que quiser.
+- **Proteção de sincronia:** pequenos ajustes no início e fim da legenda não mexem no áudio, no texto, nos estilos nem no tempo de cada palavra do karaokê. Incerteza, fotos, transições e sobreposições não viram ajustes automáticos. Desfazer restaura a edição em lote.
+
 # Uai Cortes · versão 0.1.286 — Estúdio de Voz
 
 - **Estúdio de Voz:** interpretação Automática por padrão, com sugestão local de tom e amostra curta opcional. IA do roteiro usa um modelo Gemini de texto separado do modelo/voz TTS, mediante confirmação. O roteiro só é trocado ao aceitar a proposta.

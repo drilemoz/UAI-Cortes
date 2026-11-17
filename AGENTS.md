@@ -1,3 +1,10 @@
+# v0.1.287 — Sincronia labial das legendas
+
+- Base v0.1.286/versionCode 287, nova v0.1.287/versionCode 288. Preservar schema 4, assinatura e cinco variantes de APK no CI.
+- Revisão por quadros só após o toque Analisar com Gemini. Nunca enviar áudio, texto da legenda, URIs ou o vídeo integral. Não exportar nem guardar quadros em disco.
+- A IA propõe somente índices de quadros, não timestamps absolutos ou palavras. Validar limites por clipe, transições, PiP, distância do horário original, vizinhos, duração mínima e âncoras por palavra.
+- Só aplicar mudanças selecionadas e com Desfazer. Conferir realismo visual, autorização e desempenho em Android com vídeos reais.
+
 # v0.1.286 — Estúdio de Voz
 
 - Base v0.1.285/versionCode 286, nova v0.1.286/versionCode 287. Preservar schema 4, assinatura e cinco APKs do CI.
