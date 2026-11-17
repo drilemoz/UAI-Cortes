@@ -9,8 +9,8 @@ timeline = read('UnifiedEditorTimeline.kt')
 dialog = read('QuickAudioDialog.kt')
 transfer = read('MusicTrackTransfer.kt')
 export = read('ExportEngine.kt')
-assert 'it == 0 || lanes[it].isNotEmpty() || kinds[it] == TimelineKind.MUSIC' in timeline
-assert '"+ Adicionar música"' in timeline and 'drawableWidth >= 40.dp' in timeline
+assert 'orderedLanes(filled)' in timeline and 'it == TimelineKind.MUSIC' not in timeline
+assert '"Adicionar música"' in timeline and 'TimelineEmptyLane(' in timeline and 'drawableWidth >= 40.dp' in timeline
 assert 'TimelineKind.SUBTITLE->if (wasSelected) onSubtitle(item.id)' in timeline
 assert 'height(lanesHeight)' in timeline and 'Estender final' in timeline
 assert 'val displayTotal = total + if (extending)' in timeline and 'total+15_000L' not in timeline

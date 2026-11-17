@@ -860,7 +860,7 @@ print('OK: v0.1.72: captura PNG com MediaStore seguro; v0.1.75 velocidades até 
 ui = (app_files/'EditorTimelineUi.kt').read_text()
 editor = (app_files/'EditorScreen.kt').read_text()
 policy = (app_files/'FrameStepPolicy.kt').read_text()
-assert 'PreviewPlayback.previous(speed)' in ui and 'PreviewPlayback.next(speed)' in ui
+assert 'Velocidade ${PreviewPlayback.label(speed)}' in ui and 'PreviewPlayback.SPEEDS.chunked(3)' in ui
 assert 'Restaurar 1×' in ui and 'PreviewPlayback.SPEEDS.chunked(3)' in ui
 assert 'FrameStepPolicy.target' in editor and 'VideoFrameRate.read' in editor
 assert 'Ajuste fino' not in editor and 'Voltar cinco segundos' not in editor

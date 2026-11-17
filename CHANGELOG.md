@@ -1,3 +1,9 @@
+# Uai Cortes 0.1.290 (2026-11-17)
+
+- **Linha do tempo:** pistas preenchidas no topo e pistas vazias compactas com atalhos abaixo. Música vazia vai para a última posição. A ordem usa somente as alterações aplicadas, sem mudar durante a edição de um clipe.
+- **Espaçamento:** régua e margens mais compactas. Em telas baixas a área de pistas permite rolar, sem alterar o enquadramento da prévia.
+- **Velocidade:** um único botão reúne as opções da prévia, sem mudar a exportação.
+
 # Uai Cortes 0.1.289 (2026-11-17)
 
 - **Linha do tempo:** horário atual/total, zoom, encaixe e histórico reunidos acima da régua. O horário abre um painel inferior com campo Ir para e atalhos Início e Fim. Ir para não muda a duração nem o histórico do projeto.

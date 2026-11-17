@@ -1,3 +1,9 @@
+# v0.1.290 — Pistas vazias compactas
+
+- Base v0.1.289/versionCode 290, nova v0.1.290/versionCode 291. Preservar schema 4, exportação e assinatura.
+- Toda pista tem atalho, mesmo quando vazia. A ordem usa os blocos confirmados, não posição do cursor ou rascunho de gesto. Música vazia permanece por último.
+- Transições continuam nos cortes da sequência principal. A velocidade compacta afeta somente a prévia.
+
 # v0.1.289 — Barra compacta do editor
 
 - Base v0.1.288/versionCode 289, nova v0.1.289/versionCode 290. Preservar schema 4, exportação e variantes assinadas do CI.

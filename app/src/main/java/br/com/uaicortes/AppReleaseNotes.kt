@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.289"
-    const val VERSION_CODE = 290
+    const val VERSION_NAME = "0.1.290"
+    const val VERSION_CODE = 291
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.290", listOf(
+            ReleaseFeature("editor-empty-tracks-290", "Pistas vazias no fim da linha do tempo",
+                "Os atalhos de Foto, PiP, Áudio e outras mídias continuam acessíveis. Pistas preenchidas ficam acima; Música vazia fica por último.", "check"),
+            ReleaseFeature("editor-spacing-290", "Menos espaço entre os controles",
+                "Régua e margens compactas, com uma só ação para escolher a velocidade da prévia.", "check")
+        )),
         ReleaseSummary("0.1.289", listOf(
             ReleaseFeature("editor-compact-clock-289", "Linha do tempo em uma só barra",
                 "Horário, zoom, encaixe e histórico ficam juntos. Toque no horário para abrir Ir para com atalhos Início e Fim.", "check"),

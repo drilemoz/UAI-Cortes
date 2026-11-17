@@ -19,7 +19,7 @@ assert 'MusicAudioPreview(music, p.durationMs' in editor
 assert 'listOf(video,images,overlays,audioSpans,listOfNotNull(musicSpan),voiceSpans,subtitles)' in timeline
 assert 'TimelineKind.MUSIC -> onOpenMusic()' in timeline
 assert 'TimelineKind.MUSIC->onOpenMusic()' in timeline and 'openTrack(i)' in timeline
-assert 'fun laneHeightDp(kind: TimelineKind): Int' in timeline and 'private val rulerHeight = 22.dp' in timeline
+assert 'fun laneHeightDp(kind: TimelineKind): Int' in timeline and 'private val rulerHeight = 18.dp' in timeline
 assert 'detectDragGestures(onDragStart=' in timeline and 'val gripPx=with(density) { 18.dp.toPx() }' in timeline
 assert 'current.copy(music = updated)' in audio and 'current.copy(music = null)' in audio
 assert 'QuickAudioPlacement.resolve(lengths' in audio and 'media.protectedCopy' in audio

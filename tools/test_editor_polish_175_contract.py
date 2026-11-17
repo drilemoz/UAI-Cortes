@@ -15,7 +15,7 @@ assert 'MAX_SCALE = 1.50f' in layout
 assert 'it in 5..150' in layout
 assert 'OverlayEditorLogic.FILL' in pip and 'Text("Preencher")' in pip
 assert '.put("fitMode",OverlayEditorLogic.fitMode(fitMode))' in project
-assert 'val visibleRows=tracks.indices.filter {' in timeline and 'it == 0 || lanes[it].isNotEmpty()' in timeline
+assert 'UnifiedTimelinePolicy.orderedLanes(filled)' in timeline and 'lanes[index].isNotEmpty()' in timeline
 assert 'visibleRows.forEach { index ->' in timeline
 assert 'EditorTimelineHeader(' in timeline and 'addMenu' not in timeline
 assert 'val featured = listOf(' in transitions and 'showMore' in transitions

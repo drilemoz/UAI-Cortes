@@ -18,7 +18,7 @@ for token in ('UnifiedEditorTimeline(p,currentMs','onClip={id->','onOverlay={id-
 for token in ('mainSpans(clips: List<Clip>, image: Boolean)', 'clip.isImage == image',
               'cursorFraction(positionMs: Long, durationMs: Long)', 'detectDragGestures',
               'detectTapGestures','TimelineSegment(span,kind,total,width,tint',
-              'transitions=if(index==0)project.clips','Icons.Default.Image', 'Icons.Default.ClosedCaption',
+              'transitions=if(kind == transitionLane)project.clips','Icons.Default.Image', 'Icons.Default.ClosedCaption',
               'Icons.Default.RecordVoiceOver','onEdit={kind,id,handle,delta,target ->'):
     assert token in timeline,token
 assert 'MainImageInsertionUi(project, screen, mediaAction, selectedClip,' in activity

@@ -367,7 +367,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 }
             }
         } else {
-        Row(Modifier.fillMaxWidth().padding(horizontal=4.dp,vertical=6.dp),horizontalArrangement=Arrangement.Center,
+        Row(Modifier.fillMaxWidth().padding(horizontal=4.dp,vertical=1.dp),horizontalArrangement=Arrangement.Center,
             verticalAlignment=Alignment.CenterVertically) {
             IconButton(onClick = {
                 player.pause()
@@ -519,7 +519,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                     else -> true
                 }
             })
-        Spacer(Modifier.height(5.dp));HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
+        Spacer(Modifier.height(2.dp));HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
         // Vídeo e Foto abrem a galeria; PiP é inserido nas abas de Camadas.
         // Animar imagens e Prompt Flow são ferramentas independentes acessíveis pela Home,
         // não operações da linha do tempo do projeto em edição.
@@ -539,7 +539,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val toolWidth = EditorTimelineHeaderPolicy.toolbarItemWidthDp(maxWidth.value, actions.size).dp
             LazyRow(state = toolsScroll, modifier = Modifier.fillMaxWidth().navigationBarsPadding()
-                .padding(vertical = 8.dp), contentPadding = PaddingValues(horizontal = 6.dp),
+                .padding(vertical = 4.dp), contentPadding = PaddingValues(horizontal = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 items(count = actions.size) { index ->
                     val (name, icon, key) = actions[index]

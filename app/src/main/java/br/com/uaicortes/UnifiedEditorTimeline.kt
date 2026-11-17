@@ -8,6 +8,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -20,11 +21,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -41,6 +44,19 @@ internal object UnifiedTimelinePolicy {
         TimelineKind.SUBTITLE -> 24
         else -> 28
     }
+
+    const val EMPTY_LANE_DP = 18
+    private val laneOrder = TimelineKind.entries
+    fun orderedLanes(filled: Set<TimelineKind>): List<TimelineKind> =
+        laneOrder.filter { it in filled } +
+            laneOrder.filter { it !in filled && it != TimelineKind.MUSIC } +
+            listOf(TimelineKind.MUSIC).filter { it !in filled }
+
+    fun displayHeightDp(kind: TimelineKind, filled: Boolean): Int =
+        if (filled) laneHeightDp(kind) else EMPTY_LANE_DP
+
+    fun maxViewportHeightDp(screenHeightDp: Int): Float =
+        (screenHeightDp * .235f).coerceIn(104f, 232f)
 
     /** Só reserva espaço em modo de extensão, sem alterar a escala do vídeo. */
     fun endExtensionMs(totalMs: Long, sourceRemainingMs: Long, zoom: Int): Long =
@@ -79,7 +95,7 @@ internal object UnifiedTimelinePolicy {
     }
 }
 
-private val rulerHeight = 22.dp
+private val rulerHeight = 18.dp
 
 /** A área central faz o drag; as alças de 18dp aparecem após seleção.
  * O único commit ocorre em onDragEnd. Tap NÃO navega para outras telas.
@@ -164,7 +180,7 @@ private fun TimelineSegment(span: TimelineVisualSpan, kind: TimelineKind,
 @Composable
 private fun TimelineLaneBody(kind: TimelineKind, entries: List<TimelineVisualSpan>,
     total: Long, tint: Color, width: Dp, selected: TimelineSelection?,
-    extendId: String? = null, onEmptyMusic: (() -> Unit)? = null,
+    extendId: String? = null,
     onSelect: (TimelineSelection)->Unit, onEntryTap: (TimelineSelection, Boolean)->Unit,
     onEdit: (TimelineKind,String,TimelineHandle,Long,Long)->Unit,
     onGestureStart:()->Unit,onGestureEnd:()->Unit,
@@ -173,12 +189,6 @@ private fun TimelineLaneBody(kind: TimelineKind, entries: List<TimelineVisualSpa
     val laneHeight = UnifiedTimelinePolicy.laneHeightDp(kind).dp
     Box(Modifier.width(width).height(laneHeight).padding(vertical=2.dp)
         .clip(RoundedCornerShape(5.dp)).background(tint.copy(alpha=.07f))) {
-        if (entries.isEmpty() && onEmptyMusic != null) {
-            Box(Modifier.fillMaxSize().clickable(onClick = onEmptyMusic).padding(start = 8.dp),
-                contentAlignment = Alignment.CenterStart) {
-                Text("+ Adicionar música", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary)
-            }
-        }
         entries.forEach { span ->
             key(kind,span.id) {
                 TimelineSegment(span,kind,total,width,tint,selected==TimelineSelection(kind,span.id),
@@ -207,6 +217,21 @@ private fun TimelineLaneBody(kind: TimelineKind, entries: List<TimelineVisualSpa
                         .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp)))
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun TimelineEmptyLane(width: Dp, height: Dp, tint: Color, label: String,
+    scrollOffset: () -> Int, onOpen: () -> Unit) {
+    Box(Modifier.width(width).height(height).padding(vertical = 1.dp)
+        .clip(RoundedCornerShape(4.dp)).background(tint.copy(alpha = .045f))
+        .clickable(onClick = onOpen), contentAlignment = Alignment.CenterStart) {
+        Row(Modifier.offset { IntOffset(scrollOffset(), 0) }.padding(start = 6.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            Icon(Icons.Default.Add, null, Modifier.size(12.dp), tint = MaterialTheme.colorScheme.primary)
+            Text(label, fontSize = 9.sp, color = MaterialTheme.colorScheme.primary,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -256,13 +281,16 @@ internal fun UnifiedEditorTimeline(
     val displayTotal = total + if (extending)
         UnifiedTimelinePolicy.endExtensionMs(total, sourceRemaining, zoom) else 0L
     val scroll=rememberScrollState()
+    val verticalScrollState = rememberScrollState()
+    // No espaço curto, mantenha a prévia e as ferramentas disponíveis. As pistas continuam acessíveis.
+    val maxLaneViewport = UnifiedTimelinePolicy.maxViewportHeightDp(LocalConfiguration.current.screenHeightDp).dp
     LaunchedEffect(extending, scroll.maxValue) {
         if (extending && scroll.maxValue < Int.MAX_VALUE) scroll.scrollTo(scroll.maxValue)
     }
     LaunchedEffect(canExtend) { if (!canExtend) extendId = null }
     val tracks=listOf(
         Triple(Icons.Default.Movie,"Vídeo",Blue),
-        Triple(Icons.Default.Image,"Imagem",Color(0xFF9877CB)),
+        Triple(Icons.Default.Image,"Foto",Color(0xFF9877CB)),
         Triple(Icons.Default.Layers,"PiP",Purple),
         Triple(Icons.Default.GraphicEq,"Áudio",Green),
         Triple(Icons.Default.MusicNote,"Música",Color(0xFFA25125)),
@@ -271,11 +299,15 @@ internal fun UnifiedEditorTimeline(
     val lanes=listOf(video,images,overlays,audioSpans,listOfNotNull(musicSpan),voiceSpans,subtitles)
     val kinds=listOf(TimelineKind.MAIN_VIDEO,TimelineKind.MAIN_IMAGE,TimelineKind.PIP,
         TimelineKind.AUDIO,TimelineKind.MUSIC,TimelineKind.VOICE,TimelineKind.SUBTITLE)
-    // Música fica explícita, inclusive vazia. As demais pistas auxiliares só aparecem se houver itens.
-    val visibleRows=tracks.indices.filter {
-        it == 0 || lanes[it].isNotEmpty() || kinds[it] == TimelineKind.MUSIC
-    }
-    val lanesHeight = visibleRows.sumOf { UnifiedTimelinePolicy.laneHeightDp(kinds[it]) }.dp
+    // O conteúdo das pistas vem do projeto confirmado. Arrastar só altera o rascunho do bloco.
+    val filled = kinds.filterIndexed { index, _ -> lanes[index].isNotEmpty() }.toSet()
+    val visibleRows = UnifiedTimelinePolicy.orderedLanes(filled).map { kinds.indexOf(it) }
+    val rowHeights = kinds.map { UnifiedTimelinePolicy.displayHeightDp(it, it in filled) }
+    val lanesHeight = rowHeights.sum().dp
+    val transitionLane = if (TimelineKind.MAIN_VIDEO in filled)
+        TimelineKind.MAIN_VIDEO else TimelineKind.MAIN_IMAGE
+    val emptyPrompts = listOf("Adicionar vídeo", "Adicionar foto", "Adicionar PiP", "Adicionar áudio",
+        "Adicionar música", "Abrir Vozes IA", "Abrir Legendas")
     val selectedSpan = selected?.let { current ->
         lanes.getOrNull(kinds.indexOf(current.kind))?.firstOrNull { it.id == current.id }
     }
@@ -293,24 +325,30 @@ internal fun UnifiedEditorTimeline(
     Column(Modifier.fillMaxWidth().padding(horizontal=10.dp)
         .clip(RoundedCornerShape(12.dp))
         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.20f))
-        .padding(4.dp),verticalArrangement=Arrangement.spacedBy(3.dp)) {
+        .padding(horizontal=4.dp),verticalArrangement=Arrangement.spacedBy(0.dp)) {
         EditorTimelineHeader(positionMs, project.durationMs, zoom, magnetic, canUndo, canRedo,
             onZoom = { zoom = it }, onMagnet = { magnetic = !magnetic }, onUndo = onUndo, onRedo = onRedo,
             onSeek = onSeek, onSeekOpened = onSeekOpened)
-        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.Top) {
+        Row(Modifier.fillMaxWidth().heightIn(max = maxLaneViewport).verticalScroll(verticalScrollState),
+            verticalAlignment=Alignment.Top) {
             Column(Modifier.width(62.dp),verticalArrangement=Arrangement.spacedBy(0.dp)) {
                 Spacer(Modifier.height(rulerHeight))
                 visibleRows.forEach { i ->
                     val item = tracks[i]
                     val kind = kinds[i]
-                    Row(Modifier.height(UnifiedTimelinePolicy.laneHeightDp(kind).dp).fillMaxWidth()
-                        .clickable { openTrack(i) }.semantics {contentDescription="Adicionar ou editar ${item.second}"},
-                        verticalAlignment=Alignment.CenterVertically,
-                        horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-                        Icon(item.first, null, modifier=Modifier.size(14.dp), tint=item.third)
-                        Text(if (kind == TimelineKind.SUBTITLE) "Legendas" else item.second,
-                            fontSize=9.sp, maxLines=1, overflow=TextOverflow.Ellipsis,
-                            color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    key(kind) {
+                        val isFilled = kind in filled
+                        Row(Modifier.height(rowHeights[i].dp).fillMaxWidth()
+                            .clickable { openTrack(i) }.semantics {
+                                contentDescription = if (isFilled) "Adicionar ou editar ${item.second}" else emptyPrompts[i]
+                            },
+                            verticalAlignment=Alignment.CenterVertically,
+                            horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                            Icon(item.first, null, modifier=Modifier.size(if (isFilled) 14.dp else 12.dp),
+                                tint=if (isFilled) item.third else item.third.copy(alpha = .7f))
+                            Text(item.second, fontSize=9.sp, maxLines=1, overflow=TextOverflow.Ellipsis,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
             }
@@ -334,42 +372,44 @@ internal fun UnifiedEditorTimeline(
                                 }
                             }
                             visibleRows.forEach { index ->
-                                val spans=lanes[index]
-                                TimelineLaneBody(kinds[index],spans,displayTotal,tracks[index].third,
-                                    stripWidth,selected,
-                                    extendId = extendId.takeIf { extending },
-                                    onEmptyMusic = if (kinds[index] == TimelineKind.MUSIC && project.music == null)
-                                        onOpenMusic else null,
-                                    onSelect={ item ->
-                                        selected=item
-                                        when(item.kind){
-                                            TimelineKind.MAIN_VIDEO,TimelineKind.MAIN_IMAGE->onSelectClip(item.id)
-                                            TimelineKind.PIP->onSelectOverlay(item.id)
-                                            TimelineKind.AUDIO,TimelineKind.VOICE,TimelineKind.MUSIC->{ /* toque apenas seleciona */ }
-                                            TimelineKind.SUBTITLE->{ /* editar pelo lápis */ }
-                                        }
-                                    },onEntryTap={ item, wasSelected ->
-                                        when(item.kind) {
-                                            TimelineKind.MAIN_VIDEO,TimelineKind.MAIN_IMAGE->onClip(item.id)
-                                            TimelineKind.PIP->onOverlay(item.id)
-                                            TimelineKind.AUDIO,TimelineKind.VOICE->onAudio(item.id)
-                                            TimelineKind.MUSIC->onOpenMusic()
-                                            TimelineKind.SUBTITLE->if (wasSelected) onSubtitle(item.id)
-                                        }
-                                    },onEdit={kind,id,handle,delta,target ->
-                                        val extendingRight = extending && id == extendId && handle == TimelineHandle.RIGHT
-                                        // Não deixe o encaixe no antigo fim bloquear uma extensão curta.
-                                        val adjusted = if (extendingRight && delta > 0L)
-                                            delta.coerceAtMost(displayTotal - total)
-                                        else if (magnetic) TimelineMagnet.adjust(project,
-                                            kind,id,handle,delta,positionMs) else delta
-                                        onTimelineEdit(kind,id,handle,adjusted,target+adjusted-delta)
-                                        if (extending && id == extendId && handle == TimelineHandle.RIGHT) extendId = null
-                                    },
-                                    onGestureStart=onGestureStart,onGestureEnd=onGestureEnd,
-                                    canEdit={id -> isEditable(kinds[index],id)},
-                                    transitions=if(index==0)project.clips else emptyList(),
-                                    onTransition=onTransition)
+                                val kind = kinds[index]
+                                key(kind) {
+                                    if (kind !in filled) TimelineEmptyLane(stripWidth, rowHeights[index].dp,
+                                        tracks[index].third, emptyPrompts[index], { scroll.value }) { openTrack(index) }
+                                    else TimelineLaneBody(kind,lanes[index],displayTotal,tracks[index].third,
+                                        stripWidth,selected,
+                                        extendId = extendId.takeIf { extending },
+                                        onSelect={ item ->
+                                            selected=item
+                                            when(item.kind){
+                                                TimelineKind.MAIN_VIDEO,TimelineKind.MAIN_IMAGE->onSelectClip(item.id)
+                                                TimelineKind.PIP->onSelectOverlay(item.id)
+                                                TimelineKind.AUDIO,TimelineKind.VOICE,TimelineKind.MUSIC->{ /* toque apenas seleciona */ }
+                                                TimelineKind.SUBTITLE->{ /* editar pelo lápis */ }
+                                            }
+                                        },onEntryTap={ item, wasSelected ->
+                                            when(item.kind) {
+                                                TimelineKind.MAIN_VIDEO,TimelineKind.MAIN_IMAGE->onClip(item.id)
+                                                TimelineKind.PIP->onOverlay(item.id)
+                                                TimelineKind.AUDIO,TimelineKind.VOICE->onAudio(item.id)
+                                                TimelineKind.MUSIC->onOpenMusic()
+                                                TimelineKind.SUBTITLE->if (wasSelected) onSubtitle(item.id)
+                                            }
+                                        },onEdit={kind,id,handle,delta,target ->
+                                            val extendingRight = extending && id == extendId && handle == TimelineHandle.RIGHT
+                                            // Não deixe o encaixe no antigo fim bloquear uma extensão curta.
+                                            val adjusted = if (extendingRight && delta > 0L)
+                                                delta.coerceAtMost(displayTotal - total)
+                                            else if (magnetic) TimelineMagnet.adjust(project,
+                                                kind,id,handle,delta,positionMs) else delta
+                                            onTimelineEdit(kind,id,handle,adjusted,target+adjusted-delta)
+                                            if (extending && id == extendId && handle == TimelineHandle.RIGHT) extendId = null
+                                        },
+                                        onGestureStart=onGestureStart,onGestureEnd=onGestureEnd,
+                                        canEdit={id -> isEditable(kinds[index],id)},
+                                        transitions=if(kind == transitionLane)project.clips else emptyList(),
+                                        onTransition=onTransition)
+                                }
                             }
                         }
                         val playX=stripWidth*UnifiedTimelinePolicy.cursorFraction(positionMs,displayTotal)

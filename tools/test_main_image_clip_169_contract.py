@@ -16,7 +16,7 @@ editor = read('EditorScreen.kt')
 timeline = read('UnifiedEditorTimeline.kt')
 assert 'onAddImage=onAddImage' in editor
 assert 'onAddImage:()->Unit' in timeline
-assert 'Triple(Icons.Default.Image,"Imagem",' in timeline
+assert 'Triple(Icons.Default.Image,"Foto",' in timeline
 assert 'addMenu' not in timeline and 'Triple("Foto", Icons.Default.AddPhotoAlternate, "insert_photo")' in editor
 assert '"insert_photo" -> onAddImage()' in editor
 assert 'TimelineKind.MAIN_IMAGE -> onAddImage()' in timeline

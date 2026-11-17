@@ -796,59 +796,46 @@ internal fun TimeDigitsField(label: String, timeMs: Long, totalMs: Long,
     }
 }
 
-/** Seletor compacto: - / velocidade / +, toque no valor abre grade e restaura 1×. */
+/** Uma ação de velocidade. Não altera a velocidade no arquivo exportado. */
 @Composable
 internal fun PlaybackSpeedButton(speed: Float, onSelect: (Float) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    Row(verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(0.dp)) {
-        IconButton(onClick = { onSelect(PreviewPlayback.previous(speed)) },
-            enabled = speed != PreviewPlayback.SPEEDS.first(),
-            modifier = Modifier.size(36.dp)) {
-            Icon(Icons.Default.Remove, "Diminuir a velocidade da prévia", modifier = Modifier.size(19.dp))
+    Box {
+        OutlinedButton(onClick = { expanded = true },
+            modifier = Modifier.heightIn(min = 48.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+            shape = RoundedCornerShape(11.dp)) {
+            Text("Velocidade ${PreviewPlayback.label(speed)}", fontSize = 12.sp, maxLines = 1,
+                fontWeight = FontWeight.SemiBold)
         }
-        Box {
-            OutlinedButton(onClick = { expanded = true },
-                modifier = Modifier.width(70.dp).height(38.dp),
-                contentPadding = PaddingValues(0.dp),
-                shape = RoundedCornerShape(11.dp)) {
-                Text(PreviewPlayback.label(speed), fontSize = 13.sp, maxLines = 1,
-                    fontWeight = FontWeight.SemiBold)
-            }
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                Text("Velocidade da prévia", modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
-                    style = MaterialTheme.typography.labelMedium)
-                Text("Apenas reprodução; não altera o MP4", modifier = Modifier.padding(horizontal = 12.dp),
-                    fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                PreviewPlayback.SPEEDS.chunked(3).forEach { group ->
-                    Row(Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        group.forEach { option ->
-                            val active = option == speed
-                            OutlinedButton(onClick = { onSelect(option); expanded = false },
-                                modifier = Modifier.width(72.dp).height(36.dp),
-                                contentPadding = PaddingValues(0.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    containerColor = if (active) MaterialTheme.colorScheme.primaryContainer
-                                        else MaterialTheme.colorScheme.surface)) {
-                                Text(PreviewPlayback.label(option), fontSize = 12.sp,
-                                    fontWeight = if (active) FontWeight.Bold else FontWeight.Normal)
-                            }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            Text("Velocidade da prévia", modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+                style = MaterialTheme.typography.labelMedium)
+            Text("Apenas reprodução; não altera o MP4", modifier = Modifier.padding(horizontal = 12.dp),
+                fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            PreviewPlayback.SPEEDS.chunked(3).forEach { group ->
+                Row(Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    group.forEach { option ->
+                        val active = option == speed
+                        OutlinedButton(onClick = { onSelect(option); expanded = false },
+                            modifier = Modifier.width(72.dp).height(36.dp),
+                            contentPadding = PaddingValues(0.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = if (active) MaterialTheme.colorScheme.primaryContainer
+                                    else MaterialTheme.colorScheme.surface)) {
+                            Text(PreviewPlayback.label(option), fontSize = 12.sp,
+                                fontWeight = if (active) FontWeight.Bold else FontWeight.Normal)
                         }
                     }
                 }
-                TextButton(onClick = { onSelect(1f); expanded = false },
-                    modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Default.Restore, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Restaurar 1×")
-                }
             }
-        }
-        IconButton(onClick = { onSelect(PreviewPlayback.next(speed)) },
-            enabled = speed != PreviewPlayback.SPEEDS.last(),
-            modifier = Modifier.size(36.dp)) {
-            Icon(Icons.Default.Add, "Aumentar a velocidade da prévia", modifier = Modifier.size(19.dp))
+            TextButton(onClick = { onSelect(1f); expanded = false },
+                modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Restore, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Restaurar 1×")
+            }
         }
     }
 }
