@@ -627,7 +627,7 @@ internal fun diagnosticPlayer(context: android.content.Context, pipVideo: Boolea
                 "export" -> project?.let { current -> ExportScreen(current, store.quality(), ::back,
                     onPublicationDraftSave = { draft -> projectSession.project?.takeIf { it.id == current.id }
                         ?.let { write(it.copy(publicationDraft = draft)) } ?: false },
-                    onComplete = { leaveEditor("save") }) }
+                    onComplete = { leaveEditor("save") }, initialPositionMs = positionMs) }
             }
         }
         if (pendingExitEditor) ConfirmEditorExit(projectSession.hasSavedOriginal,

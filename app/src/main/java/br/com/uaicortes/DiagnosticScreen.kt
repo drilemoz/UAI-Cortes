@@ -62,7 +62,7 @@ fun DiagnosticScreen(onBack: () -> Unit, onEnabledChanged: (Boolean) -> Unit) {
             Text("Quando ativo, registra data/hora, tela, ações, estados de downloads, etapas da exportação, " +
                 "prévias, transcrição automática, proteção de mídia, motivos de encerramento informados pelo Android e falhas de API " +
                 "(serviço, operação, HTTP, modelo público, latência e tokens quando informados). " +
-                "Separa falhas de transição, PiP e importação de imagens por etapa. " +
+                "Separa falhas de transição, PiP e importação de imagens e guarda o resumo do teste de engasgos quando executado. " +
                 "Não registra chaves, tokens, prompts, mensagens HTTP, nomes dos arquivos, caminhos, áudio, vídeos ou senhas. " +
                 "O TXT inclui o modelo do aparelho e a versão do Android.",
                 style = MaterialTheme.typography.bodySmall,

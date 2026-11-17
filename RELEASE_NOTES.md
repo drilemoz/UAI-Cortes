@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.299 — Diagnóstico de engasgos
+
+- **Analisar engasgos:** aparece na tela de exportação e no painel de vídeo salvo. Compare até cinco segundos de um clipe com o MP4 e com um teste isolado do mesmo trecho.
+- **Relatório local:** identifica padrões em que um quadro volta na sequência. Distingue repetição normal por conversão de FPS e sinaliza quando a amostra é inconclusiva.
+- O teste fica no cache e é apagado ao terminar. Não altera o projeto, o MP4 selecionado, áudio, transições ou exportação normal.
+
 # Uai Cortes · versão 0.1.298 — Cursor e diagnóstico
 
 - **Timeline:** régua de 48 dp e alça maior. Toque para ir até um ponto ou arraste para revisar. Durante o gesto, a prévia pausa e o horário aparece junto da alça. As pistas mantêm os gestos de edição.

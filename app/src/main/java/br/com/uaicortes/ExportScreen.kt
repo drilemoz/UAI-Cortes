@@ -92,7 +92,7 @@ private fun ExportFrameIllustration(crop: Boolean) {
 @Composable
 internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
     onPublicationDraftSave: (VideoPublicationDraft) -> Boolean,
-    onComplete: () -> Boolean) {
+    onComplete: () -> Boolean, initialPositionMs: Long = 0L) {
     val context=LocalContext.current
     val exportVm: ExportTaskViewModel = viewModel()
     val exportState = exportVm.task
@@ -179,6 +179,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
             }.minOrNull()
         }
     }
+    var showStutter by remember(p.id) { mutableStateOf(false) }
     var confirmCancelExport by remember {mutableStateOf(false)}
     var confirmStartExport by remember {mutableStateOf(false)}
     // Conteúdo rolável e ação principal fixa. Em telas pequenas/alto zoom, as opções
@@ -410,6 +411,13 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
             subtitleSummary.warnings.forEach { warning ->
                 Text("Atenção: $warning", style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.error)
+            }
+            OutlinedButton(onClick = {
+                previewPlayer.pause()
+                showStutter = true
+            }, modifier = Modifier.fillMaxWidth(),
+                enabled = !working && p.clips.any { !it.isImage && it.durationMs >= 500L }) {
+                Text("Analisar engasgos")
             }
             if(result.isNotBlank()) Text(result,modifier=Modifier.padding(vertical=5.dp),
                 color=if(result.startsWith("Erro"))MaterialTheme.colorScheme.error
@@ -651,7 +659,12 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
             }) {Text("Cancelar exportação")}},
             dismissButton={TextButton(onClick={confirmCancelExport=false}) {Text("Continuar")}})
     }
-    // Confirmação compartilhada com Animar Imagens, somente após MediaStore concluir.
+    if (showStutter && !working) {
+        ExportStutterDialog(p, if (previewExpanded) exportPreviewMs else initialPositionMs,
+            exportVm.lastExportVideo?.takeIf { exportVm.isForProject(p.id) },
+            quality, bitratePreset, destination, frameMode, onClose = { showStutter = false })
+    }
+    // Confirmação somente após MediaStore concluir.
     savedVideo?.let { savedUri ->
         VideoSavedDialog(uri=savedUri,name=savedName,editLabel="Voltar ao editor",
             exportDetails=qualityReport?.lines().orEmpty(), qualityReport=qualityReport,
@@ -669,6 +682,11 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
             onPublicationDraftSave=onPublicationDraftSave,
             onEdit={ _ -> exportVm.dismissSaved();back()},
             closeLabel="Concluir",
+            onAnalyze = if (p.clips.any { !it.isImage && it.durationMs >= 500L }) ({
+                exportVm.dismissSaved()
+                previewPlayer.pause()
+                showStutter = true
+            }) else null,
             onClose={ if (onComplete()) exportVm.dismissSaved() })
     }
 

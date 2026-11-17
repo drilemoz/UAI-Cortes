@@ -45,7 +45,8 @@ internal fun VideoSavedDialog(
     initialPublicationDraft: VideoPublicationDraft? = null,
     onPublicationDraftSave: ((VideoPublicationDraft) -> Boolean)? = null,
     onEdit: (VideoPublicationDraft) -> Unit, onClose: () -> Unit,
-    closeLabel: String = "Fechar"
+    closeLabel: String = "Fechar",
+    onAnalyze: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -269,6 +270,12 @@ internal fun VideoSavedDialog(
                         Icon(Icons.Default.AutoAwesome,null,Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
                         Text("Gerar com IA")
+                    }
+                }
+                if (onAnalyze != null) {
+                    OutlinedButton(onClick = { if (persistDraft()) onAnalyze() },
+                        modifier = Modifier.fillMaxWidth(), shape = UaiShapes.button) {
+                        Text("Analisar engasgos")
                     }
                 }
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {

@@ -202,6 +202,18 @@ object DiagnosticRecorder {
             "${seconds?.let { " elapsed_s=$it" }.orEmpty()}")
     }
 
+    /** Só números e estágios. Não persiste as assinaturas visuais nem o MP4. */
+    internal fun exportStutter(report: ExportStutterAnalysis.Report) {
+        if (!active.get()) return
+        fun part(outcome: ExportStutterAnalysis.Outcome): String {
+            val r = outcome.comparison ?: return outcome.problem?.name?.lowercase() ?: "unknown"
+            return "${r.reversals}/${r.matched}/${r.frames}"
+        }
+        log("EXPORT_STUTTER", "clip=${report.window.source.index + 1} " +
+            "start_ms=${report.window.projectStartMs} span_ms=${report.window.durationMs} " +
+            "mp4=${part(report.exported)} isolated=${part(report.isolated)}")
+    }
+
     /** Causa do encerramento ANTERIOR, quando Android 11+ informa. Não examina dump privado. */
     private fun inspectPreviousProcessExit(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || !active.get()) return

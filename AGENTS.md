@@ -1,3 +1,9 @@
+# v0.1.299 — Diagnóstico de engasgos da exportação
+
+- Base v0.1.298/versionCode 299, nova v0.1.299/versionCode 300. Preservar schema 4, assinatura e cinco variantes.
+- Comparar até cinco segundos de um mesmo clipe no relógio original, no MP4 e no teste isolado. Identificar conteúdo dos quadros, não inferir desordem pela ordem dos pacotes B-frame nem pela simples duplicação de quadros na conversão de FPS.
+- Renderizar o teste com ExportEngine em cache via callback privado e descartar ao cancelar/concluir. Nenhuma gravação MediaStore, alteração de projeto, upload ou reparo automático. Relatório guarda apenas agregados e horários de montagem, sem nomes, URIs ou assinaturas visuais.
+
 # v0.1.298 — Cursor e diagnóstico do editor
 
 - Base v0.1.297/versionCode 298, nova v0.1.298/versionCode 299. Preservar schema 4, assinatura e cinco variantes.
