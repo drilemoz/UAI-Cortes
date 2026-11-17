@@ -1,3 +1,9 @@
+# v0.1.294 — Correção do workflow 250
+
+- Base v0.1.293/versionCode 294, nova v0.1.294/versionCode 295. Preservar schema 4, assinatura e variantes de APK.
+- Na construção da lista de junções, verifique nomes na coleção de tipos de efeitos. Não chame o contains implícito do receptor de uma lista de Join com uma String.
+- Os efeitos novos e antigos, a prévia de vídeo e o relógio da montagem não mudam. Confirmar Kotlin Debug/Release e Lint no runner de Android.
+
 # v0.1.293 — Composição na junção e prévia em vídeo
 
 - Base v0.1.292/versionCode 293, nova v0.1.293/versionCode 294. Preservar schema 4, assinatura e variantes de APK.

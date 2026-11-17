@@ -1,4 +1,4 @@
-# Uai Cortes · v0.1.293 — Transições em vídeo
+# Uai Cortes · v0.1.294 — Correção de compilação das transições
 
 - **Cortar vídeo:** Marcar início e Marcar fim na tela principal, com alças e duração da parte mantida. A régua usa o intervalo do clipe atual, inclusive se já foi cortado antes.
 - **Prévia:** reproduz uma vez só a seleção. Navegação aproximada por quadro substitui os pulos grandes. A prévia não altera a mídia.

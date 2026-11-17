@@ -70,6 +70,19 @@ class JunctionTransition293Test {
             1000L, JunctionTransitionPlan.PUSH_LEFT, 300L))
     }
 
+    @Test fun planSkipsLegacyEffectWithoutResettingThePositionOfTheNextJoin() {
+        val a = clip("a")
+        val b = clip("b")
+        val c = clip("c")
+        val project = VideoProject(clips = listOf(a, b, c), transitions = listOf(
+            ClipTransition(a.id, b.id, TransitionEffects.BLACK, 500L),
+            ClipTransition(b.id, c.id, JunctionTransitionPlan.DISSOLVE, 300L)))
+        val join = JunctionTransitionPlan.project(project).single()
+        assertEquals(JunctionTransitionPlan.DISSOLVE, join.kind)
+        assertEquals(2000L, join.cutMs)
+        assertEquals(300L, join.durationMs)
+    }
+
     @Test fun previewCropsToTheSelectedCutAndShiftsOnlyItsPrivateCopy() {
         val a = clip("a", 800L, 4600L, 5000L)
         val b = clip("b", 400L, 3900L, 4000L)

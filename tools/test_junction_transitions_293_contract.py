@@ -13,6 +13,8 @@ model = (app / 'ProjectStore.kt').read_text()
 editor = (app / 'EditorScreen.kt').read_text()
 
 assert all(kind in plan for kind in ['DISSOLVE', 'PUSH_LEFT', 'PUSH_RIGHT'])
+assert 'buildList<Join> {' in plan and 'if (transition.kind !in kinds) return@forEach' in plan
+assert 'contains(transition.kind)' not in plan
 assert 'aMs / 2L, bMs / 2L' in plan and 'a.sourceDurationMs - a.endMs < halfMs' in plan
 assert 'b.startMs < halfMs' in plan and 'mainAlpha = if (before) 1f - p else p' in plan
 assert 'setRemoveAudio(true)' in render and 'setOverlayFrameAnchor(-x, 0f)' in render

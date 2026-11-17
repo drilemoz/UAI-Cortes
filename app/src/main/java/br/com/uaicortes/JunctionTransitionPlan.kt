@@ -39,16 +39,18 @@ internal object JunctionTransitionPlan {
                 if (needsLastFrame) maxOf(a.startMs, a.endMs - 1L) else a.endMs, needsLastFrame))
     }
 
-    fun project(project: VideoProject): List<Join> = buildList {
+    fun project(project: VideoProject): List<Join> = buildList<Join> {
         var cutMs = 0L
         val byPair = project.transitions.groupBy { it.fromId to it.toId }
         project.clips.zipWithNext().forEach { (a, b) ->
             cutMs += a.durationMs
             val transition = byPair[a.id to b.id]?.firstOrNull() ?: return@forEach
-            if (contains(transition.kind)) add(requireNotNull(boundary(a, b, cutMs,
-                transition.kind, transition.durationMs)) {
+            // Check the effect names, not the resulting list of Join objects.
+            if (transition.kind !in kinds) return@forEach
+            val join = requireNotNull(boundary(a, b, cutMs, transition.kind, transition.durationMs)) {
                 "Clipes curtos demais para a transição em ${cutMs} ms. Escolha Corte direto ou revise o corte."
-            })
+            }
+            add(join)
         }
     }
 

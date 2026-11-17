@@ -1,3 +1,8 @@
+# Uai Cortes 0.1.294 (2026-11-17)
+
+- Corrigido o erro de inferência de tipos no workflow 250 durante a compilação Kotlin Debug e Release. O planejador compara o nome do efeito com a lista de efeitos, não com a lista de junções que está construindo.
+- Mantidos Dissolver, Empurrão lateral, os efeitos anteriores, a prévia renderizada e os horários existentes. Adicionado teste de projeto com efeito legado e moderno em junções consecutivas.
+
 # Uai Cortes 0.1.293 (2026-11-17)
 
 - **Transições:** o marcador entre clipes abre um painel inferior com Dissolver, Empurrão lateral nos dois sentidos, Corte direto e Fade preto. Os efeitos legados ficam em Mais efeitos.
