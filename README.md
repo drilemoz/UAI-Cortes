@@ -1,4 +1,4 @@
-# Uai Cortes · v0.1.276 — print do editor com mais qualidade
+# Uai Cortes · v0.1.277 — tela Exportar simplificada
 
 - Publicar vídeo agora usa seleção -> confirmação única -> fila de envios YouTube -> relatório por destino, sem solicitar repetidamente os mesmos botões.
 - A tela informa estado de autorização, identidade do canal, percentual confirmado, velocidade e tempo restante estimado; relatório resumido é salvo de forma privada.

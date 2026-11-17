@@ -4,7 +4,7 @@ from pathlib import Path
 r=Path(__file__).resolve().parents[1]
 src=r/'app/src/main/java/br/com/uaicortes'
 s=(src/'ExportScreen.kt').read_text()
-assert 'listOf(360,480,720,1080).forEach' in s
+assert 'listOf(720,1080).forEach' in s
 assert 'Modifier.weight(1f).height(62.dp)' in s
 assert 'ExportProgressUi.progressExplanation(exportPhase)' in s
 assert 'ExportProgressUi.renderPercent(exportPhase,progress)' in s

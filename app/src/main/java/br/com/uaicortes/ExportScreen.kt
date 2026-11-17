@@ -139,9 +139,8 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
         previewPlayer.prepare()
     }
     var name by rememberSaveable(p.id) { mutableStateOf(ProjectNaming.exportName(p.title).removeSuffix(".mp4")) }
-    var quality by rememberSaveable(p.id) {mutableIntStateOf(defaultQuality.takeIf { it in listOf(360, 480, 720, 1080) } ?: 1080)}
+    var quality by rememberSaveable(p.id) {mutableIntStateOf(if (defaultQuality in listOf(720, 1080)) defaultQuality else if (defaultQuality < 720) 720 else 1080)}
     var bitratePresetName by rememberSaveable(p.id) { mutableStateOf(ExportBitratePreset.HIGH.name) }
-    var qualityHelpExpanded by rememberSaveable(p.id) { mutableStateOf(false) }
     var framingHelpExpanded by rememberSaveable(p.id) { mutableStateOf(false) }
     var previewExpanded by rememberSaveable(p.id) { mutableStateOf(false) }
     var guideKind by rememberSaveable(p.id) { mutableStateOf("BOTH") }
@@ -204,22 +203,61 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                 shape=UaiShapes.card,enabled=!working,
                 supportingText={Text("A extensão .mp4 será adicionada automaticamente.")})
             Spacer(Modifier.height(12.dp))
-            CompactExportLabel("Destino",Icons.Default.MovieFilter)
-            Spacer(Modifier.height(5.dp))
-            Row(horizontalArrangement=Arrangement.spacedBy(5.dp),modifier=Modifier.fillMaxWidth()) {
-                listOf(
-                    Triple(ExportDestination.ORIGINAL,Icons.Default.Movie,"Original"),
-                    Triple(ExportDestination.SHORTS,Icons.Default.PlayCircle,"Shorts"),
-                    Triple(ExportDestination.REELS,Icons.Default.Videocam,"Reels"),
-                    Triple(ExportDestination.TIKTOK,Icons.Default.MusicNote,"TikTok")
-                ).forEach { (item, icon, label) ->
-                    CompactExportOption(label,icon,destination==item,!working,
-                        Modifier.weight(1f).height(62.dp)) {
-                        destinationId=item.name
-                        bitratePresetName=SocialExportPolicy.recommendedBitrate(item).name
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    CompactExportLabel("Resolução",Icons.Default.AspectRatio)
+                    Spacer(Modifier.height(5.dp))
+                    Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                        listOf(720,1080).forEach { q ->
+                            CompactExportOption("${q}p",Icons.Default.Movie,
+                                q==quality,!working,Modifier.weight(1f).height(58.dp)) {
+                                quality=q
+                            }
+                        }
                     }
                 }
             }
+            Text(when(quality) {
+                    720 -> "720p · equilíbrio entre nitidez e tamanho"
+                    else -> "1080p · melhor definição, com maior consumo de espaço"
+                },fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier=Modifier.padding(top=5.dp))
+            Spacer(Modifier.height(11.dp))
+            CompactExportLabel("Compressão",Icons.Default.Tune)
+            Spacer(Modifier.height(5.dp))
+            Row(horizontalArrangement=Arrangement.spacedBy(6.dp),modifier=Modifier.fillMaxWidth()) {
+                ExportBitratePreset.values().forEach { preset ->
+                    val mbps=VideoExportQuality.videoBitrateBps(quality,preset)/1_000_000
+                    CompactExportOption("${preset.label} · ${mbps}M",null,
+                        bitratePreset==preset,!working,Modifier.weight(1f).height(50.dp),horizontal=true) {
+                        bitratePresetName=preset.name
+                    }
+                }
+            }
+            ExportSourceQualityPolicy.warning(sourceShortSide, quality)?.let { notice ->
+                Text(notice,fontSize=11.sp,color=MaterialTheme.colorScheme.tertiary,
+                    modifier=Modifier.padding(top=5.dp))
+            }
+            Spacer(Modifier.height(12.dp))
+            CompactExportLabel("Formato",Icons.Default.MovieFilter)
+            Spacer(Modifier.height(5.dp))
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.fillMaxWidth()) {
+                listOf(
+                    Triple(ExportDestination.ORIGINAL,Icons.Default.Movie,"Original"),
+                    Triple(ExportDestination.SHORTS,Icons.Default.Videocam,"Vertical 9:16")
+                ).forEach { (item, icon, label) ->
+                    CompactExportOption(label,icon,destination.isVertical==item.isVertical,!working,
+                        Modifier.weight(1f).height(62.dp)) {
+                        if (destination.isVertical != item.isVertical) {
+                            destinationId=item.name
+                            bitratePresetName=SocialExportPolicy.recommendedBitrate(item).name
+                        }
+                    }
+                }
+            }
+            Text(if(destination.isVertical) "Para Shorts, Reels e TikTok" else "Mantém a proporção do vídeo",
+                fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier=Modifier.padding(top=4.dp))
             Spacer(Modifier.height(10.dp))
             if (destination.isVertical) {
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
@@ -264,6 +302,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                         lineHeight=14.sp)
                 }
             }
+            if(destination.isVertical) {
             Surface(onClick={previewExpanded=!previewExpanded},
                 modifier=Modifier.fillMaxWidth(),shape=UaiShapes.card,
                 color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.48f)) {
@@ -360,80 +399,16 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                     style=MaterialTheme.typography.labelSmall,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            }
             Spacer(Modifier.height(12.dp))
             CompactExportLabel("Áudio e legendas na exportação", Icons.Default.Subtitles)
-            Text("${activeAudios.size} faixa(s) extras ativas · " +
-                "música ${if(musicEnabled) "ligada" else "desligada"} · $pipAudios PiP(s) com áudio habilitado*",
-                style=MaterialTheme.typography.bodySmall,
-                color=MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("${subtitleSummary.valid} legenda(s) com intervalo visível · " +
-                "som original conforme o volume de cada clipe. *Trilha do PiP será conferida na exportação.",
+            Text("${activeAudios.size} faixa(s) extra(s) · música ${if(musicEnabled) "ligada" else "desligada"} · " +
+                "${subtitleSummary.valid} legenda(s)" + if(pipAudios>0) " · $pipAudios PiP com áudio" else "",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
             subtitleSummary.warnings.forEach { warning ->
                 Text("Atenção: $warning", style=MaterialTheme.typography.bodySmall,
                     color=MaterialTheme.colorScheme.error)
-            }
-            Spacer(Modifier.height(12.dp))
-            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    CompactExportLabel("Resolução",Icons.Default.AspectRatio)
-                    Spacer(Modifier.height(5.dp))
-                    Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                        listOf(360,480,720,1080).forEach { q ->
-                            CompactExportOption("${q}p",Icons.Default.Movie,
-                                q==quality,!working,Modifier.weight(1f).height(58.dp)) {
-                                quality=q
-                            }
-                        }
-                    }
-                }
-            }
-            Text(when(quality) {
-                    360 -> "360p · arquivo menor e processamento mais leve"
-                    480 -> "480p · econômico para prévias e envio rápido"
-                    720 -> "720p · equilíbrio entre nitidez e tamanho"
-                    else -> "1080p · melhor definição, com maior consumo de espaço"
-                },fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier=Modifier.padding(top=5.dp))
-            Spacer(Modifier.height(11.dp))
-            CompactExportLabel("Compressão",Icons.Default.Tune)
-            Spacer(Modifier.height(5.dp))
-            Row(horizontalArrangement=Arrangement.spacedBy(6.dp),modifier=Modifier.fillMaxWidth()) {
-                ExportBitratePreset.values().forEach { preset ->
-                    val mbps=VideoExportQuality.videoBitrateBps(quality,preset)/1_000_000
-                    CompactExportOption("${preset.label} · ${mbps}M",null,
-                        bitratePreset==preset,!working,Modifier.weight(1f).height(50.dp),horizontal=true) {
-                        bitratePresetName=preset.name
-                    }
-                }
-            }
-            ExportSourceQualityPolicy.warning(sourceShortSide, quality)?.let { notice ->
-                Text(notice,fontSize=11.sp,color=MaterialTheme.colorScheme.tertiary,
-                    modifier=Modifier.padding(top=5.dp))
-            }
-            TextButton(onClick={qualityHelpExpanded=!qualityHelpExpanded},
-                modifier=Modifier.fillMaxWidth(),enabled=!working,
-                contentPadding=PaddingValues(vertical=2.dp)) {
-                Icon(Icons.Default.Tune,contentDescription=null,modifier=Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(if(qualityHelpExpanded)"Ocultar detalhes técnicos" else "Detalhes e compatibilidade",
-                    fontSize=12.sp)
-                Spacer(Modifier.width(5.dp))
-                Icon(if(qualityHelpExpanded)Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription=null,modifier=Modifier.size(16.dp))
-            }
-            if(qualityHelpExpanded) {
-                Text("Resolução e bitrate são solicitações ao encoder; o MP4 real pode diferir. " +
-                    "Bitrate elevado não recupera detalhes que a origem não tem. " +
-                    "O arquivo fica na galeria e não é enviado à plataforma selecionada. " +
-                    "Referência: ~${VideoExportQuality.estimatedMiBPerMinute(quality,true,bitratePreset)} MiB/min.",
-                    style=MaterialTheme.typography.bodySmall,
-                    color=MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Solicitado: ${SocialExportPolicy.requestedLabel(destination,quality)} · " +
-                    "H.264/AAC · keyframe ~${VideoExportQuality.REQUESTED_KEYFRAME_INTERVAL_SECONDS}s",
-                    style=MaterialTheme.typography.bodySmall,
-                    color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if(result.isNotBlank()) Text(result,modifier=Modifier.padding(vertical=5.dp),
                 color=if(result.startsWith("Erro"))MaterialTheme.colorScheme.error
@@ -456,7 +431,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                     "${VideoExportQuality.videoBitrateBps(quality,bitratePreset)/1_000_000} Mb/s · MP4",
                     fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Estimativa: ~${VideoExportQuality.estimatedMiBForDuration(p.durationMs,quality,true,bitratePreset)} MiB para este projeto",
+                Text("Estimativa: ~${VideoExportQuality.estimatedMiBForDuration(p.durationMs,quality,true,bitratePreset)} MiB para este projeto · ~${VideoExportQuality.estimatedMiBPerMinute(quality,true,bitratePreset)} MiB/min",
                     fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(5.dp))

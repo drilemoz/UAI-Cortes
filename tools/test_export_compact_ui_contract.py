@@ -7,7 +7,7 @@ s=(r/'app/src/main/java/br/com/uaicortes/ExportScreen.kt').read_text()
 e=(r/'app/src/main/java/br/com/uaicortes/ExportEngine.kt').read_text()
 p=(r/'app/src/main/java/br/com/uaicortes/SocialExportPreset.kt').read_text()
 assert 'CompactExportOption(' in s and 'CompactExportLabel(' in s
-assert all(x in s for x in ['"Original"','"Shorts"','"Reels"','"TikTok"','"Mostrar tudo"','"Preencher"'])
+assert all(x in s for x in ['"Original"','"Vertical 9:16"','"Mostrar tudo"','"Preencher"'])
 assert 'Text("${q}p"' not in s # valores não ficam com bitrate no cartão de resolução
 assert 'CompactExportOption("${q}p"' in s
 assert 'CompactExportOption("${preset.label} · ${mbps}M"' in s

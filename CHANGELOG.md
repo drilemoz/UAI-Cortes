@@ -1,3 +1,9 @@
+# Uai Cortes 0.1.277 (2026-11-17)
+
+- Exportar: só 720p e 1080p na interface (o coordenador segue aceitando 360p/480p de projetos antigos, que abrem em 720p); sem "Detalhes e compatibilidade"; estimativa por projeto e por minuto no rodapé.
+- Destino virou Formato: Original ou Vertical 9:16 (Shorts, Reels e TikTok eram idênticos no código); a prévia de enquadramento só aparece no formato vertical.
+- Ordem: Resolução, Compressão, Formato, resumo de áudio/legendas. Compilação Android pendente.
+
 # Uai Cortes 0.1.276 (2026-11-17)
 
 - Print (botão de câmera): o quadro composto (PiP, legenda, marca d'água) usa `snapshotTier` (480/720/1080, sem perder detalhe) — antes resoluções como 540p/576p não tinham bitrate e o print falhava.

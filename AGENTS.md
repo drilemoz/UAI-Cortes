@@ -1,3 +1,8 @@
+# v0.1.277 — Exportar simplificado
+
+- Base v0.1.276/versionCode 277; atual v0.1.277/versionCode 278. UI de Exportar: 720p/1080p; ExportDestination continua com SHORTS/REELS/TIKTOK no código (vertical = SHORTS).
+- Próximas etapas combinadas: barra do editor (Música, Camadas), navegador de áudios do aparelho, limpeza da tela Áudio.
+
 # v0.1.276 — print do editor
 
 - Base v0.1.275/versionCode 276; atual v0.1.276/versionCode 277. Manter literais de ExportEngine exigidos por validate_source (`videoBitrateBps(height, preset)`, `setiFrameIntervalSeconds(VideoExportQuality.REQUESTED_KEYFRAME_INTERVAL_SECONDS)`).

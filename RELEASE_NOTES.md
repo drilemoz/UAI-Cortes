@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.277 — Exportar mais simples
+
+- Resolução só 720p e 1080p; sem detalhes técnicos.
+- Formato: Original ou Vertical 9:16 (prévia só no vertical).
+- Resumo de áudio e legendas em uma linha.
+
 # Uai Cortes · versão 0.1.276 — print do editor com mais qualidade
 
 - Print com legenda/PiP: bitrate máximo, keyframes frequentes e suporte a qualquer resolução de origem.

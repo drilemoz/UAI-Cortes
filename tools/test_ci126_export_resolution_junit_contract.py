@@ -13,7 +13,8 @@ allowed={int(v.strip()) for v in re.search(r'require\(quality in listOf\(([^)]+)
 accepted={int(v.strip()) for v in re.search(r'fun everyAdvertisedResolutionIsAccepted\(\).*?listOf\(([^)]+)\)',test,re.S).group(1).split(',')}
 invalid={int(v.strip()) for v in re.search(r'fun invalidResolutionOrFileNameAreRejected\(\).*?listOf\(([^)]+)\)',test,re.S).group(1).split(',')}
 ui={int(v.strip()) for v in re.search(r'listOf\((\d+(?:,\d+)+)\)\.forEach',screen).group(1).split(',')}
-assert allowed == accepted == ui == {360,480,720,1080}, (allowed,accepted,ui)
+# v0.1.277: a tela oferece só 720p/1080p; o coordenador continua aceitando todas (projetos antigos).
+assert allowed == accepted == {360,480,720,1080} and ui == {720,1080} and ui <= allowed, (allowed,accepted,ui)
 assert invalid and allowed.isdisjoint(invalid), (allowed,invalid)
 assert 240 in invalid and 2160 in invalid
 assert 'for (resolution in listOf(480, 2160))' not in test
