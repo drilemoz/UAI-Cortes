@@ -22,7 +22,7 @@ import kotlinx.coroutines.withContext
 
 @Composable
 internal fun SubtitleLipSyncDialog(project: VideoProject, candidates: List<SubtitleCue>,
-    onDismiss: () -> Unit, onApply: (List<SubtitleLipSyncPolicy.Change>) -> Unit) {
+    onDismiss: () -> Unit, embedded: Boolean = false, onApply: (List<SubtitleLipSyncPolicy.Change>) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val credentials = remember(context) { GeminiCredentialStore(context) }
@@ -98,10 +98,7 @@ internal fun SubtitleLipSyncDialog(project: VideoProject, candidates: List<Subti
         }
     }
 
-    AlertDialog(
-        onDismissRequest = ::cancelOrClose,
-        title = { Text("Sincronia labial") },
-        text = {
+    val body: @Composable () -> Unit = {
             Column(Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (changes == null) {
@@ -151,15 +148,25 @@ internal fun SubtitleLipSyncDialog(project: VideoProject, candidates: List<Subti
                     }
                 }
             }
-        },
-        confirmButton = {
-            if (changes == null) TextButton(onClick = ::analyze,
-                enabled = !busy && configured == true && picked.isNotEmpty()) { Text("Analisar com Gemini") }
-            else TextButton(onClick = { onApply(changes.orEmpty().filter { it.before.id in accepted }) },
-                enabled = accepted.isNotEmpty()) { Text("Aplicar selecionadas") }
-        },
-        dismissButton = { TextButton(onClick = ::cancelOrClose) { Text(if (busy) "Interromper" else "Fechar") } }
-    )
+    }
+    val confirm: @Composable () -> Unit = {
+        if (changes == null) TextButton(onClick = ::analyze,
+            enabled = !busy && configured == true && picked.isNotEmpty()) { Text("Analisar com Gemini") }
+        else TextButton(onClick = { onApply(changes.orEmpty().filter { it.before.id in accepted }) },
+            enabled = accepted.isNotEmpty()) { Text("Aplicar selecionadas") }
+    }
+    val dismiss: @Composable () -> Unit = {
+        TextButton(onClick = ::cancelOrClose) { Text(if (busy) "Interromper" else "Voltar à revisão") }
+    }
+    if (embedded) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Sincronia labial", style = MaterialTheme.typography.titleMedium)
+            body()
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { dismiss(); confirm() }
+        }
+    } else AlertDialog(onDismissRequest = ::cancelOrClose,
+        title = { Text("Sincronia labial") }, text = body, confirmButton = confirm, dismissButton = dismiss)
+
 }
 
 private fun lipInterval(cue: SubtitleCue) = "${formatPipMs(cue.startMs)} – ${formatPipMs(cue.endMs)}"

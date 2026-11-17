@@ -25,7 +25,8 @@ assert 'val pending = batchPlan.toGenerate' in ui
 assert 'pendingSpeakerVoice?.let' in ui
 assert 'VoiceIaQueuePolicy.reconcileSelections' in ui
 assert 'currentVoices[item.cueId] != item.voiceId' in queue
-assert 'FilterChip(selected = appearanceMode == SubtitleAppearanceMode.CLASSIC_SRT' in auto
+panel = (src/'AutoSubtitlePanel.kt').read_text()
+assert 'SubtitleAppearanceMode.CLASSIC_SRT to' in panel and 'FilterChip(appearance == mode' in panel
 assert 'SubtitleAppearancePolicy.generated(it, appearanceMode, generatedSize)' in auto
 assert 'wordTimings' not in style  # copy preserva marcações sem reconstruir
 assert 'CLASSIC_SRT' in style and 'KARAOKE_IA' in style

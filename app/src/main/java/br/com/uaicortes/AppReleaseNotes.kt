@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.287"
-    const val VERSION_CODE = 288
+    const val VERSION_NAME = "0.1.288"
+    const val VERSION_CODE = 289
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.288", listOf(
+            ReleaseFeature("auto-subtitle-panel-288", "Legendas offline e online em um painel",
+                "Escolha Vosk ou Gemini, selecione o áudio e revise sem sair. Veja ou ouça cada trecho e refaça só o intervalo necessário.", "check"),
+            ReleaseFeature("auto-subtitle-word-times-288", "Karaokê preservado na revisão",
+                "Ajustes de pontuação e maiúsculas não apagam os horários. Confira palavras alteradas pelo áudio e revise a sincronia pela boca quando fizer sentido.", "check")
+        )),
         ReleaseSummary("0.1.287", listOf(
             ReleaseFeature("subtitle-lip-sync-287", "Sincronia labial nas legendas",
                 "Compare quadros com Gemini e confirme pequenos ajustes no início e no fim da legenda. O áudio e os tempos do karaokê não mudam.", "check")

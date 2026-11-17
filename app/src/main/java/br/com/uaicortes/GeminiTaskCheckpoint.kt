@@ -22,7 +22,14 @@ internal class GeminiTaskCheckpointStore(context: Context, kind: GeminiTaskKind,
         if (root.optInt("schema") != 1) throw IOException("Checkpoint Gemini incompatível")
         val snapshot = GeminiTaskCheckpoint(root.getString("fingerprint"), root.getString("model"),
             GeminiTaskStage.valueOf(root.getString("stage")), root.getLong("timestamp"),
-            root.optString("payload").takeIf { root.has("payload") && !root.isNull("payload") })
+            root.optString("payload").takeIf { root.has("payload") && !root.isNull("payload") },
+            root.optJSONObject("subtitleSource")?.let { source ->
+                val ids = source.optJSONArray("needsReview")
+                SubtitleCheckpointSource(source.optString("track").take(180).takeIf(String::isNotBlank),
+                    source.optLong("start"), source.optLong("end"),
+                    (0 until minOf(ids?.length() ?: 0, GeminiTaskRecoveryPolicy.MAX_CUES))
+                        .mapNotNull { ids?.optString(it)?.take(100)?.takeIf(String::isNotBlank) }.toSet())
+            })
         val now = System.currentTimeMillis()
         val result = GeminiTaskRecoveryPolicy.recover(snapshot, fingerprint, now)
         // Expiração também remove bytes do cache privado, não apenas esconde o cartão.
@@ -37,11 +44,12 @@ internal class GeminiTaskCheckpointStore(context: Context, kind: GeminiTaskKind,
     fun review(fingerprint: String, model: String) = save(GeminiTaskCheckpoint(
         fingerprint, model, GeminiTaskStage.REVIEW, System.currentTimeMillis()))
 
-    fun saveSubtitles(fingerprint: String, model: String, cues: List<SubtitleCue>) {
+    fun saveSubtitles(fingerprint: String, model: String, cues: List<SubtitleCue>,
+        source: SubtitleCheckpointSource? = null) {
         require(cues.size <= GeminiTaskRecoveryPolicy.MAX_CUES)
         val payload = JSONArray().apply { cues.forEach { put(it.json()) } }.toString()
         save(GeminiTaskCheckpoint(fingerprint, model, GeminiTaskStage.READY,
-            System.currentTimeMillis(), payload))
+            System.currentTimeMillis(), payload, source))
     }
 
     fun subtitles(snapshot: GeminiTaskCheckpoint): List<SubtitleCue> {
@@ -68,6 +76,13 @@ internal class GeminiTaskCheckpointStore(context: Context, kind: GeminiTaskKind,
             .put("model", snapshot.model).put("stage", snapshot.stage.name)
             .put("timestamp", snapshot.timestamp)
         snapshot.payload?.let { result.put("payload", it) }
+        snapshot.subtitleSource?.let { spec ->
+            result.put("subtitleSource", JSONObject().put("track", spec.trackId.orEmpty().take(180))
+                .put("start", spec.startMs).put("end", spec.endMs)
+                .put("needsReview", JSONArray().apply {
+                    spec.needsReview.take(GeminiTaskRecoveryPolicy.MAX_CUES).forEach { put(it.take(100)) }
+                }))
+        }
         val bytes = result.toString().toByteArray(Charsets.UTF_8)
         require(bytes.size <= GeminiTaskRecoveryPolicy.MAX_BYTES) { "Checkpoint excede 1 MiB" }
         if (!directory.exists() && !directory.mkdirs()) throw IOException("Erro ao criar cache de tarefas")

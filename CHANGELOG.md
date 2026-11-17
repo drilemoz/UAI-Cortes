@@ -1,3 +1,9 @@
+# Uai Cortes 0.1.288 (2026-11-17)
+
+- **Legendas automáticas:** escolha Offline · Vosk ou Online · Gemini nos cards. Um painel reúne fonte, intervalo, progresso e revisão. A explicação longa pode ser lembrada, mas o botão de envio do áudio continua explícito.
+- **Fonte e sincronia:** use o áudio dos clipes ou uma faixa de narração no tempo original do projeto. Preserve os tempos do karaokê ao revisar pontuação e maiúsculas. Palavras alteradas ficam marcadas para revisão.
+- **Revisão por trecho:** ouça a fonte, veja o clipe e a legenda, confira os tempos pelo áudio ou revise os quadros da boca. Refaça um intervalo sem descartar as demais legendas. A recuperação Gemini não exige nova transcrição.
+
 # Uai Cortes 0.1.287 (2026-11-17)
 
 - **Sincronia labial** em Legendas → Automáticas. A consulta opcional ao Gemini envia apenas quadros amostrados da faixa principal, mediante ação explícita. Revise até quatro legendas por análise, compare quadros e aceite somente as sugestões que quiser.

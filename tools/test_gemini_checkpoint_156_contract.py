@@ -24,7 +24,7 @@ class GeminiRecovery156Contract(unittest.TestCase):
         self.assertLess(screen.index('geminiClient.transcribe('), screen.index('geminiCheckpoint.saveSubtitles('))
         self.assertIn('geminiCheckpoint.subtitles(persisted)', screen)
         self.assertIn('GeminiTaskStage.REVIEW', screen)
-        self.assertIn('Text("Restaurar")', screen)
+        self.assertIn('Text("Continuar revisão")', screen)
         self.assertIn('Repetir pode consumir cota novamente', screen)
         self.assertIn('NonCancellable + Dispatchers.IO', screen)
 

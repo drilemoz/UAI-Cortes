@@ -19,7 +19,7 @@ assert 'SrtImportReview(p, original' in editor and 'SubtitleBatchUndo(p.subtitle
 review = read('SrtImportReview.kt')
 assert 'Manter horários e importar' in review and 'Enviar áudio e conferir' in review
 assert 'AutoSubtitleEngine.transcribe' in review and 'gemini.transcribe' in review
-assert 'source.offsetMs' in review and 'window.timelineStartMs' in review
+assert 'source.offsetMs' in review and 'window.timelineStartMs' in read('SubtitleSpeechSource.kt')
 assert 'proposals[indexed.index]' in read('SrtSpeechAlignment.kt')
 assert 'SubtitleCaptionInk.outlineRadius' in editor and 'SubtitleCaptionInk.outlineRadius' in read('VideoEffects.kt')
 print('OK: tamanho 14, prévia MP4 privada, verificação de fala e métricas de karaokê')

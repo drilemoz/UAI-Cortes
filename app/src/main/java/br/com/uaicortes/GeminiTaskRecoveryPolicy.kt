@@ -5,12 +5,16 @@ import java.security.MessageDigest
 internal enum class GeminiTaskKind { LEGENDAS, DESCRICAO }
 internal enum class GeminiTaskStage { IN_FLIGHT, REVIEW, READY }
 
+internal data class SubtitleCheckpointSource(val trackId: String?, val startMs: Long, val endMs: Long,
+    val needsReview: Set<String> = emptySet())
+
 internal data class GeminiTaskCheckpoint(
     val fingerprint: String,
     val model: String,
     val stage: GeminiTaskStage,
     val timestamp: Long,
-    val payload: String? = null
+    val payload: String? = null,
+    val subtitleSource: SubtitleCheckpointSource? = null
 )
 
 internal object GeminiTaskRecoveryPolicy {

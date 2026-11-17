@@ -1,3 +1,10 @@
+# v0.1.288 — Legendas automáticas em painel
+
+- Base v0.1.287/versionCode 288, nova v0.1.288/versionCode 289. Preservar schema 4 e as cinco variantes assinadas do CI.
+- Escolher o card nunca inicia transcrição, upload ou análise visual. Lembrar somente a explicação longa, mantendo ações de envio explícitas.
+- A fonte compartilhada com revisão de SRT deve respeitar o recorte, duração verificada e deslocamento da faixa. Reprocessar só o intervalo escolhido e não perder a última transcrição recuperável numa falha.
+- Preservar horários das palavras conhecidas nas correções, avisar sobre horários aproximados de palavras novas e manter a confirmação antes de alterar o projeto.
+
 # v0.1.287 — Sincronia labial das legendas
 
 - Base v0.1.286/versionCode 287, nova v0.1.287/versionCode 288. Preservar schema 4, assinatura e cinco variantes de APK no CI.

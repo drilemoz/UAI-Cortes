@@ -498,7 +498,8 @@ assert 'android.permission.INTERNET' in (root/'app/src/main/AndroidManifest.xml'
 assert 'MediaExtractor()' in auto and 'MediaCodec.createDecoderByType' in auto
 assert 'Recognizer(it, RATE.toFloat())' in auto and 'currentCoroutineContext().ensureActive()' in auto
 assert 'vosk-model-small-pt-0.3.zip' in auto and 'MAX_EXTRACTED' in auto
-assert 'Modelo offline PT-BR pronto' in auto_ui and 'Transcrever' in auto_ui and 'Revisar' in auto_ui and 'SubtitleHelpButton' in auto_ui
+assert 'Modelo offline PT-BR pronto' in auto_ui and 'AutoSubtitleEngine.transcribe(' in auto_ui
+assert 'ModalBottomSheet(' in auto_ui and 'AutoSubtitleReviewList(' in auto_ui
 assert 'SpeechModelSettingsScreen' in (root/'app/src/main/java/br/com/uaicortes/SpeechModelSettingsScreen.kt').read_text()
 assert 'AutoSubtitleScreen(current' in ui and 'onAutoSubtitles' in ui
 assert 'pendingProjectDelete' in ui and 'ConfirmDeleteProjectDialog' in ui and 'projectSession.delete(target.id)' in ui
@@ -962,7 +963,7 @@ assert 'onDecoded(fraction)' in transcription and 'lastReportedFraction' in tran
 assert 'onProgress(null, "Carregando o modelo' in transcription
 assert 'TranscriptionStageProgress.decoding(' in transcription
 assert 'SystemClock.elapsedRealtime()' in transcription_ui
-assert 'if(progress==null) LinearProgressIndicator' in transcription_ui
+assert 'if (runningCloud || progress == null) LinearProgressIndicator' in transcription_ui
 assert (root/'app/src/test/java/br/com/uaicortes/TranscriptionStageProgressTest.kt').exists()
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleBatchVisualTest.kt').exists()
 print('OK: v0.1.78: navegação Salvar->editor, edição em lote/undo e transcrição com progresso real')
@@ -1125,7 +1126,7 @@ assert 'SubtitleFileExport.Format.SRT' in screen and 'SubtitleFileExport.Format.
 assert 'deleteAllConfirm' in screen and 'deletedSnapshot' in screen
 assert 'RoundedCornerShape(8.dp)' in screen and 'SubtitleToolButton' in screen
 assert 'gemini-3.5-transcribe' in remote and 'timestamp_granularities' in remote
-assert 'geminiConfirm' in auto_ui and 'GeminiCredentialStore(context)' in auto_ui
+assert 'Enviar e gerar' in auto_ui and 'GeminiCredentialStore(context)' in auto_ui
 assert 'word_info' in parser and 'GeminiSubtitleParser.parse' in remote
 assert 'onManageGemini' in main
 assert all((root/'app/src/test/java/br/com/uaicortes'/name).exists() for name in ['GeminiSubtitleParserTest.kt','SubtitleFileExportTest.kt','SubtitlePresentationTest.kt'])

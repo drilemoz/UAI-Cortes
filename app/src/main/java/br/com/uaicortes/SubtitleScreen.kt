@@ -760,10 +760,7 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                     Icon(Icons.Default.ArrowDropDown,null,modifier=Modifier.size(16.dp))
                 }
                 DropdownMenu(expanded=autoSubtitlesMenu,onDismissRequest={autoSubtitlesMenu=false}) {
-                    DropdownMenuItem(text={Text("Offline · Vosk")},onClick={
-                        autoSubtitlesMenu=false;onAutoSubtitles()
-                    },leadingIcon={Icon(Icons.Default.RecordVoiceOver,null)})
-                    DropdownMenuItem(text={Text("Gemini IA")},onClick={
+                    DropdownMenuItem(text={Text("Gerar legendas")},onClick={
                         autoSubtitlesMenu=false;onAutoSubtitles()
                     },leadingIcon={Icon(Icons.Default.AutoAwesome,null)})
                     DropdownMenuItem(text={Text("Sincronia labial · Gemini")},

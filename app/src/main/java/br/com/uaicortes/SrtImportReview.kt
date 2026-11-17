@@ -1,7 +1,5 @@
 package br.com.uaicortes
 
-import android.content.Context
-import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -16,26 +14,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-private data class SrtSpeechSource(val project: VideoProject, val offsetMs: Long)
-
-private suspend fun prepareSrtSpeechSource(context: Context, project: VideoProject,
-    track: AudioTrack?): SrtSpeechSource {
-    if (track == null) return SrtSpeechSource(project, 0L)
-    return withContext(Dispatchers.IO) {
-        val duration = verifiedMediaDuration(context, Uri.parse(track.uri))
-        val window = requireNotNull(ExportAudioPolicy.window(track.startMs, track.sourceStartMs,
-            track.durationMs, duration, project.durationMs)) {
-            "Não foi possível confirmar o trecho da narração escolhido."
-        }
-        val clip = Clip(id = track.id, uri = track.uri, title = track.title,
-            sourceDurationMs = duration, startMs = window.sourceStartMs,
-            endMs = window.sourceStartMs + window.playableMs)
-        SrtSpeechSource(project.copy(clips = listOf(clip), overlays = emptyList(),
-            audioTracks = emptyList(), music = null, subtitles = emptyList(),
-            transitions = emptyList(), textWatermark = null), window.timelineStartMs)
-    }
-}
 
 @Composable
 internal fun SrtImportReview(project: VideoProject, original: List<SubtitleCue>,
@@ -65,7 +43,7 @@ internal fun SrtImportReview(project: VideoProject, original: List<SubtitleCue>,
             error = ""
             progress = "Preparando áudio…"
             try {
-                val source = prepareSrtSpeechSource(context, project, track)
+                val source = prepareSubtitleSpeechSource(context, project, track)
                 val transcript = if (useCloud) {
                     val key = withContext(Dispatchers.IO) { credentials.read() }
                         ?: error("Configure sua chave Gemini antes de conferir.")
