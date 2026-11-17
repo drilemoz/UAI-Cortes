@@ -41,6 +41,7 @@ internal object GitHubUpdateCore {
         val repo = normalizedRepository(repository) ?: return null
         val entries = JSONArray(payload)
         var chosen: GitHubUpdateRelease? = null
+        val availableNotes = mutableMapOf<String, GitHubReleaseNote>()
         for (i in 0 until entries.length().coerceAtMost(100)) {
             val entry = entries.optJSONObject(i) ?: continue
             if (entry.optBoolean("draft", false)) continue
@@ -60,12 +61,27 @@ internal object GitHubUpdateCore {
                 val releaseUrl = "https://github.com/$repo/releases/tag/$tag"
                 val release = GitHubUpdateRelease(version, name, url, releaseUrl,
                     entry.optString("body").take(1800), size, hash)
+                if (release.notes.isNotBlank()) availableNotes.putIfAbsent(version,
+                    GitHubReleaseNote(version, release.notes))
                 if (chosen == null || newer(release.version, chosen.version)) chosen = release
             }
         }
-        return chosen
+        val latest = chosen ?: return null
+        val previous = availableNotes.values.filter { newer(latest.version, it.version) }
+            .sortedWith(Comparator { a, b -> when {
+                newer(a.version, b.version) -> -1
+                newer(b.version, a.version) -> 1
+                else -> 0
+            } }).take(8)
+        return latest.copy(previousNotes = previous)
     }
+
+    fun displayNotes(raw: String): String = raw.lineSequence().map { line ->
+        line.trim().removePrefix("#").trimStart('#', ' ').replace("**", "").replace("`", "")
+    }.filter { it.isNotBlank() }.take(14).joinToString("\n")
 }
+
+internal data class GitHubReleaseNote(val version: String, val notes: String)
 
 internal data class GitHubUpdateRelease(
     val version: String,
@@ -74,5 +90,6 @@ internal data class GitHubUpdateRelease(
     val releaseUrl: String,
     val notes: String,
     val size: Long,
-    val sha256: String?
+    val sha256: String?,
+    val previousNotes: List<GitHubReleaseNote> = emptyList()
 )

@@ -42,6 +42,7 @@ object SubtitleWordEffects {
 
     fun colors(cue: SubtitleCue, visibleText: String, activeWord: IntRange?,
         activeColor: Int = cue.highlightColor): List<ColorRange> {
+        if (cue.animation == SubtitleAnimations.SINGLE_WORD) return emptyList()
         val words = wordRanges(visibleText)
         val result = cue.wordColors.asSequence()
             .filter { it.index in words.indices }
@@ -52,6 +53,24 @@ object SubtitleWordEffects {
             result += ColorRange(activeWord, activeColor)
         }
         return result
+    }
+
+    internal fun hasIndividualTimes(cue: SubtitleCue): Boolean {
+        val timings = cue.wordTimings
+        return timings.isNotEmpty() && timings.size == wordRanges(cue.text).size &&
+            timings.all { it.startMs >= cue.startMs && it.endMs <= cue.endMs && it.endMs > it.startMs } &&
+            timings.zipWithNext().all { (a, b) -> a.startMs <= b.startMs }
+    }
+
+    /** Sem herdar a última palavra nas pausas. Sem horários individuais, aproxima
+     * a posição dentro do intervalo do trecho, sem alterar os horários salvos. */
+    internal fun singleWordIndex(cue: SubtitleCue, atMs: Long): Int? {
+        val count = wordRanges(cue.text).size
+        if (atMs < cue.startMs || atMs >= cue.endMs || count == 0) return null
+        if (hasIndividualTimes(cue)) return cue.wordTimings
+            .indexOfLast { atMs >= it.startMs && atMs < it.endMs }.takeIf { it >= 0 }
+        val fraction = (atMs - cue.startMs).toDouble() / (cue.endMs - cue.startMs).toDouble()
+        return (count * fraction).toInt().coerceIn(0, count - 1)
     }
 
     /** Só usa os tempos se houver correspondência 1:1 e intervalos íntegros. */

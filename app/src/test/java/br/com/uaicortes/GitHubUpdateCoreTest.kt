@@ -56,6 +56,15 @@ class GitHubUpdateCoreTest {
         assertNull(release?.sha256)
     }
 
+    @Test fun listsNotesFromSkippedVersionsNewestFirstAndCleansMarkdown() {
+        val rows = listOf(release("v0.1.293", false), release("v0.1.295", false),
+            release("v0.1.291", false), release("v0.1.294", false))
+        val update = requireNotNull(GitHubUpdateCore.parseReleases(rows.joinToString(",", "[", "]"),
+            "owner/repo", "0.1.291"))
+        assertEquals(listOf("0.1.294", "0.1.293"), update.previousNotes.map { it.version })
+        assertEquals("Novidades\n- Em vídeo", GitHubUpdateCore.displayNotes("# **Novidades**\n- Em vídeo"))
+    }
+
     private fun release(tag: String, prerelease: Boolean, draft: Boolean = false): String {
         val version = tag.removePrefix("v")
         val name = "UaiCortes-v$version-universal.apk"

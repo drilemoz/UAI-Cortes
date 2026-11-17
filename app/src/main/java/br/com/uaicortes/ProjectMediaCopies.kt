@@ -56,9 +56,13 @@ internal object ProjectMediaCopies {
     private fun alreadyProtected(context: Context, uri: Uri, projectId: String, kind: Kind): Boolean {
         if (uri.scheme == "content" && uri.authority == "${context.packageName}.diagnostics") {
             val parts = uri.pathSegments
-            if (parts.firstOrNull() == "project_images" && kind == Kind.IMAGE) return true
-            if (parts.size >= 4 && parts[0] == "project_media" &&
-                parts[1] == projectId && parts[2] == kind.name.lowercase()) return true
+            // Persisted private copies are app-owned and are not removed when
+            // a project is deleted. Drafts may safely reference the same bytes.
+            val privateImage = parts.firstOrNull() == "project_images" && kind == Kind.IMAGE
+            val privateCopy = parts.size == 4 && parts[0] == "project_media" &&
+                parts[1].matches(Regex("[A-Za-z0-9_-]{1,64}")) && parts[2] == kind.name.lowercase()
+            if ((privateImage || privateCopy) && ProjectMediaAvailability.canOpen(context, uri.toString()))
+                return true
         }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || uri.scheme != "content") return false
         return runCatching {
@@ -71,11 +75,15 @@ internal object ProjectMediaCopies {
 
     /** Projetos anteriores também passam a usar cópias próprias quando abertos. */
     suspend fun protectProject(context: Context, project: VideoProject): VideoProject {
+        var missing = false
         suspend fun safe(raw: String, kind: Kind): String {
             val uri = Uri.parse(raw)
             if (alreadyProtected(context, uri, project.id, kind)) return raw
             // Mídia já desaparecida permanece como está, para a ferramenta Reparar mídia.
-            if (!ProjectMediaAvailability.canOpen(context, raw)) return raw
+            if (!ProjectMediaAvailability.canOpen(context, raw)) {
+                missing = true
+                return raw
+            }
             return copy(context, uri, project.id, kind).toString()
         }
         val clips = project.clips.map { it.copy(uri = safe(it.uri,
@@ -84,6 +92,7 @@ internal object ProjectMediaCopies {
             if (it.isImage) Kind.IMAGE else Kind.VIDEO)) }
         val music = project.music?.let { it.copy(uri = safe(it.uri, Kind.AUDIO)) }
         val tracks = project.audioTracks.map { it.copy(uri = safe(it.uri, Kind.AUDIO)) }
+        if (missing) DiagnosticRecorder.mediaProtection("unavailable")
         return project.copy(clips = clips, overlays = overlays, music = music, audioTracks = tracks)
     }
 

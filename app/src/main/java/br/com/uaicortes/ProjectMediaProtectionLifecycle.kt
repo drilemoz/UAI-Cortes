@@ -31,13 +31,12 @@ internal fun ProjectMediaProtectionLifecycle(
             }
             if (latestScreen == "editor" && latestProject === opened && updated != opened &&
                 currentSave(updated)) {
-                Toast.makeText(context,
-                    "Mídias protegidas. Salve a edição para manter as novas referências.",
-                    Toast.LENGTH_LONG).show()
+                DiagnosticRecorder.mediaProtection("updated")
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failure: Exception) {
+            DiagnosticRecorder.mediaProtection("failed")
             DiagnosticRecorder.exception("media_protection", failure)
             if (latestScreen == "editor" && latestProject === opened) {
                 Toast.makeText(context,

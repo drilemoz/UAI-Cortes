@@ -204,13 +204,13 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
                 SubtitleAnimations.NONE, SubtitleAnimations.SOFT_POP,
                 SubtitleAnimations.CINEMATIC, SubtitleAnimations.SOFT_FADE,
                 SubtitleAnimations.IMPACT, SubtitleAnimations.GLIDE,
-                SubtitleAnimations.KARAOKE, SubtitleAnimations.KARAOKE_BADGE, SubtitleAnimations.WORD_REVEAL)
+                SubtitleAnimations.KARAOKE, SubtitleAnimations.KARAOKE_BADGE, SubtitleAnimations.SINGLE_WORD)
             SubtitleTwoColumnChoices(recommendedEffects.map(SubtitleAnimations::label),
                 selected={ label -> draft.animation in recommendedEffects &&
                     SubtitleAnimations.label(draft.animation)==label },
                 choose={ label -> recommendedEffects.firstOrNull {
                     SubtitleAnimations.label(it)==label
-                }?.let { onChange(draft.copy(animation=it)) } })
+                }?.let { onChange(SubtitleAnimations.choose(draft,it)) } })
             TextButton(onClick={showLegacyEffects=!showLegacyEffects},shape=UaiShapes.button) {
                 Text(if (showLegacyEffects) "Ocultar outros efeitos"
                     else "Mais efeitos antigos")
@@ -232,12 +232,17 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
                         SubtitleAnimations.label(draft.animation)==label},
                     choose={label-> ids.firstOrNull {
                         SubtitleAnimations.label(it)==label
-                    }?.let { id -> onChange(draft.copy(animation=id)) }})
+                    }?.let { id -> onChange(SubtitleAnimations.choose(draft,id)) }})
             }
             Text("Use Reproduzir, Reiniciar e Tempo real para conferir a animação acima.",
                 style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
-            if(draft.animation!=SubtitleAnimations.NONE) {
+            if (draft.animation == SubtitleAnimations.SINGLE_WORD) {
+                Text(if (SubtitleWordEffects.hasIndividualTimes(draft))
+                    "Sincronia definida pelos horários de cada palavra."
+                    else "Sincronia estimada. Use Sincronizar palavras para ajustar os horários.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+            } else if(draft.animation!=SubtitleAnimations.NONE) {
                 SubtitleValueSlider("Velocidade", "${"%.1f".format(java.util.Locale.US,draft.animationSpeed)}×",
                     draft.animationSpeed,.5f..2f,5,onChange={onChange(draft.copy(animationSpeed=it))})
                 Text(if(SubtitleAnimations.isKaraoke(draft.animation) && draft.wordTimings.isNotEmpty())

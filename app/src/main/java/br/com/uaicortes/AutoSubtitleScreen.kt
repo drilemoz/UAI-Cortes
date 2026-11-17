@@ -171,6 +171,8 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
         processingStarted = SystemClock.elapsedRealtime()
         message = "Preparando áudio…"
         task = scope.launch {
+            val sourceEngine = if (cloud) "gemini" else "vosk"
+            DiagnosticRecorder.subtitleGeneration(sourceEngine, "start")
             var recorded = false
             try {
                 if (trackId != null && track == null) error("A faixa escolhida não existe mais no projeto.")
@@ -242,7 +244,9 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                         else message += " Não foi possível salvar uma cópia de recuperação."
                     }
                 }
+                DiagnosticRecorder.subtitleGeneration(sourceEngine, "ready", placed.size)
             } catch (cancel: CancellationException) {
+                DiagnosticRecorder.subtitleGeneration(sourceEngine, "cancelled")
                 if (recorded) {
                     withContext(NonCancellable + Dispatchers.IO) {
                         runCatching { geminiCheckpoint.review(mediaFingerprint, SUBTITLE_GEMINI_MODEL) }
@@ -253,6 +257,7 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                 message = "Transcrição cancelada. Nada foi aplicado ao projeto."
                 throw cancel
             } catch (error: Exception) {
+                DiagnosticRecorder.subtitleGeneration(sourceEngine, "failed")
                 if (recorded) {
                     withContext(Dispatchers.IO) {
                         runCatching { geminiCheckpoint.review(mediaFingerprint, SUBTITLE_GEMINI_MODEL) }

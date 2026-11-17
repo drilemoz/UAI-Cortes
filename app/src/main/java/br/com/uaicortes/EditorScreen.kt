@@ -207,6 +207,9 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             delay(200)
         }
     }
+    val captionPlaying = isPlaying && !scrubbing && !restoringMedia && p.subtitles.isNotEmpty()
+    val subtitleClock = rememberSubtitleLiveClock(player, p.clips, p.durationMs,
+        currentMs, captionPlaying, "editor")
     fun seekGlobal(ms: Long) {
         val target = ms.coerceIn(0L, p.durationMs.coerceAtLeast(0L))
         seekProjectPosition(player, p.clips, target)
@@ -326,9 +329,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                         }
                     }
                 }
-                SubtitlePreviewPolicy.firstAt(p.subtitles, currentMs)?.let { cue ->
-                    SubtitleOverlayOnFrame(cue, editable = false, playbackMs=currentMs)
-                }
+                LiveSubtitleLayers(p.subtitles, subtitleClock, currentMs, captionPlaying)
                 watermarkCue
                     ?.takeIf { currentMs >= it.startMs && currentMs < it.endMs }?.let { watermark ->
                     SubtitleOverlayOnFrame(watermark, editable = false, playbackMs=currentMs)

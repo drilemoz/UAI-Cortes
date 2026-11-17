@@ -1,3 +1,11 @@
+# v0.1.295 — Relógio da prévia, palavra ativa e ações compactas
+
+- Base v0.1.294/versionCode 295, nova v0.1.295/versionCode 296. Preservar schema 4, assinatura e cinco variantes.
+- O MP4 de prévia da junção renderiza no relógio original do projeto. O player limita a reprodução ao trecho e preserva repetições, voz, PiP e horários das palavras. Nunca compensar o MP4 final com adiantamento artificial.
+- O modo single_word não altera os tempos/trilhas e não mostra a última palavra durante pausas com horários definidos. O texto completo continua no SRT.
+- Rascunho nomeado tem ID distinto. Mídias privadas válidas não são recopiadas entre projetos. Não apagar originais nem suas cópias compartilhadas.
+- Eventos de diagnóstico locais e agregados, sem texto, caminhos, identificadores de mídia, áudio ou vídeo. Distinguir testes estáticos, compilação e ensaios Android executados.
+
 # v0.1.294 — Correção do workflow 250
 
 - Base v0.1.293/versionCode 294, nova v0.1.294/versionCode 295. Preservar schema 4, assinatura e variantes de APK.

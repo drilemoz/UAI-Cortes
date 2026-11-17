@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -60,7 +60,7 @@ fun DiagnosticScreen(onBack: () -> Unit, onEnabledChanged: (Boolean) -> Unit) {
                 })
             }
             Text("Quando ativo, registra data/hora, tela, ações, estados de downloads, etapas da exportação, " +
-                "motivos de encerramento anteriores quando o Android informar, erros e falhas de API " +
+                "prévias, transcrição automática, proteção de mídia, motivos de encerramento informados pelo Android e falhas de API " +
                 "(serviço, operação, HTTP, modelo público, latência e tokens quando informados). " +
                 "Não registra chaves, tokens, prompts, mensagens HTTP, nomes dos arquivos, caminhos, áudio, vídeos ou senhas. " +
                 "O TXT inclui o modelo do aparelho e a versão do Android.",
@@ -72,17 +72,18 @@ fun DiagnosticScreen(onBack: () -> Unit, onEnabledChanged: (Boolean) -> Unit) {
                 "Nada é enviado automaticamente. Você decide se deseja salvar ou compartilhar o relatório.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Button(onClick = {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+              CompactActionTile("Ver", Icons.Default.Visibility, primary = true) {
                 report = DiagnosticRecorder.report()
                 feedback = "Relatório atualizado."
                 DiagnosticRecorder.action("diagnostics", "view_report")
-            }, modifier = Modifier.fillMaxWidth()) { Text("Visualizar relatório") }
-            OutlinedButton(onClick = {
+              }
+              CompactActionTile("TXT", Icons.Default.Description) {
                 pendingText = DiagnosticRecorder.report()
                 saveTxt.launch("UaiCortes-diagnostico.txt")
                 DiagnosticRecorder.action("diagnostics", "save_report")
-            }, modifier = Modifier.fillMaxWidth()) { Text("Salvar relatório TXT") }
-            OutlinedButton(onClick = {
+              }
+              CompactActionTile("Enviar", Icons.Default.Share) {
                 runCatching {
                     val folder = File(context.cacheDir, "diagnosticos").apply { mkdirs() }
                     val file = File(folder, "UaiCortes-diagnostico.txt")
@@ -102,9 +103,8 @@ fun DiagnosticScreen(onBack: () -> Unit, onEnabledChanged: (Boolean) -> Unit) {
                     feedback = "Não foi possível compartilhar o relatório. Use Salvar TXT."
                     DiagnosticRecorder.exception("diagnostic_share", it)
                 }
-            }, modifier = Modifier.fillMaxWidth()) { Text("Compartilhar relatório") }
-            TextButton(onClick = { confirmClear = true }, modifier = Modifier.fillMaxWidth()) {
-                Text("Apagar histórico local", color = MaterialTheme.colorScheme.error)
+              }
+              CompactActionTile("Apagar", Icons.Default.DeleteOutline, danger = true) { confirmClear = true }
             }
             if (feedback.isNotBlank()) Text(feedback, style = MaterialTheme.typography.bodySmall)
             if (report.isNotBlank()) {

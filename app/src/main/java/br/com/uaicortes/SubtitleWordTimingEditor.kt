@@ -32,7 +32,7 @@ internal fun SubtitleWordTimingEditor(cue: SubtitleCue,
     var seekMs by remember(cue.id) { mutableLongStateOf(cue.startMs) }
     val ready = policy.valid(cue, intervals)
     val previewCue = cue.copy(
-        animation = if (SubtitleAnimations.isKaraoke(cue.animation)) cue.animation
+        animation = if (SubtitleAnimations.isKaraoke(cue.animation) || cue.animation == SubtitleAnimations.SINGLE_WORD) cue.animation
             else SubtitleAnimations.KARAOKE,
         wordTimings = if (ready) intervals else emptyList())
 

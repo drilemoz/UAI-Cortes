@@ -16,7 +16,8 @@ assert 'setEffects(Effects(emptyList(),' in e
 assert 'TimedSubtitleOverlay(project.subtitles, 0L)' in e
 assert 'if (!postCompositionText)' in e
 assert 'fun <T> media3TopFirst(' in order and '.asReversed()' in order
-assert 'SubtitlePreviewPolicy.firstAt(p.subtitles, currentMs)' in ui
+assert 'LiveSubtitleLayers(p.subtitles, subtitleClock, currentMs, captionPlaying)' in ui
+assert 'SubtitlePreviewPolicy.firstAt(cues, playbackMs)' in (r/'app/src/main/java/br/com/uaicortes/SubtitleLiveClock.kt').read_text()
 assert 'SubtitlePreviewPolicy.firstAt(cues, t)' in fx
 assert 'TransitionEffects.motionAt(local, clip.durationMs' in ui
 assert 'TransitionEffects.motionAt(presentationTimeUs / 1000L' in motion

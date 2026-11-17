@@ -12,11 +12,9 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.Modifier
@@ -28,6 +26,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -40,55 +43,45 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Três ações igualmente tocáveis sem empilhar botões em telas estreitas. */
+/** Decide what to do before leaving without touching the saved original. */
 @Composable
-private fun androidx.compose.foundation.layout.RowScope.EditorExitAction(
-    label: String, icon: androidx.compose.ui.graphics.vector.ImageVector,
-    danger: Boolean = false, action: () -> Unit
-) {
-    OutlinedButton(onClick = action,
-        modifier = Modifier.weight(1f).height(64.dp),
-        shape = UaiShapes.button,
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(2.dp)) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically)) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(19.dp),
-                tint = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
-            Text(label, fontSize = 11.sp, maxLines = 1, textAlign = TextAlign.Center,
-                color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
-        }
+internal fun ConfirmEditorExit(hasSavedOriginal: Boolean, projectTitle: String,
+    onDecision: (String) -> Unit, onNamedDraft: (String) -> Boolean, onContinue: () -> Unit) {
+    var naming by remember { mutableStateOf(false) }
+    var draftName by remember(projectTitle) { mutableStateOf("${projectTitle.take(69)} (rascunho)") }
+    var saveFailed by remember { mutableStateOf(false) }
+    if (naming) {
+        AlertDialog(onDismissRequest = { naming = false }, shape = UaiShapes.dialog,
+            title = { Text("Nome do rascunho") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Uma versão separada em Projetos. O original não será substituído.")
+                    OutlinedTextField(value = draftName, onValueChange = {
+                        draftName = it.take(80); saveFailed = false
+                    }, label = { Text("Nome do projeto") }, singleLine = true)
+                    if (saveFailed) Text("Não foi possível guardar o rascunho.",
+                        color = MaterialTheme.colorScheme.error)
+                }
+            },
+            confirmButton = {
+                Button(onClick = { saveFailed = !onNamedDraft(ProjectNaming.title(draftName)) },
+                    enabled = ProjectNaming.validTitle(draftName)) { Text("Guardar") }
+            },
+            dismissButton = { TextButton(onClick = { naming = false }) { Text("Voltar") } })
+        return
     }
-}
-
-/** UI da decisão de saída, sem disparar gravação permanente por conta própria. */
-@Composable
-internal fun ConfirmEditorExit(hasSavedOriginal: Boolean, onDecision: (String) -> Unit,
-    onContinue: () -> Unit) {
     AlertDialog(
-        onDismissRequest = onContinue,
-        shape = UaiShapes.dialog,
+        onDismissRequest = onContinue, shape = UaiShapes.dialog,
         icon = { Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(20.dp)) },
         title = { Text("Salvar edição?") },
-        text = { Text(if (hasSavedOriginal)
-            "Deseja guardar as alterações antes de sair?"
-        else "Guardar este projeto antes de sair? Os arquivos originais permanecem no celular.") },
+        text = { Text(if (hasSavedOriginal) "Deseja guardar as alterações antes de sair?"
+            else "Guardar este projeto antes de sair? Os arquivos originais permanecem no celular.") },
         confirmButton = {
-            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    EditorExitAction("Salvar", Icons.Default.Save) { onDecision("save") }
-                    EditorExitAction("Descartar", Icons.Default.DeleteOutline, danger = true) {
-                        onDecision("discard")
-                    }
-                    EditorExitAction("Continuar", Icons.Default.Edit) { onContinue() }
-                }
-                if (hasSavedOriginal) {
-                    TextButton(onClick = { onDecision("copy") },
-                        modifier = Modifier.align(Alignment.End)) {
-                        Icon(Icons.Default.ContentCopy, contentDescription = null,
-                            modifier = Modifier.padding(end = 6.dp))
-                        Text("Salvar como cópia")
-                    }
-                }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                CompactActionTile("Salvar", Icons.Default.Save, primary = true) { onDecision("save") }
+                CompactActionTile("Rascunho", Icons.Default.ContentCopy) { naming = true }
+                CompactActionTile("Descartar", Icons.Default.DeleteOutline, danger = true) { onDecision("discard") }
+                CompactActionTile("Editar", Icons.Default.Edit) { onContinue() }
             }
         }
     )

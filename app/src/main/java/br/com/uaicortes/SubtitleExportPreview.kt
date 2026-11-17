@@ -1,6 +1,8 @@
 package br.com.uaicortes
 
 import android.net.Uri
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -29,7 +31,7 @@ import kotlinx.coroutines.delay
 internal fun SubtitleExportPreviewDialog(project: VideoProject, cursorMs: Long, onClose: () -> Unit) {
     val context = LocalContext.current
     val quality = remember(context) { ProjectStore(context).quality() }
-    var vertical by remember { mutableStateOf(false) }
+    var outputMode by remember { mutableStateOf(PreviewOutputMode.ORIGINAL) }
     Dialog(onDismissRequest = onClose,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
@@ -39,12 +41,16 @@ internal fun SubtitleExportPreviewDialog(project: VideoProject, cursorMs: Long, 
                     Text("Como vai exportar", Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
                     IconButton(onClick = onClose) { Icon(Icons.Default.Close, "Fechar prévia de exportação") }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    FilterChip(!vertical, { vertical = false }, label = { Text("Original") })
-                    FilterChip(vertical, { vertical = true }, label = { Text("Vertical 9:16") })
+                Row(Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    PreviewOutputMode.entries.forEach { mode ->
+                        FilterChip(outputMode == mode, { outputMode = mode }, label = {
+                            Text(mode.label, maxLines = 1)
+                        })
+                    }
                 }
-                key(vertical) {
-                    SubtitlePreviewRender(project, cursorMs, quality, vertical,
+                key(outputMode) {
+                    SubtitlePreviewRender(project, cursorMs, quality, outputMode,
                         modifier = Modifier.weight(1f), onClose = onClose)
                 }
             }
@@ -54,7 +60,7 @@ internal fun SubtitleExportPreviewDialog(project: VideoProject, cursorMs: Long, 
 
 @OptIn(UnstableApi::class)
 @Composable
-private fun SubtitlePreviewRender(project: VideoProject, cursorMs: Long, quality: Int, vertical: Boolean,
+private fun SubtitlePreviewRender(project: VideoProject, cursorMs: Long, quality: Int, outputMode: PreviewOutputMode,
     modifier: Modifier, onClose: () -> Unit) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -72,7 +78,10 @@ private fun SubtitlePreviewRender(project: VideoProject, cursorMs: Long, quality
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) { if (open) playing = isPlaying }
             override fun onPlayerError(errorValue: androidx.media3.common.PlaybackException) {
-                if (open) error = "Não foi possível reproduzir a prévia renderizada."
+                if (open) {
+                    DiagnosticRecorder.previewEvent("subtitles", "play_error")
+                    error = "Não foi possível reproduzir a prévia renderizada."
+                }
             }
         }
         val observer = LifecycleEventObserver { _, event ->
@@ -96,9 +105,11 @@ private fun SubtitlePreviewRender(project: VideoProject, cursorMs: Long, quality
         file = null
         error = null
         progress = null
+        val started = android.os.SystemClock.elapsedRealtime()
+        DiagnosticRecorder.previewEvent("subtitles", "start", project.subtitles)
         try {
             engine.start(project, quality, "preview-legendas.mp4",
-                destination = if (vertical) ExportDestination.VERTICAL else ExportDestination.ORIGINAL,
+                destination = outputMode.destination, frameMode = outputMode.frameMode,
                 onSuccess = { _, _ -> }, onError = { error = it },
                 onPreviewReady = { ready -> file = ready })
             while (file == null && error == null) {
@@ -109,6 +120,10 @@ private fun SubtitlePreviewRender(project: VideoProject, cursorMs: Long, quality
             throw cancelled
         } catch (failure: Exception) {
             error = failure.message ?: "Não foi possível renderizar a prévia."
+        } finally {
+            val outcome = when { file != null -> "ready"; error != null -> "failed"; else -> "cancelled" }
+            DiagnosticRecorder.previewEvent("subtitles", outcome,
+                elapsedMs = android.os.SystemClock.elapsedRealtime() - started)
         }
     }
     val ready = file

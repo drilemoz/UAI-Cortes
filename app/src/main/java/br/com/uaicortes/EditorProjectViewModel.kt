@@ -108,11 +108,13 @@ internal class EditorProjectViewModel(
     }
 
     /** Cópia independente: não modifica o projeto original. */
-    fun commitCopy(): VideoProject {
+    fun commitCopy(customName: String? = null): VideoProject {
         val edited = requireNotNull(project)
-        check(draft.baseline != null) { "Salvar cópia exige um projeto original" }
+        check(draft.baseline != null || customName != null) { "Salvar cópia exige nome ou projeto original" }
+        val title = ProjectNaming.title(customName ?: "${edited.title} (cópia)")
+        require(title.isNotEmpty()) { "Informe o nome do rascunho." }
         val copy = edited.copy(id = UUID.randomUUID().toString(),
-            title = "${edited.title} (cópia)", updated = System.currentTimeMillis())
+            title = title, updated = System.currentTimeMillis())
         publish(session.save(copy))
         val persisted = projects.firstOrNull { it.id == copy.id }
             ?: error("Cópia confirmada não foi encontrada no catálogo")

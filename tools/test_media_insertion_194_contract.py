@@ -18,7 +18,7 @@ assert all(s in ui for s in ['"Início"','"Antes"','"Depois"','"Final"','MediaPl
 assert 'MediaPlacementChoices(placement,' in image
 assert 'shiftTimedElements(project, begin, incoming.sumOf { it.durationMs })' in policy
 assert 'onInserted(updated, pending.clips.first(), index)' in ui
-assert 'EditorExitAction("Salvar"' in exit_ui and 'EditorExitAction("Descartar"' in exit_ui and 'EditorExitAction("Continuar"' in exit_ui
+assert 'CompactActionTile("Salvar"' in exit_ui and 'CompactActionTile("Descartar"' in exit_ui and 'CompactActionTile("Editar"' in exit_ui
 assert 'Triple("Cortar"' in editor and 'Triple("Transição"' in editor and 'Modifier.width(toolWidth)' in editor
 assert 'EditorTimelineHeaderPolicy.toolbarItemWidthDp(maxWidth.value, actions.size)' in editor
 assert '.coerceIn(48f, 64f)' in (Path(__file__).resolve().parents[1] / 'app/src/main/java/br/com/uaicortes/EditorTimelineHeaderPolicy.kt').read_text()

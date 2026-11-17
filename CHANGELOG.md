@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.295 (2026-11-17)
+
+- **Legendas:** novo estilo Uma palavra por vez, sem tarja ou caixa alta automática. Usa horários individuais; quando não existem, mostra que a sincronia é estimada. Karaokê e efeitos legados mantidos.
+- **Prévias:** a legenda ao vivo usa a posição real do player. O loop da junção mantém narração, música e tempos originais da montagem. Original, 9:16 Ajustar e 9:16 Preencher estão disponíveis. A renderização da prévia de junção pode levar mais tempo em projetos longos.
+- **Projetos:** quatro ações na saída do editor. Rascunho cria um projeto independente com nome escolhido. Cópias privadas acessíveis podem ser reutilizadas entre projetos, sem o aviso de sucesso repetitivo.
+- **Diagnóstico e atualização:** botões na mesma linha, notas da atualização com versões puladas quando disponíveis, eventos de prévia e transcrição sem conteúdo pessoal. Mensagem do instalador não aparece durante o download.
+
 # Uai Cortes 0.1.294 (2026-11-17)
 
 - Corrigido o erro de inferência de tipos no workflow 250 durante a compilação Kotlin Debug e Release. O planejador compara o nome do efeito com a lista de efeitos, não com a lista de junções que está construindo.

@@ -83,21 +83,22 @@ class JunctionTransition293Test {
         assertEquals(300L, join.durationMs)
     }
 
-    @Test fun previewCropsToTheSelectedCutAndShiftsOnlyItsPrivateCopy() {
+    @Test fun previewLoopsTheSelectedCutWithoutRebasingAudioOrCaptionTimes() {
         val a = clip("a", 800L, 4600L, 5000L)
         val b = clip("b", 400L, 3900L, 4000L)
-        val caption = SubtitleCue(startMs = 3770L, endMs = 4200L, text = "Na junção")
+        val caption = SubtitleCue(startMs = 3770L, endMs = 4200L, text = "Na junção",
+            wordTimings = listOf(SubtitleWordTiming(3770L, 3880L), SubtitleWordTiming(3900L, 4200L)))
         val pip = Overlay("file:///pip.mp4", false, 3700L, startAtMs = 1200L, sourceStartMs = 100L)
-        val p = VideoProject(clips = listOf(a, b), subtitles = listOf(caption), overlays = listOf(pip))
+        val voice = AudioTrack("file:///voice.wav", "Voz", startMs = 3760L, durationMs = 500L)
+        val music = Music("file:///music.wav", "Tema", sourceDurationMs = 2000L, repeat = true)
+        val p = VideoProject(clips = listOf(a, b), subtitles = listOf(caption), overlays = listOf(pip),
+            audioTracks = listOf(voice), music = music)
         val job = requireNotNull(JunctionPreviewProject.prepare(p, 0, JunctionTransitionPlan.DISSOLVE, 300L))
-        assertEquals(2200L, job.project.durationMs)
-        assertEquals(1100L, job.cutMs)
-        assertEquals(3500L, job.project.clips.first().startMs)
-        assertEquals(1070L, job.project.subtitles.single().startMs)
-        assertEquals(1600L, job.project.overlays.single().sourceStartMs)
-        assertTrue(job.project.overlays.single().muted)
-        assertTrue(p.transitions.isEmpty())
-        assertEquals(7300L, p.durationMs)
+        assertEquals(3800L, job.cutMs)
+        assertEquals(2700L, job.playbackStartMs)
+        assertEquals(4900L, job.playbackEndMs)
+        assertEquals(p, job.project.copy(transitions = emptyList()))
+        assertEquals(7300L, job.project.durationMs)
         assertFalse(JunctionTransitionPlan.project(job.project).single().usesHold)
     }
 }

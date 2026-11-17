@@ -68,6 +68,7 @@ internal fun TransitionScreen(p: VideoProject, back: () -> Unit, update: (VideoP
             var showMore by remember { mutableStateOf(false) }
             var applyAll by remember { mutableStateOf(false) }
             var audioOn by remember { mutableStateOf(false) }
+            var outputMode by remember { mutableStateOf(PreviewOutputMode.ORIGINAL) }
             var saveFailed by remember { mutableStateOf(false) }
             val first = p.clips.first()
             val aspect by produceState<Float?>(null, first.uri, first.isImage) {
@@ -100,10 +101,16 @@ internal fun TransitionScreen(p: VideoProject, back: () -> Unit, update: (VideoP
                 }
                 Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        PreviewOutputMode.entries.forEach { mode ->
+                            FilterChip(outputMode == mode, { outputMode = mode }, label = { Text(mode.label) })
+                        }
+                    }
                     val renderAspect = aspect
                     if ((!modern || join != null) && renderAspect != null) {
-                        key(p, safeBoundary, kind, durationMs, renderAspect) {
-                            TransitionVideoPreview(p, safeBoundary, kind, durationMs, renderAspect, audioOn) {
+                        key(p, safeBoundary, kind, durationMs, renderAspect, outputMode) {
+                            TransitionVideoPreview(p, safeBoundary, kind, durationMs, renderAspect, outputMode, audioOn) {
                                 audioOn = it
                             }
                         }

@@ -48,7 +48,7 @@ object DiagnosticRecorder {
                 }
             }
         }
-        log("SESSION", "app_start sdk=${Build.VERSION.SDK_INT}")
+        log("SESSION", "app_start sdk=${Build.VERSION.SDK_INT} version=${BuildConfig.VERSION_NAME}")
         if (active.get()) executor.execute { inspectPreviousProcessExit(context.applicationContext) }
     }
 
@@ -71,7 +71,7 @@ object DiagnosticRecorder {
     fun action(route: String, action: String) {
         // Deslizamentos de PiP/áudio podem salvar dezenas de vezes por segundo.
         // Agregação apenas da telemetria: NÃO interfere no salvamento real do projeto.
-        if (action == "project_saved") {
+        if (action == "project_saved" || action == "project_draft_changed") {
             val now = System.currentTimeMillis()
             val previous = lastSaveLogMs.get()
             if (now - previous < 1500L || !lastSaveLogMs.compareAndSet(previous, now)) return
@@ -92,9 +92,36 @@ object DiagnosticRecorder {
         if (!active.get()) return
         val now = System.currentTimeMillis()
         val previous = lastTapLogMs.get()
-        if (now - previous < 250L || !lastTapLogMs.compareAndSet(previous, now)) return
+        if (now - previous < 900L || !lastTapLogMs.compareAndSet(previous, now)) return
         log("TAP", "screen=${DiagnosticPrivacy.safeIdentifier(route)} " +
             DiagnosticPrivacy.touchGrid(x,y,width,height))
+    }
+
+    /** Aggregate only. No captions, media URI, or per-frame rows. */
+    fun previewEvent(route: String, stage: String, cues: List<SubtitleCue> = emptyList(),
+        elapsedMs: Long? = null) {
+        if (!active.get()) return
+        val safeRoute = route.takeIf { it == "transition" || it == "subtitles" || it == "editor" } ?: return
+        val safeStage = stage.takeIf { it in setOf("start", "ready", "failed", "cancelled", "play_error") } ?: return
+        val timing = if (stage == "start") " cues=${cues.size} exact=${cues.count(SubtitleWordEffects::hasIndividualTimes)}"
+            else elapsedMs?.let { " elapsed_ms=${it.coerceAtLeast(0L)}" }.orEmpty()
+        log("PREVIEW", "screen=$safeRoute stage=$safeStage$timing")
+    }
+
+    fun previewClock(route: String, maxDeltaMs: Long) {
+        if (route != "editor" && route != "subtitles") return
+        log("PREVIEW", "screen=$route stage=clock cursor_delta_ms=${maxDeltaMs.coerceAtLeast(0L)}")
+    }
+
+    fun mediaProtection(result: String) {
+        if (result in setOf("updated", "failed", "unavailable"))
+            log("MEDIA", "operation=protection result=$result")
+    }
+
+    fun subtitleGeneration(engine: String, stage: String, count: Int? = null) {
+        if (engine !in setOf("vosk", "gemini") || stage !in setOf("start", "ready", "failed", "cancelled")) return
+        log("SUBTITLES", "engine=$engine stage=$stage" +
+            count?.let { " count=${it.coerceAtLeast(0)}" }.orEmpty())
     }
 
     /** Telemetria de atualização sem URL, nome de APK ou headers de autenticação. */

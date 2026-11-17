@@ -1,4 +1,17 @@
-# Uai Cortes · v0.1.294 — Correção de compilação das transições
+# Uai Cortes · v0.1.295 — Legendas e prévias mais precisas
+
+- **Legendas:** novo estilo Uma palavra por vez, sem tarja ou caixa alta automática. Usa horários individuais; quando não existem, mostra que a sincronia é estimada. Karaokê e efeitos legados mantidos.
+- **Prévias:** a legenda ao vivo usa a posição real do player. O loop da junção mantém narração, música e tempos originais da montagem. Original, 9:16 Ajustar e 9:16 Preencher estão disponíveis. A renderização da prévia de junção pode levar mais tempo em projetos longos.
+- **Projetos:** quatro ações na saída do editor. Rascunho cria um projeto independente com nome escolhido. Cópias privadas acessíveis podem ser reutilizadas entre projetos, sem o aviso de sucesso repetitivo.
+- **Diagnóstico e atualização:** botões na mesma linha, notas da atualização com versões puladas quando disponíveis, eventos de prévia e transcrição sem conteúdo pessoal. Mensagem do instalador não aparece durante o download.
+
+Validação e roteiro de teste em [docs/VALIDATION_0.1.295.md](docs/VALIDATION_0.1.295.md).
+
+## v0.1.293–0.1.294 — Transições em vídeo
+
+Dissolver e Empurrão lateral combinam as duas cenas em uma janela ao redor da junção, sem deslocar a montagem. A 0.1.294 corrigiu a compilação.
+
+## v0.1.292 — Corte com início e fim
 
 - **Cortar vídeo:** Marcar início e Marcar fim na tela principal, com alças e duração da parte mantida. A régua usa o intervalo do clipe atual, inclusive se já foi cortado antes.
 - **Prévia:** reproduz uma vez só a seleção. Navegação aproximada por quadro substitui os pulos grandes. A prévia não altera a mídia.

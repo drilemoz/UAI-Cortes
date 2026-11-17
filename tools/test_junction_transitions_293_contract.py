@@ -29,7 +29,8 @@ assert 'val durationMs get() = clips.sumOf { it.durationMs }' in model
 assert 'JunctionPreviewProject.prepare(' in preview
 assert 'engine.start(job.project, 360' in preview and 'onPreviewReady = { file = it }' in preview
 assert 'REPEAT_MODE_ALL' in preview and 'file?.delete()' in preview
-assert 'minOf(a.durationMs, 1100L)' in sample and 'audioTracks = emptyList(), music = null' in sample
+assert 'minOf(a.durationMs, 1100L)' in sample and 'TransitionBatch.apply(project, index' in sample
+assert 'setStartPositionMs(job.playbackStartMs).setEndPositionMs(job.playbackEndMs)' in preview
 assert 'TransitionFramePreview' not in sheet and 'ModalBottomSheet(' in sheet and 'Aplicar nesta junção' in sheet
 assert 'suspendPreviewForPanel' in editor and 'player.clearMediaItems()' in editor
 assert (root / 'app/src/test/java/br/com/uaicortes/JunctionTransition293Test.kt').is_file()

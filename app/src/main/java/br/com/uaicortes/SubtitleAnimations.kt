@@ -30,6 +30,7 @@ object SubtitleAnimations {
     const val SLIDE_LEFT = "slide_left"
     const val SLIDE_RIGHT = "slide_right"
     const val WORD_REVEAL = "word_reveal"
+    const val SINGLE_WORD = "single_word"
     const val ELASTIC = "elastic"
     const val FLOAT = "float"
     const val SWAY = "sway"
@@ -49,7 +50,7 @@ object SubtitleAnimations {
         BOUNCE to "Bounce", PULSE to "Pulsar", ZOOM_OUT to "Zoom reverso",
         RISE to "Subir", DROP to "Descer",
         SLIDE_LEFT to "Entrar esquerda", SLIDE_RIGHT to "Entrar direita",
-        WORD_REVEAL to "Palavra por palavra", ELASTIC to "Elástico",
+        WORD_REVEAL to "Palavras acumuladas", SINGLE_WORD to "Uma palavra por vez", ELASTIC to "Elástico",
         FLOAT to "Flutuar", SWAY to "Balançar", SOFT_SHAKE to "Tremor suave",
         SOFT_POP to "Pop suave", CINEMATIC to "Cinema suave",
         SOFT_FADE to "Fade delicado", IMPACT to "Impacto limpo",
@@ -58,7 +59,7 @@ object SubtitleAnimations {
     /** A organização por categorias evita uma única lista horizontal com dezenas de efeitos. */
     val groups: List<Pair<String, List<String>>> = listOf(
         "Entrada" to listOf(NONE, POP, FADE, SLIDE, ZOOM_OUT, RISE, DROP, SLIDE_LEFT, SLIDE_RIGHT, ELASTIC, SOFT_POP, CINEMATIC, SOFT_FADE, GLIDE),
-        "Texto" to listOf(TYPEWRITER, PHRASES, WORD_REVEAL, KARAOKE,
+        "Texto" to listOf(TYPEWRITER, PHRASES, SINGLE_WORD, WORD_REVEAL, KARAOKE,
             KARAOKE_PULSE, KARAOKE_BOLD, KARAOKE_UNDERLINE, KARAOKE_BADGE),
         "Movimento" to listOf(BOUNCE, PULSE, FLOAT, SWAY, SOFT_SHAKE, IMPACT)
     )
@@ -66,6 +67,11 @@ object SubtitleAnimations {
     fun isKaraoke(id: String): Boolean = normalize(id) in setOf(
         KARAOKE, KARAOKE_PULSE, KARAOKE_BOLD, KARAOKE_UNDERLINE, KARAOKE_BADGE)
     fun normalize(value: String): String = if (choices.any { it.first == value }) value else NONE
+    fun choose(cue: SubtitleCue, effect: String): SubtitleCue =
+        if (effect == SINGLE_WORD) cue.copy(animation = effect,
+            textCase = SubtitleTextCasePolicy.ORIGINAL, backgroundColor = 0)
+        else cue.copy(animation = effect)
+
     fun speed(value: Float): Float = if (value.isFinite()) value.coerceIn(.5f, 2f) else 1f
 
     data class Frame(val text: String, val highlighted: IntRange? = null,
@@ -123,6 +129,11 @@ object SubtitleAnimations {
                         boldActiveWord=mode == KARAOKE_BOLD,
                         underlineActiveWord=mode == KARAOKE_UNDERLINE)
                 }
+            }
+            SINGLE_WORD -> {
+                val words = SubtitleWordEffects.wordRanges(text)
+                val index = SubtitleWordEffects.singleWordIndex(cue, absoluteMs)
+                Frame(index?.let { words.getOrNull(it) }?.let { text.substring(it) }.orEmpty())
             }
             WORD_REVEAL -> {
                 val words = Regex("\\S+").findAll(text).toList()

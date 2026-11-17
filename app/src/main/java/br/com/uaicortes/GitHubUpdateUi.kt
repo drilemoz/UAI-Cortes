@@ -46,7 +46,10 @@ import kotlinx.coroutines.launch
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Há uma versão mais recente do Uai Cortes. O download e a instalação continuam dependendo da sua autorização.")
+                val summary = GitHubUpdateCore.displayNotes(pending.notes)
+                if (summary.isNotBlank()) Text(summary, maxLines = 3,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                else Text("Há uma versão mais recente do Uai Cortes.")
                 Surface(color = colors.surfaceVariant.copy(alpha = 0.7f), shape = UaiShapes.card) {
                     Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically) {
@@ -73,35 +76,16 @@ import kotlinx.coroutines.launch
     )
 }
 
-@Composable private fun GitHubUpdateActionButton(
-    label: String,
-    icon: ImageVector,
-    primary: Boolean,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val content: @Composable () -> Unit = {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
-            Text(label, maxLines = 1)
-        }
-    }
-    if (primary) {
-        Button(onClick = onClick, enabled = enabled, shape = UaiShapes.button,
-            modifier = modifier.heightIn(min = 48.dp)) { content() }
-    } else {
-        OutlinedButton(onClick = onClick, enabled = enabled, shape = UaiShapes.button,
-            modifier = modifier.heightIn(min = 48.dp)) { content() }
-    }
-}
-
 @Composable internal fun GitHubUpdatesScreen(manager: GitHubUpdateManager, back: () -> Unit) {
     val scope = rememberCoroutineScope()
     var confirmDownload by remember { mutableStateOf<GitHubUpdateRelease?>(null) }
     var installMessage by remember { mutableStateOf<String?>(null) }
     var confirmStop by remember { mutableStateOf(false) }
     val check = manager.result
+    LaunchedEffect(manager.downloading, manager.paused, check) {
+        if (manager.downloading || manager.paused || check is GitHubUpdateResult.Checking)
+            installMessage = null
+    }
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
         .padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Heading("Atualizações", back)
@@ -136,6 +120,7 @@ import kotlinx.coroutines.launch
                         Text("APK universal · ${GitHubDownloadProgress.readableBytes(release.size)}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        AvailableUpdateNotes(release)
                     }
                 }
                 if (release.sha256 != null) {
@@ -176,62 +161,16 @@ import kotlinx.coroutines.launch
                             style = MaterialTheme.typography.bodySmall)
                     }
                     val release = (check as? GitHubUpdateResult.Available)?.release
-                    BoxWithConstraints(Modifier.fillMaxWidth()) {
-                        val stacked = maxWidth < 430.dp
-                        if (stacked) {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                GitHubUpdateActionButton(
-                                    label = if (manager.paused) "Retomar" else "Pausar",
-                                    icon = if (manager.paused) Icons.Default.PlayArrow else Icons.Default.PauseCircle,
-                                    primary = true,
-                                    enabled = (manager.paused && release != null) || manager.downloading,
-                                    onClick = {
-                                        if (manager.paused && release != null) scope.launch { manager.resumeDownload(release) }
-                                        else manager.pauseDownload()
-                                    },
-                                    modifier = Modifier.fillMaxWidth())
-                                GitHubUpdateActionButton(
-                                    label = "Parar",
-                                    icon = Icons.Default.SystemUpdate,
-                                    primary = false,
-                                    enabled = true,
-                                    onClick = { confirmStop = true },
-                                    modifier = Modifier.fillMaxWidth())
-                                GitHubUpdateActionButton(
-                                    label = "Reiniciar download",
-                                    icon = Icons.Default.RestartAlt,
-                                    primary = false,
-                                    enabled = release != null,
-                                    onClick = { if (release != null) scope.launch { manager.restartDownload(release) } },
-                                    modifier = Modifier.fillMaxWidth())
-                            }
-                        } else {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                GitHubUpdateActionButton(
-                                    label = if (manager.paused) "Retomar" else "Pausar",
-                                    icon = if (manager.paused) Icons.Default.PlayArrow else Icons.Default.PauseCircle,
-                                    primary = true,
-                                    enabled = (manager.paused && release != null) || manager.downloading,
-                                    onClick = {
-                                        if (manager.paused && release != null) scope.launch { manager.resumeDownload(release) }
-                                        else manager.pauseDownload()
-                                    },
-                                    modifier = Modifier.weight(1f))
-                                GitHubUpdateActionButton(
-                                    label = "Parar",
-                                    icon = Icons.Default.SystemUpdate,
-                                    primary = false,
-                                    enabled = true,
-                                    onClick = { confirmStop = true },
-                                    modifier = Modifier.weight(1f))
-                                GitHubUpdateActionButton(
-                                    label = "Reiniciar",
-                                    icon = Icons.Default.RestartAlt,
-                                    primary = false,
-                                    enabled = release != null,
-                                    onClick = { if (release != null) scope.launch { manager.restartDownload(release) } },
-                                    modifier = Modifier.weight(1f))
-                            }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        CompactActionTile(if (manager.paused) "Retomar" else "Pausar",
+                            if (manager.paused) Icons.Default.PlayArrow else Icons.Default.PauseCircle,
+                            primary = true, enabled = release?.let(manager::canResume) == true || manager.downloading) {
+                            if (manager.paused && release != null) scope.launch { manager.resumeDownload(release) }
+                            else manager.pauseDownload()
+                        }
+                        CompactActionTile("Parar", Icons.Default.SystemUpdate) { confirmStop = true }
+                        CompactActionTile("Reiniciar", Icons.Default.RestartAlt, enabled = release != null) {
+                            if (release != null) scope.launch { manager.restartDownload(release) }
                         }
                     }
                     if (manager.paused) Text("O download parcial será verificado antes da instalação. " +
@@ -254,7 +193,8 @@ import kotlinx.coroutines.launch
             }, shape = UaiShapes.button,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Instalar atualização") }
         }
-        installMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+        if (!manager.downloading && !manager.paused)
+            installMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
         if (manager.readyFile != null || check is GitHubUpdateResult.Available) {
             Text("Não desinstale o aplicativo. A atualização precisa ter a mesma assinatura para preservar seus projetos.",
                 style = MaterialTheme.typography.bodySmall,
@@ -300,5 +240,24 @@ import kotlinx.coroutines.launch
                 scope.launch { manager.download(release) }
             }, shape = UaiShapes.button) { Text("Baixar") } },
             dismissButton = { TextButton(onClick = { confirmDownload = null }, shape = UaiShapes.button) { Text("Cancelar") } })
+    }
+}
+
+
+@Composable
+private fun AvailableUpdateNotes(release: GitHubUpdateRelease) {
+    var expanded by remember(release.version) { mutableStateOf(false) }
+    val summary = GitHubUpdateCore.displayNotes(release.notes)
+    Text("O que mudou", style = MaterialTheme.typography.labelLarge)
+    Text(summary.ifBlank { "A publicação não trouxe notas para esta versão." },
+        maxLines = if (expanded) 20 else 4,
+        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        style = MaterialTheme.typography.bodySmall)
+    if (summary.isNotBlank() || release.previousNotes.isNotEmpty()) TextButton(onClick = { expanded = !expanded }) {
+        Text(if (expanded) "Ver menos" else "Ver notas")
+    }
+    if (expanded) release.previousNotes.forEach { note ->
+        Text("Versão ${note.version}", style = MaterialTheme.typography.labelLarge)
+        Text(GitHubUpdateCore.displayNotes(note.notes), style = MaterialTheme.typography.bodySmall)
     }
 }

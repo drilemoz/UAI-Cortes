@@ -34,7 +34,7 @@ import kotlinx.coroutines.delay
 @OptIn(UnstableApi::class)
 @Composable
 internal fun TransitionVideoPreview(project: VideoProject, boundary: Int, kind: String, durationMs: Long,
-                                    canvasAspect: Float, audioOn: Boolean, onAudio: (Boolean) -> Unit) {
+                                    canvasAspect: Float, outputMode: PreviewOutputMode, audioOn: Boolean, onAudio: (Boolean) -> Unit) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val job = remember(project, boundary, kind, durationMs) {
@@ -55,6 +55,7 @@ internal fun TransitionVideoPreview(project: VideoProject, boundary: Int, kind: 
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) { playing = isPlaying }
             override fun onPlayerError(failure: PlaybackException) {
+                DiagnosticRecorder.previewEvent("transition", "play_error")
                 error = "Não foi possível reproduzir a prévia renderizada."
             }
         }
@@ -81,9 +82,12 @@ internal fun TransitionVideoPreview(project: VideoProject, boundary: Int, kind: 
         error = null
         progress = null
         delay(220L) // Coalesce rapid selection changes without holding multiple Transformer jobs.
+        val started = android.os.SystemClock.elapsedRealtime()
+        DiagnosticRecorder.previewEvent("transition", "start", job.project.subtitles)
         try {
             engine.start(job.project, 360, "preview-transicao.mp4",
                 preset = ExportBitratePreset.COMPACT, originalAspectOverride = canvasAspect,
+                destination = outputMode.destination, frameMode = outputMode.frameMode,
                 onSuccess = { _, _ -> }, onError = { error = it }, onPreviewReady = { file = it })
             while (file == null && error == null) {
                 progress = engine.progressOrNull()
@@ -94,13 +98,20 @@ internal fun TransitionVideoPreview(project: VideoProject, boundary: Int, kind: 
         } catch (failure: Exception) {
             engine.cancel()
             error = failure.message ?: "Não foi possível renderizar esta junção."
+        } finally {
+            val outcome = when { file != null -> "ready"; error != null -> "failed"; else -> "cancelled" }
+            DiagnosticRecorder.previewEvent("transition", outcome,
+                elapsedMs = android.os.SystemClock.elapsedRealtime() - started)
         }
     }
     val ready = file
     LaunchedEffect(ready) {
         if (ready != null) {
             player.volume = if (latestAudioOn) 1f else 0f
-            player.setMediaItem(MediaItem.fromUri(Uri.fromFile(ready)))
+            val window = MediaItem.ClippingConfiguration.Builder()
+                .setStartPositionMs(job.playbackStartMs).setEndPositionMs(job.playbackEndMs).build()
+            player.setMediaItem(MediaItem.Builder().setUri(Uri.fromFile(ready))
+                .setClippingConfiguration(window).build())
             player.prepare()
             if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) player.play()
         }
@@ -120,7 +131,7 @@ internal fun TransitionVideoPreview(project: VideoProject, boundary: Int, kind: 
                 val p = progress
                 if (p == null) CircularProgressIndicator(Modifier.size(24.dp), color = Color.White)
                 else CircularProgressIndicator(progress = { p / 100f }, modifier = Modifier.size(24.dp), color = Color.White)
-                Text("Preparando prévia da junção…", color = Color.White, style = MaterialTheme.typography.bodySmall)
+                Text("Renderizando a montagem para a prévia…", color = Color.White, style = MaterialTheme.typography.bodySmall)
             }
             else -> AndroidView(factory = { ctx -> previewPlayer(ctx).apply {
                 this.player = player
@@ -137,7 +148,7 @@ internal fun TransitionVideoPreview(project: VideoProject, boundary: Int, kind: 
         Text("Prévia em loop", Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
         IconButton(onClick = { onAudio(!audioOn) }) {
             Icon(if (audioOn) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
-                if (audioOn) "Silenciar som dos clipes" else "Ouvir som dos clipes")
+                if (audioOn) "Silenciar mixagem" else "Ouvir mixagem")
         }
     }
 }

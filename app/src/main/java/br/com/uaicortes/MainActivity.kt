@@ -170,11 +170,11 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     }
     ProjectMediaProtectionLifecycle(project, screen, activeMediaTask != null,
         onBusyChanged = { protectingMedia = it }, onProtected = { write(it) })
-    fun leaveEditor(decision: String): Boolean {
+    fun leaveEditor(decision: String, draftName: String? = null): Boolean {
         val completed = runCatching {
             val savedProject = when (decision) {
                 "save" -> projectSession.commit()
-                "copy" -> projectSession.commitCopy()
+                "copy" -> projectSession.commitCopy(draftName)
                 "discard" -> null
                 else -> return false
             }
@@ -687,7 +687,8 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
             }
         }
         if (pendingExitEditor) ConfirmEditorExit(projectSession.hasSavedOriginal,
-            onDecision = { leaveEditor(it) }) {
+            projectTitle = project?.title ?: "Meu vídeo", onDecision = { leaveEditor(it) },
+            onNamedDraft = { leaveEditor("copy", it) }) {
             pendingExitEditor = false
         }
         if (screen == "home" && interruptedDraft != null) {

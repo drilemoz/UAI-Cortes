@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.294"
-    const val VERSION_CODE = 295
+    const val VERSION_NAME = "0.1.295"
+    const val VERSION_CODE = 296
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.295", listOf(
+            ReleaseFeature("single-word-295", "Uma palavra por vez",
+                "Mostra só a palavra ativa, sem tarja. A prévia acompanha a reprodução e a junção inclui a mixagem do projeto.", "check"),
+            ReleaseFeature("compact-actions-295", "Rascunho, diagnóstico e atualizações",
+                "Salve um rascunho com nome, veja as notas da atualização e use ações compactas em uma linha.", "check")
+        )),
         ReleaseSummary("0.1.294", listOf(
             ReleaseFeature("junction-compile-294", "Correção de compilação das transições",
                 "Corrige o erro de tipos ao montar a lista de Dissolver e Empurrão lateral. Os efeitos e os horários do projeto permanecem os mesmos.", "check")

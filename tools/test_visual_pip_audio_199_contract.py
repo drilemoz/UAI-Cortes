@@ -17,8 +17,9 @@ assert 'val button = RoundedCornerShape(8.dp)' in shapes
 assert 'val card = RoundedCornerShape(10.dp)' in shapes
 assert 'val dialog = RoundedCornerShape(12.dp)' in shapes
 assert 'MaterialTheme(colorScheme = palette, shapes = UaiShapes.theme)' in main
-assert 'UaiShapes.button' in exit_ui and 'height(64.dp)' in exit_ui
-assert 'EditorExitAction("Descartar"' in exit_ui and 'onDecision("save")' in exit_ui
+tile=(src/'CompactActionTile.kt').read_text()
+assert 'shape = UaiShapes.button' in tile and 'heightIn(min = 58.dp)' in tile
+assert 'CompactActionTile("Descartar"' in exit_ui and 'onDecision("save")' in exit_ui
 assert 'onDecision("discard")' in exit_ui and 'onContinue()' in exit_ui
 assert 'LayerPreviewFrame(canvasAspect, Modifier.weight(1f))' in pip
 assert 'LayerTool(label, icon, Modifier.weight(1f)' in pip

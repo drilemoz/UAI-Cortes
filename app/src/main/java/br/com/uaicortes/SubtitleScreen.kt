@@ -103,7 +103,8 @@ internal fun previewSubtitleScale(cue: SubtitleCue, widthPx: Int, textSizePx: Fl
     }
     val displayText = br.com.uaicortes.subtitles.core.SubtitleTextCasePolicy.display(cue.text, cue.textCase)
     val longest = displayText.split(Regex("\\s+")).maxOfOrNull { paint.measureText(it) } ?: 0f
-    val total = displayText.lines().sumOf { paint.measureText(it).toDouble() }.toFloat()
+    val total = if (cue.animation == SubtitleAnimations.SINGLE_WORD) longest
+        else displayText.lines().sumOf { paint.measureText(it).toDouble() }.toFloat()
     val available = (widthPx - textSizePx * .65f).coerceAtLeast(1f)
     return SubtitleAutoFit.factor(longest, total, available)
 }
@@ -276,7 +277,9 @@ internal fun SubtitlePositionPreview(p: VideoProject, cue: SubtitleCue?,
             delay(120)
         }
     }
-    val visibleCues = SubtitlePreviewPolicy.activeAt(p.subtitles, cursorMs)
+    val captionPlaying = playing && !scrubbing && p.subtitles.isNotEmpty()
+    val subtitleClock = rememberSubtitleLiveClock(player, p.clips, p.durationMs,
+        cursorMs, captionPlaying, "subtitles")
     val source = remember(p.clips, cursorMs) {
         TimelinePrecision.sourceAt(p.clips.map { it.uri to it.durationMs }, cursorMs)
     }
@@ -307,13 +310,9 @@ internal fun SubtitlePositionPreview(p: VideoProject, cue: SubtitleCue?,
                         translationX = (imageTransform?.offsetX ?: 0f) * size.width / 2f
                         translationY = (imageTransform?.offsetY ?: 0f) * size.height / 2f
                     })
-                visibleCues.forEach { visible ->
-                    key(visible.id) {
-                        SubtitleOverlayOnFrame(visible,
-                            editable = !playing && visible.id == cue?.id,
-                            playbackMs = cursorMs, onPositionCommit = onPositionCommit)
-                    }
-                }
+                LiveSubtitleLayers(p.subtitles, subtitleClock, cursorMs, captionPlaying,
+                    selectedId = cue?.id?.takeUnless { playing }, showAll = true,
+                    onPositionCommit = onPositionCommit)
             } else Text("Adicione um vídeo ou uma imagem ao projeto",
                 color = Color.White, fontSize = 12.sp,
                 modifier = Modifier.align(Alignment.Center))
@@ -1090,7 +1089,8 @@ internal fun SubtitleEditDialog(cue: SubtitleCue,totalMs: Long,number: Int,
     if(wordTimingOpen) SubtitleWordTimingEditor(draft,
         onDismiss={wordTimingOpen=false},
         onSave={times ->
-            draft=draft.copy(wordTimings=times,animation=SubtitleAnimations.KARAOKE)
+            draft=draft.copy(wordTimings=times, animation=if (draft.animation == SubtitleAnimations.SINGLE_WORD)
+                draft.animation else SubtitleAnimations.KARAOKE)
             wordTimingOpen=false
         })
 }

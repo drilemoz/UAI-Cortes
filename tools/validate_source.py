@@ -153,7 +153,7 @@ print('OK: v0.1.24 / versionCode 25, timeline de áudio arrastável, seleção e
 
 # v0.1.25: coordenadas relativas da legenda na prévia, editor visual e busca fina.
 precision=(root/'app/src/main/java/br/com/uaicortes/TimelinePrecision.kt').read_text()
-assert 'SubtitleOverlayOnFrame(cue, editable = false, playbackMs=currentMs)' in ui
+assert 'LiveSubtitleLayers(p.subtitles, subtitleClock, currentMs, captionPlaying)' in ui
 assert 'SubtitlePositionPreview(p, selected,' in ui
 assert 'SubtitlePlacement.anchorPixels(' in ui
 assert 'SubtitlePlacement.drag(' in ui
@@ -1183,9 +1183,10 @@ narration=(app_files/'GeminiNarrationUi.kt').read_text()
 policy=(app_files/'SubtitlePreviewPolicy.kt').read_text()
 assert 'projectPosition(player,p.clips,p.durationMs)>=cue.endMs' not in subtitle
 assert 'if (player.playbackState == Player.STATE_ENDED)' in subtitle
-assert 'SubtitlePreviewPolicy.activeAt(p.subtitles, cursorMs)' in subtitle
-assert 'visibleCues.forEach' in subtitle and 'key(visible.id)' in subtitle
-assert 'playbackMs = cursorMs' in subtitle
+assert 'LiveSubtitleLayers(p.subtitles, subtitleClock, cursorMs, captionPlaying' in subtitle
+live_layers = (root/'app/src/main/java/br/com/uaicortes/SubtitleLiveClock.kt').read_text()
+assert 'visible.forEach' in live_layers and 'key(cue.id)' in live_layers
+assert 'if (playing) clock.value else fallbackMs' in live_layers
 assert 'seekProjectPosition(player, p.clips, 0L)' in subtitle
 assert 'AudioQuickAction("Extrair"' not in audio
 assert 'GeminiNarrationSection(p, timelinePositionMs, update, onOpenGeminiSettings,' in audio
