@@ -469,16 +469,10 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         if (savingFrame) Text("Renderizando quadro em ${formatPipMs(captureAtMs)}… Aguarde; o vídeo está pausado.",
             modifier=Modifier.fillMaxWidth().padding(horizontal=20.dp),
             style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary)
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            Text("Vídeo:", style = MaterialTheme.typography.bodySmall)
-            EditableSeekTime(currentMs, p.durationMs, onSeek = { ms ->
-                seekGlobal(ms)
-            }, modifier = Modifier.weight(1f))
-        }
         // Um toque seleciona; arrastar o centro move, puxar uma borda apara.
         // Todos os commits são únicos e só ocorrem quando o dedo é solto.
         UnifiedEditorTimeline(p,currentMs,selectedClipId=selectedId,onSeek=::seekGlobal,
+            onSeekOpened={player.pause()},
             onClip={id->onSelected(id);clipMenuId=id},onSelectClip=onSelected,
             onTransition=onTransition,
             onOverlay={id->onSelectOverlay(id);onEdit("pip")},onSelectOverlay=onSelectOverlay,
@@ -526,11 +520,13 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 }
             })
         Spacer(Modifier.height(5.dp));HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
-        // Vídeo, Imagem e PiP são inseridos em Linha do tempo > Adicionar.
+        // Vídeo e Foto abrem a galeria; PiP é inserido nas abas de Camadas.
         // Animar imagens e Prompt Flow são ferramentas independentes acessíveis pela Home,
         // não operações da linha do tempo do projeto em edição.
         // Salvar permanece no cabeçalho; aqui ficam apenas ações relacionadas ao editor.
         val actions = remember { listOf(
+            Triple("Vídeo", Icons.Default.Movie, "insert_video"),
+            Triple("Foto", Icons.Default.AddPhotoAlternate, "insert_photo"),
             Triple("Cortar", Icons.Default.ContentCut, "trim"),
             Triple("Transição", Icons.Default.Transform, "transition"),
             Triple("Legendas", Icons.Default.ClosedCaption, "subtitles"),
@@ -541,21 +537,31 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         ) }
         val toolsScroll = rememberLazyListState()
         BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val toolWidth = ((maxWidth - 12.dp - 2.dp * (actions.size - 1)) / actions.size)
-                .coerceIn(48.dp, 56.dp)
+            val toolWidth = EditorTimelineHeaderPolicy.toolbarItemWidthDp(maxWidth.value, actions.size).dp
             LazyRow(state = toolsScroll, modifier = Modifier.fillMaxWidth().navigationBarsPadding()
                 .padding(vertical = 8.dp), contentPadding = PaddingValues(horizontal = 6.dp),
                 horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 items(count = actions.size) { index ->
                     val (name, icon, key) = actions[index]
                     Column(Modifier.width(toolWidth).clip(RoundedCornerShape(12.dp)).clickable {
-                        if (key == "audio") openQuickAudio("")
-                        else if (key == "music") openQuickAudio("music")
-                        else onEdit(key)
+                        when (key) {
+                            "insert_video" -> onAddVideo()
+                            "insert_photo" -> onAddImage()
+                            "audio" -> openQuickAudio("")
+                            "music" -> openQuickAudio("music")
+                            else -> onEdit(key)
+                        }
                     }, horizontalAlignment = Alignment.CenterHorizontally) {
                         Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-                            Icon(icon, name, modifier = Modifier.size(21.dp))
+                            Icon(icon, when (key) {
+                                "insert_video" -> "Adicionar vídeo"
+                                "insert_photo" -> "Adicionar foto"
+                                else -> name
+                            }, modifier = Modifier.size(21.dp))
+                            if (key == "insert_video") Icon(Icons.Default.Add, null,
+                                modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(12.dp),
+                                tint = MaterialTheme.colorScheme.primary)
                         }
                         Text(name, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)

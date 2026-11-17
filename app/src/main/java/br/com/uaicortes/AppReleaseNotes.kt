@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.288"
-    const val VERSION_CODE = 289
+    const val VERSION_NAME = "0.1.289"
+    const val VERSION_CODE = 290
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.289", listOf(
+            ReleaseFeature("editor-compact-clock-289", "Linha do tempo em uma só barra",
+                "Horário, zoom, encaixe e histórico ficam juntos. Toque no horário para abrir Ir para com atalhos Início e Fim.", "check"),
+            ReleaseFeature("editor-media-actions-289", "Vídeo e Foto na barra inferior",
+                "Adicione pela galeria com os novos ícones na barra rolável. O menu geral de adicionar saiu da linha do tempo.", "check")
+        )),
         ReleaseSummary("0.1.288", listOf(
             ReleaseFeature("auto-subtitle-panel-288", "Legendas offline e online em um painel",
                 "Escolha Vosk ou Gemini, selecione o áudio e revise sem sair. Veja ou ouça cada trecho e refaça só o intervalo necessário.", "check"),

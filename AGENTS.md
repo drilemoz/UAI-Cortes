@@ -1,3 +1,9 @@
+# v0.1.289 — Barra compacta do editor
+
+- Base v0.1.288/versionCode 289, nova v0.1.289/versionCode 290. Preservar schema 4, exportação e variantes assinadas do CI.
+- O relógio e o painel Ir para só movem a prévia e a posição do editor. Não alteram duração nem histórico. Zoom, encaixe, undo/redo e cabeçalhos das pistas mantêm os fluxos existentes.
+- A barra inferior usa as rotas existentes de Vídeo e Foto. PiP continua em Camadas. Nenhuma ferramenta da Home deve voltar à barra do editor.
+
 # v0.1.288 — Legendas automáticas em painel
 
 - Base v0.1.287/versionCode 288, nova v0.1.288/versionCode 289. Preservar schema 4 e as cinco variantes assinadas do CI.

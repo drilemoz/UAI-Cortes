@@ -214,7 +214,7 @@ private fun TimelineLaneBody(kind: TimelineKind, entries: List<TimelineVisualSpa
 @Composable
 internal fun UnifiedEditorTimeline(
     project:VideoProject, positionMs:Long, selectedClipId: String,
-    onSeek:(Long)->Unit,onClip:(String)->Unit,onSelectClip:(String)->Unit,
+    onSeek:(Long)->Unit,onSeekOpened:()->Unit,onClip:(String)->Unit,onSelectClip:(String)->Unit,
     onTransition:(Int)->Unit,onOverlay:(String)->Unit,onSelectOverlay:(String)->Unit,
     onAudio:(String)->Unit,onAddVideo:()->Unit,onAddImage:()->Unit,
     onOpenPiP:()->Unit,onOpenAudio:()->Unit,onOpenMusic:()->Unit,onOpenVoice:()->Unit,
@@ -290,44 +290,13 @@ internal fun UnifiedEditorTimeline(
             TimelineKind.SUBTITLE -> onOpenSubtitle()
         }
     }
-    var addMenu by remember(project.id) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().padding(horizontal=10.dp)
         .clip(RoundedCornerShape(12.dp))
         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.20f))
         .padding(4.dp),verticalArrangement=Arrangement.spacedBy(3.dp)) {
-        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-            Text("Linha do tempo",style=MaterialTheme.typography.labelMedium,
-                modifier=Modifier.weight(1f))
-            Box {
-                TextButton(onClick={addMenu=true},contentPadding=PaddingValues(horizontal=6.dp)) {
-                    Icon(Icons.Default.Add,"Adicionar mídia",Modifier.size(18.dp))
-                    Text("Adicionar",fontSize=11.sp)
-                }
-                DropdownMenu(expanded=addMenu,onDismissRequest={addMenu=false}) {
-                    tracks.forEachIndexed { index,track ->
-                        DropdownMenuItem(text={Text(track.second)},leadingIcon={Icon(track.first,null)},
-                            onClick={
-                                addMenu=false
-                                openTrack(index)
-                            })
-                    }
-                }
-            }
-            Text("${zoom}×",fontSize=11.sp,color=MaterialTheme.colorScheme.onSurfaceVariant)
-            IconButton(onClick={zoom=(zoom/2).coerceAtLeast(1)},enabled=zoom>1,
-                modifier=Modifier.size(32.dp)) {Icon(Icons.Default.Remove,"Reduzir zoom",Modifier.size(18.dp))}
-            IconButton(onClick={zoom=(zoom*2).coerceAtMost(8)},enabled=zoom<8,
-                modifier=Modifier.size(32.dp)) {Icon(Icons.Default.Add,"Ampliar zoom",Modifier.size(18.dp))}
-            IconButton(onClick={magnetic=!magnetic},modifier=Modifier.size(32.dp)) {
-                Icon(Icons.Default.Link,"Encaixe magnético ${if(magnetic) "ligado" else "desligado"}",
-                    Modifier.size(18.dp),tint=if(magnetic)MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            IconButton(onClick=onUndo,enabled=canUndo,modifier=Modifier.size(32.dp)) {
-                Icon(Icons.Default.Undo,"Desfazer",Modifier.size(18.dp))}
-            IconButton(onClick=onRedo,enabled=canRedo,modifier=Modifier.size(32.dp)) {
-                Icon(Icons.Default.Redo,"Refazer",Modifier.size(18.dp))}
-        }
+        EditorTimelineHeader(positionMs, project.durationMs, zoom, magnetic, canUndo, canRedo,
+            onZoom = { zoom = it }, onMagnet = { magnetic = !magnetic }, onUndo = onUndo, onRedo = onRedo,
+            onSeek = onSeek, onSeekOpened = onSeekOpened)
         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.Top) {
             Column(Modifier.width(62.dp),verticalArrangement=Arrangement.spacedBy(0.dp)) {
                 Spacer(Modifier.height(rulerHeight))

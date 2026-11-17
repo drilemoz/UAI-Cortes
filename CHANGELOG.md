@@ -1,3 +1,9 @@
+# Uai Cortes 0.1.289 (2026-11-17)
+
+- **Linha do tempo:** horário atual/total, zoom, encaixe e histórico reunidos acima da régua. O horário abre um painel inferior com campo Ir para e atalhos Início e Fim. Ir para não muda a duração nem o histórico do projeto.
+- **Ferramentas:** Vídeo e Foto abrem a galeria pela barra inferior rolável. O menu Adicionar saiu do cabeçalho. PiP continua em Camadas e os atalhos nas próprias faixas permanecem.
+- **Tela estreita:** encaixe e, se necessário, zoom passam a Mais opções. Desfazer e Refazer ficam acessíveis diretamente.
+
 # Uai Cortes 0.1.288 (2026-11-17)
 
 - **Legendas automáticas:** escolha Offline · Vosk ou Online · Gemini nos cards. Um painel reúne fonte, intervalo, progresso e revisão. A explicação longa pode ser lembrada, mas o botão de envio do áudio continua explícito.

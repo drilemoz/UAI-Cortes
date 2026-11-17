@@ -13,7 +13,7 @@ export = read('ExportEngine.kt')
 model = read('ProjectStore.kt')
 policy = read('ExportAudioPolicy.kt')
 assert 'Triple("Música", Icons.Default.MusicNote, "music")' in editor
-assert 'if (key == "music") openQuickAudio("music")' in editor
+assert '"music" -> openQuickAudio("music")' in editor
 assert 'musicMode = true' in editor and 'onOpenMusic={openQuickAudio("music")}' in editor
 assert 'MusicAudioPreview(music, p.durationMs' in editor
 assert 'listOf(video,images,overlays,audioSpans,listOfNotNull(musicSpan),voiceSpans,subtitles)' in timeline

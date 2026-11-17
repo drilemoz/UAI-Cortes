@@ -20,7 +20,8 @@ assert 'shiftTimedElements(project, begin, incoming.sumOf { it.durationMs })' in
 assert 'onInserted(updated, pending.clips.first(), index)' in ui
 assert 'EditorExitAction("Salvar"' in exit_ui and 'EditorExitAction("Descartar"' in exit_ui and 'EditorExitAction("Continuar"' in exit_ui
 assert 'Triple("Cortar"' in editor and 'Triple("Transição"' in editor and 'Modifier.width(toolWidth)' in editor
-assert '.coerceIn(48.dp, 56.dp)' in editor
-assert 'Triple("Vídeo +"' not in editor  # Ações de adicionar agora ficam no menu da linha do tempo
+assert 'EditorTimelineHeaderPolicy.toolbarItemWidthDp(maxWidth.value, actions.size)' in editor
+assert '.coerceIn(48f, 64f)' in (Path(__file__).resolve().parents[1] / 'app/src/main/java/br/com/uaicortes/EditorTimelineHeaderPolicy.kt').read_text()
+assert 'Triple("Vídeo +"' not in editor  # Rótulo curto e nome acessível no novo atalho.
 assert 'Arrange' not in ''  # skip visual-only assertions
 print('OK: v194, save/close, video placement, compact image/exit, temporal reflow')

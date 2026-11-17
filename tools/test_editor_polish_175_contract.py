@@ -17,7 +17,7 @@ assert 'OverlayEditorLogic.FILL' in pip and 'Text("Preencher")' in pip
 assert '.put("fitMode",OverlayEditorLogic.fitMode(fitMode))' in project
 assert 'val visibleRows=tracks.indices.filter {' in timeline and 'it == 0 || lanes[it].isNotEmpty()' in timeline
 assert 'visibleRows.forEach { index ->' in timeline
-assert 'DropdownMenu(expanded=addMenu' in timeline
+assert 'EditorTimelineHeader(' in timeline and 'addMenu' not in timeline
 assert 'val featured = listOf(' in transitions and 'showMore' in transitions
 assert 'TransitionFramePreview(' in transitions
 assert 'schemaVersion", 4' in project

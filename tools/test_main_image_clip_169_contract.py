@@ -10,14 +10,15 @@ assert 'j.optBoolean("isImage", false)' in read('ProjectStore.kt')
 assert '"schemaVersion", 4' in read('ProjectStore.kt')
 assert 'MainImageInsertionUi(project' in read('MainActivity.kt')
 assert 'onAddImage = mainImagePick' in read('MainActivity.kt')
-# A partir da v0.1.206, a inserção de imagens ficou em Linha do tempo > Adicionar.
-# Não exigir de volta o atalho duplicado da barra inferior.
+# A partir da v0.1.289, Foto é o atalho de inserção na barra inferior e a faixa
+# da imagem continua chamando a mesma ação. Não existe menu geral duplicado.
 editor = read('EditorScreen.kt')
 timeline = read('UnifiedEditorTimeline.kt')
 assert 'onAddImage=onAddImage' in editor
 assert 'onAddImage:()->Unit' in timeline
 assert 'Triple(Icons.Default.Image,"Imagem",' in timeline
-assert 'Text("Adicionar",fontSize=11.sp)' in timeline
+assert 'addMenu' not in timeline and 'Triple("Foto", Icons.Default.AddPhotoAlternate, "insert_photo")' in editor
+assert '"insert_photo" -> onAddImage()' in editor
 assert 'TimelineKind.MAIN_IMAGE -> onAddImage()' in timeline
 assert 'Triple("Imagem", Icons.Default.AddPhotoAlternate, "image")' not in editor
 assert 'MediaPlacementChoices(placement,' in read('MainImageInsertionUi.kt')
