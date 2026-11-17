@@ -14,7 +14,7 @@ assert 'setMaxDelayBetweenMuxerSamplesMs' in engine
 assert 'if (onRenderedFrame != null) setRemoveAudio(true)' in engine
 assert 'EditedMediaItemSequence.withVideoFrom(mainItems)' in engine
 assert 'detectDragGestures(onDragStart=' in menu
-assert 'onTap={ onEntryTap(TimelineSelection(kind,span.id)) }' in menu
+assert 'onEntryTap(item, selected == item)' in menu
 assert 'TimelineKind.MAIN_VIDEO,TimelineKind.MAIN_IMAGE->onClip(item.id)' in menu
 assert '.clickable { onSelect(); onTap() }' in menu
 assert 'Text("Editar",fontSize=12.sp)' not in menu

@@ -24,11 +24,18 @@ import kotlin.math.sin
 @LargeTest
 @RunWith(AndroidJUnit4::class)
 class MusicExportTimingAndroidTest {
-    @Test fun musicStartsAndEndsAtItsOwnPositionWithoutReplacingAdditionalAudio() {
+    @Test fun musicStartsAndEndsAtItsOwnPositionWithoutReplacingAdditionalAudio() =
+        verify(moved = false)
+
+    @Test fun movingMusicUsesItsTrimmedSourceNotTheSilenceBeforeIt() =
+        verify(moved = true)
+
+    private fun verify(moved: Boolean) {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         val photo = File.createTempFile("uai-music-photo-", ".png", context.cacheDir)
         val wave = File.createTempFile("uai-music-tone-", ".wav", context.cacheDir)
+        val trimmedWave = if (moved) File.createTempFile("uai-trimmed-tone-", ".wav", context.cacheDir) else null
         val saved = AtomicReference<Uri?>(null)
         val error = AtomicReference<String?>(null)
         val done = CountDownLatch(1)
@@ -41,12 +48,19 @@ class MusicExportTimingAndroidTest {
             } finally { bitmap.recycle() }
             writeTone(wave)
             val sound = Uri.fromFile(wave).toString()
-            val project = VideoProject(title = "Música separada",
+            val base = VideoProject(title = "Música separada",
                 clips = listOf(Clip(uri = Uri.fromFile(photo).toString(), title = "Foto",
                     sourceDurationMs = 3_000L, isImage = true, imageMimeType = "image/png")),
                 audioTracks = listOf(AudioTrack(sound, "Narração", startMs = 200L,
-                    durationMs = 400L, volume = .6f)),
-                music = Music(sound, "Tema", .75f, startMs = 1_200L, sourceDurationMs = 750L, repeat = false))
+                    durationMs = 400L, volume = .6f)))
+            val project = if (trimmedWave != null) {
+                writeTone(trimmedWave, leadingSilence = true)
+                val track = AudioTrack(Uri.fromFile(trimmedWave).toString(), "Tema", startMs = 1_200L,
+                    durationMs = 750L, volume = .75f, sourceStartMs = 750L)
+                requireNotNull(MusicTrackTransfer.move(base.copy(audioTracks = base.audioTracks + track),
+                    track, 1_500L, null))
+            } else base.copy(music = Music(sound, "Tema", .75f, startMs = 1_200L,
+                sourceDurationMs = 750L, repeat = false))
             instrumentation.runOnMainSync {
                 engine = ExportEngine(context)
                 try {
@@ -76,18 +90,20 @@ class MusicExportTimingAndroidTest {
             instrumentation.runOnMainSync { engine?.cancel() }
             photo.delete()
             wave.delete()
+            trimmedWave?.delete()
         }
     }
 
-    private fun writeTone(file: File) {
+    private fun writeTone(file: File, leadingSilence: Boolean = false) {
         val rate = 48_000
         val samples = rate * 3 / 4
-        val bytes = samples * 2
+        val bytes = samples * if (leadingSilence) 4 else 2
         val wav = ByteBuffer.allocate(44 + bytes).order(ByteOrder.LITTLE_ENDIAN)
         wav.put("RIFF".toByteArray()).putInt(36 + bytes).put("WAVE".toByteArray())
         wav.put("fmt ".toByteArray()).putInt(16).putShort(1.toShort()).putShort(1.toShort())
         wav.putInt(rate).putInt(rate * 2).putShort(2.toShort()).putShort(16.toShort())
         wav.put("data".toByteArray()).putInt(bytes)
+        if (leadingSilence) repeat(samples) { wav.putShort(0.toShort()) }
         repeat(samples) { i -> wav.putShort((sin(2 * PI * 440 * i / rate) * 14_000).toInt().toShort()) }
         file.writeBytes(wav.array())
     }

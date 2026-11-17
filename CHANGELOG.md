@@ -1,3 +1,9 @@
+# Uai Cortes 0.1.285 (2026-11-17)
+
+- **Linha do tempo:** vídeo, imagem e PiP em 34 dp, áudio/música/vozes em 28 dp e legendas em 24 dp. Ícones menores com nomes, transições marcadas no corte e texto da legenda quando selecionada.
+- **Música:** faixa visível mesmo vazia. Toque no áudio avulso e em **Mover para Música** para preservar início, recorte e volume sem criar outra cópia. Requer confirmação se já houver música e suporta Desfazer.
+- **Régua:** termina no fim do projeto. Se o último clipe selecionado tiver material para alongar, **Estender final** revela temporariamente o espaço para puxar a borda direita.
+
 # Uai Cortes 0.1.284 (2026-11-17)
 
 - **CI 241:** ajusta o teste de equivalência entre SRT e legenda clássica para usar a importação real e o padrão 14, removendo o valor 12 usado equivocadamente no cenário de padrão.

@@ -1,3 +1,9 @@
+# v0.1.285 — Linha do tempo compacta
+
+- Base v0.1.284/versionCode 285, nova v0.1.285/versionCode 286. Preservar schema 4, assinatura e variantes do CI.
+- Música aparece mesmo vazia. Mover áudio avulso é uma única alteração desfeita pela timeline; preserve o URI, recorte, posição, volume e tratamento no exportador. Não migrar pelo nome e não mover vozes ou áudios vinculados.
+- A régua normal termina no projeto. Estender final só dá folga temporária se houver mídia disponível no último clipe selecionado. Manter a escala temporal, gestos, rolagem e encaixe.
+
 # v0.1.284 — Correção do CI 241
 
 - Base v0.1.283/versionCode 284; atual v0.1.284/versionCode 285. No CI 241, compilaram Debug e Release, mas 1 de 761 testes unitários falhou no estilo clássico (tamanho padrão mudou de 12 para 14).

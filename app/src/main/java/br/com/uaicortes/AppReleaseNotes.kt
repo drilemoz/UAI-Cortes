@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.284"
-    const val VERSION_CODE = 285
+    const val VERSION_NAME = "0.1.285"
+    const val VERSION_CODE = 286
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.285", listOf(
+            ReleaseFeature("timeline-compact-285", "Linha do tempo mais baixa e limpa",
+                "As faixas têm rótulos compactos, marcas menores de transição e a régua termina no fim do vídeo. Estender final abre espaço só quando necessário.", "check"),
+            ReleaseFeature("move-music-285", "Mover um áudio para Música",
+                "A faixa Música ficou sempre visível. Mova uma trilha de Áudio preservando início, volume e recorte, com confirmação ao substituir e suporte a Desfazer.", "check")
+        )),
         ReleaseSummary("0.1.284", listOf(
             ReleaseFeature("ci-241-caption-size-284", "Correção de teste do build de legendas",
                 "O teste do estilo clássico agora verifica o tamanho inicial 14. A escolha manual de 12 continua disponível. Não há mudança no comportamento do editor.", "check")

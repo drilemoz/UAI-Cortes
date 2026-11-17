@@ -23,7 +23,7 @@ assert 'voiceProcessors(clip.volume, clip.voiceTone)' in export
 assert 'voiceProcessors(audio.volume, audio.voiceTone)' in export
 assert 'else GainProcessor(volume)' in export
 assert 'val voiceTone: VoiceTone = VoiceTone()' in model
-assert model.count('VoiceTone.read(j.optJSONObject("voiceTone"))')==2
+assert model.count('VoiceTone.read(j.optJSONObject("voiceTone"))')==3
 assert '.put("schemaVersion", 4)' in model
 for key in ('trebleDb','compression','noiseReduction','deEsser','autoGain'):
     assert f'.put("{key}"' in tone and f'"{key}"' in tone

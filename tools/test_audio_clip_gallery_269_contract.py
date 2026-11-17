@@ -35,6 +35,6 @@ assert 'onClick = { picker.launch(arrayOf("audio/*")) }' in linked
 assert '"Aplicar somente a este clipe"' in linked
 assert '"Remover áudio deste clipe"' in linked
 assert 'detectDragGestures(onDragStart=' in timeline
-assert 'onTap={ onEntryTap(TimelineSelection(kind,span.id)) }' in timeline
+assert 'onEntryTap(item, selected == item)' in timeline
 assert '.clickable { onSelect(); onTap() }' in timeline
 print('OK: galeria interna só vídeos, SAF opcional, áudio por clipe direto e arrasto preservado')

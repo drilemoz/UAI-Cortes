@@ -33,7 +33,11 @@ internal object ExportAudioPolicy {
     fun musicWindow(music: Music, projectDurationMs: Long,
                     sourceDurationMs: Long = music.sourceDurationMs): Window? =
         if (music.loops && projectDurationMs > 0L) Window(0L, 0L, projectDurationMs, 0L)
-        else window(music.startMs, 0L, music.sourceDurationMs, sourceDurationMs, projectDurationMs)
+        else {
+            val knownSource = music.sourceDurationMs.takeIf { it > 0L }
+            val source = knownSource?.let { minOf(it, sourceDurationMs) } ?: sourceDurationMs
+            window(music.startMs, music.sourceStartMs, music.durationMs, source, projectDurationMs)
+        }
 
     fun activeMusic(project: VideoProject): Music? = project.music?.takeIf {
         audible(it.volume) && musicWindow(it, project.durationMs) != null

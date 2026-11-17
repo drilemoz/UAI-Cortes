@@ -89,17 +89,21 @@ data class Overlay(
 
 /** Música de fundo única. Projetos antigos não tinham duração, nem posição, e repetiam desde zero. */
 data class Music(val uri: String, val title: String, val volume: Float = 0.35f,
-    val startMs: Long = 0L, val sourceDurationMs: Long = 0L, val repeat: Boolean = true) {
-    val loops: Boolean get() = repeat && startMs == 0L
+    val startMs: Long = 0L, val sourceDurationMs: Long = 0L, val repeat: Boolean = true,
+    val sourceStartMs: Long = 0L, val durationMs: Long = 0L, val voiceTone: VoiceTone = VoiceTone()) {
+    val loops: Boolean get() = repeat && startMs == 0L && sourceStartMs == 0L && durationMs == 0L
 
     fun json() = JSONObject().put("uri", uri).put("title", title).put("volume", volume.toDouble())
         .put("startMs", startMs).put("sourceDurationMs", sourceDurationMs).put("repeat", repeat)
+        .put("sourceStartMs", sourceStartMs).put("durationMs", durationMs)
+        .put("voiceTone", voiceTone.json())
 
     companion object {
         fun read(j: JSONObject) = Music(j.getString("uri"), j.optString("title"),
             j.optDouble("volume", .35).toFloat().let { if (it.isFinite()) it.coerceIn(0f, 1f) else .35f },
             j.optLong("startMs").coerceAtLeast(0L), j.optLong("sourceDurationMs").coerceAtLeast(0L),
-            j.optBoolean("repeat", true))
+            j.optBoolean("repeat", true), j.optLong("sourceStartMs").coerceAtLeast(0L),
+            j.optLong("durationMs").coerceAtLeast(0L), VoiceTone.read(j.optJSONObject("voiceTone")))
     }
 }
 

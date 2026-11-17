@@ -42,7 +42,12 @@ internal fun QuickAudioDialog(
     val latestSave by rememberUpdatedState(onSave)
     var uriText by rememberSaveable { mutableStateOf(initialUri) }
     var title by rememberSaveable { mutableStateOf((music?.title ?: track?.title).orEmpty()) }
-    var audioMs by rememberSaveable { mutableLongStateOf(music?.sourceDurationMs ?: track?.durationMs ?: 0L) }
+    var audioMs by rememberSaveable {
+        mutableLongStateOf(music?.let { item ->
+            val available = (item.sourceDurationMs - item.sourceStartMs).coerceAtLeast(0L)
+            item.durationMs.takeIf { it > 0L }?.coerceAtMost(available) ?: available
+        } ?: track?.durationMs ?: 0L)
+    }
     val initialStartMs = remember { (music?.startMs ?: track?.startMs ?: atMs).coerceIn(0L, project.durationMs) }
     var enteredTime by rememberSaveable { mutableStateOf<String?>(null) }
     val initialDigits = NumericTime.fromMs(initialStartMs)
@@ -51,6 +56,30 @@ internal fun QuickAudioDialog(
     var volume by rememberSaveable { mutableFloatStateOf(music?.volume ?: track?.volume ?: if (musicMode) .25f else .35f) }
     var busy by remember { mutableStateOf(false) }
     var error by rememberSaveable { mutableStateOf("") }
+    var replacement by remember(project.id, track?.id) { mutableStateOf<Music?>(null) }
+
+    fun moveToMusic(existing: Music?) {
+        val selected = track ?: return
+        scope.launch {
+            busy = true
+            error = ""
+            try {
+                val inspected = withContext(Dispatchers.IO) { media.duration(Uri.parse(selected.uri)) }
+                val current = latestProject
+                val changed = if (current.id == project.id)
+                    MusicTrackTransfer.move(current, selected, inspected, existing) else null
+                if (changed != null && latestSave(changed)) onDismiss()
+                else error = "Não foi possível mover. Confira o arquivo e se a faixa ainda cabe no projeto."
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                DiagnosticRecorder.exception("quick_audio_move_to_music", e)
+                error = "Não foi possível ler o arquivo para mover à faixa Música."
+            } finally {
+                busy = false
+            }
+        }
+    }
     val choose = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
             busy = true
@@ -82,7 +111,9 @@ internal fun QuickAudioDialog(
             busy = true
             try {
                 audioMs = withContext(Dispatchers.IO) { media.duration(Uri.parse(initialUri)) }
-                    .minus(track?.sourceStartMs ?: 0L).coerceAtLeast(0L)
+                    .minus(music?.sourceStartMs ?: track?.sourceStartMs ?: 0L).coerceAtLeast(0L)
+                    .let { remaining -> music?.durationMs?.takeIf { it > 0L }
+                        ?.coerceAtMost(remaining) ?: remaining }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -97,6 +128,18 @@ internal fun QuickAudioDialog(
     val legacyLoop = music != null && music.loops && startMs == 0L && uriText == music.uri
     val window = startMs?.let {
         QuickAudioPlacement.resolve(lengths, it, if (legacyLoop) project.durationMs else audioMs)
+    }
+    val replaceMusic = replacement
+    if (replaceMusic != null) {
+        AlertDialog(onDismissRequest = { replacement = null }, shape = UaiShapes.dialog,
+            title = { Text("Substituir a música?") },
+            text = { Text("“${replaceMusic.title.ifBlank { "Música atual" }}” sairá da faixa Música. O áudio selecionado será movido sem duplicar o arquivo.") },
+            confirmButton = { Button(onClick = {
+                replacement = null
+                moveToMusic(replaceMusic)
+            }) { Text("Substituir e mover") } },
+            dismissButton = { TextButton(onClick = { replacement = null }) { Text("Cancelar") } })
+        return
     }
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
@@ -115,7 +158,9 @@ internal fun QuickAudioDialog(
                 if (uriText != null) {
                     Text(title.ifBlank { mediaLabel }, style = MaterialTheme.typography.titleSmall,
                         maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text("Duração do arquivo: ${formatPipMs(audioMs)}", style = MaterialTheme.typography.bodySmall)
+                    val durationLabel = if (music != null && music.uri == uriText &&
+                        (music.sourceStartMs > 0L || music.durationMs > 0L)) "Duração do trecho" else "Duração do arquivo"
+                    Text("$durationLabel: ${formatPipMs(audioMs)}", style = MaterialTheme.typography.bodySmall)
                     if (legacyLoop) Text("Esta música já estava configurada para repetir desde o início.",
                         style = MaterialTheme.typography.bodySmall)
                     OutlinedTextField(value = enteredTime ?: initialDigits,
@@ -144,6 +189,11 @@ internal fun QuickAudioDialog(
                 }
                 if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error)
+                if (!musicMode && track != null && MusicTrackTransfer.eligible(track)) TextButton(
+                    onClick = {
+                        val existing = latestProject.music
+                        if (existing == null) moveToMusic(null) else replacement = existing
+                    }, enabled = !busy) { Text("Mover para Música") }
                 if (track != null || music != null) TextButton(onClick = {
                     val current = latestProject
                     val changed = if (musicMode) current.copy(music = null)
@@ -173,8 +223,10 @@ internal fun QuickAudioDialog(
                             (track != null && current.audioTracks.none { it.id == track.id })) {
                             error = "A linha do tempo mudou. Confira o alcance antes de aplicar."
                         } else if (musicMode) {
-                            val updated = Music(savedUri, title, volume,
-                                startMs = placement.startMs, sourceDurationMs = audioMs, repeat = legacyLoop)
+                            val updated = if (music != null && selectedUri == music.uri)
+                                music.copy(startMs = placement.startMs, volume = volume, repeat = legacyLoop)
+                            else Music(savedUri, title, volume,
+                                startMs = placement.startMs, sourceDurationMs = audioMs, repeat = false)
                             if (latestSave(current.copy(music = updated))) onDismiss()
                             else error = "Não foi possível salvar a música."
                         } else {

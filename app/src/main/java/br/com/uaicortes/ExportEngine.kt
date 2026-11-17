@@ -379,7 +379,7 @@ class ExportEngine(private val context: Context) {
         }
         ExportAudioPolicy.activeMusic(project)?.let { music ->
             val mediaItem = MediaItem.Builder().setUri(music.uri)
-            val gains = Effects(listOf(GainProcessor(music.volume)), emptyList())
+            val gains = Effects(listOf(voiceProcessors(music.volume, music.voiceTone)), emptyList())
             if (music.loops) {
                 // Compatibilidade: este caso nunca adiciona lacuna à sequência que repete.
                 val track = EditedMediaItem.Builder(mediaItem.build()).setEffects(gains).build()
@@ -396,7 +396,8 @@ class ExportEngine(private val context: Context) {
                     "A música está fora do vídeo. Ajuste a posição antes de exportar."
                 }
                 mediaItem.setClippingConfiguration(MediaItem.ClippingConfiguration.Builder()
-                    .setEndPositionMs(window.playableMs).build())
+                    .setStartPositionMs(window.sourceStartMs)
+                    .setEndPositionMs(window.sourceStartMs + window.playableMs).build())
                 val sequence = EditedMediaItemSequence.Builder(setOf(C.TRACK_TYPE_AUDIO))
                 if (window.timelineStartMs > 0L) sequence.addGap(window.timelineStartMs * 1000L)
                 sequence.addItem(EditedMediaItem.Builder(mediaItem.build()).setEffects(gains).build())

@@ -478,7 +478,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         }
         // Um toque seleciona; arrastar o centro move, puxar uma borda apara.
         // Todos os commits são únicos e só ocorrem quando o dedo é solto.
-        UnifiedEditorTimeline(p,currentMs,onSeek=::seekGlobal,
+        UnifiedEditorTimeline(p,currentMs,selectedClipId=selectedId,onSeek=::seekGlobal,
             onClip={id->onSelected(id);clipMenuId=id},onSelectClip=onSelected,
             onTransition=onTransition,
             onOverlay={id->onSelectOverlay(id);onEdit("pip")},onSelectOverlay=onSelectOverlay,

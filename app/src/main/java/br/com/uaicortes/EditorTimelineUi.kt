@@ -95,7 +95,7 @@ internal fun MusicAudioPreview(music: Music, projectDurationMs: Long,
     volume: Float, projectMs: Long, playing: Boolean, speed: Float) {
     val window = ExportAudioPolicy.musicWindow(music, projectDurationMs) ?: return
     TrackAudioPreview(music.uri, window.timelineStartMs, window.playableMs, volume,
-        projectMs, playing, speed, music.loops)
+        projectMs, playing, speed, music.loops, window.sourceStartMs)
 }
 
 @Composable

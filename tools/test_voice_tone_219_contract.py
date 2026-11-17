@@ -10,8 +10,8 @@ panel = (src/'VoiceTonePanel.kt').read_text()
 fx = (src/'VoiceTone.kt').read_text()
 processor = (src/'VoiceToneProcessor.kt').read_text()
 assert 'val voiceTone: VoiceTone = VoiceTone()' in model
-assert model.count('.put("voiceTone", voiceTone.json())') == 2
-assert model.count('VoiceTone.read(j.optJSONObject("voiceTone"))') == 2
+assert model.count('.put("voiceTone", voiceTone.json())') == 3
+assert model.count('VoiceTone.read(j.optJSONObject("voiceTone"))') == 3
 assert '.put("schemaVersion", 4)' in model
 assert 'voiceProcessors(clip.volume, clip.voiceTone)' in export
 assert 'voiceProcessors(audio.volume, audio.voiceTone)' in export

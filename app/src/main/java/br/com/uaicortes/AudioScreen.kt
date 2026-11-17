@@ -411,7 +411,7 @@ internal fun AudioScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Uni
                 p.music?.let { music ->
                     AudioTrackCard {
                         Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                            IconButton(onClick = { previewIsolated("music", music.uri, 0L, 0L, music.volume) },
+                            IconButton(onClick = { previewIsolated("music", music.uri, music.sourceStartMs, music.durationMs, music.volume) },
                                 modifier = Modifier.size(40.dp)) {
                                 Icon(if (isolatedId == "music" && isolatedPlaying) Icons.Default.Pause
                                     else Icons.Default.PlayArrow, "Ouvir música", tint=MaterialTheme.colorScheme.primary)
