@@ -1,3 +1,16 @@
+# v0.1.275 — sincronia por palavra e ajuste manual
+
+- Base v0.1.274/versionCode 275; atual v0.1.275/versionCode 276. Preservar schema 4, cinco APKs e assinatura.
+- `refineWords` é tudo-ou-nada por legenda e nunca altera texto; `SubtitleGlobalShift` limita o deslocamento para nenhuma legenda sair do vídeo e usa `SubtitleBatchUndo`.
+- Testes de contrato não substituem Gradle/Android real.
+
+# v0.1.274 — sincronismo de legendas Gemini e Vozes IA sem legendas
+
+- Base v0.1.273/versionCode 274; atual v0.1.274/versionCode 275. Manter projeto schema 4, cinco APKs, assinatura e SocialStore.
+- `AutoSubtitleEngine.readClip` alinha o PCM aos timestamps do contêiner (silêncio em início tardio/lacunas >30 ms). `SubtitleTimingRefiner` confere horários do Gemini com o envelope de energia do WAV; sem ganho claro não altera nada e nunca muda texto/ordem.
+- Vozes IA sem legendas via `VoiceIaFreeScript` (IDs `livre-N`, sessão apenas; legendas do projeto intocadas). `VoiceIaWavStretch.fit` = trim de silêncio + WSOLA; `MAX_LOCAL_SPEED` permanece 1,25.
+- Testes de contrato não substituem Gradle/Android real; validar em aparelho com Gemini.
+
 # v0.1.273 — publicação em lote com resultado verificável
 
 - Base v0.1.272/versionCode 273; atual v0.1.273/versionCode 274. Manter esquema de projeto de vídeo 4 e SocialStore schema 1, cinco APKs e assinatura.

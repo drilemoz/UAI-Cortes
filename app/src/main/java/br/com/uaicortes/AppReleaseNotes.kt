@@ -16,11 +16,25 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.273"
-    const val VERSION_CODE = 274
+    const val VERSION_NAME = "0.1.275"
+    const val VERSION_CODE = 276
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.275", listOf(
+            ReleaseFeature("subtitle-word-sync-275", "Sincronia palavra por palavra",
+                "Depois do ajuste por legenda, cada palavra do karaokê é conferida com as pausas reais da voz; se algo ficar incoerente, o tempo original é mantido.", "check"),
+            ReleaseFeature("subtitle-manual-sync-275", "Ajustar sincronia manualmente",
+                "Em Legendas > Automáticas > Ajustar sincronia, mova todas as legendas juntas (±50, ±100, ±500 ms) e desfaça se não gostar.", "check")
+        )),
+        ReleaseSummary("0.1.274", listOf(
+            ReleaseFeature("subtitle-sync-274", "Legendas Gemini sincronizadas com a fala",
+                "O áudio enviado agora respeita o relógio real do vídeo (início tardio e lacunas) e os horários do Gemini são conferidos com a energia da voz, corrigindo legendas adiantadas ou atrasadas.", "check"),
+            ReleaseFeature("voice-free-script-274", "Vozes IA sem legendas",
+                "Sem legendas no projeto, escreva uma fala por linha e gere as vozes a partir do cursor, sem criar ou alterar legendas.", "check"),
+            ReleaseFeature("voice-fit-274", "Ajuste de fala mais natural",
+                "Ao não caber na legenda, a voz primeiro perde silêncios das pontas e só então é acelerada com WSOLA (até 1,25×), mantendo a altura.", "check")
+        )),
         ReleaseSummary("0.1.273", listOf(
             ReleaseFeature("publish-batch-confirm-273", "Confirmação única dos destinos",
                 "Selecione dois canais e avance para uma única revisão antes de autorizar cada conta. Sem botões individuais repetidos após Continuar.", "check"),

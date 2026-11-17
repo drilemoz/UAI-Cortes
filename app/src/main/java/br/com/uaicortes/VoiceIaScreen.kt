@@ -600,7 +600,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
             try {
                 val updated = withContext(Dispatchers.IO) {
                     val source = File(take.sourceFilePath ?: take.filePath)
-                    val wave = VoiceIaWavStretch.shorten(source.readBytes(), targetMs)
+                    val wave = VoiceIaWavStretch.fit(source.readBytes(), targetMs)
                     val saved = GeminiAudioFiles.save(context, wave)
                     take.copy(filePath = saved.absolutePath, durationMs = wave.durationMs,
                         sha256 = GeminiNarrationCheckpoint.hash(wave.bytes),
@@ -1521,16 +1521,17 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                     if (review.nextOverlapMs > 0) Text(
                         "A voz invade a próxima legenda em ${formatPipMs(review.nextOverlapMs)}.",
                         color = MaterialTheme.colorScheme.error)
-                    if (review.canStretch) Text(
-                        "Ajuste offline ${String.format(Locale.ROOT, "%.2f", review.requiredSpeed)}×: " +
-                        "preserva a altura aproximada da voz, mas pode criar artefatos. " +
+                    if (review.excessMs > 0 && review.availableMs >= 250L) Text(
+                        "Ajuste offline: remove silêncios das pontas e, se ainda sobrar " +
+                        "(${String.format(Locale.ROOT, "%.2f", review.requiredSpeed)}× sem o corte), " +
+                        "acelera mantendo a altura da voz (limite 1,25×). " +
                         "O WAV original fica guardado; ouça antes de inserir.")
-                    else Text("Aceleração excessiva prejudicaria a naturalidade. " +
+                    else if (review.excessMs > 0) Text("Janela da legenda curta demais para ajuste. Aceleração excessiva prejudicaria a naturalidade. " +
                         "Prefira regenerar com ritmo mais rápido ou editar os horários na tela Legendas.")
                     Text("Os horários e o texto das legendas não serão alterados.",
                         style = MaterialTheme.typography.labelSmall)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        if (review.canStretch) Button(onClick = {
+                        if (review.excessMs > 0 && review.availableMs >= 250L) Button(onClick = {
                             pendingSyncId = null
                             adjustWav(cue, take, review.availableMs)
                         }, modifier = Modifier.weight(1f), enabled = !busy, shape = UaiShapes.button) {

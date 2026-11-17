@@ -208,8 +208,16 @@ internal class GeminiSubtitleClient(context: Context? = null) {
             val response=interaction(uri,valid,withSpeakerLabels)
             usage?.safeRecord(valid, "gemini-3.5-transcribe", "legendas", response, latencyMs = elapsedMs())
             currentCoroutineContext().ensureActive()
-            val cues=GeminiSubtitleParser.parse(response,project.durationMs,withSpeakerLabels)
-            onProgress(100,"Transcrição concluída")
+            val parsed=GeminiSubtitleParser.parse(response,project.durationMs,withSpeakerLabels)
+            // Confere os horários do Gemini com a energia real do áudio enviado.
+            val refined=runCatching {
+                SubtitleTimingRefiner.refine(parsed,SubtitleVoiceEnvelope.read(wav),project.durationMs)
+            }.getOrNull()
+            val cues=refined?.cues ?: parsed
+            val note=if (refined != null && (refined.globalShiftMs != 0L || refined.snappedCount > 0 || refined.wordsSnapped > 0))
+                "Transcrição concluída · horários conferidos com o áudio (${refined.snappedCount} legendas, ${refined.wordsSnapped} palavras)"
+            else "Transcrição concluída"
+            onProgress(100,note)
             cues
         } catch(e: GeminiHttpException) {
             usage?.safeRecord(valid, "gemini-3.5-transcribe", "legendas",

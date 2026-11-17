@@ -3,6 +3,7 @@ package br.com.uaicortes
 import java.io.IOException
 import java.util.Locale
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.roundToInt
@@ -55,6 +56,65 @@ internal object VoiceIaWavStretch {
     private fun write32(data: ByteArray, p: Int, n: Int) {
         write16(data, p, n); write16(data, p + 2, n ushr 16)
     }
+    private fun locate(wav: ByteArray): IntArray? {
+        var at = 12
+        var rate = 0
+        var dataStart = -1
+        var dataSize = 0
+        while (at + 8 <= wav.size) {
+            val size = u32(wav, at + 4).toLong() and 0xffffffffL
+            val beginning = at + 8
+            if (size > wav.size - beginning) return null
+            when (String(wav, at, 4, Charsets.US_ASCII)) {
+                "fmt " -> rate = u32(wav, beginning + 4)
+                "data" -> { dataStart = beginning; dataSize = size.toInt() }
+            }
+            at = (beginning + size + (size and 1L)).toInt()
+        }
+        return if (rate in 8000..96000 && dataStart >= 0 && dataSize >= 1024 && dataSize % 2 == 0)
+            intArrayOf(rate, dataStart, dataSize) else null
+    }
+
+    /** Remove silêncio inicial/final comum em TTS, mantendo 40 ms de respiro. Null se não houver ganho. */
+    fun trimSilence(wav: ByteArray): GeminiWave? {
+        if (wav.size > 4 * 1024 * 1024) return null
+        val info = locate(wav) ?: return null
+        val rate = info[0]
+        val dataStart = info[1]
+        val count = info[2] / 2
+        val threshold = 300
+        var first = 0
+        while (first < count && abs(u16(wav, dataStart + first * 2).toShort().toInt()) < threshold) first++
+        if (first >= count) return null
+        var last = count - 1
+        while (last > first && abs(u16(wav, dataStart + last * 2).toShort().toInt()) < threshold) last--
+        val pad = rate * 40 / 1000
+        val from = (first - pad).coerceAtLeast(0)
+        val to = (last + pad + 1).coerceAtMost(count)
+        val removedMs = (count - (to - from)) * 1000L / rate
+        if (removedMs < 120L || to - from < rate / 4) return null
+        val outCount = to - from
+        val bytes = ByteArray(44 + outCount * 2)
+        "RIFF".toByteArray().copyInto(bytes, 0)
+        write32(bytes, 4, bytes.size - 8)
+        "WAVEfmt ".toByteArray().copyInto(bytes, 8)
+        write32(bytes, 16, 16); write16(bytes, 20, 1); write16(bytes, 22, 1)
+        write32(bytes, 24, rate); write32(bytes, 28, rate * 2)
+        write16(bytes, 32, 2); write16(bytes, 34, 16)
+        "data".toByteArray().copyInto(bytes, 36)
+        write32(bytes, 40, outCount * 2)
+        System.arraycopy(wav, dataStart + from * 2, bytes, 44, outCount * 2)
+        return GeminiWave(bytes, GeminiWaveParser.duration(bytes, "audio/wav"))
+    }
+
+    /** Ajuste para caber na legenda: primeiro tira silêncios das pontas; só então acelera (WSOLA). */
+    fun fit(wav: ByteArray, targetMs: Long): GeminiWave {
+        val trimmed = trimSilence(wav)
+        val duration = trimmed?.durationMs ?: GeminiWaveParser.duration(wav, "audio/wav")
+        if (duration <= targetMs) return trimmed ?: GeminiWave(wav, duration)
+        return shorten(trimmed?.bytes ?: wav, targetMs)
+    }
+
     fun shorten(wav: ByteArray, targetMs: Long): GeminiWave {
         require(wav.size <= 4 * 1024 * 1024) { "WAV muito grande para ajuste local. Regere a voz." }
         val sourceMs = GeminiWaveParser.duration(wav, "audio/wav")
@@ -83,20 +143,43 @@ internal object VoiceIaWavStretch {
         val input = ShortArray(inputCount) { idx -> u16(wav, dataStart + idx * 2).toShort() }
         val sums = FloatArray(outputCount)
         val weights = FloatArray(outputCount)
-        val window = (rate / 25).coerceIn(320, 3840)  // cerca de 40 ms
-        val hop = (window / 4).coerceAtLeast(80)
+        // WSOLA: cada janela procura, perto da posição nominal, o trecho mais parecido com a
+        // continuação natural da anterior; evita o efeito metálico/embolado de OLA simples.
+        val window = ((rate * 0.032).toInt() / 2 * 2).coerceAtLeast(256)
+        val hop = window / 2
+        val tolerance = (rate / 100).coerceAtLeast(64)
         val taper = FloatArray(window) { i ->
             (0.5 - 0.5 * cos(2 * PI * (i + .5) / window)).toFloat()
         }
+        var previous = -1
         var outStart = 0
         while (outStart < outputCount) {
-            val srcStart = (outStart * ratio).roundToInt()
-            if (srcStart >= inputCount) break
-            val n = minOf(window, outputCount - outStart, inputCount - srcStart)
+            val nominal = (outStart * ratio).roundToInt()
+            var chosen = nominal.coerceIn(0, inputCount - 1)
+            if (previous >= 0) {
+                val reference = previous + hop
+                var bestScore = Double.NEGATIVE_INFINITY
+                var d = -tolerance
+                while (d <= tolerance) {
+                    val c = nominal + d
+                    if (c >= 0 && c + window <= inputCount && reference + window <= inputCount) {
+                        var score = 0.0
+                        var i = 0
+                        while (i < window) {
+                            score += input[c + i].toDouble() * input[reference + i].toDouble()
+                            i += 4
+                        }
+                        if (score > bestScore) { bestScore = score; chosen = c }
+                    }
+                    d += 2
+                }
+            }
+            previous = chosen
+            val n = minOf(window, outputCount - outStart, inputCount - chosen)
             for (i in 0 until n) {
                 val pos = outStart + i
                 val weight = taper[i]
-                sums[pos] += input[srcStart + i] * weight
+                sums[pos] += input[chosen + i] * weight
                 weights[pos] += weight
             }
             outStart += hop

@@ -22,6 +22,6 @@ assert 'SubtitleSpeakerStyles.manualEdit(p, selected, draft)' in sub
 assert 'onRestoreSpeakerStyle' in sub
 assert 'cue.id in project.subtitleStyleOverrides' in policy
 assert 'VoiceIaSubtitleGate.hasCues(current)' in main
-assert 'VoiceIaSubtitleGateScreen' in main
+assert 'VoiceIaFreeEntry' in main  # v0.1.274: sem legendas, roteiro livre
 assert (SRC/'VoiceIaSubtitleGateScreen.kt').exists()
 print('OK: finite toolbar, stable subtitle scroll, persistent speaker styles and voice gate')

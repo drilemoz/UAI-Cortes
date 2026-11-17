@@ -33,6 +33,8 @@ object AutoSubtitleEngine {
     private const val MAX_EXTRACTED = 300L * 1024 * 1024
     private const val MAX_DURATION_MS = 10L * 60 * 1000
     private const val RATE = 16000
+    /** Lacunas menores que 30 ms no relógio do contêiner não são preenchidas. */
+    private const val GAP_TOLERANCE_SAMPLES = 480L
     private val installationMutex = Mutex()
 
     fun modelFolder(context: Context): File = File(context.filesDir, "speech-models/$MODEL_NAME")
@@ -356,6 +358,10 @@ object AutoSubtitleEngine {
             val results = mutableListOf<Word>()
             val outputChunk = java.io.ByteArrayOutputStream(4096)
             var phase = 0L
+            var emitted = 0L
+            var accumulated = 0f
+            var accumulatedCount = 0
+            var lastSample = 0
             val startUs = clip.startMs * 1000L
             val endUs = clip.endMs * 1000L
             val info = MediaCodec.BufferInfo()
@@ -373,6 +379,17 @@ object AutoSubtitleEngine {
                     pcmSink?.write(bytes)
                     recognizer?.let { if (it.acceptWaveForm(bytes, bytes.size)) absorbResult(it.result) }
                     outputChunk.reset()
+                }
+                fun writeSilence(samples: Long) {
+                    var remaining = samples
+                    val zeros = ByteArray(2048 * 2)
+                    while (remaining > 0L) {
+                        val n = minOf(remaining, 2048L).toInt()
+                        outputChunk.write(zeros, 0, n * 2)
+                        emitted += n
+                        remaining -= n
+                        if (outputChunk.size() >= 4096) feed()
+                    }
                 }
                 var inputEnded = false
                 var outputEnded = false
@@ -416,6 +433,16 @@ object AutoSubtitleEngine {
                                     encoding != AudioFormat.ENCODING_PCM_FLOAT)
                                     error("Formato de áudio PCM não suportado neste aparelho")
                                 val frames = info.size / (width * channels.coerceAtLeast(1))
+                                // Alinha o PCM ao relógio do contêiner: início tardio da faixa,
+                                // lacunas ou atraso do codec não podem encurtar a linha do tempo
+                                // enviada ao reconhecimento (causa de legendas adiantadas).
+                                val firstTs = maxOf(info.presentationTimeUs, startUs)
+                                if (frames > 0 && firstTs < endUs) {
+                                    val expected = (firstTs - startUs) * RATE / 1_000_000L
+                                    val clipSamples = (endUs - startUs) * RATE / 1_000_000L
+                                    val missing = minOf(expected, clipSamples) - emitted
+                                    if (missing > GAP_TOLERANCE_SAMPLES) writeSilence(missing)
+                                }
                                 for (frame in 0 until frames) {
                                     var average = 0f
                                     repeat(channels) {
@@ -425,12 +452,21 @@ object AutoSubtitleEngine {
                                     }
                                     val timestamp = info.presentationTimeUs + frame * 1000000L / rate
                                     if (timestamp < startUs || timestamp >= endUs) continue
+                                    // Média das amostras de cada grupo: filtro simples contra aliasing.
+                                    accumulated += average / channels
+                                    accumulatedCount++
                                     phase += RATE.toLong()
                                     while (phase >= rate) {
                                         phase -= rate
-                                        val sample = (average / channels).toInt().coerceIn(-32768, 32767)
+                                        val sample = if (accumulatedCount > 0)
+                                            (accumulated / accumulatedCount).toInt().coerceIn(-32768, 32767)
+                                        else lastSample
+                                        accumulated = 0f
+                                        accumulatedCount = 0
+                                        lastSample = sample
                                         outputChunk.write(sample and 0xFF)
                                         outputChunk.write((sample shr 8) and 0xFF)
+                                        emitted++
                                         if (outputChunk.size() >= 4096) feed()
                                     }
                                 }

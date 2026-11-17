@@ -502,10 +502,20 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                     subtitleSpeakerStyles = batchUndoSpeakerStyles ?: p.subtitleSpeakerStyles))) {
                     batchUndo = null
                     batchUndoSpeakerStyles = null
-                    status = "Estilos anteriores restaurados"
+                    status = "Alteração em lote desfeita"
                 }
             }
         }
+    }
+    var syncOpen by remember(p.id) { mutableStateOf(false) }
+    if(syncOpen) SubtitleSyncDialog(p.subtitles,p.durationMs,{syncOpen=false}) { requested ->
+        val (shifted,applied)=SubtitleGlobalShift.apply(p.subtitles,requested,p.durationMs)
+        if(applied!=0L && update(p.copy(subtitles=shifted))) {
+            batchUndo=SubtitleBatchUndo(p.subtitles,shifted)
+            batchUndoSpeakerStyles=null
+            status="Sincronia ajustada em ${if(applied>0) "+" else ""}$applied ms. Use Desfazer para voltar."
+        }
+        syncOpen=false
     }
     var editorOpen by remember(p.id) { mutableStateOf(false) }
     val selected=p.subtitles.firstOrNull{it.id==selectedId}
@@ -709,6 +719,9 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                     DropdownMenuItem(text={Text("Gemini IA")},onClick={
                         autoSubtitlesMenu=false;onAutoSubtitles()
                     },leadingIcon={Icon(Icons.Default.AutoAwesome,null)})
+                    DropdownMenuItem(text={Text("Ajustar sincronia")},enabled=p.subtitles.isNotEmpty(),onClick={
+                        autoSubtitlesMenu=false;syncOpen=true
+                    },leadingIcon={Icon(Icons.Default.Settings,null)})
                 }
             }
         }

@@ -1,3 +1,16 @@
+# Uai Cortes · versão 0.1.275 — sincronia por palavra e ajuste manual
+
+- Karaokê: cada palavra é conferida com as pausas reais da fala após o ajuste da legenda.
+- Legendas > Automáticas > Ajustar sincronia: desloca todas as legendas em ±50/100/500 ms, com desfazer.
+- Compilação Android e escuta/visualização no aparelho ainda precisam ser confirmadas.
+
+# Uai Cortes · versão 0.1.274 — sincronismo de legendas e vozes sem legenda
+
+- Legendas com Gemini: áudio enviado alinhado ao relógio real do vídeo e horários conferidos com a energia da fala (corrige legendas adiantadas/atrasadas).
+- Vozes IA agora funciona sem legendas: escreva uma fala por linha e gere a partir do cursor, sem criar legendas.
+- Quando a voz não cabe na janela, o app tira silêncios das pontas e só depois acelera (até 1,25×) com algoritmo WSOLA.
+- Compilação Android e testes no aparelho (inclusive escuta real) ainda precisam ser confirmados.
+
 # Uai Cortes · versão 0.1.273 — confirmação e acompanhamento dos envios
 
 - Seleção de 1 ou mais canais e confirmação unificada sem botões repetidos após Continuar.

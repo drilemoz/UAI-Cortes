@@ -9,7 +9,7 @@ draft = (base/'VoiceIaDraftStore.kt').read_text()
 search = (base/'GeminiVoiceSearch.kt').read_text()
 assert 'VoiceIaSync.review(' in ui and 'pendingSyncId = cue.id' in ui
 assert 'adjustWav(cue, take, review.availableMs)' in ui
-assert 'VoiceIaWavStretch.shorten(source.readBytes(), targetMs)' in ui
+assert 'VoiceIaWavStretch.fit(source.readBytes(), targetMs)' in ui
 assert 'GeminiAudioFiles.save(context, wave)' in ui
 assert 'sourceFilePath = source.absolutePath' in ui and 'sourceDurationMs' in draft
 assert 'VoiceIaSync.guidance(direction, available, quickId == cue.id)' in ui

@@ -1,3 +1,17 @@
+# Uai Cortes 0.1.275 (2026-11-16)
+
+- `SubtitleTimingRefiner.refineWords`: cada palavra (karaokê) é ajustada às bordas reais de fala em janela de ±120 ms; tudo-ou-nada por legenda (mantém o original se ficar incoerente).
+- Novo "Ajustar sincronia" (Legendas > Automáticas): `SubtitleGlobalShift` move todas as legendas e tempos de palavra por ±50/100/500 ms (até ±5 s), limitado ao vídeo, com desfazer em lote.
+- Mensagem de desfazer em lote agora é genérica. Compilação Android e teste físico ainda pendentes.
+
+# Uai Cortes 0.1.274 (2026-11-16)
+
+- Legendas Gemini: o WAV enviado ao ASR agora é alinhado aos timestamps do contêiner (preenche início tardio e lacunas com silêncio) e a reamostragem usa média por grupo; antes a fala podia parecer mais cedo no áudio enviado.
+- Novo `SubtitleTimingRefiner`: estima deslocamento global (até ±600 ms) e ajusta início/fim de cada legenda ao começo/fim real de fala no WAV; sem ganho claro, nada é alterado. Textos e ordem preservados.
+- Vozes IA liberada sem legendas (`VoiceIaFreeScript`): uma fala por linha a partir do cursor; legendas do projeto não são criadas nem alteradas.
+- Ajuste de fala: remove silêncio das pontas e usa WSOLA no lugar de OLA simples; limite de aceleração segue 1,25×.
+- Compilação Gradle/Android e teste físico com Gemini real ainda dependem do CI e de aparelho.
+
 # Uai Cortes 0.1.273 (2026-11-10)
 
 - Corrigido o workflow 230: `ExportPipelineSmokeAndroidTest.kt` usava `assertEquals` sem importar `org.junit.Assert.assertEquals`, quebrando `:app:compileDebugAndroidTestKotlin`.

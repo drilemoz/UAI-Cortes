@@ -612,7 +612,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 "voices" -> project?.let { current ->
                     if(VoiceIaSubtitleGate.hasCues(current)) VoiceIaScreen(current,
                         back=::back,onSave={write(it)},openGeminiSettings={previous="voices";screen="gemini_settings"},initialCueId=selectedVoiceCueId)
-                    else VoiceIaSubtitleGateScreen(::back) { selectedSubtitleId=null;navTo("subtitles") }
+                    else VoiceIaFreeEntry(current,positionMs,::back,{selectedSubtitleId=null;navTo("subtitles")},{write(it)},{previous="voices";screen="gemini_settings"})
                 }
                 "pip" -> project?.let { current -> PipScreen(current, selectedOverlayId,
                     onSelect = { selectedOverlayId = it }, back = ::back,
