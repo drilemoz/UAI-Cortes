@@ -72,7 +72,7 @@ internal object FrameSnapshotProject {
         val hasActiveSubtitle = SubtitlePreviewPolicy.firstAt(project.subtitles, atMs) != null
         val hasWatermark = project.textWatermark?.toSubtitle(project.durationMs) != null
         val directSourceFrame = !hasActivePip && !hasActiveSubtitle && !hasWatermark
-        val shortSide = sourceShortSide.coerceIn(480, 1080)
+        val shortSide = VideoExportQuality.snapshotTier(sourceShortSide)
         return FrameSnapshotJob(
             project.copy(clips = listOf(clip.copy(startMs = slice.startMs,
                 endMs = slice.endMs, volume = 0f, voiceTone = VoiceTone())),

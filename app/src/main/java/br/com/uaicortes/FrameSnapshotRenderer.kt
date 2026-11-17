@@ -30,7 +30,7 @@ internal object FrameSnapshotRenderer {
             try {
                 engine.start(job.project, job.requestedShortSide,
                     fileName = "snapshot-frame.mp4",
-                    preset = ExportBitratePreset.HIGH,
+                    preset = ExportBitratePreset.MAXIMUM,
                     onSaving = {},
                     onSuccess = { _, _ ->
                         if (continuation.isActive) continuation.resumeWithException(

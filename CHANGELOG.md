@@ -1,3 +1,9 @@
+# Uai Cortes 0.1.276 (2026-11-17)
+
+- Print (botão de câmera): o quadro composto (PiP, legenda, marca d'água) usa `snapshotTier` (480/720/1080, sem perder detalhe) — antes resoluções como 540p/576p não tinham bitrate e o print falhava.
+- Quadro composto renderizado com perfil Máxima e keyframes a cada 0,5 s para o quadro pedido não cair em quadro P comprimido.
+- `VideoFrameSaver` extrai em ARGB_8888 (API 30+). Compilação Android e teste físico pendentes.
+
 # Uai Cortes 0.1.275 (2026-11-16)
 
 - `SubtitleTimingRefiner.refineWords`: cada palavra (karaokê) é ajustada às bordas reais de fala em janela de ±120 ms; tudo-ou-nada por legenda (mantém o original se ficar incoerente).

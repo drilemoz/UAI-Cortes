@@ -1,3 +1,8 @@
+# v0.1.276 — print do editor
+
+- Base v0.1.275/versionCode 276; atual v0.1.276/versionCode 277. Manter literais de ExportEngine exigidos por validate_source (`videoBitrateBps(height, preset)`, `setiFrameIntervalSeconds(VideoExportQuality.REQUESTED_KEYFRAME_INTERVAL_SECONDS)`).
+- `FrameSnapshotProject` só pode passar degraus 480/720/1080 ao ExportEngine.
+
 # v0.1.275 — sincronia por palavra e ajuste manual
 
 - Base v0.1.274/versionCode 275; atual v0.1.275/versionCode 276. Preservar schema 4, cinco APKs e assinatura.

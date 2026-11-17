@@ -404,7 +404,9 @@ class ExportEngine(private val context: Context) {
         val encoderFactory = DefaultEncoderFactory.Builder(context)
             .setRequestedVideoEncoderSettings(VideoEncoderSettings.Builder()
                 .setBitrate(bitrateBps)
-                .setiFrameIntervalSeconds(VideoExportQuality.REQUESTED_KEYFRAME_INTERVAL_SECONDS).build())
+                .setiFrameIntervalSeconds(VideoExportQuality.REQUESTED_KEYFRAME_INTERVAL_SECONDS)
+                .also { if (onRenderedFrame != null) it.setiFrameIntervalSeconds(
+                    VideoExportQuality.SNAPSHOT_KEYFRAME_INTERVAL_SECONDS) }.build())
             .setRequestedAudioEncoderSettings(AudioEncoderSettings.Builder()
                 .setBitrate(VideoExportQuality.AUDIO_BITRATE_BPS).build())
             .setEnableFallback(true)

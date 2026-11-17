@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.275"
-    const val VERSION_CODE = 276
+    const val VERSION_NAME = "0.1.276"
+    const val VERSION_CODE = 277
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.276", listOf(
+            ReleaseFeature("snapshot-quality-276", "Print do editor com mais qualidade",
+                "O print com legendas, PiP ou marca d'água agora usa bitrate máximo e keyframes frequentes, e funciona com vídeos de qualquer resolução (540p, 576p…). O quadro sem camadas usa cores de 32 bits.", "check")
+        )),
         ReleaseSummary("0.1.275", listOf(
             ReleaseFeature("subtitle-word-sync-275", "Sincronia palavra por palavra",
                 "Depois do ajuste por legenda, cada palavra do karaokê é conferida com as pausas reais da voz; se algo ficar incoerente, o tempo original é mantido.", "check"),

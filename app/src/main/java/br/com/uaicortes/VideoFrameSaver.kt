@@ -19,13 +19,22 @@ internal object VideoFrameSaver {
         val bitmap = try {
             retriever.setDataSource(context, Uri.parse(target.uri))
             // OPTION_CLOSEST busca o quadro solicitado, não apenas o keyframe mais próximo.
-            retriever.getFrameAtTime(target.sourceTimeMs * 1_000L, MediaMetadataRetriever.OPTION_CLOSEST)
+            frameAt(retriever, target.sourceTimeMs * 1_000L)
                 ?: error("Não foi possível extrair o quadro do vídeo. Verifique o acesso ao arquivo.")
         } finally {
             retriever.release()
         }
         return saveBitmap(context, bitmap, displayName)
     }
+
+    /** Quadro mais próximo em ARGB_8888 (o padrão antigo do Android podia ser RGB_565, com faixas nos degradês). */
+    private fun frameAt(retriever: MediaMetadataRetriever, timeUs: Long): Bitmap? =
+        // OPTION_CLOSEST: o quadro pedido, não apenas o keyframe mais próximo.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val params = MediaMetadataRetriever.BitmapParams()
+            params.setPreferredConfig(Bitmap.Config.ARGB_8888)
+            retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST, params)
+        } else retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST)
 
     /** Lado menor da mídia real. Não inventar 1080p para uma origem 480p. */
     fun sourceShortSide(context: Context, uri: String): Int {
@@ -49,8 +58,7 @@ internal object VideoFrameSaver {
         val retriever = MediaMetadataRetriever()
         val bitmap = try {
             retriever.setDataSource(file.absolutePath)
-            retriever.getFrameAtTime(frameMs.coerceAtLeast(0L) * 1000L,
-                MediaMetadataRetriever.OPTION_CLOSEST)
+            frameAt(retriever, frameMs.coerceAtLeast(0L) * 1000L)
                 ?: error("O vídeo temporário não contém um quadro decodificável.")
         } finally {
             retriever.release()

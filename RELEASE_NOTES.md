@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.276 — print do editor com mais qualidade
+
+- Print com legenda/PiP: bitrate máximo, keyframes frequentes e suporte a qualquer resolução de origem.
+- Print sem camadas: extração em cores de 32 bits.
+- Origens acima de 1080p com legenda/PiP continuam limitadas a 1080p; sem camadas, o print usa a resolução original.
+
 # Uai Cortes · versão 0.1.275 — sincronia por palavra e ajuste manual
 
 - Karaokê: cada palavra é conferida com as pausas reais da fala após o ajuste da legenda.
