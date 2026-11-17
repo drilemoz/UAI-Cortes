@@ -1,5 +1,10 @@
 package br.com.uaicortes
 
+import br.com.uaicortes.EditorDiagnosticPolicy.MediaStage
+import br.com.uaicortes.EditorDiagnosticPolicy.Result as MediaResult
+import br.com.uaicortes.EditorDiagnosticPolicy.Target
+import kotlinx.coroutines.CancellationException
+
 import android.net.Uri
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -65,15 +70,32 @@ internal class MediaImportTasks(
 
     suspend fun overlay(uri: Uri, availableMs: Long, projectId: String): OverlayImportSource? =
         withContext(ioDispatcher) {
-            media.persistReadAccess(uri)
-            if (availableMs <= 0L) return@withContext null
-            val isImage = media.isImage(uri)
-            val duration = if (isImage) 5_000L else media.duration(uri)
-            if (duration <= 0L) null
-            else {
+            if (availableMs <= 0L) {
+                DiagnosticRecorder.editorMedia(Target.PIP_MEDIA, MediaStage.IMPORT_BLOCKED,
+                    MediaResult.NO_SPACE_ON_TIMELINE)
+                return@withContext null
+            }
+            var target = Target.PIP_MEDIA
+            var stage = MediaStage.IMPORT_READ
+            try {
+                media.persistReadAccess(uri)
+                val isImage = media.isImage(uri)
+                target = Target.pip(isImage)
+                val duration = if (isImage) 5_000L else media.duration(uri)
+                if (duration <= 0L) {
+                    DiagnosticRecorder.editorMedia(target, stage, MediaResult.NO_DURATION)
+                    return@withContext null
+                }
+                stage = MediaStage.IMPORT_COPY
                 val safe = media.protectedCopy(uri, projectId,
                     if (isImage) ProjectMediaCopies.Kind.IMAGE else ProjectMediaCopies.Kind.VIDEO)
+                DiagnosticRecorder.editorMedia(target, MediaStage.IMPORT_READY, MediaResult.READY)
                 OverlayImportSource(safe, isImage, minOf(duration, availableMs))
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                DiagnosticRecorder.editorMedia(target, stage, MediaResult.FAILED)
+                throw error
             }
         }
 }

@@ -1,3 +1,9 @@
+# Uai Cortes 0.1.298 (2026-11-17)
+
+- **Timeline:** régua de 48 dp e alça maior. Toque para ir até um ponto ou arraste para revisar. Durante o gesto, a prévia pausa e o horário aparece junto da alça. As pistas mantêm os gestos de edição.
+- **Diagnóstico local:** distingue fotos da faixa principal, imagem de PiP e vídeo de PiP. Registra falhas de abertura, decodificação e reprodução nos respectivos fluxos. Na transição, diferencia planejamento, quadros de apoio, renderização e reprodução.
+- Projetos, mídia original, esquema de dados e assinatura preservados.
+
 # Uai Cortes 0.1.297 (2026-11-17)
 
 - **Transições:** Corte direto, Dissolver, Empurrão lateral e Fade preto. Aplicar a todos fica ao lado do botão de som. Efeitos antigos em projetos existentes continuam sendo renderizados.

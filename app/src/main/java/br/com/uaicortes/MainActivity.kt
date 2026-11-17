@@ -1,4 +1,8 @@
 package br.com.uaicortes
+
+import br.com.uaicortes.EditorDiagnosticPolicy.MediaStage
+import br.com.uaicortes.EditorDiagnosticPolicy.Result as MediaResult
+import br.com.uaicortes.EditorDiagnosticPolicy.Target
 import android.net.Uri
 import android.os.Bundle
 import kotlinx.coroutines.Dispatchers
@@ -47,10 +51,12 @@ class MainActivity : ComponentActivity() {
     }
 }
 /** Observa falhas de reprodução em todos os players sem capturar caminhos de mídia. */
-internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
+internal fun diagnosticPlayer(context: android.content.Context, pipVideo: Boolean = false): ExoPlayer =
     ExoPlayer.Builder(context).build().apply {
         addListener(object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
+                if (pipVideo) DiagnosticRecorder.editorMedia(Target.PIP_VIDEO,
+                    MediaStage.PREVIEW_PLAYBACK, MediaResult.FAILED, error.errorCode)
                 DiagnosticRecorder.exception("media3_player", error)
             }
         })
@@ -216,6 +222,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 false
             }
             is OverlayUpdate.Rejected -> {
+                DiagnosticRecorder.editorMedia(Target.PIP_MEDIA, MediaStage.IMPORT_COMMIT, MediaResult.REJECTED)
                 android.widget.Toast.makeText(context, result.reason, android.widget.Toast.LENGTH_LONG).show()
                 false
             }
@@ -230,6 +237,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
         when (val insertion = OverlayOperations.insert(current, uri.toString(), isImage,
                 mediaMs, selectedOverlayId, mediaAction == "replace", positionMs, allowTimeOverlap)) {
             OverlayInsertion.LimitReached -> {
+                DiagnosticRecorder.editorMedia(Target.pip(isImage), MediaStage.IMPORT_BLOCKED, MediaResult.LIMIT)
                 android.widget.Toast.makeText(context, "Limite de quatro PiPs atingido",
                     android.widget.Toast.LENGTH_SHORT).show()
             }
@@ -237,8 +245,10 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                 pendingSequential = SequentialConfirmation(uri, isImage, mediaMs)
             }
             is OverlayInsertion.Proposed -> {
-                if (saveOverlays(current, insertion.requested, insertion.selectedId))
+                if (saveOverlays(current, insertion.requested, insertion.selectedId)) {
                     selectedOverlayId = insertion.selectedId
+                    DiagnosticRecorder.editorMedia(Target.pip(isImage), MediaStage.IMPORT_COMMIT, MediaResult.READY)
+                }
             }
         }
         screen = "pip"
@@ -247,6 +257,8 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
     var transitionPanelOpen by remember(project?.id) { mutableStateOf(false) }
     fun startMediaTask(kind: MediaTaskKind, origin: MediaTaskOrigin, operation: suspend () -> Unit) {
         if (!mediaTaskCoordinator.start(kind, origin, operation)) {
+            if (kind == MediaTaskKind.OVERLAY)
+                DiagnosticRecorder.editorMedia(Target.PIP_MEDIA, MediaStage.IMPORT_BLOCKED, MediaResult.BUSY)
             android.widget.Toast.makeText(context, "Aguarde a importação atual terminar",
                 android.widget.Toast.LENGTH_SHORT).show()
         }
@@ -577,6 +589,10 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                         else -> chosen.firstOrNull()?.let { item ->
                             val videoMs = if (item.isImage) 5000L else
                                 item.durationMs.takeIf { it > 0 } ?: mediaDuration(context, item.uri)
+                            if (videoMs <= 0L)
+                                DiagnosticRecorder.editorMedia(Target.PIP_VIDEO, MediaStage.IMPORT_READ, MediaResult.NO_DURATION)
+                            else DiagnosticRecorder.editorMedia(Target.pip(item.isImage),
+                                MediaStage.IMPORT_READY, MediaResult.READY)
                             insertOverlay(item.uri, item.isImage, videoMs)
                         }
                     }

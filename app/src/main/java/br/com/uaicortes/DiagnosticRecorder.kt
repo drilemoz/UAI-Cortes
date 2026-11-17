@@ -108,6 +108,35 @@ object DiagnosticRecorder {
         log("PREVIEW", "screen=$safeRoute stage=$safeStage$timing")
     }
 
+    // Fixed-size by enum values. Avoid repeating a broken PiP every time playhead enters its span.
+    private val recentPipImageFailures =
+        mutableMapOf<Pair<EditorDiagnosticPolicy.MediaStage, EditorDiagnosticPolicy.Result>, Long>()
+
+    internal fun editorMedia(target: EditorDiagnosticPolicy.Target,
+        stage: EditorDiagnosticPolicy.MediaStage, result: EditorDiagnosticPolicy.Result, playerCode: Int? = null) {
+        if (!active.get()) return
+        val event = EditorDiagnosticPolicy.media(target, stage, result, playerCode)
+        if (target == EditorDiagnosticPolicy.Target.PIP_IMAGE &&
+            (stage == EditorDiagnosticPolicy.MediaStage.PREVIEW_OPEN ||
+                stage == EditorDiagnosticPolicy.MediaStage.PREVIEW_DECODE)) {
+            val key = stage to result
+            val now = android.os.SystemClock.elapsedRealtime()
+            synchronized(recentPipImageFailures) {
+                val previous = recentPipImageFailures[key]
+                if (previous != null && now - previous < 10_000L) return
+                recentPipImageFailures[key] = now
+            }
+        }
+        log("EDITOR_MEDIA", event)
+    }
+
+    internal fun transitionStage(preview: Boolean, stage: EditorDiagnosticPolicy.TransitionStage,
+        context: TransitionDiagnosticContext? = null, media3: Int? = null) {
+        if (!active.get()) return
+        log("TRANSITION", EditorDiagnosticPolicy.transition(preview, stage,
+            context?.boundary, context?.kind, media3))
+    }
+
     fun previewClock(route: String, maxDeltaMs: Long) {
         if (route != "editor" && route != "subtitles") return
         log("PREVIEW", "screen=$route stage=clock cursor_delta_ms=${maxDeltaMs.coerceAtLeast(0L)}")

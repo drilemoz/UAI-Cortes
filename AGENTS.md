@@ -1,3 +1,9 @@
+# v0.1.298 — Cursor e diagnóstico do editor
+
+- Base v0.1.297/versionCode 298, nova v0.1.298/versionCode 299. Preservar schema 4, assinatura e cinco variantes.
+- A régua tem 48 dp, alça de 22 × 15 dp e pausa no seek. O arrasto não altera projeto/histórico nem bloqueia os gestos dos clipes. Compatível com zoom e extensão sem seek além do fim real.
+- Diagnóstico local usa estágios e códigos fechados. Nunca registrar URI, título ou conteúdo de mídia. Não atribuir uma falha geral do codificador a uma junção específica sem evidência.
+
 # v0.1.297 — Transições simplificadas e correção do build 253
 
 - Base v0.1.296/versionCode 297, nova v0.1.297/versionCode 298. Preservar schema 4, assinatura e cinco variantes.

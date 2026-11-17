@@ -45,6 +45,27 @@ class ImageClipImportAndroidTest {
         }
     }
 
+    @Test fun pipPreviewDistinguishesReadableImageFromCorruptAndMissingSources() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val file = File.createTempFile("pip-preview-", ".png", context.cacheDir)
+        val uri = android.net.Uri.fromFile(file)
+        val original = Bitmap.createBitmap(320, 180, Bitmap.Config.ARGB_8888)
+        try {
+            file.outputStream().use { assertTrue(original.compress(Bitmap.CompressFormat.PNG, 100, it)) }
+            val preview = requireNotNull(decodePipPreviewImage(context.contentResolver, uri))
+            try {
+                assertEquals(320, preview.width)
+                assertEquals(180, preview.height)
+            } finally { preview.recycle() }
+            file.writeBytes(byteArrayOf(1, 2, 3, 4))
+            assertNull(decodePipPreviewImage(context.contentResolver, uri))
+        } finally {
+            original.recycle()
+            file.delete()
+        }
+        assertNull(decodePipPreviewImage(context.contentResolver, uri))
+    }
+
     @Test fun corruptJpegIsRejectedWithInvalidImageMessage() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val folder = File(context.filesDir, "project_images_v1").apply { mkdirs() }

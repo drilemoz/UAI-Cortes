@@ -1,5 +1,10 @@
 package br.com.uaicortes
 
+import br.com.uaicortes.EditorDiagnosticPolicy.MediaStage
+import br.com.uaicortes.EditorDiagnosticPolicy.Result as MediaResult
+import br.com.uaicortes.EditorDiagnosticPolicy.Target
+import br.com.uaicortes.EditorDiagnosticPolicy.TransitionStage
+
 import android.content.ContentValues
 import android.content.Context
 import android.media.MediaMetadataRetriever
@@ -139,9 +144,10 @@ class ExportEngine(private val context: Context) {
     @Volatile private var isSavingToGallery = false
 
     /** Não comece a codificação quando um arquivo local perdeu a permissão de leitura. */
-    private fun checkReadable(uriText: String, description: String) {
+    private fun checkReadable(uriText: String, description: String, target: Target? = null) {
         val uri = Uri.parse(uriText)
         if (uri.scheme != "content" && uri.scheme != "file") {
+            if (target != null) DiagnosticRecorder.editorMedia(target, MediaStage.EXPORT_READ, MediaResult.FAILED)
             throw IllegalArgumentException("$description: endereço de mídia incompatível com a exportação local")
         }
         try {
@@ -150,6 +156,11 @@ class ExportEngine(private val context: Context) {
             } ?: throw FileNotFoundException("não foi possível abrir o arquivo")
         } catch (e: Exception) {
             Log.e("UaiCortesExport", "Não foi possível abrir $description para exportação", e)
+            if (target != null) DiagnosticRecorder.editorMedia(target, MediaStage.EXPORT_READ, when (e) {
+                is SecurityException -> MediaResult.PERMISSION
+                is FileNotFoundException -> MediaResult.NOT_FOUND
+                else -> MediaResult.FAILED
+            })
             DiagnosticRecorder.exception("export_media_read", e)
             throw IllegalStateException("$description não está acessível. Selecione novamente o arquivo original.", e)
         }
@@ -160,10 +171,11 @@ class ExportEngine(private val context: Context) {
             require(ExportTimingPolicy.validClip(clip.startMs, clip.endMs, clip.sourceDurationMs)) {
                 "Trecho ${index + 1} possui início/fim inválidos; revise o corte antes de exportar."
             }
-            checkReadable(clip.uri, if (clip.isImage) "Imagem ${index + 1}" else "Vídeo ${index + 1}")
+            checkReadable(clip.uri, if (clip.isImage) "Imagem ${index + 1}" else "Vídeo ${index + 1}",
+                Target.MAIN_IMAGE.takeIf { clip.isImage })
         }
         project.overlays.forEachIndexed { index, overlay ->
-            checkReadable(overlay.uri, "PiP ${index + 1}")
+            checkReadable(overlay.uri, "PiP ${index + 1}", Target.pip(overlay.isImage))
         }
         ExportAudioPolicy.activeExtraTracks(project).forEachIndexed { index, audio ->
             checkReadable(audio.uri, "Áudio ${index + 1}")
@@ -229,7 +241,14 @@ class ExportEngine(private val context: Context) {
         require(onRenderedFrame == null || onPreviewReady == null)
         require(!isSavingToGallery) { "Aguarde a conclusão do salvamento anterior." }
         cancel()
-        val joins = JunctionTransitionPlan.project(project)
+        val preview = onPreviewReady != null
+        val joins = try {
+            JunctionTransitionPlan.project(project)
+        } catch (error: JunctionTransitionPlan.InvalidJoin) {
+            DiagnosticRecorder.transitionStage(preview, TransitionStage.PLAN_FAILED,
+                TransitionDiagnosticContext(error.boundary, error.kind))
+            throw error
+        }
         fun begin(preparedJoins: List<JunctionTransitionPlan.Join>,
                   held: Map<JunctionTransitionPlan.Side, File>, canvas: Pair<Int, Int>?) =
             startPrepared(project, height, fileName, preset, destination, frameMode, onSaving,
@@ -238,10 +257,16 @@ class ExportEngine(private val context: Context) {
             begin(joins, emptyMap(), null)
             return
         }
-        require(context.cacheDir.usableSpace > VideoExportQuality.minimumFreeBytes(
-            project.durationMs, height, true, preset)) { "Libere espaço para preparar as transições." }
-        val dir = File(context.cacheDir, "uai-transition-frames-${java.util.UUID.randomUUID()}")
-        require(dir.mkdir()) { "Não foi possível criar o cache da transição." }
+        val dir = try {
+            require(context.cacheDir.usableSpace > VideoExportQuality.minimumFreeBytes(
+                project.durationMs, height, true, preset)) { "Libere espaço para preparar as transições." }
+            File(context.cacheDir, "uai-transition-frames-${java.util.UUID.randomUUID()}").also {
+                require(it.mkdir()) { "Não foi possível criar o cache da transição." }
+            }
+        } catch (error: Exception) {
+            DiagnosticRecorder.transitionStage(preview, TransitionStage.FRAME_PREP_FAILED)
+            throw error
+        }
         transitionFramesDir = dir
         preparingTransitions = CoroutineScope(Dispatchers.Main.immediate).launch {
             var handedOff = false
@@ -260,7 +285,11 @@ class ExportEngine(private val context: Context) {
                                 .getOrDefault(true)
                         }
                     }
-                    Triple(prepared, JunctionTransitionFrames.prepare(context, prepared, dir, height), geometry)
+                    val held = JunctionTransitionFrames.prepare(context, prepared, dir, height) { join ->
+                        DiagnosticRecorder.transitionStage(preview, TransitionStage.FRAME_PREP_FAILED,
+                            TransitionDiagnosticContext(join.boundary, join.kind))
+                    }
+                    Triple(prepared, held, geometry)
                 }
                 preparingTransitions = null
                 begin(preparedJoins, held, canvas)
@@ -650,6 +679,10 @@ class ExportEngine(private val context: Context) {
                 }
                 override fun onError(composition: Composition, exportResult: ExportResult,
                                      exportException: ExportException) {
+                    // A codec pode falhar em qualquer faixa. Não atribuir a falha a uma junção por suposição.
+                    if (onPreviewReady == null && onRenderedFrame == null && project.transitions.isNotEmpty())
+                        DiagnosticRecorder.transitionStage(false, TransitionStage.RENDER_FAILED,
+                            media3 = exportException.errorCode)
                     target.delete()
                     clearTransitionFrames()
                     tempFile = null

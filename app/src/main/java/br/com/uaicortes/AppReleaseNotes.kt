@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.297"
-    const val VERSION_CODE = 298
+    const val VERSION_NAME = "0.1.298"
+    const val VERSION_CODE = 299
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.298", listOf(
+            ReleaseFeature("timeline-playhead-298", "Cursor mais fácil de arrastar",
+                "Toque ou arraste pela régua mesmo sem acertar a alça. A prévia pausa e mostra o tempo durante o arrasto.", "check"),
+            ReleaseFeature("editor-diagnostics-298", "Diagnóstico do editor mais preciso",
+                "Separa fotos da montagem, PiP e falhas de transição por etapa, sem nomes ou caminhos de mídia.", "check")
+        )),
         ReleaseSummary("0.1.297", listOf(
             ReleaseFeature("transition-dialogue-297", "Transições mais simples",
                 "Quatro opções, Aplicar a todos perto do som e proteção contra movimento extra de clipes com áudio nas transições.", "check")

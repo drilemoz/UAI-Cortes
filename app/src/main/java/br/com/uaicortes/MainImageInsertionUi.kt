@@ -1,4 +1,7 @@
 package br.com.uaicortes
+import br.com.uaicortes.EditorDiagnosticPolicy.MediaStage
+import br.com.uaicortes.EditorDiagnosticPolicy.Result as MediaResult
+import br.com.uaicortes.EditorDiagnosticPolicy.Target
 
 import android.widget.Toast
 import kotlinx.coroutines.CancellationException
@@ -47,8 +50,10 @@ internal fun MainImageInsertionUi(
         onImageConsumed()
         val accepted = coordinator.start(MediaTaskKind.IMAGE,
             MediaTaskOrigin(expectedId, screen, mediaAction)) {
+            var stage = MediaStage.IMPORT_READ
             try {
                 val source = ImageClipImport.inspect(context.applicationContext, uri)
+                stage = MediaStage.IMPORT_COPY
                 val durable = ImageClipImport.copyIntoProject(context.applicationContext, source)
                 if (project.id == expectedId && screen == "editor") {
                     pendingProjectId = expectedId
@@ -56,6 +61,7 @@ internal fun MainImageInsertionUi(
                     seconds = ImageClipPolicy.DEFAULT_SECONDS
                     placement = ImageClipPolicy.Placement.START
                     DiagnosticRecorder.action("editor", "image_import_ready")
+                    DiagnosticRecorder.editorMedia(Target.MAIN_IMAGE, MediaStage.IMPORT_READY, MediaResult.READY)
                 } else {
                     ImageClipImport.discardUnused(context.applicationContext, durable)
                     Toast.makeText(context, "O projeto mudou. Importe novamente.", Toast.LENGTH_LONG).show()
@@ -64,6 +70,7 @@ internal fun MainImageInsertionUi(
                 // Sair da tela deve cancelar a leitura, sem toast ou commit tardio.
                 throw cancelled
             } catch (error: Exception) {
+                DiagnosticRecorder.editorMedia(Target.MAIN_IMAGE, stage, MediaResult.FAILED)
                 DiagnosticRecorder.exception("image_import", error)
                 DiagnosticRecorder.action("image_import", "failure_${ImageImportSafety.diagnosticKind(error)}")
                 Toast.makeText(context, ImageImportSafety.userMessage(error),
@@ -71,7 +78,7 @@ internal fun MainImageInsertionUi(
             }
         }
         if (!accepted) {
-            DiagnosticRecorder.failure("image_import", "import busy")
+            DiagnosticRecorder.editorMedia(Target.MAIN_IMAGE, MediaStage.IMPORT_BLOCKED, MediaResult.BUSY)
             Toast.makeText(context, "Há outra importação em andamento. Tente novamente.",
                 Toast.LENGTH_LONG).show()
         }
@@ -103,7 +110,10 @@ internal fun MainImageInsertionUi(
                         val index = ImageClipPolicy.index(latest.clips, selectedClipId, placement)
                         val updated = ImageClipPolicy.insertIntoProject(
                             latest, clip, placement, selectedClipId)
-                        if (onInserted(updated, clip, index)) {
+                        val committed = onInserted(updated, clip, index)
+                        DiagnosticRecorder.editorMedia(Target.MAIN_IMAGE, MediaStage.IMPORT_COMMIT,
+                            if (committed) MediaResult.READY else MediaResult.REJECTED)
+                        if (committed) {
                             pending = null
                             Toast.makeText(context, "Imagem adicionada à timeline.", Toast.LENGTH_SHORT).show()
                         }

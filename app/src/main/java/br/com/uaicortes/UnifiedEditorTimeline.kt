@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -22,7 +23,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.setProgress
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -95,7 +100,99 @@ internal object UnifiedTimelinePolicy {
     }
 }
 
-private val rulerHeight = 18.dp
+private val rulerHeight = 48.dp
+private val playheadColor = Color(0xFF176EFF)
+
+@Composable
+internal fun TimelinePlayheadRuler(stripWidth: Dp, positionMs: Long, displayTotal: Long,
+    total: Long, onSeek: (Long) -> Unit, onGestureStart: () -> Unit, onGestureEnd: () -> Unit,
+    viewportWidth: Dp = stripWidth, scrollOffsetPx: () -> Int = { 0 }) {
+    var dragMs by remember(total, displayTotal, stripWidth) { mutableStateOf<Long?>(null) }
+    val activeSeek by rememberUpdatedState(onSeek)
+    val activeStart by rememberUpdatedState(onGestureStart)
+    val activeEnd by rememberUpdatedState(onGestureEnd)
+    val shownMs = dragMs ?: positionMs
+    fun positionAt(x: Float, widthPx: Int): Long =
+        TimelinePlayheadPosition.fromX(x, widthPx, displayTotal, total)
+    Box(Modifier.width(stripWidth).height(rulerHeight)
+        .semantics {
+            contentDescription = "Cursor da linha do tempo"
+            stateDescription = formatPipMs(shownMs)
+            progressBarRangeInfo = ProgressBarRangeInfo(
+                shownMs.coerceIn(0L, total).toFloat(), 0f..total.toFloat())
+            setProgress { target ->
+                if (!target.isFinite()) false
+                else {
+                    activeStart()
+                    try { activeSeek(target.toLong().coerceIn(0L, total)) }
+                    finally { activeEnd() }
+                    true
+                }
+            }
+        }
+        .pointerInput(total, displayTotal, stripWidth) {
+            detectTapGestures { at ->
+                activeStart()
+                try { activeSeek(positionAt(at.x, size.width)) }
+                finally { activeEnd() }
+            }
+        }
+        .pointerInput(total, displayTotal, stripWidth) {
+            fun update(x: Float) {
+                val target = positionAt(x, size.width)
+                if (dragMs != target) {
+                    dragMs = target
+                    activeSeek(target)
+                }
+            }
+            fun finish() {
+                if (dragMs != null) {
+                    dragMs = null
+                    activeEnd()
+                }
+            }
+            try {
+                detectHorizontalDragGestures(
+                    onDragStart = { activeStart(); update(it.x) },
+                    onDragEnd = ::finish,
+                    onDragCancel = ::finish
+                ) { change, _ ->
+                    change.consume()
+                    update(change.position.x)
+                }
+            } finally { finish() }
+        }) {
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween) {
+            for (i in 0..4) Text(formatPipMs(displayTotal * i / 4), fontSize = 9.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        val playX = stripWidth * UnifiedTimelinePolicy.cursorFraction(shownMs, displayTotal)
+        val gripWidth = minOf(22.dp, stripWidth)
+        Box(Modifier.align(Alignment.BottomStart)
+            .offset(x = (playX - gripWidth * .5f).coerceIn(0.dp, stripWidth - gripWidth))
+            .size(gripWidth, 15.dp)
+            .background(playheadColor, RoundedCornerShape(5.dp)), contentAlignment = Alignment.Center) {
+            Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                repeat(2) { Box(Modifier.size(1.dp, 7.dp).background(Color.White)) }
+            }
+        }
+        if (dragMs != null) {
+            val visibleWidth = minOf(viewportWidth, stripWidth)
+            val labelWidth = minOf(75.dp, visibleWidth)
+            val left = with(LocalDensity.current) { scrollOffsetPx().toDp() }
+                .coerceIn(0.dp, (stripWidth - visibleWidth).coerceAtLeast(0.dp))
+            Text(formatPipMs(shownMs), Modifier
+                .offset(x = (playX - labelWidth * .5f)
+                    .coerceIn(left, left + visibleWidth - labelWidth), y = 4.dp)
+                .width(labelWidth)
+                .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(6.dp))
+                .padding(vertical = 2.dp), color = MaterialTheme.colorScheme.onPrimaryContainer,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center, fontSize = 11.sp,
+                lineHeight = 14.sp, maxLines = 1)
+        }
+    }
+}
 
 /** A área central faz o drag; as alças de 18dp aparecem após seleção.
  * O único commit ocorre em onDragEnd. Tap NÃO navega para outras telas.
@@ -354,23 +451,13 @@ internal fun UnifiedEditorTimeline(
             }
             Spacer(Modifier.width(6.dp))
             BoxWithConstraints(Modifier.weight(1f)) {
+                val viewportWidth = maxWidth
                 val stripWidth=maxWidth*zoom*(displayTotal.toDouble()/total).toFloat()
-                val stripWidthPx=with(LocalDensity.current){stripWidth.toPx()}
                 Box(Modifier.fillMaxWidth().horizontalScroll(scroll)) {
                     Box(Modifier.width(stripWidth).height(rulerHeight+lanesHeight)) {
                         Column(Modifier.fillMaxSize()) {
-                            Box(Modifier.width(stripWidth).height(rulerHeight)
-                                .pointerInput(total,stripWidthPx){
-                                    detectTapGestures { onSeek(UnifiedTimelinePolicy.position(it.x/stripWidthPx,displayTotal).coerceAtMost(total)) }
-                                }.pointerInput(total,stripWidthPx){
-                                    detectDragGestures { change,_ -> change.consume()
-                                        onSeek(UnifiedTimelinePolicy.position(change.position.x/stripWidthPx,displayTotal).coerceAtMost(total)) }
-                                }) {
-                                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {
-                                    for(i in 0..4) Text(formatPipMs(displayTotal*i/4),fontSize=9.sp,
-                                        color=MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
+                            TimelinePlayheadRuler(stripWidth, positionMs, displayTotal, total,
+                                onSeek, onGestureStart, onGestureEnd, viewportWidth) { scroll.value }
                             visibleRows.forEach { index ->
                                 val kind = kinds[index]
                                 key(kind) {
@@ -413,13 +500,10 @@ internal fun UnifiedEditorTimeline(
                             }
                         }
                         val playX=stripWidth*UnifiedTimelinePolicy.cursorFraction(positionMs,displayTotal)
-                        // Cursor sem área de toque própria, não impede edição dos clipes.
+                        // Linha decorativa: os toques na régua e nas pistas são independentes.
                         val cursorX = playX.coerceIn(0.dp, (stripWidth - 1.dp).coerceAtLeast(0.dp))
                         Box(Modifier.offset(x=cursorX,y=rulerHeight).width(1.dp)
-                            .height(lanesHeight).background(Color(0xFF176EFF)))
-                        Box(Modifier.offset(x=(cursorX-3.dp).coerceIn(0.dp,
-                            (stripWidth-6.dp).coerceAtLeast(0.dp)),y=rulerHeight-6.dp).size(6.dp)
-                            .background(Color(0xFF176EFF),RoundedCornerShape(3.dp)))
+                            .height(lanesHeight).background(playheadColor))
                     }
                 }
             }

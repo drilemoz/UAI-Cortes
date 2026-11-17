@@ -18,23 +18,32 @@ import androidx.media3.transformer.EditedMediaItemSequence
 import androidx.media3.transformer.Effects
 import java.io.File
 import kotlin.math.roundToInt
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 
 internal object JunctionTransitionFrames {
     /** Invoked on IO. The caller owns and removes the private directory on all exits. */
     suspend fun prepare(context: Context, joins: List<JunctionTransitionPlan.Join>, directory: File,
-                        shortSide: Int): Map<JunctionTransitionPlan.Side, File> {
-        val holds = joins.flatMap { listOf(it.incoming, it.outgoing) }.filter { it.heldFrame }
+                        shortSide: Int, onFrameFailure: (JunctionTransitionPlan.Join) -> Unit = {}):
+        Map<JunctionTransitionPlan.Side, File> {
         val unique = mutableMapOf<Pair<String, Long>, File>()
         return buildMap {
-            for (side in holds) {
+            for (join in joins) for (side in listOf(join.incoming, join.outgoing)) {
+                if (!side.heldFrame) continue
                 currentCoroutineContext().ensureActive()
-                put(side, unique.getOrPut(side.clip.uri to side.sourceStartMs) {
-                    val file = File(directory, "edge-${unique.size}.jpg")
-                    save(context, side, shortSide, file)
-                    file
-                })
+                try {
+                    put(side, unique.getOrPut(side.clip.uri to side.sourceStartMs) {
+                        val file = File(directory, "edge-${unique.size}.jpg")
+                        save(context, side, shortSide, file)
+                        file
+                    })
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    onFrameFailure(join)
+                    throw error
+                }
             }
         }
     }

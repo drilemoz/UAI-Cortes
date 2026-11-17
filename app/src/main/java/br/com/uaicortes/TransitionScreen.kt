@@ -116,6 +116,10 @@ internal fun TransitionScreen(p: VideoProject, back: () -> Unit, update: (VideoP
                                 applyAll = useAll, onApplyAll = { applyAll = it }, canApplyAll = selectable)
                         }
                     } else if (modern && join == null) {
+                        LaunchedEffect(safeBoundary, kind, durationMs) {
+                            DiagnosticRecorder.transitionStage(true, EditorDiagnosticPolicy.TransitionStage.PLAN_FAILED,
+                                TransitionDiagnosticContext(safeBoundary, kind))
+                        }
                         Text("Os clipes são curtos demais para esta transição.",
                             color = MaterialTheme.colorScheme.error)
                     }

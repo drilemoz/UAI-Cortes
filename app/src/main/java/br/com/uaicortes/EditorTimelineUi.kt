@@ -621,7 +621,7 @@ internal fun PipLayer(pip: Overlay, timeMs: Long, playing: Boolean,
                      previewGain: Float = 1f, onUpdate: (Overlay) -> Unit) {
     val context = LocalContext.current
     val sourceAspect = remember(pip.uri, pip.isImage) { mediaAspect(context, pip.uri, pip.isImage) }
-    val pipPlayer = remember(pip.uri) { if (!pip.isImage) diagnosticPlayer(context) else null }
+    val pipPlayer = remember(pip.uri, pip.isImage) { if (!pip.isImage) diagnosticPlayer(context, pipVideo = true) else null }
     DisposableEffect(pipPlayer) { onDispose { pipPlayer?.release() } }
     LaunchedEffect(pip.uri) {
         pipPlayer?.apply { setMediaItem(MediaItem.fromUri(pip.uri)); prepare() }
@@ -676,27 +676,19 @@ internal fun PipLayer(pip: Overlay, timeMs: Long, playing: Boolean,
                 .background(Color.Transparent)
         ) {
             if (pip.isImage) {
-                val bitmap = remember(pip.uri) {
-                    runCatching {
-                        val options = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                        context.contentResolver.openInputStream(Uri.parse(pip.uri))?.use {
-                            android.graphics.BitmapFactory.decodeStream(it, null, options)
+                key(pip.uri) {
+                    val bitmap by produceState<android.graphics.Bitmap?>(null) {
+                        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            decodePipPreviewImage(context.contentResolver, Uri.parse(pip.uri))
                         }
-                        var sample = 1
-                        while (options.outWidth / sample > 1400 || options.outHeight / sample > 1400) {
-                            sample *= 2
-                        }
-                        options.inJustDecodeBounds = false
-                        options.inSampleSize = sample
-                        context.contentResolver.openInputStream(Uri.parse(pip.uri))?.use {
-                            android.graphics.BitmapFactory.decodeStream(it, null, options)
-                        }
-                    }.getOrNull()
+                    }
+                    // FIT + proporção original evita cortar letras ou bordas de logotipos.
+                    bitmap?.let { image ->
+                        Image(image.asImageBitmap(), "Imagem sobreposta",
+                            Modifier.fillMaxSize().graphicsLayer { alpha = pip.opacity.coerceIn(0f, 1f) },
+                            contentScale = ContentScale.Fit)
+                    }
                 }
-                // FIT + proporção original evita cortar letras ou bordas de logotipos.
-                if (bitmap != null) Image(bitmap.asImageBitmap(), "Imagem sobreposta",
-                    Modifier.fillMaxSize().graphicsLayer { alpha = pip.opacity.coerceIn(0f, 1f) },
-                    contentScale = ContentScale.Fit)
             } else {
                 AndroidView(factory = { previewPlayer(it, transparentShutter = true).apply {
                     player = pipPlayer; useController = false

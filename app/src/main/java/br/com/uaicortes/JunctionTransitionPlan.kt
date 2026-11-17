@@ -11,8 +11,10 @@ internal object JunctionTransitionPlan {
 
     data class Side(val timelineStartMs: Long, val lengthMs: Long, val clip: Clip,
                     val sourceStartMs: Long, val heldFrame: Boolean)
+    class InvalidJoin(val boundary: Int, val kind: String, cutMs: Long) : IllegalArgumentException(
+        "Clipes curtos demais para a transição em ${cutMs} ms. Escolha Corte direto ou revise o corte.")
     data class Join(val kind: String, val cutMs: Long, val halfMs: Long,
-                    val incoming: Side, val outgoing: Side) {
+                    val incoming: Side, val outgoing: Side, val boundary: Int = -1) {
         val startMs get() = cutMs - halfMs
         val endMs get() = cutMs + halfMs
         val durationMs get() = halfMs * 2L
@@ -42,15 +44,14 @@ internal object JunctionTransitionPlan {
     fun project(project: VideoProject): List<Join> = buildList<Join> {
         var cutMs = 0L
         val byPair = project.transitions.groupBy { it.fromId to it.toId }
-        project.clips.zipWithNext().forEach { (a, b) ->
+        project.clips.zipWithNext().forEachIndexed { index, (a, b) ->
             cutMs += a.durationMs
-            val transition = byPair[a.id to b.id]?.firstOrNull() ?: return@forEach
+            val transition = byPair[a.id to b.id]?.firstOrNull() ?: return@forEachIndexed
             // Check the effect names, not the resulting list of Join objects.
-            if (transition.kind !in kinds) return@forEach
-            val join = requireNotNull(boundary(a, b, cutMs, transition.kind, transition.durationMs)) {
-                "Clipes curtos demais para a transição em ${cutMs} ms. Escolha Corte direto ou revise o corte."
-            }
-            add(join)
+            if (transition.kind !in kinds) return@forEachIndexed
+            val join = boundary(a, b, cutMs, transition.kind, transition.durationMs)
+                ?: throw InvalidJoin(index, transition.kind, cutMs)
+            add(join.copy(boundary = index))
         }
     }
 

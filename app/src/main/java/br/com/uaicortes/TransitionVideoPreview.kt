@@ -1,5 +1,7 @@
 package br.com.uaicortes
 
+import br.com.uaicortes.EditorDiagnosticPolicy.TransitionStage
+
 import android.net.Uri
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
@@ -39,9 +41,16 @@ internal fun TransitionVideoPreview(project: VideoProject, boundary: Int, kind: 
                                     applyAll: Boolean, onApplyAll: (Boolean) -> Unit, canApplyAll: Boolean) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val diagnosis = TransitionDiagnosticContext(boundary, kind)
     val job = remember(project, boundary, kind, durationMs) {
         JunctionPreviewProject.prepare(project, boundary, kind, durationMs)
-    } ?: return
+    }
+    if (job == null) {
+        LaunchedEffect(boundary, kind) {
+            DiagnosticRecorder.transitionStage(true, TransitionStage.PLAN_FAILED, diagnosis)
+        }
+        return
+    }
     val engine = remember { ExportEngine(context) }
     val player = remember { diagnosticPlayer(context).apply {
         repeatMode = Player.REPEAT_MODE_ALL
@@ -58,6 +67,7 @@ internal fun TransitionVideoPreview(project: VideoProject, boundary: Int, kind: 
             override fun onIsPlayingChanged(isPlaying: Boolean) { playing = isPlaying }
             override fun onPlayerError(failure: PlaybackException) {
                 DiagnosticRecorder.previewEvent("transition", "play_error")
+                DiagnosticRecorder.transitionStage(true, TransitionStage.PLAY_FAILED, diagnosis, failure.errorCode)
                 error = "Não foi possível reproduzir a prévia renderizada."
             }
         }
@@ -86,6 +96,7 @@ internal fun TransitionVideoPreview(project: VideoProject, boundary: Int, kind: 
         delay(220L) // Coalesce rapid selection changes without holding multiple Transformer jobs.
         val started = android.os.SystemClock.elapsedRealtime()
         DiagnosticRecorder.previewEvent("transition", "start", job.project.subtitles)
+        DiagnosticRecorder.transitionStage(true, TransitionStage.RENDER_START, diagnosis)
         try {
             engine.start(job.project, 360, "preview-transicao.mp4",
                 preset = ExportBitratePreset.COMPACT, originalAspectOverride = canvasAspect,
@@ -104,6 +115,11 @@ internal fun TransitionVideoPreview(project: VideoProject, boundary: Int, kind: 
             val outcome = when { file != null -> "ready"; error != null -> "failed"; else -> "cancelled" }
             DiagnosticRecorder.previewEvent("transition", outcome,
                 elapsedMs = android.os.SystemClock.elapsedRealtime() - started)
+            DiagnosticRecorder.transitionStage(true, when (outcome) {
+                "ready" -> TransitionStage.RENDER_READY
+                "failed" -> TransitionStage.RENDER_FAILED
+                else -> TransitionStage.CANCELLED
+            }, diagnosis)
         }
     }
     val ready = file
