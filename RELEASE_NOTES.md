@@ -1,3 +1,15 @@
+# Uai Cortes · versão 0.1.293 — Transições em vídeo
+
+- **Transições:** o marcador entre clipes abre um painel inferior com Dissolver, Empurrão lateral nos dois sentidos, Corte direto e Fade preto. Os efeitos legados ficam em Mais efeitos.
+- **Prévia da junção:** vídeo temporário local em loop, renderizado pelo exportador, com opção de ouvir o som dos clipes. Até 1,1 s de contexto por lado. Não publica nem salva na galeria.
+- **Relógio preservado:** a transição não desloca legendas, PiP, narração ou música. Usa sobras da fonte quando disponíveis e quadros de apoio nos lados sem folga. A composição com duas fontes sai em SDR.
+
+# Uai Cortes · versão 0.1.292 — Corte com início e fim
+
+- **Cortar vídeo:** Marcar início e Marcar fim na tela principal, com alças e duração da parte mantida. A régua usa o intervalo do clipe atual, inclusive se já foi cortado antes.
+- **Prévia:** reproduz uma vez só a seleção. Navegação aproximada por quadro substitui os pulos grandes. A prévia não altera a mídia.
+- **Edição:** Dividir aqui permanece como ação secundária. Remover trecho só aparece depois de selecionar o intervalo a retirar. Pronto aplica as marcações sem regravar os originais.
+
 # Uai Cortes · versão 0.1.291 — Editor sem módulo social
 
 - **Editor sem módulo social:** retirados aba Redes, contas, métricas, histórico integrado, botão Publicar vídeo e integrações de envio e autenticação.

@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -22,12 +23,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.util.UnstableApi
@@ -36,7 +37,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 private data class TrimHistoryFrame(val project: VideoProject, val selectedId: String)
-private enum class TrimMode { SEEK, KEEP, REMOVE }
 
 /** Editor de cortes de uma tela: prévia, faixa de quadros e três verbos simples.
  * Toda edição passa pelo projeto, nunca altera a mídia original. */
@@ -55,9 +55,18 @@ internal fun TrimScreen(
     var showPrecise by remember { mutableStateOf(false) }
     var askDeleteClip by remember { mutableStateOf(false) }
     var askRemove by remember { mutableStateOf(false) }
-    var mode by remember(clip?.id) { mutableStateOf(TrimMode.SEEK) }
-    var start by remember(clip?.id) { mutableLongStateOf(clip?.startMs ?: 0L) }
-    var end by remember(clip?.id) { mutableLongStateOf(clip?.endMs ?: 0L) }
+    val marks = remember(p.id) { mutableStateMapOf<String, TrimWindow>() }
+    val currentWindow = clip?.let(TrimMarksPolicy::clipWindow) ?: TrimWindow(0L, 0L)
+    val keep = clip?.id?.let { marks[it] } ?: currentWindow
+    var removing by remember(clip?.id, currentWindow) { mutableStateOf<TrimWindow?>(null) }
+    val shownRange = removing ?: keep
+    val hasMarks = clip != null && keep != currentWindow
+    val canRemove = removing?.let { TrimMarksPolicy.canRemove(keep, it, p.clips.size > 1) } ?: false
+    var playbackRequest by remember(clip?.id) { mutableIntStateOf(0) }
+    var removeRequest by remember(clip?.id) { mutableIntStateOf(0) }
+    fun setKeep(id: String, changed: TrimWindow) {
+        if (changed == currentWindow) marks.remove(id) else marks[id] = changed
+    }
     fun notifyUser(message: String) {
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
     }
@@ -79,6 +88,13 @@ internal fun TrimScreen(
         if (update(snapshot.project)) {
             history.removeAt(history.lastIndex)
             inverse.add(TrimHistoryFrame(p, clip?.id.orEmpty()))
+            // O histórico restaura projetos completos, não mistura seus limites com marcas de outro estado.
+            val restoredById = snapshot.project.clips.associateBy { it.id }
+            marks.keys.toList().forEach { id ->
+                val original = p.clips.firstOrNull { it.id == id }
+                val restored = restoredById[id]
+                if (original != restored) marks.remove(id)
+            }
             selected(snapshot.selectedId)
         } else notifyUser("Não foi possível recuperar a edição.")
     }
@@ -93,10 +109,14 @@ internal fun TrimScreen(
             Column(Modifier.weight(1f).padding(start = 3.dp)) {
                 Text("Cortar vídeo", fontWeight = FontWeight.SemiBold,
                     style = MaterialTheme.typography.titleMedium)
-                Text("Simples, visual e sem perder o original", fontSize = 11.sp,
+                Text("Escolha a parte que fica", fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             }
-            IconButton(onClick = { restore(undo, redo) }, enabled = undo.isNotEmpty()) {
+            IconButton(onClick = {
+                if (removing != null) removing = null
+                else if (hasMarks && clip != null) { marks.remove(clip.id); playbackRequest++ }
+                else restore(undo, redo)
+            }, enabled = undo.isNotEmpty() || hasMarks || removing != null) {
                 Icon(Icons.Default.Undo, "Desfazer")
             }
             Box {
@@ -138,18 +158,22 @@ internal fun TrimScreen(
                                 }
                             }
                         }, enabled = clip != null && p.clips.indexOfFirst { it.id == clip.id } in 0 until p.clips.lastIndex)
+                    if (clip != null && !clip.isImage) DropdownMenuItem(
+                        text = { Text("Selecionar intervalo para remover") },
+                        leadingIcon = { Icon(Icons.Default.DeleteSweep, null) },
+                        onClick = {
+                            menuOpen = false
+                            removeRequest++
+                        }, enabled = keep.durationMs >= 2 * TrimLogic.MIN_SEGMENT_MS)
                     DropdownMenuItem(text = { Text("Excluir clipe") },
                         leadingIcon = { Icon(Icons.Default.DeleteOutline, null) },
                         onClick = { menuOpen = false; askDeleteClip = true }, enabled = p.clips.size > 1)
                 }
             }
             Button(onClick = {
-                if (clip != null && !clip.isImage && mode == TrimMode.KEEP &&
-                    (start != clip.startMs || end != clip.endMs)) {
-                    val amended = TrimSaveLogic.applyPending(p, clip.id, start, end)
-                    if (amended == null) notifyUser("Ajuste o trecho antes de concluir.")
-                    else onDone(amended)
-                } else onDone(p)
+                val amended = TrimMarksPolicy.applyAll(p, marks)
+                if (amended == null) notifyUser("Ajuste o trecho antes de concluir.")
+                else onDone(amended)
             }, shape = UaiShapes.card,
                 contentPadding = PaddingValues(horizontal = 17.dp, vertical = 12.dp)) {
                 Icon(Icons.Default.Check, null, Modifier.size(18.dp))
@@ -164,67 +188,98 @@ internal fun TrimScreen(
             return@Column
         }
         if (clip.isImage) {
-            TrimImageDuration(p, clip, update, onDone)
+            TrimImageDuration(p, clip, update) { changed ->
+                val amended = TrimMarksPolicy.applyAll(changed, marks)
+                if (amended == null) notifyUser("Ajuste o trecho antes de concluir.")
+                else onDone(amended)
+            }
             return@Column
         }
-        val sourceTotal = clip.sourceDurationMs.coerceAtLeast(1L)
+        val screenHeight = LocalConfiguration.current.screenHeightDp
+        val controlsLimit = (screenHeight * .52f).coerceAtLeast(128f).dp
         val player = remember(clip.id) {
             diagnosticPlayer(context).apply { repeatMode = Player.REPEAT_MODE_OFF }
         }
-        var cursorMs by remember(clip.id) { mutableLongStateOf(TrimTimelineEdit.cursorFor(p, clip)) }
+        var cursorMs by remember(clip.id, clip.uri) { mutableLongStateOf(TrimTimelineEdit.cursorFor(p, clip)) }
         var isPlaying by remember(clip.id) { mutableStateOf(false) }
         var speed by remember(clip.id) { mutableFloatStateOf(1f) }
+        var activeMediaWindow by remember(player) { mutableStateOf<TrimWindow?>(null) }
+        var playingCut by remember(player) { mutableStateOf(false) }
+        val frameFps by produceState<Float?>(null, clip.uri) {
+            value = withContext(Dispatchers.IO) { VideoFrameRate.read(context, clip.uri) }
+        }
         DisposableEffect(player) { onDispose { player.release() } }
         LaunchedEffect(player, speed) { player.setPlaybackParameters(PlaybackParameters(speed)) }
-        LaunchedEffect(player, clip.uri) {
-            player.setMediaItem(MediaItem.fromUri(clip.uri))
+        fun load(window: TrimWindow, at: Long, autoPlay: Boolean) {
+            player.pause()
+            activeMediaWindow = window
+            cursorMs = window.clamp(at)
+            // A faixa de mídia termina na marca. Não depende da frequência de atualização da UI.
+            val media = ClipMediaItems.playback(clip.copy(startMs = window.startMs, endMs = window.endMs))
+            player.setMediaItem(media, cursorMs - window.startMs)
             player.prepare()
-            player.seekTo(cursorMs.coerceIn(clip.startMs, clip.endMs))
+            if (autoPlay) player.play()
         }
-        LaunchedEffect(player, clip.id, clip.startMs, clip.endMs) {
-            // A prévia respeita os limites do trecho que restou após os cortes.
+        LaunchedEffect(player, clip.uri, currentWindow, playbackRequest) {
+            playingCut = false
+            load(currentWindow, cursorMs, false)
+        }
+        LaunchedEffect(player) {
             while (true) {
+                val window = activeMediaWindow
                 isPlaying = player.isPlaying
-                val reachedEnd = TrimPreviewEndPolicy.reachedEnd(
-                    player.currentPosition, clip.endMs,
-                    player.playbackState == Player.STATE_ENDED
-                )
-                if (reachedEnd) {
-                    // Uma seleção toca uma vez. Recomeçar requer novo toque em Reproduzir.
-                    player.pause()
-                    cursorMs = clip.endMs
-                    isPlaying = false
-                } else if (player.isPlaying) {
-                    cursorMs = player.currentPosition.coerceIn(clip.startMs, clip.endMs)
+                if (window != null) {
+                    val localMs = player.currentPosition
+                    if (TrimPreviewEndPolicy.reachedEnd(localMs, window.durationMs,
+                            player.playbackState == Player.STATE_ENDED)) {
+                        if (player.playWhenReady) player.pause()
+                        cursorMs = window.endMs
+                        isPlaying = false
+                    } else if (player.isPlaying) {
+                        cursorMs = window.clamp(window.startMs + localMs)
+                    }
                 }
-                delay(100L)
+                delay(35L)
             }
         }
-        LaunchedEffect(clip.id, clip.startMs, clip.endMs) {
-            if (mode != TrimMode.REMOVE) {
-                start = clip.startMs
-                end = clip.endMs
-            }
-            cursorMs = cursorMs.coerceIn(clip.startMs, clip.endMs)
-            player.seekTo(cursorMs)
+        fun pauseAtCursor(): Long {
+            val window = activeMediaWindow
+            if (player.isPlaying && window != null)
+                cursorMs = window.clamp(window.startMs + player.currentPosition)
+            player.pause()
+            return cursorMs
         }
         fun seek(ms: Long) {
             player.pause()
-            cursorMs = ms.coerceIn(clip.startMs, clip.endMs)
-            player.seekTo(cursorMs)
-        }
-        fun selectMode(next: TrimMode) {
-            player.pause()
-            mode = if (mode == next) TrimMode.SEEK else next
-            if (mode == TrimMode.REMOVE) {
-                val window = minOf(1800L, clip.durationMs)
-                val begin = (cursorMs - window / 2L).coerceIn(clip.startMs, clip.endMs - window)
-                start = begin
-                end = begin + window
+            val target = currentWindow.clamp(ms)
+            if (playingCut || activeMediaWindow != currentWindow) {
+                playingCut = false
+                load(currentWindow, target, false)
             } else {
-                start = clip.startMs
-                end = clip.endMs
+                cursorMs = target
+                player.seekTo(target - currentWindow.startMs)
             }
+        }
+        LaunchedEffect(clip.id, removeRequest) {
+            if (removeRequest > 0) {
+                val center = pauseAtCursor()
+                val width = minOf(1800L, keep.durationMs)
+                val begin = (center - width / 2).coerceIn(keep.startMs, keep.endMs - width)
+                removing = TrimWindow(begin, begin + width)
+            }
+        }
+        fun mark(start: Boolean) {
+            val changed = TrimMarksPolicy.mark(currentWindow, keep, pauseAtCursor(), start)
+            if (changed == null) notifyUser("Deixe pelo menos 0,25 s entre início e fim.")
+            else setKeep(clip.id, changed)
+        }
+        fun previewCut() {
+            if (playingCut && player.playWhenReady) {
+                pauseAtCursor()
+                return
+            }
+            playingCut = true
+            load(keep, keep.startMs, true)
         }
         // A prévia ocupa a área livre e mantém a proporção original no Media3 PlayerView.
         Box(Modifier.fillMaxWidth().weight(1f).background(Color(0xFF111115))
@@ -238,8 +293,9 @@ internal fun TrimScreen(
         Surface(tonalElevation = 2.dp,
             shape = UaiShapes.sheet,
             color = MaterialTheme.colorScheme.surface) {
-            Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Column(Modifier.fillMaxWidth().heightIn(max = controlsLimit)
+                .verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 7.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     Text("Trecho ${p.clips.indexOfFirst { it.id == clip.id } + 1}/${p.clips.size}",
@@ -249,18 +305,33 @@ internal fun TrimScreen(
                         fontWeight = FontWeight.Medium, style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary)
                 }
-                TrimVisualTimeline(uri = clip.uri, durationMs = sourceTotal,
-                    clipStartMs = clip.startMs, clipEndMs = clip.endMs,
-                    cursorMs = cursorMs, rangeStartMs = start, rangeEndMs = end,
-                    editMode = mode != TrimMode.SEEK, removing = mode == TrimMode.REMOVE,
+                TrimVisualTimeline(uri = clip.uri, clipStartMs = clip.startMs, clipEndMs = clip.endMs,
+                    cursorMs = cursorMs, rangeStartMs = shownRange.startMs, rangeEndMs = shownRange.endMs,
+                    handleStartMs = if (removing != null) keep.startMs else clip.startMs,
+                    handleEndMs = if (removing != null) keep.endMs else clip.endMs,
+                    removing = removing != null,
                     onSeek = { seek(it) },
                     onRangeChange = { newStart, newEnd, point ->
-                        start = newStart
-                        end = newEnd
+                        val changed = TrimWindow(newStart, newEnd)
+                        if (removing != null) removing = changed else setKeep(clip.id, changed)
                         seek(point)
                     })
+                if (removing == null) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TrimMainAction(Icons.Default.FirstPage, "Marcar início",
+                            currentWindow.durationMs >= TrimLogic.MIN_SEGMENT_MS, Modifier.weight(1f),
+                            active = keep.startMs != currentWindow.startMs) { mark(true) }
+                        TrimMainAction(Icons.Default.LastPage, "Marcar fim",
+                            currentWindow.durationMs >= TrimLogic.MIN_SEGMENT_MS, Modifier.weight(1f),
+                            active = keep.endMs != currentWindow.endMs) { mark(false) }
+                    }
+                    Text("De ${formatPipMs(keep.startMs - clip.startMs)} a ${formatPipMs(keep.endMs - clip.startMs)}" +
+                        " · Mantém ${formatPipMs(keep.durationMs)}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 // Trechos: botões pequenos e tocáveis, sem os cartões antigos ocupando a tela.
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                if (p.clips.size > 1) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     p.clips.forEachIndexed { index, item ->
                         val active = item.id == clip.id
@@ -281,100 +352,86 @@ internal fun TrimScreen(
                     }
                 }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    IconButton(onClick = { seek(cursorMs - 1000L) }) {
-                        Icon(Icons.Default.Replay10, "Voltar no vídeo")
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    IconButton(onClick = { seek(TrimMarksPolicy.step(currentWindow, cursorMs, -1, frameFps)) },
+                        enabled = cursorMs > currentWindow.startMs) {
+                        Icon(Icons.Default.SkipPrevious, "Voltar aproximadamente um quadro")
                     }
                     FilledIconButton(onClick = {
-                        if (player.isPlaying) player.pause() else {
-                            if (cursorMs >= clip.endMs - 100L) {
-                                cursorMs = clip.startMs
-                                player.seekTo(cursorMs)
+                        if (player.playWhenReady) pauseAtCursor() else {
+                            val at = if (cursorMs >= currentWindow.endMs) currentWindow.startMs else cursorMs
+                            if (playingCut || activeMediaWindow != currentWindow) {
+                                playingCut = false
+                                load(currentWindow, at, true)
+                            } else {
+                                player.seekTo(at - currentWindow.startMs)
+                                player.play()
                             }
-                            player.play()
                         }
                     }, modifier = Modifier.size(43.dp)) {
                         Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                             if (isPlaying) "Pausar" else "Reproduzir")
                     }
-                    IconButton(onClick = { seek(cursorMs + 1000L) }) {
-                        Icon(Icons.Default.Forward10, "Avançar no vídeo")
+                    IconButton(onClick = { seek(TrimMarksPolicy.step(currentWindow, cursorMs, 1, frameFps)) },
+                        enabled = cursorMs < currentWindow.endMs) {
+                        Icon(Icons.Default.SkipNext, "Avançar aproximadamente um quadro")
                     }
+                    Spacer(Modifier.weight(1f))
                     TextButton(onClick = { speed = PreviewPlayback.next(speed) },
-                        contentPadding = PaddingValues(horizontal = 6.dp),
-                        modifier = Modifier.width(62.dp)) {
+                        contentPadding = PaddingValues(horizontal = 6.dp)) {
                         Text(PreviewPlayback.label(speed), fontWeight = FontWeight.Bold)
                     }
                 }
-                when (mode) {
-                    TrimMode.SEEK -> {
-                        Text("Arraste a linha do tempo e escolha o ponto do corte.",
-                            fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2)
-                    }
-                    TrimMode.KEEP -> {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Alças roxas: escolha o que fica.", modifier = Modifier.weight(1f),
-                                fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            TextButton(onClick = { selectMode(TrimMode.SEEK) }) { Text("Cancelar") }
+                if (removing != null) {
+                    Text("A faixa laranja marca o intervalo que vai sair.", style = MaterialTheme.typography.labelMedium)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedButton(onClick = { removing = null; pauseAtCursor() }, modifier = Modifier.weight(1f)) {
+                            Text("Cancelar")
                         }
-                        Button(onClick = {
-                            val next = TrimSaveLogic.applyPending(p, clip.id, start, end)
-                            if (next == null) notifyUser("Deixe pelo menos 0,25 s de vídeo.")
-                            else if (commit(next, clip.id)) { mode = TrimMode.SEEK }
-                        }, enabled = start != clip.startMs || end != clip.endMs,
-                            modifier = Modifier.fillMaxWidth(), shape = UaiShapes.card) {
-                            Icon(Icons.Default.Check, null)
-                            Spacer(Modifier.width(6.dp))
-                            Text("Guardar corte")
+                        Button(onClick = { askRemove = true }, enabled = canRemove, modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
+                            Text("Remover trecho")
                         }
                     }
-                    TrimMode.REMOVE -> {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Alças amarelas: escolha o que vai sair.", modifier = Modifier.weight(1f),
-                                fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            TextButton(onClick = { selectMode(TrimMode.SEEK) }) { Text("Cancelar") }
+                } else {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedButton(onClick = ::previewCut,
+                            enabled = keep.durationMs >= TrimLogic.MIN_SEGMENT_MS, modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 4.dp)) {
+                            Text(if (playingCut && isPlaying) "Pausar prévia" else "Prévia do corte", maxLines = 1)
                         }
-                        Button(onClick = { askRemove = true }, modifier = Modifier.fillMaxWidth(),
-                            shape = UaiShapes.card, colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error)) {
-                            Icon(Icons.Default.DeleteSweep, null)
-                            Spacer(Modifier.width(6.dp))
-                            Text("Remover este trecho (${formatPipMs(end - start)})")
+                        TextButton(onClick = {
+                            val point = pauseAtCursor()
+                            val base = if (hasMarks) TrimSaveLogic.applyPending(p, clip.id, keep.startMs, keep.endMs) else p
+                            val next = base?.let { TrimTimelineEdit.split(it, clip.id, point) }
+                            if (next == null) notifyUser("Escolha um ponto dentro da parte mantida.")
+                            else if (commit(next.project, next.selectedClipId)) marks.remove(clip.id)
+                        }, enabled = TrimLogic.canSplit(keep.startMs, keep.endMs, cursorMs),
+                            modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 4.dp)) {
+                            Text("Dividir aqui", maxLines = 1)
                         }
-                    }
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TrimMainAction(Icons.Default.ContentCut, "Dividir", mode == TrimMode.SEEK,
-                        Modifier.weight(1f)) {
-                        val next = TrimTimelineEdit.split(p, clip.id, cursorMs)
-                        if (next == null) notifyUser("Arraste o cursor para dentro do trecho antes de dividir.")
-                        else if (commit(next.project, next.selectedClipId)) mode = TrimMode.SEEK
-                    }
-                    TrimMainAction(Icons.Default.Crop, "Aparar", true,
-                        Modifier.weight(1f), active = mode == TrimMode.KEEP) {
-                        selectMode(TrimMode.KEEP)
-                    }
-                    TrimMainAction(Icons.Default.DeleteSweep, "Remover", true,
-                        Modifier.weight(1f), active = mode == TrimMode.REMOVE) {
-                        selectMode(TrimMode.REMOVE)
                     }
                 }
             }
         }
     }
-    if (clip != null && askRemove) {
+    val removal = removing
+    if (clip != null && askRemove && removal != null) {
         AlertDialog(onDismissRequest = { askRemove = false },
             title = { Text("Remover esse pedaço?") },
-            text = { Text("De ${formatPipMs(start)} até ${formatPipMs(end)}. " +
-                "O restante será unido. Seu vídeo original não será apagado.") },
+            text = { Text("De ${formatPipMs(removal.startMs - clip.startMs)} até " +
+                "${formatPipMs(removal.endMs - clip.startMs)}. O restante será unido. O original não muda.") },
             confirmButton = {
                 Button(onClick = {
                     askRemove = false
-                    val next = TrimRemoveRange.apply(p, clip.id, start, end)
-                    if (next == null) notifyUser("Ajuste as alças. Não é possível apagar todo o único clipe.")
-                    else if (commit(next.project, next.selectedClipId)) mode = TrimMode.SEEK
-                }, shape = UaiShapes.button) { Text("Remover") }
+                    val base = if (hasMarks) TrimSaveLogic.applyPending(p, clip.id, keep.startMs, keep.endMs) else p
+                    val next = base?.let { TrimRemoveRange.apply(it, clip.id, removal.startMs, removal.endMs) }
+                    if (next == null) notifyUser("Ajuste as alças para preservar os trechos restantes.")
+                    else if (commit(next.project, next.selectedClipId)) {
+                        marks.remove(clip.id)
+                        removing = null
+                    }
+                }, enabled = canRemove, shape = UaiShapes.button) { Text("Remover") }
             }, dismissButton = { TextButton(onClick = { askRemove = false }) { Text("Cancelar") } })
     }
     if (clip != null && askDeleteClip) {
@@ -384,13 +441,15 @@ internal fun TrimScreen(
             confirmButton = {
                 TextButton(onClick = {
                     askDeleteClip = false
-                    TrimTimelineEdit.remove(p, clip.id)?.let { commit(it.project, it.selectedClipId) }
+                    TrimTimelineEdit.remove(p, clip.id)?.let {
+                        if (commit(it.project, it.selectedClipId)) marks.remove(clip.id)
+                    }
                 }) { Text("Excluir") }
             }, dismissButton = { TextButton(onClick = { askDeleteClip = false }) { Text("Cancelar") } })
     }
     if (clip != null && showPrecise && !clip.isImage) {
-        var preciseStart by remember(clip.id, showPrecise) { mutableLongStateOf(clip.startMs) }
-        var preciseEnd by remember(clip.id, showPrecise) { mutableLongStateOf(clip.endMs) }
+        var preciseStart by remember(clip.id, showPrecise) { mutableLongStateOf(keep.startMs) }
+        var preciseEnd by remember(clip.id, showPrecise) { mutableLongStateOf(keep.endMs) }
         AlertDialog(onDismissRequest = { showPrecise = false },
             title = { Text("Ajuste preciso") },
             text = {
@@ -406,9 +465,17 @@ internal fun TrimScreen(
                 }
             }, confirmButton = {
                 TextButton(onClick = {
-                    val next = TrimSaveLogic.applyPending(p, clip.id, preciseStart, preciseEnd)
-                    if (next == null) notifyUser("Início e fim inválidos.")
-                    else { commit(next, clip.id); showPrecise = false }
+                    val changed = TrimWindow(preciseStart, preciseEnd)
+                    if (TrimMarksPolicy.containsValid(currentWindow, changed)) {
+                        setKeep(clip.id, changed)
+                        showPrecise = false
+                        removing = null
+                    } else {
+                        // O ajuste avançado ainda pode trazer de volta bordas da mídia original.
+                        val next = TrimSaveLogic.applyPending(p, clip.id, preciseStart, preciseEnd)
+                        if (next == null) notifyUser("Início e fim inválidos.")
+                        else if (commit(next, clip.id)) { marks.remove(clip.id); showPrecise = false }
+                    }
                 }) { Text("Aplicar") }
             }, dismissButton = { TextButton(onClick = { showPrecise = false }) { Text("Cancelar") } })
     }
@@ -420,11 +487,11 @@ private fun TrimMainAction(icon: androidx.compose.ui.graphics.vector.ImageVector
     onClick: () -> Unit) {
     val container = if (active) MaterialTheme.colorScheme.primaryContainer
         else MaterialTheme.colorScheme.surfaceVariant
-    Surface(onClick = onClick, enabled = enabled, modifier = modifier.height(62.dp),
+    Surface(onClick = onClick, enabled = enabled, modifier = modifier.height(50.dp),
         shape = UaiShapes.card, color = container) {
         Column(horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center) {
-            Icon(icon, title, modifier = Modifier.size(23.dp))
+            Icon(icon, null, modifier = Modifier.size(19.dp))
             Text(title, fontSize = 12.sp, fontWeight = FontWeight.Medium,
                 maxLines = 1, overflow = TextOverflow.Ellipsis)
         }

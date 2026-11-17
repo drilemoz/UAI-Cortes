@@ -1,3 +1,16 @@
+# v0.1.293 — Composição na junção e prévia em vídeo
+
+- Base v0.1.292/versionCode 293, nova v0.1.293/versionCode 294. Preservar schema 4, assinatura e variantes de APK.
+- Dissolver e Empurrão usam janela centrada na junção existente, com pista de apoio sem áudio. A faixa principal, os horários globais e os arquivos de origem permanecem intactos.
+- Usar sobra da mídia ou um quadro de apoio temporário. PiP fica acima da composição e legendas são renderizadas depois. O painel reutiliza o exportador para uma amostra curta privada em loop. Verificar pixels, sincronismo e codecs no Android antes de afirmar compatibilidade.
+
+# v0.1.292 — Corte com início e fim
+
+- Base v0.1.291/versionCode 292, nova v0.1.292/versionCode 293. Preservar schema 4, assinatura e variantes de APK.
+- Marcas e alças usam tempos absolutos da fonte. A interação e a régua usam o intervalo confirmado do clipe. Pronto aplica os rascunhos por ID sem regravar a fonte.
+- A prévia toca uma janela Media3 recortada e não reinicia sozinha. O passo por quadro usa FPS nominal e é aproximado.
+- Manter remoção e divisão não destrutivas e preservar ajustes de duração de fotos.
+
 # v0.1.291 — Editor sem módulo social
 
 - Base v0.1.290/versionCode 291; nova v0.1.291/versionCode 292. Preservar schema 4, assinatura e cinco variantes da automação de build.

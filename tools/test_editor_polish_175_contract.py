@@ -18,7 +18,7 @@ assert '.put("fitMode",OverlayEditorLogic.fitMode(fitMode))' in project
 assert 'UnifiedTimelinePolicy.orderedLanes(filled)' in timeline and 'lanes[index].isNotEmpty()' in timeline
 assert 'visibleRows.forEach { index ->' in timeline
 assert 'EditorTimelineHeader(' in timeline and 'addMenu' not in timeline
-assert 'val featured = listOf(' in transitions and 'showMore' in transitions
-assert 'TransitionFramePreview(' in transitions
+assert 'Mais efeitos' in transitions and 'showMore' in transitions
+assert 'TransitionVideoPreview(' in transitions and 'ModalBottomSheet(' in transitions
 assert 'schemaVersion", 4' in project
 print('OK: entrada não destrutiva, PiP 150%, enquadramento, faixas compactas e transições visuais')

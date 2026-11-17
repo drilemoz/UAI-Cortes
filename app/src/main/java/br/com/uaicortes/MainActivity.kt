@@ -254,6 +254,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
         screen = "pip"
     }
     var selectedBoundary by workspace::selectedBoundary
+    var transitionPanelOpen by remember(project?.id) { mutableStateOf(false) }
     fun startMediaTask(kind: MediaTaskKind, origin: MediaTaskOrigin, operation: suspend () -> Unit) {
         if (!mediaTaskCoordinator.start(kind, origin, operation)) {
             android.widget.Toast.makeText(context, "Aguarde a importação atual terminar",
@@ -527,7 +528,8 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     Box(Modifier.weight(1f)) { EditorScreen(p, selectedClip, positionMs,
                     onSelected = { selectedClip = it }, onPosition = { positionMs = it }, onBack = ::back,
                     onEdit = {
-                        if (it == "animate") {
+                        if (it == "transition") transitionPanelOpen = true
+                        else if (it == "animate") {
                             animationDestination = "append"
                             animationImages.clear()
                             animationImages.addAll(animationDraftStore.load()?.images.orEmpty())
@@ -552,12 +554,16 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     },
                     onSelectSubtitle = { id -> selectedSubtitleId = id; navTo("subtitles") },
                     onSelectOverlay = { selectedOverlayId = it },
-                    onTransition = { index -> selectedBoundary = index; screen = "transition" },
+                    onTransition = { index -> selectedBoundary = index; transitionPanelOpen = true },
                     onSaveHome = { if (write(p)) leaveEditor("save") },
                     onClipAudio = { id -> selectedClip=id; navTo("clip_audio") },
                     onRepairMedia = { navTo("media_repair") },
                     autoPlayOnReturn = resumeVideoPreview,
-                    onReturnPlaybackConsumed = { resumeVideoPreview = false }) }
+                    onReturnPlaybackConsumed = { resumeVideoPreview = false },
+                    suspendPreviewForPanel = transitionPanelOpen)
+                        if (transitionPanelOpen) TransitionScreen(p, { transitionPanelOpen = false },
+                            ::write, selectedBoundary)
+                    }
                 } }
                 "watermark" -> project?.let { current -> TextWatermarkScreen(current, ::back, positionMs, { LayersTabs("watermark") { screen = "pip" } }) { changed ->
                     if (write(changed)) screen = "editor"

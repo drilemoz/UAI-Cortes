@@ -12,7 +12,9 @@ object EditFeatures {
     }
 
     fun transitionMs(t: ClipTransition?, firstMs: Long, secondMs: Long): Long =
-        if (t == null || t.kind == "Corte direto") 0L else
+        if (t == null || t.kind == "Corte direto") 0L else if (JunctionTransitionPlan.contains(t.kind))
+            JunctionTransitionPlan.half(t.durationMs, firstMs, secondMs)
+        else
             t.durationMs.coerceIn(0L, minOf(firstMs, secondMs) / 2L)
 
     fun fadeFraction(clipMs: Long, clipDurationMs: Long, fadeInMs: Long,

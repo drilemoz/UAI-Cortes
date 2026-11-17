@@ -22,7 +22,7 @@ object TransitionEffects {
 
     val names = listOf(CUT, ZOOM_IN, ZOOM_OUT, PAN, BLACK, WHITE, FLASH_WHITE, FLASH_BLACK, BLUE, GOLD, MONO, SEPIA)
 
-    fun supported(kind: String): Boolean = kind in names
+    fun supported(kind: String): Boolean = kind in names || JunctionTransitionPlan.contains(kind)
     fun isMotion(kind: String) = kind == ZOOM_IN || kind == ZOOM_OUT || kind == PAN
     fun motionScale(kind: String, strength: Float): Float {
         val s = strength.coerceIn(0f, 1f)
@@ -53,6 +53,9 @@ object TransitionEffects {
     }
 
     fun description(kind: String): String = when (kind) {
+        JunctionTransitionPlan.DISSOLVE -> "As duas cenas se misturam na junção."
+        JunctionTransitionPlan.PUSH_LEFT -> "A próxima cena entra pela direita e empurra a anterior."
+        JunctionTransitionPlan.PUSH_RIGHT -> "A próxima cena entra pela esquerda e empurra a anterior."
         CUT -> "Troca imediata de um vídeo para o próximo, sem efeito."
         BLACK -> "Escurece até preto na junção e clareia no clipe seguinte."
         WHITE -> "Clareia até branco na junção e volta à imagem seguinte."
@@ -72,7 +75,7 @@ object TransitionEffects {
      * A animação ocorre em um clipe por vez, sem sobreposição temporal.
      */
     fun intensity(kind: String, sideProgress: Float): Float {
-        if (!supported(kind) || kind == CUT) return 0f
+        if (kind !in names || kind == CUT) return 0f
         val p = sideProgress.coerceIn(0f, 1f)
         return when (kind) {
             FLASH_WHITE, FLASH_BLACK -> p.pow(5)

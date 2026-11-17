@@ -57,7 +57,8 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     onSelectAudio:(String)->Unit,onSelectSubtitle:(String)->Unit,
     onClipAudio:(String)->Unit, onRepairMedia:()->Unit,
     autoPlayOnReturn: Boolean = false,
-    onReturnPlaybackConsumed: () -> Unit = {}) {
+    onReturnPlaybackConsumed: () -> Unit = {},
+    suspendPreviewForPanel: Boolean = false) {
     val context=LocalContext.current
     val captureScope = rememberCoroutineScope()
     var savingFrame by remember { mutableStateOf(false) }
@@ -175,8 +176,14 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
         }
     }
     LaunchedEffect(player, p.clips.map { Triple(it.uri, it.startMs, it.endMs) },
-        p.clips.map { Triple(it.id, it.isImage, it.durationMs) }) {
+        p.clips.map { Triple(it.id, it.isImage, it.durationMs) }, suspendPreviewForPanel) {
         restoringMedia = true
+        if (suspendPreviewForPanel) {
+            player.pause()
+            player.stop()
+            player.clearMediaItems()
+            return@LaunchedEffect
+        }
         player.setMediaItems(p.clips.map(ClipMediaItems::playback))
         player.prepare()
         // Restaura o playhead após reconfiguração/retorno à tela; não sobrescrever

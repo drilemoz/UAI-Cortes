@@ -15,7 +15,8 @@ object TransitionBatch {
         val ids = selected.toSet()
         val remaining = project.transitions.filterNot { (it.fromId to it.toId) in ids }
         if (kind == TransitionEffects.CUT) return project.copy(transitions = remaining)
-        val ms = durationMs.coerceIn(250L, 1000L)
+        val ms = if (JunctionTransitionPlan.contains(kind)) JunctionTransitionPlan.duration(durationMs)
+            else durationMs.coerceIn(250L, 1000L)
         return project.copy(transitions = remaining + selected.map { (a,b) ->
             ClipTransition(a,b,kind,ms)
         })

@@ -14,7 +14,8 @@ assert 'VisibleFrameCapture.copy(' not in editor
 assert 'FrameCapturePlan.locate' in editor
 assert 'MediaStore.Images.Media.IS_PENDING' in saver
 assert 'TrimPreviewEndPolicy.reachedEnd' in trim
-assert 'player.pause()\n                    cursorMs = clip.endMs' in trim
+assert 'cursorMs = window.endMs' in trim and 'player.playWhenReady) player.pause()' in trim
+assert 'load(keep, keep.startMs, true)' in trim and 'ClipMediaItems.playback(clip.copy' in trim
 assert 'if (at >= clip.endMs)' not in trim
 assert '"quick_split", "quick_audio", "edit_audio"' in nav
 print('OK: CI218 regressão de corte/rotas; quadro agora renderizado via Media3, sem PixelCopy da tela')

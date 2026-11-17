@@ -38,6 +38,12 @@ import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.roundToInt
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Metadados do arquivo de fato salvo, sem inferir orientação pela configuração solicitada. */
 private fun savedMp4Geometry(context: Context, uri: Uri): Triple<Int, Int, Int?>? {
@@ -122,6 +128,13 @@ class PipCompositor(private val overlays: List<Overlay>) : VideoCompositorSettin
 class ExportEngine(private val context: Context) {
     private var transformer: Transformer? = null
     private var tempFile: File? = null
+    private var preparingTransitions: Job? = null
+    private var transitionFramesDir: File? = null
+
+    private fun clearTransitionFrames() {
+        transitionFramesDir?.deleteRecursively()
+        transitionFramesDir = null
+    }
     private val progressHolder = ProgressHolder()
     @Volatile private var isSavingToGallery = false
 
@@ -195,10 +208,13 @@ class ExportEngine(private val context: Context) {
     fun cancel() {
         // A cópia MediaStore precisa chegar ao fim, com rollback próprio em caso de erro.
         if (isSavingToGallery) return
+        preparingTransitions?.cancel()
+        preparingTransitions = null
         transformer?.cancel()
         transformer = null
         tempFile?.delete()
         tempFile = null
+        clearTransitionFrames()
     }
 
     internal fun start(project: VideoProject, height: Int, fileName: String,
@@ -208,8 +224,55 @@ class ExportEngine(private val context: Context) {
               onSaving: () -> Unit = {},
               onSuccess: (Uri, ExportQualityReport) -> Unit, onError: (String) -> Unit,
               onRenderedFrame: ((File) -> Unit)? = null,
-              onPreviewReady: ((File) -> Unit)? = null) {
+              onPreviewReady: ((File) -> Unit)? = null,
+              originalAspectOverride: Float? = null) {
         require(onRenderedFrame == null || onPreviewReady == null)
+        require(!isSavingToGallery) { "Aguarde a conclusão do salvamento anterior." }
+        cancel()
+        val joins = JunctionTransitionPlan.project(project)
+        fun begin(held: Map<JunctionTransitionPlan.Side, File>, canvas: Pair<Int, Int>?) =
+            startPrepared(project, height, fileName, preset, destination, frameMode, onSaving,
+                onSuccess, onError, onRenderedFrame, onPreviewReady, joins, held, canvas)
+        if (joins.isEmpty()) {
+            begin(emptyMap(), null)
+            return
+        }
+        require(context.cacheDir.usableSpace > VideoExportQuality.minimumFreeBytes(
+            project.durationMs, height, true, preset)) { "Libere espaço para preparar as transições." }
+        val dir = File(context.cacheDir, "uai-transition-frames-${java.util.UUID.randomUUID()}")
+        require(dir.mkdir()) { "Não foi possível criar o cache da transição." }
+        transitionFramesDir = dir
+        preparingTransitions = CoroutineScope(Dispatchers.Main.immediate).launch {
+            var handedOff = false
+            try {
+                val (held, canvas) = withContext(Dispatchers.IO) {
+                    val first = project.clips.first()
+                    val geometry = VideoExportFormatPolicy.dimensions(destination, height)
+                        ?: transitionOutputSize(originalAspectOverride
+                            ?: mediaAspect(context, first.uri, first.isImage), height)
+                    JunctionTransitionFrames.prepare(context, joins, dir, height) to geometry
+                }
+                preparingTransitions = null
+                begin(held, canvas)
+                handedOff = true
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                cancel()
+                DiagnosticRecorder.exception("transition_render_start", error)
+                onError(error.message ?: "Não foi possível preparar a transição.")
+            } finally {
+                if (!handedOff) dir.deleteRecursively()
+            }
+        }
+    }
+
+    private fun startPrepared(project: VideoProject, height: Int, fileName: String,
+              preset: ExportBitratePreset, destination: ExportDestination, frameMode: VerticalFrameMode,
+              onSaving: () -> Unit, onSuccess: (Uri, ExportQualityReport) -> Unit,
+              onError: (String) -> Unit, onRenderedFrame: ((File) -> Unit)?,
+              onPreviewReady: ((File) -> Unit)?, joins: List<JunctionTransitionPlan.Join>,
+              heldFrames: Map<JunctionTransitionPlan.Side, File>, transitionCanvas: Pair<Int, Int>?) {
         require(!isSavingToGallery) { "Aguarde a conclusão do salvamento anterior." }
         require(project.clips.isNotEmpty()) { "Projeto sem vídeos" }
         val bitrateBps = VideoExportQuality.videoBitrateBps(height, preset)
@@ -220,7 +283,6 @@ class ExportEngine(private val context: Context) {
                 "Libere armazenamento ou escolha um perfil/resolução menor."
         }
         require(project.overlays.size <= OverlayPlacement.MAX_PIPS) { "O limite é de 4 PiPs" }
-        cancel()
         validateSources(project)
         val pipsTopFirst = ExportLayerOrder.media3TopFirst(project.overlays.take(OverlayPlacement.MAX_PIPS))
         // Alguns MP4s PiP são somente vídeo; não criar trilha sonora artificial
@@ -238,13 +300,38 @@ class ExportEngine(private val context: Context) {
             }
         val expectedAudio = ExportAudioPolicy.hasRequiredAudio(project) ||
             pipAudioAvailability.values.any { it }
-        val postCompositionText = pipsTopFirst.isNotEmpty()
+        val postCompositionText = pipsTopFirst.isNotEmpty() || joins.isNotEmpty()
         val watermark = project.textWatermark?.toSubtitle(project.clips)
+        fun imageLayout(clip: Clip): MutableList<androidx.media3.common.Effect> {
+            val hasImageFrame = clip.isImage && (clip.imageFrameMode == ImageFraming.FILL ||
+                clip.imageZoom != 1f || clip.imagePanX != 0f || clip.imagePanY != 0f)
+            val crop = destination.isVertical && frameMode == VerticalFrameMode.CENTER_CROP && !hasImageFrame
+            // Set identical output geometry for both inputs of a combined transition.
+            val presentation = when {
+                transitionCanvas != null -> junctionPresentation(transitionCanvas, crop)
+                portraitSize != null -> Presentation.createForWidthAndHeight(portraitSize.first,
+                    portraitSize.second, if (crop) Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP
+                    else Presentation.LAYOUT_SCALE_TO_FIT)
+                else -> Presentation.createForShortSide(height)
+            }
+            val effects = mutableListOf<androidx.media3.common.Effect>(presentation)
+            if (hasImageFrame) {
+                val canvas = transitionCanvas ?: portraitSize
+                val targetAspect = canvas?.let { it.first.toFloat() / it.second }
+                    ?: project.clips.firstOrNull { !it.isImage }?.let { other ->
+                        mediaAspect(context, other.uri, false)
+                    } ?: mediaAspect(context, clip.uri, true)
+                effects += ImageFrameEffect(clip, mediaAspect(context, clip.uri, true), targetAspect)
+            }
+            return effects
+        }
         var globalStartMs = 0L
         val mainItems = project.clips.mapIndexed { index, clip ->
             val item = ClipMediaItems.playback(clip)
             val previous = EditFeatures.boundary(project, index - 1)
+                ?.takeUnless { JunctionTransitionPlan.contains(it.kind) }
             val next = EditFeatures.boundary(project, index)
+                ?.takeUnless { JunctionTransitionPlan.contains(it.kind) }
             val fadeIn = EditFeatures.transitionMs(previous,
                 project.clips.getOrElse(index - 1) { clip }.durationMs, clip.durationMs)
             val fadeOut = EditFeatures.transitionMs(next, clip.durationMs,
@@ -256,29 +343,7 @@ class ExportEngine(private val context: Context) {
             // Quando a composição era reescalada por último, textos nascidos de uma
             // fonte 480p/720p também eram ampliados como bitmap até a saída 1080p.
             // A ordem é relevante: vídeo -> dimensão final -> transições -> texto.
-            val hasImageFrame = clip.isImage && (clip.imageFrameMode == ImageFraming.FILL ||
-                clip.imageZoom != 1f || clip.imagePanX != 0f || clip.imagePanY != 0f)
-            val presentation = if (portraitSize == null) {
-                Presentation.createForShortSide(height)
-            } else {
-                Presentation.createForWidthAndHeight(
-                    portraitSize.first, portraitSize.second,
-                    if (frameMode == VerticalFrameMode.CENTER_CROP && !hasImageFrame)
-                        Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP
-                    else Presentation.LAYOUT_SCALE_TO_FIT
-                )
-            }
-            val videoEffects = mutableListOf<androidx.media3.common.Effect>(presentation)
-            if (hasImageFrame) {
-                // Transforma só imagens da faixa principal, sem afetar PiPs e vídeos.
-                // Para saída vertical, a geometria considera o quadro 9:16 final.
-                val targetAspect = portraitSize?.let { it.first.toFloat() / it.second }
-                    ?: project.clips.firstOrNull { !it.isImage }?.let { other ->
-                        mediaAspect(context, other.uri, false)
-                    } ?: mediaAspect(context, clip.uri, true)
-                videoEffects += ImageFrameEffect(clip,
-                    mediaAspect(context, clip.uri, true), targetAspect)
-            }
+            val videoEffects = imageLayout(clip)
             if (fadeIn > 0 || fadeOut > 0) {
                 val entering = previous?.kind ?: TransitionEffects.CUT
                 val leaving = next?.kind ?: TransitionEffects.CUT
@@ -337,6 +402,7 @@ class ExportEngine(private val context: Context) {
             sequences += overlayTrack.build()
         }
         sequences += mainSequence
+        if (joins.isNotEmpty()) sequences += junctionVideoTrack(joins, project.durationMs, heldFrames, ::imageLayout)
         for (pip in pipsTopFirst) {
             if (pip.isImage || pip.muted || !ExportAudioPolicy.audible(pip.volume) ||
                 pipAudioAvailability[pip.uri] != true) continue
@@ -408,8 +474,14 @@ class ExportEngine(private val context: Context) {
         // Resolução é ajustada no clipe principal, antes do compositor PiP;
         // quando há PiP, textos passam para os efeitos finais da composição.
         val composition = Composition.Builder(sequences).apply {
-            if (pipsTopFirst.isNotEmpty()) {
+            if (joins.isNotEmpty()) {
+                // The compositor can mix compatible SDR textures, including cached edge images.
+                setHdrMode(Composition.HDR_MODE_TONE_MAP_HDR_TO_SDR_USING_OPEN_GL)
+                setVideoCompositorSettings(JunctionVideoCompositor(pipsTopFirst, joins))
+            } else if (pipsTopFirst.isNotEmpty()) {
                 setVideoCompositorSettings(PipCompositor(pipsTopFirst))
+            }
+            if (postCompositionText) {
                 // DefaultGlFrameProcessor: efeitos por clipe -> compositor -> efeitos
                 // por composição. Tempos das legendas são ABSOLUTOS no projeto.
                 val textLayers = mutableListOf<androidx.media3.effect.TextureOverlay>()
@@ -449,6 +521,7 @@ class ExportEngine(private val context: Context) {
             .setEncoderFactory(encoderFactory)
             .addListener(object : Transformer.Listener {
                 override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                    clearTransitionFrames()
                     // Captura de quadro: a própria saída MP4 temporária fornece a composição
                     // de vídeo, PiP e textos na resolução renderizada. Não entra na galeria.
                     if (onRenderedFrame != null) {
@@ -568,6 +641,7 @@ class ExportEngine(private val context: Context) {
                 override fun onError(composition: Composition, exportResult: ExportResult,
                                      exportException: ExportException) {
                     target.delete()
+                    clearTransitionFrames()
                     tempFile = null
                     transformer = null
                     onError(describeExportError(exportException))

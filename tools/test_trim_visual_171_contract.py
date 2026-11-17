@@ -6,7 +6,7 @@ source = (root/'app/src/main/java/br/com/uaicortes/TrimScreen.kt').read_text()
 visual = (root/'app/src/main/java/br/com/uaicortes/TrimVisualTimeline.kt').read_text()
 core = (root/'app/src/main/java/br/com/uaicortes/TrimTimelineEdit.kt').read_text()
 app = (root/'app/src/main/java/br/com/uaicortes/MainActivity.kt').read_text()
-for label in ('Dividir','Aparar','Remover','Pronto','Guardar corte','Ajuste preciso',
+for label in ('Dividir aqui','Marcar início','Marcar fim','Remover trecho','Pronto','Prévia do corte','Ajuste preciso',
               'Remover esse pedaço?','Desfazer','Refazer','Voltar ao editor'):
     assert label in source, label
 for token in ('detectDragGestures', 'detectTapGestures', 'currentRange', 'currentSeek',

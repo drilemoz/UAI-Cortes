@@ -69,10 +69,10 @@ trim_screen = (root/'app/src/main/java/br/com/uaicortes/TrimScreen.kt').read_tex
 trim_visual = (root/'app/src/main/java/br/com/uaicortes/TrimVisualTimeline.kt').read_text()
 assert 'internal fun TrimScreen(' in trim_screen
 assert 'TrimVisualTimeline(' in trim_screen and 'detectDragGestures' in trim_visual
-assert all(label in trim_screen for label in ['Dividir', 'Aparar', 'Remover', 'Pronto', 'Ajuste preciso'])
+assert all(label in trim_screen for label in ['Dividir aqui', 'Marcar início', 'Marcar fim', 'Remover trecho', 'Pronto', 'Ajuste preciso'])
 assert 'TimeDigitsField(' in trim_screen and 'NumericTimeMask' in ui
-assert 'TrimRemoveRange.apply(p, clip.id, start, end)' in trim_screen
-assert 'TrimSaveLogic.applyPending(p, clip.id, start, end)' in trim_screen
+assert 'TrimRemoveRange.apply(it, clip.id, removal.startMs, removal.endMs)' in trim_screen
+assert 'TrimMarksPolicy.applyAll(p, marks)' in trim_screen
 assert 'undo = remember(p.id)' in trim_screen and 'redo = remember(p.id)' in trim_screen
 assert 'repeatMode = Player.REPEAT_MODE_OFF' in trim_screen and 'repeatMode = Player.REPEAT_MODE_OFF' in (root/'app/src/main/java/br/com/uaicortes/EditorScreen.kt').read_text()
 assert 'setPlaybackParameters(PlaybackParameters(speed))' in trim_screen
@@ -111,9 +111,11 @@ assert ui.count('setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)') == 1
 assert 'previewPlayer(it, transparentShutter = true)' in ui
 print('OK: build 16 Lint Media3 isolado e 5 saídas ABI/universal Release sem APK duplicado')
 
-assert 'internal fun TransitionFramePreview(' in ui
-assert 'TransitionFramePreview(p.clips[safeBoundary]' in ui
-print('OK: prévia animada com quadros reais de transições')
+transition_player = (root/'app/src/main/java/br/com/uaicortes/TransitionVideoPreview.kt').read_text()
+assert 'internal fun TransitionVideoPreview(' in transition_player
+assert 'onPreviewReady = { file = it }' in transition_player
+assert 'TransitionVideoPreview(p, safeBoundary' in ui
+print('OK: prévia de vídeo renderizada para o corte entre clipes')
 
 # v0.1.23: recorte de faixas adicionais entre origem, posição e exportação.
 logic=(root/'app/src/main/java/br/com/uaicortes/AudioTrackTiming.kt').read_text()
@@ -233,7 +235,7 @@ assert 'Icon(Icons.Default.Save, "Salvar projeto e sair")' in ui
 assert 'Salvar e voltar à Home' not in ui
 assert 'onDone = { saved -> if (write(saved)) screen = "editor" }' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/TrimSaveLogicTest.kt').exists()
-assert 'TrimTimelineEdit.split(p, clip.id, cursorMs)' in ui
+assert 'TrimTimelineEdit.split(it, clip.id, point)' in ui
 assert 'TrimTimelineEdit.cursorFor(p, clip)' in ui
 assert 'lastTrimCutClipId' in model and 'lastTrimCutSourceMs' in model
 trim_edit=(root/'app/src/main/java/br/com/uaicortes/TrimTimelineEdit.kt').read_text()
@@ -449,7 +451,7 @@ assert 'fun composeValues(' in trans_fx and 'fun intensity(' in trans_fx
 for kind in ('Flash branco','Flash preto','Fade azul','Fade dourado','Preto e branco','Sépia'):
     assert kind in trans_fx, kind
 assert 'fun apply(' in trans_batch and 'if (applyAll) joins' in trans_batch
-assert 'TransitionBatch.apply(p,safeBoundary,kind,fadeMs.toLong(),applyAll)' in ui
+assert 'TransitionBatch.apply(p, safeBoundary, kind, durationMs, applyAll)' in ui
 assert 'Aplicar a todas as junções' in ui and 'Text("Aplicar")' in ui
 assert (root/'app/src/test/java/br/com/uaicortes/TransitionEffectsTest.kt').exists()
 assert (root/'app/src/test/java/br/com/uaicortes/TransitionBatchTest.kt').exists()
@@ -638,7 +640,8 @@ boundary=(app_files/'TransitionBoundaryPolicy.kt').read_text()
 transition=(app_files/'TransitionScreen.kt').read_text()
 assert 'TransitionBoundaryPolicy.clamp(selectedBoundary, project.clips.size)' in state
 assert 'fun clamp(index: Int, clipCount: Int)' in boundary
-assert 'TransitionFramePreview(p.clips[safeBoundary],p.clips[safeBoundary+1]' in transition
+assert 'TransitionVideoPreview(p, safeBoundary, kind, durationMs' in transition
+assert 'onTransition = { index -> selectedBoundary = index; transitionPanelOpen = true }' in main
 assert 'LaunchedEffect(project) {' in main
 assert 'mediaTasks.videos(uris, persistDocumentAccess, importTarget.id)' in main and 'MediaImportTasks(mediaController)' in main
 assert 'VideoImportRequest(project?.id.orEmpty()' in main

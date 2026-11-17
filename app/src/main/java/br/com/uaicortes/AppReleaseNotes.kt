@@ -16,11 +16,23 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.291"
-    const val VERSION_CODE = 292
+    const val VERSION_NAME = "0.1.293"
+    const val VERSION_CODE = 294
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.293", listOf(
+            ReleaseFeature("junction-motion-293", "Dissolver e Empurrão lateral",
+                "Combine as duas cenas na junção ou deslize para qualquer lado, sem mudar os tempos do projeto.", "check"),
+            ReleaseFeature("junction-preview-293", "Prévia em vídeo na transição",
+                "Toque entre dois clipes para abrir o painel e conferir a passagem em loop, com som opcional.", "check")
+        )),
+        ReleaseSummary("0.1.292", listOf(
+            ReleaseFeature("trim-marks-292", "Cortes com início e fim",
+                "Marque as duas pontas, confira a duração e veja só a parte mantida antes de tocar em Pronto.", "check"),
+            ReleaseFeature("trim-frame-controls-292", "Ajuste do corte por quadro",
+                "Avance ou volte aproximadamente um quadro. Dividir aqui e selecionar um intervalo para remover continuam disponíveis.", "check")
+        )),
         ReleaseSummary("0.1.291", listOf(
             ReleaseFeature("editor-without-social-291", "Exportação sem publicação integrada",
                 "Redes, contas, métricas e publicação direta foram retiradas. Salvar no aparelho e exportar em 9:16 continuam disponíveis.", "check"),

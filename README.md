@@ -1,3 +1,9 @@
+# Uai Cortes · v0.1.293 — Transições em vídeo
+
+- **Cortar vídeo:** Marcar início e Marcar fim na tela principal, com alças e duração da parte mantida. A régua usa o intervalo do clipe atual, inclusive se já foi cortado antes.
+- **Prévia:** reproduz uma vez só a seleção. Navegação aproximada por quadro substitui os pulos grandes. A prévia não altera a mídia.
+- **Edição:** Dividir aqui permanece como ação secundária. Remover trecho só aparece depois de selecionar o intervalo a retirar. Pronto aplica as marcações sem regravar os originais.
+
 # Uai Cortes · v0.1.291 — Editor sem módulo social
 
 - **Editor sem módulo social:** retirados aba Redes, contas, métricas, histórico integrado, botão Publicar vídeo e integrações de envio e autenticação.

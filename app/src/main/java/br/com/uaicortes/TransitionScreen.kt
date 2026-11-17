@@ -1,37 +1,21 @@
 package br.com.uaicortes
 
-import android.net.Uri
-import android.os.Build
-import android.media.MediaMetadataRetriever
-import androidx.compose.foundation.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.*
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.*
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.media3.exoplayer.ExoPlayer
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-
-// Extraído da MainActivity na v0.1.53 para reutilização de componentes.
+import androidx.compose.ui.unit.dp
 
 /** Aproxima a tintura das transições na prévia do ExoPlayer.
- * Preto e branco/sépia têm prévia correta na tela Transições com quadros estáticos;
+ * Para ver a composição exata, use a prévia renderizada da junção;
  * a renderização em vídeo usa Media3 no MP4 exportado.
  */
 @Composable
@@ -57,207 +41,156 @@ internal fun TransitionPreviewTint(incoming: ClipTransition?, incomingMs: Long,
         Box(Modifier.fillMaxSize().background(tint.copy(alpha=strength)))
 }
 
-/** Prévia ilustrada com quadros reais: não decodifica ambos simultaneamente.
- * Usa a mesma matriz de cor e a mesma curva temporal do exportador.
- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun TransitionFramePreview(a: Clip, b: Clip, kind: String, durationMs: Long) {
-    val context = LocalContext.current
-    val frames by produceState<Pair<ImageBitmap?, ImageBitmap?>>(null to null, a.uri, b.uri, a.endMs, b.startMs) {
-        value = withContext(Dispatchers.IO) {
-            fun frame(clip: Clip, atMs: Long): ImageBitmap? = runCatching {
-                if (clip.isImage) {
-                    val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                    context.contentResolver.openInputStream(Uri.parse(clip.uri))?.use {
-                        android.graphics.BitmapFactory.decodeStream(it, null, bounds)
-                    }
-                    var sample = 1
-                    while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 512) sample *= 2
-                    context.contentResolver.openInputStream(Uri.parse(clip.uri))?.use {
-                        android.graphics.BitmapFactory.decodeStream(it, null,
-                            android.graphics.BitmapFactory.Options().apply { inSampleSize = sample })
-                    }?.asImageBitmap()
-                } else {
-                val retriever = MediaMetadataRetriever()
-                try {
-                    retriever.setDataSource(context, Uri.parse(clip.uri))
-                    val timeUs = atMs.coerceAtLeast(0L) * 1000L
-                    val bitmap = if (Build.VERSION.SDK_INT >= 27) {
-                        retriever.getScaledFrameAtTime(timeUs,
-                            MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 320, 180)
-                    } else {
-                        retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
-                    }
-                    bitmap?.asImageBitmap()
-                } finally { retriever.release() }
-                }
-            }.getOrNull()
-            frame(a, (a.endMs - 100L).coerceAtLeast(a.startMs)) to frame(b, b.startMs)
-        }
-    }
-    var progress by remember(a.id, b.id, kind, durationMs) { mutableFloatStateOf(0f) }
-    LaunchedEffect(a.id, b.id, kind, durationMs) {
-        while (true) {
-            val total = (durationMs.coerceIn(250L, 1000L) * 2L).coerceAtLeast(500L)
-            val steps = (total / 40L).toInt().coerceAtLeast(1)
-            for (step in 0..steps) {
-                progress = step.toFloat() / steps
-                delay(40L)
-            }
-            delay(450L)
-        }
-    }
-    val first = progress < .5f
-    val nearCut = if (first) progress * 2f else (1f - progress) * 2f
-    val intensity = TransitionEffects.intensity(kind, nearCut)
-    val filter = androidx.compose.ui.graphics.ColorFilter.colorMatrix(
-        androidx.compose.ui.graphics.ColorMatrix(
-            TransitionEffects.composeValues(TransitionEffects.matrix(kind, intensity))))
-    Box(Modifier.fillMaxWidth().height(175.dp).clip(RoundedCornerShape(12.dp))
-        .background(Color(0xFF222222)), contentAlignment = Alignment.Center) {
-        val bitmap = if (first) frames.first else frames.second
-        if (bitmap != null) Image(bitmap, "Quadro da transição",
-            Modifier.fillMaxSize().graphicsLayer {
-                val zoom = TransitionEffects.motionScale(kind, intensity)
-                scaleX = zoom; scaleY = zoom
-                translationX = TransitionEffects.motionX(kind, intensity) * size.width / 2f
-            }, contentScale = ContentScale.Fit, colorFilter = filter)
-        else Text(if (first) "Clipe A" else "Clipe B", color = Color.White)
-    }
-    Text("Simulação com quadros dos dois clipes (sem áudio); exportação Media3 mantém a sequência.",
-        style = MaterialTheme.typography.bodySmall)
-}
-
-@Composable
-internal fun TransitionScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->Unit,initialBoundary:Int=0) {
-    var boundary by remember(p.id,initialBoundary) {
-        mutableIntStateOf(TransitionBoundaryPolicy.clamp(initialBoundary, p.clips.size))
-    }
-    // A lista de clipes pode mudar sem que o ID do projeto mude.
-    val safeBoundary = TransitionBoundaryPolicy.clamp(boundary, p.clips.size)
-    LaunchedEffect(p.clips.size) { boundary = TransitionBoundaryPolicy.clamp(boundary, p.clips.size) }
-    fun stored(index: Int) = EditFeatures.boundary(p, index)
-    var kind by remember(p.id, initialBoundary) {
-        mutableStateOf(stored(boundary)?.kind?.takeIf(TransitionEffects::supported) ?: TransitionEffects.CUT)
-    }
-    var fadeMs by remember(p.id,initialBoundary) {
-        mutableFloatStateOf((stored(boundary)?.durationMs ?: 500L).coerceIn(250L,1000L).toFloat())
-    }
-    var applyAll by remember(p.id) { mutableStateOf(false) }
-    var showMore by remember(p.id) { mutableStateOf(false) }
-    val featured = listOf(TransitionEffects.CUT,TransitionEffects.ZOOM_IN,
-        TransitionEffects.ZOOM_OUT,TransitionEffects.PAN,
-        TransitionEffects.FLASH_WHITE,TransitionEffects.BLACK)
-    Column(Modifier.fillMaxSize().statusBarsPadding().imePadding()
-        .padding(horizontal=16.dp), verticalArrangement=Arrangement.spacedBy(8.dp)) {
-        Heading("Transições", back)
+internal fun TransitionScreen(p: VideoProject, back: () -> Unit, update: (VideoProject) -> Boolean,
+    initialBoundary: Int = 0) {
+    val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(onDismissRequest = back, sheetState = sheet) {
         if (p.clips.size < 2) {
-            Text("Adicione pelo menos dois clipes para criar uma transição.")
+            Text("Adicione dois clipes para editar a passagem entre eles.",
+                Modifier.padding(horizontal = 20.dp).padding(bottom = 24.dp))
         } else {
-            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),
-                verticalArrangement=Arrangement.spacedBy(10.dp)) {
-                Text("Junção entre clipes",fontWeight=FontWeight.Medium)
-                androidx.compose.foundation.lazy.LazyRow(
-                    horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                    items(p.clips.lastIndex) { index ->
-                        val a=p.clips[index];val b=p.clips[index+1]
-                        FilterChip(selected=safeBoundary==index,onClick={
-                            boundary=index
-                            kind=stored(index)?.kind?.takeIf(TransitionEffects::supported) ?: TransitionEffects.CUT
-                            fadeMs=(stored(index)?.durationMs ?: 500L).coerceIn(250L,1000L).toFloat()
-                        },label={Text("${index+1} → ${index+2}: ${a.title.take(10)} / ${b.title.take(10)}")})
+            val context = androidx.compose.ui.platform.LocalContext.current
+            var boundary by remember(p.id, initialBoundary) {
+                mutableIntStateOf(TransitionBoundaryPolicy.clamp(initialBoundary, p.clips.size))
+            }
+            val safeBoundary = TransitionBoundaryPolicy.clamp(boundary, p.clips.size)
+            val from = p.clips[safeBoundary]
+            val to = p.clips[safeBoundary + 1]
+            val stored = EditFeatures.boundary(p, safeBoundary)
+            var kind by remember(p.id, from.id, to.id) {
+                mutableStateOf(stored?.kind?.takeIf(TransitionEffects::supported) ?: TransitionEffects.CUT)
+            }
+            var durationMs by remember(p.id, from.id, to.id) {
+                mutableLongStateOf(stored?.durationMs ?: 300L)
+            }
+            var showMore by remember { mutableStateOf(false) }
+            var applyAll by remember { mutableStateOf(false) }
+            var audioOn by remember { mutableStateOf(false) }
+            var saveFailed by remember { mutableStateOf(false) }
+            val first = p.clips.first()
+            val aspect by produceState<Float?>(null, first.uri, first.isImage) {
+                value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    mediaAspect(context, first.uri, first.isImage)
+                }
+            }
+            val modern = JunctionTransitionPlan.contains(kind)
+            val join = JunctionTransitionPlan.boundary(from, to, from.durationMs, kind, durationMs)
+            val allValid = !modern || !applyAll || p.clips.zipWithNext().all { (a, b) ->
+                JunctionTransitionPlan.boundary(a, b, a.durationMs, kind, durationMs) != null
+            }
+            val valid = (!modern || join != null) && allValid
+            Column(Modifier.fillMaxWidth().heightIn(max = 680.dp).padding(horizontal = 16.dp)) {
+                Text("Transição", style = MaterialTheme.typography.titleLarge)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { boundary = safeBoundary - 1 }, enabled = safeBoundary > 0) {
+                        Icon(Icons.Default.ChevronLeft, "Junção anterior")
+                    }
+                    Column(Modifier.weight(1f)) {
+                        Text("Junção ${safeBoundary + 1} de ${p.clips.lastIndex}",
+                            style = MaterialTheme.typography.labelLarge)
+                        Text("${from.title} → ${to.title}", maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    IconButton(onClick = { boundary = safeBoundary + 1 }, enabled = safeBoundary < p.clips.lastIndex - 1) {
+                        Icon(Icons.Default.ChevronRight, "Próxima junção")
                     }
                 }
-                TransitionFramePreview(p.clips[safeBoundary],p.clips[safeBoundary+1],kind,fadeMs.toLong())
-                Text("Efeito",fontWeight=FontWeight.Bold)
-                Text("Escolha o efeito. As mudanças só são gravadas ao tocar em Aplicar.",
-                    style=MaterialTheme.typography.bodySmall)
-                // Seis escolhas iniciais com cartões visuais. Os demais efeitos
-                // permanecem disponíveis sem poluir a interface de quem só quer editar.
-                val shown = if (showMore) TransitionEffects.names else featured
-                shown.chunked(3).forEach { group ->
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                        group.forEach { value ->
-                            val selected=kind==value
-                            Surface(onClick={kind=value},modifier=Modifier.weight(1f),
-                                shape=RoundedCornerShape(12.dp),
-                                color=if(selected) MaterialTheme.colorScheme.primaryContainer
-                                    else MaterialTheme.colorScheme.surfaceVariant,
-                                border=BorderStroke(if(selected)2.dp else 1.dp,
-                                    if(selected)MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.outlineVariant)) {
-                                Column(Modifier.padding(6.dp),verticalArrangement=Arrangement.spacedBy(6.dp),
-                                    horizontalAlignment=Alignment.CenterHorizontally) {
-                                    // Miniatura gráfica diferente por efeito; a prévia acima
-                                    // mostra o comportamento real com quadros dos dois clipes.
-                                    Row(Modifier.fillMaxWidth().height(53.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(Color(0xFF151924)),
-                                        verticalAlignment=Alignment.CenterVertically,
-                                        horizontalArrangement=Arrangement.spacedBy(0.dp)) {
-                                        val leftSize=when(value) {
-                                            TransitionEffects.ZOOM_IN->1.30f
-                                            TransitionEffects.ZOOM_OUT->.84f
-                                            else->1f
-                                        }
-                                        Box(Modifier.weight(1f).fillMaxHeight()
-                                            .graphicsLayer {scaleX=leftSize;scaleY=leftSize}
-                                            .background(Color(0xFF1986A9)),contentAlignment=Alignment.Center) {
-                                            Icon(Icons.Default.Movie,null,tint=Color.White,
-                                                modifier=Modifier.size(20.dp))
-                                        }
-                                        Box(Modifier.width(if(value==TransitionEffects.PAN)8.dp else 2.dp)
-                                            .fillMaxHeight().background(if(value==TransitionEffects.FLASH_WHITE)
-                                                Color.White else if(value==TransitionEffects.BLACK)
-                                                Color.Black else Color(0xFFB6E0FA)))
-                                        Box(Modifier.weight(1f).fillMaxHeight()
-                                            .background(Color(0xFF7146B5)),contentAlignment=Alignment.Center) {
-                                            Icon(Icons.Default.Movie,null,tint=Color.White,
-                                                modifier=Modifier.size(20.dp))
-                                        }
-                                    }
-                                    Text(value,fontSize=11.sp,maxLines=2,minLines=2,
-                                        textAlign=TextAlign.Center,lineHeight=13.sp)
-                                }
+                Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val renderAspect = aspect
+                    if ((!modern || join != null) && renderAspect != null) {
+                        key(p, safeBoundary, kind, durationMs, renderAspect) {
+                            TransitionVideoPreview(p, safeBoundary, kind, durationMs, renderAspect, audioOn) {
+                                audioOn = it
                             }
                         }
-                        repeat(3-group.size){Spacer(Modifier.weight(1f))}
+                    } else if (modern && join == null) {
+                        Text("Os clipes são curtos demais para esta transição.",
+                            color = MaterialTheme.colorScheme.error)
+                    }
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(kind == TransitionEffects.CUT, { kind = TransitionEffects.CUT },
+                            label = { Text("Corte direto") })
+                        FilterChip(kind == JunctionTransitionPlan.DISSOLVE, {
+                            kind = JunctionTransitionPlan.DISSOLVE
+                            durationMs = stored?.takeIf { it.kind == kind }?.durationMs ?: 300L
+                        }, label = { Text("Dissolver") })
+                        FilterChip(kind in listOf(JunctionTransitionPlan.PUSH_LEFT, JunctionTransitionPlan.PUSH_RIGHT), {
+                            kind = stored?.kind?.takeIf { it == JunctionTransitionPlan.PUSH_LEFT ||
+                                it == JunctionTransitionPlan.PUSH_RIGHT } ?: JunctionTransitionPlan.PUSH_LEFT
+                            durationMs = stored?.takeIf { it.kind == kind }?.durationMs ?: 250L
+                        }, label = { Text("Empurrão lateral") })
+                        FilterChip(kind == TransitionEffects.BLACK, {
+                            kind = TransitionEffects.BLACK
+                            durationMs = stored?.takeIf { it.kind == kind }?.durationMs ?: 400L
+                        }, label = { Text("Fade preto") })
+                    }
+                    if (kind == JunctionTransitionPlan.PUSH_LEFT || kind == JunctionTransitionPlan.PUSH_RIGHT) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(kind == JunctionTransitionPlan.PUSH_LEFT,
+                                { kind = JunctionTransitionPlan.PUSH_LEFT }, label = { Text("Para esquerda") })
+                            FilterChip(kind == JunctionTransitionPlan.PUSH_RIGHT,
+                                { kind = JunctionTransitionPlan.PUSH_RIGHT }, label = { Text("Para direita") })
+                        }
+                    }
+                    if (kind != TransitionEffects.CUT) {
+                        Text(TransitionEffects.description(kind), style = MaterialTheme.typography.bodySmall)
+                        val effective = join?.durationMs ?: if (!modern)
+                            2L * EditFeatures.transitionMs(ClipTransition(from.id, to.id, kind,
+                                durationMs.coerceIn(250L, 1000L)), from.durationMs, to.durationMs)
+                        else 0L
+                        Text("Duração na junção · $effective ms", style = MaterialTheme.typography.labelLarge)
+                        val range = if (modern) 120f..1000f else 250f..1000f
+                        var slidingMs by remember(kind, durationMs) { mutableFloatStateOf(durationMs.toFloat()) }
+                        Slider(value = slidingMs.coerceIn(range.start, range.endInclusive), valueRange = range,
+                            onValueChange = { slidingMs = it }, onValueChangeFinished = {
+                                durationMs = ((slidingMs.toLong() + 5L) / 10L) * 10L
+                            })
+                        if (join?.usesHold == true) Text(
+                            "Sem sobra de vídeo num dos lados. Um quadro de apoio é usado nesse lado.",
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                    Text("Mantém a duração, as legendas e os áudios no mesmo horário.",
+                        style = MaterialTheme.typography.bodySmall)
+                    if (modern) Text("As transições combinadas são exportadas em SDR.",
+                        style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = { showMore = !showMore }) {
+                        Text(if (showMore) "Recolher efeitos" else "Mais efeitos")
+                    }
+                    if (showMore) {
+                        for (row in TransitionEffects.names.filter {
+                            it != TransitionEffects.CUT && it != TransitionEffects.BLACK
+                        }.chunked(2)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                for (effect in row) FilterChip(kind == effect, {
+                                    kind = effect
+                                    durationMs = stored?.takeIf { it.kind == kind }?.durationMs ?: 350L
+                                }, label = { Text(effect) }, modifier = Modifier.weight(1f))
+                            }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(applyAll, { applyAll = it })
+                            Text("Aplicar também às outras junções")
+                        }
                     }
                 }
-                TextButton(onClick={showMore=!showMore},modifier=Modifier.align(Alignment.End)) {
-                    Text(if(showMore)"Mostrar seis principais" else "Ver todos os efeitos")
-                    Icon(if(showMore)Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        null,Modifier.size(17.dp))
+                if (!allValid) Text("Há junções curtas demais. Aplique somente nesta junção.",
+                    color = MaterialTheme.colorScheme.error)
+                if (saveFailed) Text("Não foi possível salvar. Tente novamente.",
+                    color = MaterialTheme.colorScheme.error)
+                Button(onClick = {
+                    val amended = TransitionBatch.apply(p, safeBoundary, kind, durationMs, applyAll)
+                    if (amended == p || update(amended)) back() else saveFailed = true
+                }, enabled = valid, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                    Icon(Icons.Default.Check, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (applyAll) "Aplicar a todas as junções" else "Aplicar nesta junção")
                 }
-                Text(TransitionEffects.description(kind),
-                    style=MaterialTheme.typography.bodySmall)
-                if (kind != TransitionEffects.CUT) {
-                    Text("Duração: ${fadeMs.toInt()} ms",fontWeight=FontWeight.Medium)
-                    Slider(value=fadeMs,valueRange=250f..1000f,steps=2,
-                        onValueChange={fadeMs=it})
-                }
-                Text("Os efeitos atuam na saída e entrada dos vídeos. Não sobrepõem clipes nem alteram sua duração.",
-                    style=MaterialTheme.typography.bodySmall,
-                    color=MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            HorizontalDivider()
-            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                Checkbox(checked=applyAll,onCheckedChange={applyAll=it})
-                Column(Modifier.weight(1f)) {
-                    Text("Aplicar a todas as junções",fontWeight=FontWeight.Medium)
-                    Text("${p.clips.lastIndex} ${if(p.clips.lastIndex==1) "junção" else "junções"} entre vídeos",
-                        style=MaterialTheme.typography.bodySmall)
-                }
-            }
-            Button(onClick={
-                update(TransitionBatch.apply(p,safeBoundary,kind,fadeMs.toLong(),applyAll))
-                back()
-            }, modifier=Modifier.fillMaxWidth().padding(bottom=8.dp)) {
-                Icon(Icons.Default.Check,null)
-                Spacer(Modifier.width(8.dp))
-                Text("Aplicar")
             }
         }
     }
 }
-
