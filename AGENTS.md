@@ -1,3 +1,8 @@
+# v0.1.284 — Correção do CI 241
+
+- Base v0.1.283/versionCode 284; atual v0.1.284/versionCode 285. No CI 241, compilaram Debug e Release, mas 1 de 761 testes unitários falhou no estilo clássico (tamanho padrão mudou de 12 para 14).
+- O teste de equivalência deve usar o valor padrão atual e a importação SRT real. Testar tamanho 12 separadamente como escolha explícita. Preservar produção, schema 4, assinatura e workflow das cinco variantes.
+
 # v0.1.283 — Legendas e sincronia
 
 - Base v0.1.282/versionCode 283; atual v0.1.283/versionCode 284. Preservar schema 4 e assinatura.

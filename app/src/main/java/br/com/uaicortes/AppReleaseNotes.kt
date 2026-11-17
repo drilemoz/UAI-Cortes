@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.283"
-    const val VERSION_CODE = 284
+    const val VERSION_NAME = "0.1.284"
+    const val VERSION_CODE = 285
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.284", listOf(
+            ReleaseFeature("ci-241-caption-size-284", "Correção de teste do build de legendas",
+                "O teste do estilo clássico agora verifica o tamanho inicial 14. A escolha manual de 12 continua disponível. Não há mudança no comportamento do editor.", "check")
+        )),
         ReleaseSummary("0.1.283", listOf(
             ReleaseFeature("subtitle-size-283", "Legendas novas em tamanho 14",
                 "Vale para legendas importadas, criadas manualmente e geradas por Gemini ou Vosk. O karaokê novo usa contorno mais leve e não tem sombra.", "check"),

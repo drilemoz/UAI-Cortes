@@ -98,14 +98,15 @@ class VoiceIaSpeakerVoicePolicyTest {
     }
 
     @Test fun classicalGeneratedStyleMatchesSrtButKeepsWordTimingsAndSpeaker() {
-        val imported = SubtitleCue(id = "srt", text = "Boa noite", startMs = 500, endMs = 1000)
+        val imported = EditFeatures.parseSrt("1\n00:00:00,500 --> 00:00:01,000\nBoa noite\n").single()
         val generated = imported.copy(sizeSp = 20, outlineWidth = 3,
             backgroundColor = SubtitleStyles.NO_BACKGROUND, shadowOffsetDp = 2,
             animation = SubtitleAnimations.KARAOKE,
             wordTimings = listOf(SubtitleWordTiming(500, 750), SubtitleWordTiming(750, 1000)),
             speakerId = "cliente")
         val converted = SubtitleAppearancePolicy.generated(generated,
-            SubtitleAppearanceMode.CLASSIC_SRT, 12)
+            SubtitleAppearanceMode.CLASSIC_SRT, SubtitleAppearancePolicy.defaultSize())
+        assertEquals(14, imported.sizeSp)
         assertEquals(imported.sizeSp, converted.sizeSp)
         assertEquals(imported.backgroundColor, converted.backgroundColor)
         assertEquals(imported.outlineWidth, converted.outlineWidth)
@@ -115,5 +116,12 @@ class VoiceIaSpeakerVoicePolicyTest {
         assertEquals("cliente", converted.speakerId)
         assertEquals(generated.text, converted.text)
         assertEquals(generated.startMs, converted.startMs)
+        assertEquals(generated.endMs, converted.endMs)
+    }
+
+    @Test fun classicalGeneratedStyleHonorsAnExplicitSizeOf12() {
+        val cue = SubtitleCue(text = "Boa noite", startMs = 500, endMs = 1000)
+        val converted = SubtitleAppearancePolicy.generated(cue, SubtitleAppearanceMode.CLASSIC_SRT, 12)
+        assertEquals(12, converted.sizeSp)
     }
 }

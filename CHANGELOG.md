@@ -1,3 +1,8 @@
+# Uai Cortes 0.1.284 (2026-11-17)
+
+- **CI 241:** ajusta o teste de equivalência entre SRT e legenda clássica para usar a importação real e o padrão 14, removendo o valor 12 usado equivocadamente no cenário de padrão.
+- **Regressão:** confirma que o tamanho 12 continua funcionando quando escolhido de forma explícita. Não muda o comportamento do editor, os dados dos projetos ou a assinatura dos APKs.
+
 # Uai Cortes 0.1.283 (2026-11-17)
 
 - **Tamanho:** 14 como padrão de novas legendas manuais, SRT, Vosk e Gemini. Ajustes manuais e tamanho de legendas salvas são preservados.
