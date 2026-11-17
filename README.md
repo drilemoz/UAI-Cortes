@@ -1,3 +1,10 @@
+# Uai Cortes · v0.1.280 — Áudio e Camadas
+
+- **Áudio no editor:** escolha um arquivo, confira duração e alcance, informe o início e ajuste o volume. A faixa toca sem reiniciar entre clipes. Se o projeto acabar antes do áudio, o pop-up avisa quanto cabe. O arquivo original é preservado.
+- **Vozes IA:** permanece separada, com geração por legenda. A revisão em lote identifica legendas cujas falas não couberam.
+- **Camadas:** marca d’água com prévia e painéis de Texto, Posição, Tamanho e Aparência. Os atalhos do PiP deixam margem de 4% do lado menor do quadro quando houver espaço. Arraste e projetos existentes mantêm suas regras.
+- **Rascunho interrompido:** Descartar rascunho à esquerda e Recuperar edição à direita, na mesma linha.
+
 # Uai Cortes · v0.1.279 — Camadas (PiP e Marca d'água)
 
 - Publicar vídeo agora usa seleção -> confirmação única -> fila de envios YouTube -> relatório por destino, sem solicitar repetidamente os mesmos botões.

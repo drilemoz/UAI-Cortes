@@ -7,6 +7,7 @@ src=root/'app/src/main/java/br/com/uaicortes'
 shapes=(src/'UaiShapes.kt').read_text()
 main=(src/'MainActivity.kt').read_text()
 pip=(src/'PipScreen.kt').read_text()
+layer_tools=(src/'LayersTabs.kt').read_text()
 audio=(src/'AudioScreen.kt').read_text()
 components=(src/'AudioSectionUi.kt').read_text()
 exit_ui=(src/'ProjectDraftUi.kt').read_text()
@@ -20,7 +21,8 @@ assert 'UaiShapes.button' in exit_ui and 'height(64.dp)' in exit_ui
 assert 'EditorExitAction("Descartar"' in exit_ui and 'onDecision("save")' in exit_ui
 assert 'onDecision("discard")' in exit_ui and 'onContinue()' in exit_ui
 assert 'InlineVideoPreview(canvasAspect, maxHeightDp = if (previewExpanded) null else 250f)' in pip
-assert 'Modifier.weight(1f).height(58.dp)' in pip
+assert 'LayerTool(label, icon, Modifier.weight(1f)' in pip
+assert 'modifier.height(58.dp)' in layer_tools
 assert 'shape = UaiShapes.sheet' in pip
 assert 'PipLayer(' in pip and 'onUpdate = onChange' in pip
 assert 'onChange(pip.copy(opacity=value))' in pip and 'onChange(pip.copy(muted = !it))' in pip

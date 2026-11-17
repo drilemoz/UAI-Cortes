@@ -1,3 +1,10 @@
+# Uai Cortes 0.1.280 (2026-11-17)
+
+- **Áudio no editor:** escolha um arquivo, confira duração e alcance, informe o início e ajuste o volume. A faixa toca sem reiniciar entre clipes. Se o projeto acabar antes do áudio, o pop-up avisa quanto cabe. O arquivo original é preservado.
+- **Vozes IA:** permanece separada, com geração por legenda. A revisão em lote identifica legendas cujas falas não couberam.
+- **Camadas:** marca d’água com prévia e painéis de Texto, Posição, Tamanho e Aparência. Os atalhos do PiP deixam margem de 4% do lado menor do quadro quando houver espaço. Arraste e projetos existentes mantêm suas regras.
+- **Rascunho interrompido:** Descartar rascunho à esquerda e Recuperar edição à direita, na mesma linha.
+
 # Uai Cortes 0.1.279 (2026-11-17)
 
 - Barra do editor: Cortar, Transição, Legendas, Áudio, Vozes IA e **Camadas** (PiP + Marca d'água em abas); o atalho solo de Marca d'água saiu da barra. Os dados do projeto não mudam (overlays e textWatermark continuam separados).

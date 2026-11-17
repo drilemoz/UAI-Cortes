@@ -102,7 +102,7 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
         }
     }
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-        Heading("Editar sobreposições", back)
+        Heading("Camadas", back)
         tabs()
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
             .padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -223,23 +223,7 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                         Triple("duration", "Duração", Icons.Default.Schedule),
                         Triple("media", "Mídia", Icons.Default.PermMedia)
                     ).forEach { (key, label, icon) ->
-                        Surface(onClick = { if (pip != null) expanded = key },
-                            modifier = Modifier.weight(1f).height(58.dp),
-                            enabled = pip != null,
-                            shape = UaiShapes.item,
-                            color = MaterialTheme.colorScheme.surfaceVariant) {
-                            Column(Modifier.fillMaxSize().padding(4.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center) {
-                                Icon(icon, contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp))
-                                Spacer(Modifier.height(2.dp))
-                                Text(label, fontWeight = FontWeight.SemiBold,
-                                    fontSize = 12.sp, maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis)
-                            }
-                        }
+                        LayerTool(label, icon, Modifier.weight(1f), enabled = pip != null) { expanded = key }
                     }
                 }
                 // Opacidade é independente do volume e persiste na prévia e no compositor MP4.
@@ -339,7 +323,7 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                 }
                                 when (expanded) {
                                     "position" -> {
-                                        Text("Escolha um dos nove pontos. Se houver outro PiP, ele será reposicionado automaticamente.",
+                                        Text("Escolha um dos nove pontos. Os atalhos deixam um espaço até a borda. Para sobrepor ou reposicionar PiPs em conflito, revise a confirmação.",
                                             style = MaterialTheme.typography.bodySmall)
                                         val names = listOf("Superior esquerdo", "Superior central", "Superior direito",
                                             "Meio esquerdo", "Centro", "Meio direito",
@@ -355,7 +339,7 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
                                                     OutlinedButton(onClick = {
                                                         val (wf, hf) = OverlayEditorLogic.dimensions(
                                                             pip.scale, sourceAspect, canvasAspect,pip.fitMode)
-                                                        val (x, y) = OverlayEditorLogic.preset(row, col, wf, hf)
+                                                        val (x, y) = OverlayEditorLogic.quickPreset(row, col, wf, hf, canvasAspect)
                                                         onChange(pip.copy(x = x, y = y))
                                                     }, modifier = Modifier.weight(1f).height(50.dp)
                                                         .semantics { contentDescription = names[i] },

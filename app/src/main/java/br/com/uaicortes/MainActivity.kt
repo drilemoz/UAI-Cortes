@@ -553,13 +553,12 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                             if (it == "voices") selectedVoiceCueId = null
                             navTo(it)
                         }
-                    }, onUpdate = { write(it) },
+                    }, onUpdate = ::write,
                     onAddVideo = { pendingPicker = "append"; openGallery("editor", "append") }, onAddImage = mainImagePick,
                     onPiP = {
                         selectedOverlayId = project?.overlays?.firstOrNull()?.id.orEmpty()
                         screen = "pip"
                     },
-                    onAudio = { audioPicker.launch(arrayOf("audio/*")) },
                     onSelectAudio = { id ->
                         val bound = project?.audioTracks?.firstOrNull { it.id == id }?.clipId
                         val track = project?.audioTracks?.firstOrNull { it.id == id }
@@ -567,7 +566,6 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                             selectedVoiceCueId = track.subtitleId
                             navTo("voices")
                         } else if (bound != null) { selectedClip = bound; navTo("clip_audio") }
-                        else { selectedAudioTrackId = id; navTo("audio") }
                     },
                     onSelectSubtitle = { id -> selectedSubtitleId = id; navTo("subtitles") },
                     onSelectOverlay = { selectedOverlayId = it },
@@ -578,7 +576,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     autoPlayOnReturn = resumeVideoPreview,
                     onReturnPlaybackConsumed = { resumeVideoPreview = false }) }
                 } }
-                "watermark" -> project?.let { current -> TextWatermarkScreen(current, ::back, { LayersTabs("watermark") { screen = "pip" } }) { changed ->
+                "watermark" -> project?.let { current -> TextWatermarkScreen(current, ::back, positionMs, { LayersTabs("watermark") { screen = "pip" } }) { changed ->
                     if (write(changed)) screen = "editor"
                 } }
                 "trim" -> project?.let { TrimScreen(it, selectedClip, positionMs, ::back, { write(it) },

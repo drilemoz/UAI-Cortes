@@ -12,7 +12,7 @@ paths=(r/'app/src/main/res/xml/diagnostic_file_paths.xml').read_text()
 record=(src/'DiagnosticRecorder.kt').read_text()
 policy=(src/'ApiDiagnosticPolicy.kt').read_text()
 ledger=(src/'GeminiUsageLedger.kt').read_text()
-for token in ('UnifiedEditorTimeline(p,currentMs','onClip={id->','onOverlay={id->','onAudio=onSelectAudio',
+for token in ('UnifiedEditorTimeline(p,currentMs','onClip={id->','onOverlay={id->','onAudio={ id ->', 'onSelectAudio(id)', 'openQuickAudio(id)',
               'onSubtitle=onSelectSubtitle', 'onTimelineEdit={kind,id,handle,delta,target->'):
     assert token in editor,token
 for token in ('mainSpans(clips: List<Clip>, image: Boolean)', 'clip.isImage == image',

@@ -1,3 +1,10 @@
+# v0.1.280 — Áudio e Camadas
+
+- Base v0.1.279/versionCode 280. Nova v0.1.280/versionCode 281. Preservar schema 4, cinco APKs Release e assinatura.
+- Adicionar/editar áudio global no editor aplica uma faixa contínua. Escolher arquivo só lê metadados; cópia e alteração do projeto em Aplicar. Respeitar início, janela e duração do projeto. Vozes IA e Áudio do clipe mantêm fluxos próprios.
+- Marca d'água usa os mesmos cartões do PiP; os atalhos de posição do PiP têm margem, sem migrar coordenadas ou bloquear arraste manual.
+- Validação Android de PiP compara pixels e posição em 720p/1080p. Essa validação requer execução instrumentada com OpenGL e encoder H.264, não apenas compilar o teste.
+
 # v0.1.279 — Camadas
 
 - Base v0.1.278/versionCode 279; atual v0.1.279/versionCode 280. MainActivity está em 799 linhas (limite 800): edite linhas existentes em vez de adicionar.

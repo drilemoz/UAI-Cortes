@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextAlign
@@ -122,8 +123,19 @@ internal fun ConfirmRecoverDraft(onRecover: () -> Unit, onDiscard: () -> Unit) {
                 }
             }
         },
-        confirmButton = { Button(onClick = onRecover, shape = UaiShapes.button) { Text("Recuperar edição") } },
-        dismissButton = { TextButton(onClick = onDiscard, shape = UaiShapes.button) { Text("Descartar rascunho") } })
+        confirmButton = {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onDiscard, shape = UaiShapes.button, modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)) {
+                    Text("Descartar rascunho", textAlign = TextAlign.Center)
+                }
+                Button(onClick = onRecover, shape = UaiShapes.button, modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)) {
+                    Text("Recuperar edição", textAlign = TextAlign.Center)
+                }
+            }
+        })
 }
 
 @Composable

@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
@@ -50,8 +51,8 @@ import java.util.UUID
 @Composable
 internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
     onSelected:(String)->Unit,onPosition:(Long)->Unit,onBack:()->Unit,onEdit:(String)->Unit,
-    onUpdate:(VideoProject)->Unit,onAddVideo:()->Unit,onAddImage:()->Unit,
-    onPiP:()->Unit,onAudio:()->Unit,
+    onUpdate:(VideoProject)->Boolean,onAddVideo:()->Unit,onAddImage:()->Unit,
+    onPiP:()->Unit,
     onSelectOverlay:(String)->Unit,onTransition:(Int)->Unit,onSaveHome:()->Unit,
     onSelectAudio:(String)->Unit,onSelectSubtitle:(String)->Unit,
     onClipAudio:(String)->Unit, onRepairMedia:()->Unit,
@@ -107,16 +108,42 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             }
         }
     }
+    fun commitWithUndo(changed: VideoProject): Boolean {
+        if (changed == p) return true
+        if (!onUpdate(changed)) return false
+        timelineUndo.add(p)
+        if (timelineUndo.size > 15) timelineUndo.removeAt(0)
+        timelineRedo.clear()
+        return true
+    }
     fun timelineCommit(result: TimelineEditResult) {
-        if (result.changed) {
-            timelineUndo.add(p)
-            if (timelineUndo.size>15) timelineUndo.removeAt(0)
-            timelineRedo.clear()
-            onUpdate(result.project)
+        if (result.changed && !commitWithUndo(result.project)) {
+            Toast.makeText(context, "Não foi possível aplicar a edição.", Toast.LENGTH_SHORT).show()
+            return
         }
         if (result.explanation.isNotBlank()) {
             feedback=result.explanation
             if (!result.changed) Toast.makeText(context,result.explanation,Toast.LENGTH_SHORT).show()
+        }
+    }
+    var quickAudioId by rememberSaveable(p.id) { mutableStateOf<String?>(null) }
+    var quickAudioAtMs by rememberSaveable(p.id) { mutableLongStateOf(0L) }
+    fun openQuickAudio(id: String) {
+        player.pause()
+        quickAudioAtMs = currentMs
+        quickAudioId = id
+    }
+    quickAudioId?.let { id ->
+        val dismiss = { quickAudioId = null }
+        when (id) {
+            "" -> QuickAudioDialog(p, quickAudioAtMs, null, dismiss, ::commitWithUndo)
+            "music" -> if (p.music != null) QuickMusicVolumeDialog(p, dismiss, ::commitWithUndo)
+                else LaunchedEffect(id) { dismiss() }
+            else -> {
+                val existing = p.audioTracks.firstOrNull { it.id == id }
+                if (existing != null) QuickAudioDialog(p, quickAudioAtMs, existing, dismiss, ::commitWithUndo)
+                else LaunchedEffect(id) { dismiss() }
+            }
         }
     }
     LaunchedEffect(player, p.clips.map { it.id to it.volume }, previewVolume) {
@@ -455,8 +482,12 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             onClip={id->onSelected(id);clipMenuId=id},onSelectClip=onSelected,
             onTransition=onTransition,
             onOverlay={id->onSelectOverlay(id);onEdit("pip")},onSelectOverlay=onSelectOverlay,
-            onAudio=onSelectAudio,onAddVideo=onAddVideo,onAddImage=onAddImage,
-            onOpenPiP=onPiP,onOpenAudio={onEdit("audio")},
+            onAudio={ id ->
+                val track = p.audioTracks.firstOrNull { it.id == id }
+                if (track?.clipId != null || track?.kind == VoiceIaPolicy.KIND) onSelectAudio(id)
+                else openQuickAudio(id)
+            },onAddVideo=onAddVideo,onAddImage=onAddImage,
+            onOpenPiP=onPiP,onOpenAudio={openQuickAudio("")},
             onOpenVoice={onEdit("voices")},onSubtitle=onSelectSubtitle,
             onOpenSubtitle={onEdit("subtitles")},
             onGestureStart={scrubbing=true;player.pause()},
@@ -510,7 +541,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             items(count = actions.size) { index ->
                 val (name, icon, key) = actions[index]
                 Column(Modifier.width(56.dp).clip(RoundedCornerShape(12.dp)).clickable {
-                    onEdit(key)
+                    if (key == "audio") openQuickAudio("") else onEdit(key)
                 }, horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(Modifier.size(48.dp).clip(RoundedCornerShape(14.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {

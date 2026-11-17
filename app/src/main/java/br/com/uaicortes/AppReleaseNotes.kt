@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.279"
-    const val VERSION_CODE = 280
+    const val VERSION_NAME = "0.1.280"
+    const val VERSION_CODE = 281
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.280", listOf(
+            ReleaseFeature("quick-audio-280", "Áudio direto no editor",
+                "Escolha o arquivo, posicione e ajuste o volume no pop-up. Veja em qual clipe e segundo o áudio termina antes de aplicar.", "check"),
+            ReleaseFeature("layer-controls-280", "Camadas mais compactas",
+                "Marca d'água agora usa os mesmos cartões do PiP. Os atalhos de posição do PiP deixam margem em relação às bordas do vídeo.", "check"),
+            ReleaseFeature("recovery-actions-280", "Recuperação em uma linha",
+                "Descartar rascunho aparece à esquerda e Recuperar edição à direita.", "check")
+        )),
         ReleaseSummary("0.1.279", listOf(
             ReleaseFeature("layers-279", "Camadas: PiP e Marca d'água juntos",
                 "A barra do editor ganhou o atalho Camadas, com abas PiP e Marca d'água, no lugar do atalho solo de Marca d'água. PiP agora fica na barra, ao lado de Vozes IA.", "check")

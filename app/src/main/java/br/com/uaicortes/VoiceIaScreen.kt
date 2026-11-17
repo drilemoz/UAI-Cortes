@@ -1472,18 +1472,25 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                 secondStart < end && secondEnd > start
             } > 1
         }
-        val late = validCues.count { (cue, take) ->
+        val cueNumbers = cues.mapIndexed { index, cue -> cue.id to (index + 1) }.toMap()
+        val late = validCues.mapNotNull { (cue, take) ->
             val start = latestProject.audioTracks.firstOrNull { it.kind == VoiceIaPolicy.KIND &&
                 it.subtitleId == cue.id }?.startMs ?: cue.startMs
-            start + take.durationMs > cue.endMs
+            val limit = cues.firstOrNull { it.startMs > cue.startMs }
+                ?.let { minOf(it.startMs, cue.endMs) } ?: cue.endMs
+            cueNumbers[cue.id]?.takeIf { start + take.durationMs > limit }
         }
         AlertDialog(onDismissRequest = { pendingBatchInsert = false },
             title = { Text("Inserir ${validCues.size} vozes na timeline?") },
             text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("As vozes serão inseridas ou substituídas em uma única gravação do projeto, " +
                     "mantendo as legendas e músicas intactas. Arquivos WAV não serão cortados.")
-                if (late > 0) Text("$late fala(s) ultrapassam seu intervalo de legenda.",
-                    color = MaterialTheme.colorScheme.error)
+                if (late.isNotEmpty()) {
+                    val list = late.take(6).joinToString(", ")
+                    val extra = if (late.size > 6) " e mais ${late.size - 6}" else ""
+                    Text("Falas que precisam de ajuste nas legendas $list$extra. " +
+                        "Use Sincronizar na fala correspondente.", color = MaterialTheme.colorScheme.error)
+                }
                 if (overlapCount > 0) Text("$overlapCount voz(es) terão sobreposição com outras vozes. " +
                     "Elas poderão tocar ao mesmo tempo.", color = MaterialTheme.colorScheme.error)
                 if (skipped > 0) Text("$skipped legenda(s) não serão inseridas: não foram geradas " +

@@ -15,6 +15,27 @@ class OverlayEditorLogicTest {
             assertTrue(y + h / 2 <= 1)
         }
     }
+    @Test fun quickCornersUseFourPercentOfShortSideOnBothAxes() {
+        for ((widthPx, heightPx) in listOf(1080f to 1920f, 1920f to 1080f, 1080f to 1080f)) {
+            val aspect = widthPx / heightPx
+            val (w, h) = OverlayEditorLogic.dimensions(.30f, 3f, aspect)
+            val margin = minOf(widthPx, heightPx) * .04f
+            for (row in listOf(0, 2)) for (col in listOf(0, 2)) {
+                val (x, y) = OverlayEditorLogic.quickPreset(row, col, w, h, aspect)
+                assertEquals(margin, ((if (col == 0) x else 1f - x) - w / 2) * widthPx, .001f)
+                assertEquals(margin, ((if (row == 0) y else 1f - y) - h / 2) * heightPx, .001f)
+            }
+            assertEquals(.5f to .5f, OverlayEditorLogic.quickPreset(1, 1, w, h, aspect))
+        }
+    }
+
+    @Test fun hugeQuickPresetCentersAnAxisThatHasNoRoomButManualCanStillTouchTheEdge() {
+        assertEquals(.5f, OverlayEditorLogic.quickPreset(0, 0, 1.2f, .6f, 1f).first, .0001f)
+        assertEquals(.5f, OverlayEditorLogic.quickPreset(0, 0, .99f, .6f, 1f).first, .0001f)
+        assertEquals(.15f, OverlayEditorLogic.clampCenter(0f, .3f), .0001f)
+        assertEquals(.15f, OverlayEditorLogic.preset(0, 0, .3f, .3f).first, .0001f)
+    }
+
     @Test fun tallAssetFitsWithinCanvas() {
         val (w, h) = OverlayEditorLogic.dimensions(.85f, .5f, 16f / 9f)
         assertTrue(w < .85f)

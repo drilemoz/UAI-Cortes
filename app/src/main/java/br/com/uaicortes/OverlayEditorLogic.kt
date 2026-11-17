@@ -37,6 +37,19 @@ object OverlayEditorLogic {
         return clampCenter(x, widthFraction) to clampCenter(y, heightFraction)
     }
 
+    /** Só o atalho visual ganha margem. Arraste e posições salvas não são reinterpretados. */
+    fun quickPreset(row: Int, col: Int, width: Float, height: Float, canvasAspect: Float): Pair<Float, Float> {
+        require(row in 0..2 && col in 0..2)
+        val aspect = canvasAspect.coerceAtLeast(.05f)
+        val xMargin = .04f * min(1f, 1f / aspect)
+        val yMargin = .04f * min(1f, aspect)
+        fun axis(slot: Int, occupied: Float, margin: Float): Float {
+            val inset = min(.5f, occupied / 2f + margin)
+            return when (slot) { 0 -> inset; 1 -> .5f; else -> 1f - inset }
+        }
+        return axis(col, width, xMargin) to axis(row, height, yMargin)
+    }
+
     /** Percentual pode preencher o quadro ou usar zoom com recorte até 150%. */
     fun parsePercentage(input: String): Float? = input.trim().removeSuffix("%").trim()
         .toIntOrNull()?.takeIf { it in 5..150 }?.div(100f)
