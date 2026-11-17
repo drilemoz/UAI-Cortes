@@ -1,3 +1,8 @@
+# Uai Cortes 0.1.279 (2026-11-17)
+
+- Barra do editor: Cortar, Transição, Legendas, Áudio, Vozes IA e **Camadas** (PiP + Marca d'água em abas); o atalho solo de Marca d'água saiu da barra. Os dados do projeto não mudam (overlays e textWatermark continuam separados).
+- Música (navegador de áudios do aparelho) fica para a próxima versão; nenhum botão sem função foi adicionado.
+
 # Uai Cortes 0.1.278 (2026-11-17)
 
 - Correção de CI: `FrameSnapshotProject` referenciava `VideoExportQuality`, que não entra na compilação isolada de `test_frame_snapshot_project_266` (kotlinc no CI): "unresolved reference 'VideoExportQuality'". `snapshotTier` agora vive em `FrameSnapshotTiming`, sem dependências.

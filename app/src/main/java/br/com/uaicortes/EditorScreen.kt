@@ -500,8 +500,8 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
             Triple("Transição", Icons.Default.Transform, "transition"),
             Triple("Legendas", Icons.Default.ClosedCaption, "subtitles"),
             Triple("Áudio", Icons.Default.MusicNote, "audio"),
-            Triple("Marca d'água", Icons.Default.TextFields, "watermark"),
-            Triple("Vozes IA", Icons.Default.RecordVoiceOver, "voices")
+            Triple("Vozes IA", Icons.Default.RecordVoiceOver, "voices"),
+            Triple("Camadas", Icons.Default.Layers, "pip")
         ) }
         val toolsScroll = rememberLazyListState()
         LazyRow(state = toolsScroll, modifier = Modifier.fillMaxWidth().navigationBarsPadding()

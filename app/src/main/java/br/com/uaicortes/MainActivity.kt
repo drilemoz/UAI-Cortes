@@ -578,7 +578,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     autoPlayOnReturn = resumeVideoPreview,
                     onReturnPlaybackConsumed = { resumeVideoPreview = false }) }
                 } }
-                "watermark" -> project?.let { current -> TextWatermarkScreen(current, ::back) { changed ->
+                "watermark" -> project?.let { current -> TextWatermarkScreen(current, ::back, { LayersTabs("watermark") { screen = "pip" } }) { changed ->
                     if (write(changed)) screen = "editor"
                 } }
                 "trim" -> project?.let { TrimScreen(it, selectedClip, positionMs, ::back, { write(it) },
@@ -615,7 +615,7 @@ internal fun diagnosticPlayer(context: android.content.Context): ExoPlayer =
                     else VoiceIaFreeEntry(current,positionMs,::back,{selectedSubtitleId=null;navTo("subtitles")},{write(it)},{previous="voices";screen="gemini_settings"})
                 }
                 "pip" -> project?.let { current -> PipScreen(current, selectedOverlayId,
-                    onSelect = { selectedOverlayId = it }, back = ::back,
+                    onSelect = { selectedOverlayId = it }, back = ::back, tabs = { LayersTabs("pip") { screen = "watermark" } },
                     onChange = { changed ->
                         saveOverlays(current, current.overlays.map {
                             if (it.id == changed.id) changed else it

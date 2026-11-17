@@ -19,7 +19,7 @@ import androidx.media3.common.util.UnstableApi
 @OptIn(UnstableApi::class)
 @Composable
 internal fun TextWatermarkScreen(p: VideoProject, back: () -> Unit,
-    onApply: (VideoProject) -> Unit) {
+    tabs: @Composable () -> Unit = {}, onApply: (VideoProject) -> Unit) {
     val context = LocalContext.current
     val savedPresets = remember(context) { WatermarkDefaultsStore(context) }
     var draft by remember(p.id) { mutableStateOf(p.textWatermark ?: TextWatermark()) }
@@ -42,6 +42,7 @@ internal fun TextWatermarkScreen(p: VideoProject, back: () -> Unit,
         dismissButton = { TextButton(onClick = { removeConfirm = false }) { Text("Cancelar") } })
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Heading("Marca d'água em texto", back)
+        tabs()
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
             Text("Arraste a marca na prévia ou escolha uma posição. Nenhum arquivo original é alterado.",

@@ -1,3 +1,8 @@
+# v0.1.279 — Camadas
+
+- Base v0.1.278/versionCode 279; atual v0.1.279/versionCode 280. MainActivity está em 799 linhas (limite 800): edite linhas existentes em vez de adicionar.
+- Camadas = rota "pip" + `LayersTabs`; Marca d'água segue na rota "watermark". Próximo: Música (navegador MediaStore + pop-up de volume/aplicar a clipes).
+
 # v0.1.278 — correção de CI
 
 - Base v0.1.277/versionCode 278; atual v0.1.278/versionCode 279. `FrameSnapshotProject.kt` é compilado isoladamente no CI com FrameSnapshotTiming, FrameCapturePlan e stubs: não referenciar outras classes do app ali (use FrameSnapshotTiming ou adicione stubs ao teste 266).

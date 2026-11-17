@@ -30,7 +30,8 @@ import kotlinx.coroutines.delay
 @Composable
 internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -> Unit,
                       back: () -> Unit, onChange: (Overlay) -> Unit,
-                      onRemove: (String) -> Unit, choose: (Boolean) -> Unit) {
+                      onRemove: (String) -> Unit, choose: (Boolean) -> Unit,
+                      tabs: @Composable () -> Unit = {}) {
     val context = LocalContext.current
     val pip = p.overlays.firstOrNull { it.id == selectedId } ?: p.overlays.firstOrNull()
     val total = p.durationMs.coerceAtLeast(1L)
@@ -102,6 +103,7 @@ internal fun PipScreen(p: VideoProject, selectedId: String, onSelect: (String) -
     }
     Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
         Heading("Editar sobreposições", back)
+        tabs()
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())
             .padding(horizontal = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,

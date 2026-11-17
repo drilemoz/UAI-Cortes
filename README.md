@@ -1,4 +1,4 @@
-# Uai Cortes · v0.1.278 — correção do CI do print (snapshotTier)
+# Uai Cortes · v0.1.279 — Camadas (PiP e Marca d'água)
 
 - Publicar vídeo agora usa seleção -> confirmação única -> fila de envios YouTube -> relatório por destino, sem solicitar repetidamente os mesmos botões.
 - A tela informa estado de autorização, identidade do canal, percentual confirmado, velocidade e tempo restante estimado; relatório resumido é salvo de forma privada.

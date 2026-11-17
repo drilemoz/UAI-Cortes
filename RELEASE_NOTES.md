@@ -1,3 +1,8 @@
+# Uai Cortes · versão 0.1.279 — Camadas
+
+- Nova ferramenta Camadas na barra do editor, com abas PiP e Marca d'água.
+- Nada muda nos projetos salvos.
+
 # Uai Cortes · versão 0.1.278 — correção do CI do print
 
 - Corrige a falha de compilação do teste do quadro (resolução do print movida para FrameSnapshotTiming).

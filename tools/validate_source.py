@@ -481,7 +481,7 @@ assert 'val textWatermark: TextWatermark? = null' in model
 assert '.put("textWatermark", textWatermark?.json())' in model
 assert 'j.optJSONObject("textWatermark")?.let(TextWatermark::read)' in model
 assert '"watermark" -> project?.let' in ui and 'internal fun TextWatermarkScreen(' in ui
-assert "Triple(\"Marca d'água\", Icons.Default.TextFields, \"watermark\")" in ui
+assert 'Triple("Camadas", Icons.Default.Layers, "pip")' in ui and 'LayersTabs("watermark")' in ui
 assert 'p.textWatermark?.toSubtitle(p.durationMs)' in ui
 assert 'project.textWatermark?.toSubtitle(project.durationMs)' in source
 assert 'textLayers += TimedSubtitleOverlay(listOf(watermarkCue), globalStartMs)' in source

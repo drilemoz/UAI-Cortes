@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.278"
-    const val VERSION_CODE = 279
+    const val VERSION_NAME = "0.1.279"
+    const val VERSION_CODE = 280
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.279", listOf(
+            ReleaseFeature("layers-279", "Camadas: PiP e Marca d'água juntos",
+                "A barra do editor ganhou o atalho Camadas, com abas PiP e Marca d'água, no lugar do atalho solo de Marca d'água. PiP agora fica na barra, ao lado de Vozes IA.", "check")
+        )),
         ReleaseSummary("0.1.278", listOf(
             ReleaseFeature("ci-snapshot-tier-278", "Correção do CI do print do editor",
                 "A escolha da resolução do print composto foi movida para uma função sem dependências, para o teste isolado de FrameSnapshotProject compilar. Nenhuma mudança visível para o usuário.", "check")
