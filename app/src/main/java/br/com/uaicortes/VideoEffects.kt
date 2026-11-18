@@ -217,10 +217,13 @@ class ClipColorTransitionEffect(
             clipDurationMs, incomingKind, incomingMs, outgoingKind, outgoingMs)
 }
 
-/** Receives absolute cue times but Media3 calls with times relative to each source clip. */
+/**
+ * Cue and frame times are both on the exported project's timeline. Media3 already applies
+ * the accumulated media-item offset before invoking the effects, including per-clip effects.
+ */
 @UnstableApi
 class TimedSubtitleOverlay(
-    private val cues: List<SubtitleCue>, private val clipStartInProjectMs: Long
+    private val cues: List<SubtitleCue>
 ) : TextOverlay() {
     // Dimensões fornecidas pelo compositor para cada vídeo (inclusive mudanças de formato).
     private var videoWidth = 720
@@ -241,8 +244,9 @@ class TimedSubtitleOverlay(
      * quando excede o vídeo. Assim o MP4 corta a frase no meio.
      */
     override fun getBitmap(presentationTimeUs: Long): Bitmap {
-        val active = cue(presentationTimeUs)
-        val frame = active?.let { SubtitleAnimations.frame(it, clipStartInProjectMs + presentationTimeUs / 1000L) }
+        val timelineMs = presentationTimeUs / 1000L
+        val active = cueAt(timelineMs)
+        val frame = active?.let { SubtitleAnimations.frame(it, timelineMs) }
         if (!SubtitleOverlayTextSafety.isVisible(frame?.text.orEmpty())) return emptyBitmap
         // Inclui o estilo animado e a aparência na chave: evita reutilizar bitmap desatualizado.
         val contentKey = "${active?.hashCode()}:${frame?.text}:${frame?.highlighted}:" +
@@ -285,14 +289,12 @@ class TimedSubtitleOverlay(
         return target
     }
 
-    private fun cue(us: Long): SubtitleCue? {
-        val t = clipStartInProjectMs + us / 1000L
-        return SubtitlePreviewPolicy.firstAt(cues, t)
-    }
+    private fun cueAt(timelineMs: Long): SubtitleCue? = SubtitlePreviewPolicy.firstAt(cues, timelineMs)
+
     override fun getText(presentationTimeUs: Long): SpannableString {
-        val active = cue(presentationTimeUs)
-        val frame = active?.let { SubtitleAnimations.frame(it,
-            clipStartInProjectMs + presentationTimeUs / 1000L) }
+        val timelineMs = presentationTimeUs / 1000L
+        val active = cueAt(timelineMs)
+        val frame = active?.let { SubtitleAnimations.frame(it, timelineMs) }
         // Media3 TextOverlay.getBitmap mede o texto e cria Bitmap(width, height).
         // Retornar "" provoca width=0 entre legendas e no primeiro frame do typewriter.
         // O NBSP garante dimensões válidas; quando inativo, nunca desenhamos esse caractere.
@@ -373,9 +375,9 @@ class TimedSubtitleOverlay(
         return text
     }
     override fun getOverlaySettings(presentationTimeUs: Long): OverlaySettings {
-        val active = cue(presentationTimeUs)
-        val frame=active?.let { SubtitleAnimations.frame(it,
-            clipStartInProjectMs + presentationTimeUs/1000L) }
+        val timelineMs = presentationTimeUs / 1000L
+        val active = cueAt(timelineMs)
+        val frame = active?.let { SubtitleAnimations.frame(it, timelineMs) }
         val textWidth = if (active != null && SubtitleOverlayTextSafety.isVisible(frame?.text.orEmpty()))
             getBitmap(presentationTimeUs).width else 2
         val centerX = SubtitleExportSizing.centerX(active?.x ?: .5f, textWidth,

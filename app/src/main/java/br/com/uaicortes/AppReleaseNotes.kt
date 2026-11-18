@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.308"
-    const val VERSION_CODE = 309
+    const val VERSION_NAME = "0.1.309"
+    const val VERSION_CODE = 310
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.309", listOf(
+            ReleaseFeature("subtitle-export-clock-309", "Legendas no tempo certo no MP4",
+                "A exportação deixa de contar duas vezes a abertura e os clipes anteriores. Mantém o horário da frase e de cada palavra da timeline.", "check")
+        )),
         ReleaseSummary("0.1.308", listOf(
             ReleaseFeature("subtitle-timed-files-308", "SRT sem extensão dupla e TXT com horários",
                 "Os dois formatos carregam início e fim de cada fala. Exporte como documento ou salve SRT direto em Downloads.", "check"),

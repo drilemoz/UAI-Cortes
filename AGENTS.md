@@ -1,3 +1,9 @@
+# v0.1.309 — Sincronia das legendas no MP4
+
+- Base v0.1.308/versionCode 309, nova v0.1.309/versionCode 310. Preservar schema 4, assinatura e cinco variantes.
+- Media3 1.11.1 já entrega o timestamp de montagem aos efeitos de vídeo, inclusive por clipe. Não recompor o horário somando a duração dos clipes anteriores. Usar o mesmo timestamp de quadro para a frase, a palavra e a visibilidade. Manter a ordem de camadas, transformações, áudio e estilos.
+- Validar foto de 2 s seguida de vídeo aparado com AAC, com e sem PiP, e repetir a exportação no dispositivo. Não deslocar dados de legendas nem aplicar compensação fixa no projeto.
+
 # v0.1.308 — Exportação de legendas
 
 - Base v0.1.307/versionCode 308, nova v0.1.308/versionCode 309. Preservar schema 4, assinatura e variantes.

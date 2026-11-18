@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.309 — Sincronia no MP4
+
+- **Sincronia do MP4:** legendas, palavras animadas e marca de texto usam o horário do quadro já convertido pelo Media3. Não somar de novo a duração da abertura ou dos clipes anteriores.
+- Projetos, áudio, visual das legendas e arquivos SRT/TXT não são modificados.
+
+Validação em [docs/VALIDATION_0.1.309.md](docs/VALIDATION_0.1.309.md).
+
 # Uai Cortes · versão 0.1.308 — Exportação de legendas
 
 - **Legendas:** SRT usa o tipo SubRip no seletor Android e tem opção de salvamento direto em Downloads. TXT passa a incluir os mesmos horários.

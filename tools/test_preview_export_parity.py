@@ -13,12 +13,12 @@ assert 'val pipsTopFirst = ExportLayerOrder.media3TopFirst(' in e
 assert 'for (pip in pipsTopFirst)' in e and 'for (pip in compositorPips)' in e
 assert 'PipCompositor(compositorPips)' in e
 assert 'setEffects(Effects(emptyList(),' in e
-assert 'TimedSubtitleOverlay(project.subtitles, 0L)' in e
+assert 'outputLayers += TimedSubtitleOverlay(project.subtitles)' in e
 assert 'if (!postCompositionText)' in e
 assert 'fun <T> media3TopFirst(' in order and '.asReversed()' in order
 assert 'LiveSubtitleLayers(p.subtitles, subtitleClock, currentMs, captionPlaying)' in ui
 assert 'SubtitlePreviewPolicy.firstAt(cues, playbackMs)' in (r/'app/src/main/java/br/com/uaicortes/SubtitleLiveClock.kt').read_text()
-assert 'SubtitlePreviewPolicy.firstAt(cues, t)' in fx
+assert 'SubtitlePreviewPolicy.firstAt(cues, timelineMs)' in fx
 assert 'TransitionEffects.motionAt(local, clip.durationMs' in ui
 assert 'TransitionEffects.motionAt(presentationTimeUs / 1000L' in motion
 assert 'clipToBounds()' in ui

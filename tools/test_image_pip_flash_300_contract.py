@@ -11,7 +11,7 @@ assert engine.count("for (pip in compositorPips)") == 1
 assert "pipsTopFirst.drop(timedPhotosTopFirst.size)" in engine
 assert "JunctionVideoCompositor(compositorPips, joins)" in engine
 assert engine.index("outputLayers += timedPhotosTopFirst.asReversed()") < engine.index(
-    "outputLayers += TimedSubtitleOverlay(project.subtitles, 0L)")
+    "outputLayers += TimedSubtitleOverlay(project.subtitles)")
 assert "else transparent" in photo and "else hidden" in photo and "setAlphaScale(0f)" in photo
 assert "timeUs >= startUs && timeUs - startUs < pip.durationMs * 1_000L" in photo
 assert "OverlayEditorLogic.dimensions" in photo and "OverlayEditorLogic.clampCenter" in photo

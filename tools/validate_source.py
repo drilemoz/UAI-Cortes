@@ -486,7 +486,7 @@ assert '"watermark" -> project?.let' in ui and 'internal fun TextWatermarkScreen
 assert 'Triple("Camadas", Icons.Default.Layers, "pip")' in ui and 'LayersTabs("watermark")' in ui
 assert 'p.textWatermark?.toSubtitle(p.clips)' in ui
 assert 'project.textWatermark?.toSubtitle(project.clips)' in source
-assert 'textLayers += TimedSubtitleOverlay(listOf(watermarkCue), globalStartMs)' in source
+assert 'textLayers += TimedSubtitleOverlay(listOf(watermarkCue))' in source
 assert 'OverlayEffect(textLayers)' in source
 assert (root/'app/src/test/java/br/com/uaicortes/TextWatermarkTest.kt').exists()
 print('OK: v0.1.64 / versionCode 74, marca de texto em prévia/editor/MP4 e JSON legado')

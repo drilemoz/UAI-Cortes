@@ -22,7 +22,7 @@ assert 'setBackgroundFrameAnchor(x, 0f)' in render
 assert 'JunctionTransitionFrames.prepare(' in engine and 'withContext(Dispatchers.IO)' in engine
 assert 'pipsTopFirst.isNotEmpty() || joins.isNotEmpty()' in engine
 assert 'setVideoCompositorSettings(JunctionVideoCompositor(compositorPips, joins))' in engine
-assert 'TimedSubtitleOverlay(project.subtitles, 0L)' in engine
+assert 'outputLayers += TimedSubtitleOverlay(project.subtitles)' in engine
 assert engine.index('sequences += mainSequence') < engine.index('sequences += junctionVideoTrack(')
 assert engine.count('clearTransitionFrames()') >= 4
 assert 'val durationMs get() = clips.sumOf { it.durationMs }' in model

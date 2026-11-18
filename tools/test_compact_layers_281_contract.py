@@ -32,7 +32,7 @@ assert 'if (clip.id == target) return cueFor(offset, end)' in model
 assert 'takeIf { hasWatermark }' in read('FrameSnapshotProject.kt')
 exporter = read('ExportEngine.kt')
 assert 'val watermark = project.textWatermark?.toSubtitle(project.clips)' in exporter
-assert 'TimedSubtitleOverlay(listOf(watermarkCue), globalStartMs)' in exporter
-assert 'TimedSubtitleOverlay(listOf(watermarkCue), 0L)' in exporter
+assert 'textLayers += TimedSubtitleOverlay(listOf(watermarkCue))' in exporter
+assert 'outputLayers += TimedSubtitleOverlay(listOf(watermarkCue))' in exporter
 assert (root / 'app/src/androidTest/java/br/com/uaicortes/WatermarkTimingAndroidTest.kt').exists()
 print('OK: PiP compacto, paleta e fontes da marca, vínculo de clipe, prévia e exportação')

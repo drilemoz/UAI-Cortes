@@ -428,16 +428,17 @@ class ExportEngine(private val context: Context) {
                     videoEffects += ClipColorTransitionEffect(clip.durationMs,
                         entering, fadeIn, leaving, fadeOut)
             }
-            // Sem PiP mantém a estratégia antiga. Com PiP, o texto é aplicado
-            // DEPOIS da composição, para ficar sobre todas as janelas como na prévia.
+            // Sem PiP mantém o texto por clipe. Com PiP ou junção composta, o
+            // texto vai por cima da composição. Nos dois caminhos, Media3 já
+            // entrega o timestamp de montagem ao overlay, sem precisar de outro offset.
             if (!postCompositionText) {
                 val textLayers = mutableListOf<androidx.media3.effect.TextureOverlay>()
                 if (project.subtitles.isNotEmpty())
-                    textLayers += TimedSubtitleOverlay(project.subtitles, globalStartMs)
+                    textLayers += TimedSubtitleOverlay(project.subtitles)
                 watermark?.takeIf {
                     it.startMs < globalStartMs + clip.durationMs && it.endMs > globalStartMs
                 }?.let { watermarkCue ->
-                    textLayers += TimedSubtitleOverlay(listOf(watermarkCue), globalStartMs)
+                    textLayers += TimedSubtitleOverlay(listOf(watermarkCue))
                 }
                 if (textLayers.isNotEmpty()) videoEffects += OverlayEffect(textLayers)
             }
@@ -562,9 +563,9 @@ class ExportEngine(private val context: Context) {
                 // OverlayEffect draws last on top. Text remains above every PiP.
                 outputLayers += timedPhotosTopFirst.asReversed()
                 if (project.subtitles.isNotEmpty())
-                    outputLayers += TimedSubtitleOverlay(project.subtitles, 0L)
+                    outputLayers += TimedSubtitleOverlay(project.subtitles)
                 watermark?.let { watermarkCue ->
-                    outputLayers += TimedSubtitleOverlay(listOf(watermarkCue), 0L)
+                    outputLayers += TimedSubtitleOverlay(listOf(watermarkCue))
                 }
                 if (outputLayers.isNotEmpty()) setEffects(Effects(emptyList(),
                     listOf(OverlayEffect(outputLayers))))
