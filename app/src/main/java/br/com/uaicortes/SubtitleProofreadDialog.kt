@@ -1,5 +1,8 @@
 package br.com.uaicortes
 
+import android.content.ClipData
+import android.content.ClipboardManager
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -25,13 +28,19 @@ internal fun SubtitleProofreadDialog(cues: List<SubtitleCue>, total: Int,
     val hasKey = remember(credentials) { credentials.hasKey() }
     var running by remember { mutableStateOf(false) }
     var issue by remember { mutableStateOf<String?>(null) }
+    var failureHttp by remember { mutableStateOf<Int?>(null) }
+    var model by remember { mutableStateOf(SubtitleProofreadPolicy.Model.FLASH) }
+    var copied by remember { mutableStateOf(false) }
     var changes by remember { mutableStateOf<List<SubtitleProofreadPolicy.Change>?>(null) }
     var selected by remember { mutableStateOf(emptySet<String>()) }
     DisposableEffect(client) { onDispose { client.cancel() } }
 
-    fun request() {
+    fun request(using: SubtitleProofreadPolicy.Model) {
         if (running || !hasKey || cues.isEmpty()) return
         issue = null
+        failureHttp = null
+        copied = false
+        model = using
         running = true
         scope.launch {
             var phase = SubtitleCloudPhase.KEY
@@ -39,7 +48,7 @@ internal fun SubtitleProofreadDialog(cues: List<SubtitleCue>, total: Int,
                 val key = withContext(Dispatchers.IO) { credentials.read() } ?: error("Chave ausente")
                 phase = SubtitleCloudPhase.PROOFREAD
                 val answer = client.generateStudioJson(key, SubtitleProofreadPolicy.prompt(cues),
-                    SubtitleProofreadPolicy.MODEL, "subtitle_proofread")
+                    using.id, "subtitle_proofread")
                 val found = try { SubtitleProofreadPolicy.parse(cues, answer) }
                 catch (_: Exception) { throw SubtitleCloudException(
                     SubtitleCloudIssue(phase, SubtitleCloudReason.INVALID_RESULT)) }
@@ -50,6 +59,7 @@ internal fun SubtitleProofreadDialog(cues: List<SubtitleCue>, total: Int,
             } catch (failure: Exception) {
                 val info = SubtitleCloudIssue.from(phase, failure)
                 DiagnosticRecorder.subtitleCloudFailure("proofread", info)
+                failureHttp = info.http
                 issue = (info.http?.let { "HTTP $it · " }.orEmpty()) + info.message()
             } finally { running = false }
         }
@@ -93,11 +103,25 @@ internal fun SubtitleProofreadDialog(cues: List<SubtitleCue>, total: Int,
                 }
             }
             issue?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            if (!running && suggested == null && failureHttp == 503) {
+                Text("Modelo usado: Gemini ${model.label}. Nenhuma legenda foi alterada.",
+                    style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = { request(model.alternative) }, enabled = hasKey) {
+                    Text("Tentar com ${model.alternative.label}")
+                }
+            }
+            if (!running && suggested == null && issue != null && cues.isNotEmpty()) {
+                TextButton(onClick = {
+                    val clipboard = context.getSystemService(ClipboardManager::class.java)
+                    clipboard?.setPrimaryClip(ClipData.newPlainText("Legendas com horários", SubtitleFileExport.render(cues)))
+                    copied = clipboard != null
+                }) { Text(if (copied) "Copiado com horários" else "Copiar texto com horários") }
+            }
         } },
         confirmButton = {
             when {
-                changes == null -> TextButton(onClick = ::request, enabled = !running && hasKey && cues.isNotEmpty()) {
-                    Text("Revisar com Gemini")
+                changes == null -> TextButton(onClick = { request(model) }, enabled = !running && hasKey && cues.isNotEmpty()) {
+                    Text(if (issue == null) "Revisar com Gemini" else "Tentar novamente")
                 }
                 changes.orEmpty().isEmpty() -> TextButton(onClick = close) { Text("Entendi") }
                 else -> TextButton(onClick = {

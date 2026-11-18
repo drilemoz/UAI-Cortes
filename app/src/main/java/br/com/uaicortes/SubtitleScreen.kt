@@ -456,27 +456,42 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
     var deletedSnapshot by remember(p.id) { mutableStateOf<List<SubtitleCue>?>(null) }
     var helpPosition by remember(p.id) { mutableStateOf(false) }
     var exportMenu by remember(p.id) { mutableStateOf(false) }
-    var exportFormat by remember(p.id) { mutableStateOf(SubtitleFileExport.Format.SRT) }
+    var exportingSubtitles by remember(p.id) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val exporter = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
-        if (uri != null) scope.launch {
+    fun saveSubtitleFile(format: SubtitleFileExport.Format, uri: android.net.Uri? = null,
+        inDownloads: Boolean = false) {
+        if (exportingSubtitles || (uri == null && !inDownloads)) return
+        val snapshot = p.subtitles.toList()
+        exportingSubtitles = true
+        scope.launch {
             try {
-                val snapshot = p.subtitles.toList()
-                val selectedFormat = exportFormat
-                withContext(Dispatchers.IO) {
-                    val content = SubtitleFileExport.render(snapshot, selectedFormat)
-                    context.contentResolver.openOutputStream(uri, "wt")?.use { output ->
-                        output.write(content.toByteArray(Charsets.UTF_8))
-                        output.flush()
-                    } ?: throw java.io.IOException("Destino de exportação indisponível")
+                val actual = SubtitleDocumentWriter.save(context, snapshot, format, uri, inDownloads)
+                status = when {
+                    actual == null -> "Legendas com horários exportadas (${format.name})."
+                    !format.hasExpectedExtension(actual) ->
+                        "Salvo como $actual. O destino mudou a extensão, mas os horários continuam no arquivo. " +
+                            "Renomeie para .${format.extension}." +
+                            (if (SubtitleDocumentWriter.canSaveDownloads && format == SubtitleFileExport.Format.SRT)
+                                " Você também pode salvar o SRT direto em Downloads." else "")
+                    inDownloads -> "Salvo em Downloads/UaiCortes · $actual"
+                    else -> "Legendas com horários exportadas · $actual"
                 }
-                status = "${snapshot.size} legendas exportadas (${selectedFormat.name})"
-            } catch (e: Exception) {
-                DiagnosticRecorder.exception("subtitle_export", e)
-                status = "Falha ao exportar legendas: ${e.message?.take(100) ?: "erro de arquivo"}"
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                DiagnosticRecorder.action("subtitles", "subtitle_export_failed")
+                status = "Não foi possível exportar as legendas. Escolha outro destino."
+            } finally {
+                exportingSubtitles = false
             }
         }
     }
+    val srtExporter = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument(SubtitleFileExport.Format.SRT.mimeType)
+    ) { uri -> saveSubtitleFile(SubtitleFileExport.Format.SRT, uri) }
+    val txtExporter = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument(SubtitleFileExport.Format.TXT.mimeType)
+    ) { uri -> saveSubtitleFile(SubtitleFileExport.Format.TXT, uri) }
     // Deve preceder o callback do importador, que limpa a busca após importar SRT.
     var searchQuery by remember(p.id) { mutableStateOf("") }
     var pendingImport by remember(p.id) { mutableStateOf<List<SubtitleCue>?>(null) }
@@ -489,7 +504,7 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                     EditFeatures.parseSrt(content).filter { it.startMs < p.durationMs }
                         .map { it.copy(endMs = it.endMs.coerceAtMost(p.durationMs)) }
                 }
-                if (cues.isEmpty()) status = "Nenhuma legenda SRT válida no arquivo"
+                if (cues.isEmpty()) status = "Nenhuma legenda com horários encontrada. Use SRT ou TXT com horários."
                 else pendingImport = cues
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
                 throw cancelled
@@ -705,11 +720,11 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
         Surface(Modifier.fillMaxWidth(), shape = UaiShapes.card,
             color = MaterialTheme.colorScheme.surfaceContainerLow) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                SubtitleActionIcon(Icons.Default.FileOpen, "Importar SRT") {
+                SubtitleActionIcon(Icons.Default.FileOpen, "Importar SRT ou TXT com horários") {
                     importer.launch(arrayOf("text/*","application/x-subrip","*/*"))
                 }
                 SubtitleActionIcon(Icons.Default.FileUpload, "Exportar legendas",
-                    enabled = p.subtitles.isNotEmpty()) { exportMenu = true }
+                    enabled = p.subtitles.isNotEmpty() && !exportingSubtitles) { exportMenu = true }
                 SubtitleActionIcon(Icons.Default.Tune, "Editar todas",
                     enabled = p.subtitles.isNotEmpty()) { batchOpen = true; followPlayback = false }
                 SubtitleActionIcon(Icons.Default.Palette, "Estilos por personagem",
@@ -944,21 +959,24 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
         confirmButton={TextButton(onClick={helpPosition=false}) {Text("Entendi")}})
     if(exportMenu) AlertDialog(onDismissRequest={exportMenu=false},
         title={Text("Exportar legendas")},
-        text={Text("Escolha SRT (com horários) ou TXT (somente o texto). " +
-            "Animações e cores não são incluídas nesses formatos.")},
-        confirmButton={TextButton(onClick={
-            exportMenu=false
-            exportFormat=SubtitleFileExport.Format.SRT
-            exporter.launch("UaiCortes-legendas.srt")
-        }) { Text("SRT") }},
-        dismissButton={Row {
-            TextButton(onClick={
+        text={Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("SRT e TXT incluem início e fim de cada fala, com milissegundos. Os dois podem ser reimportados. Cores e animações não são incluídas.")
+            OutlinedButton(onClick={
                 exportMenu=false
-                exportFormat=SubtitleFileExport.Format.TXT
-                exporter.launch("UaiCortes-legendas.txt")
-            }) { Text("TXT") }
-            TextButton(onClick={exportMenu=false}) { Text("Cancelar") }
-        }})
+                srtExporter.launch(SubtitleFileExport.Format.SRT.fileName)
+            }, modifier=Modifier.fillMaxWidth()) { Text("SRT · Escolher destino") }
+            OutlinedButton(onClick={
+                exportMenu=false
+                txtExporter.launch(SubtitleFileExport.Format.TXT.fileName)
+            }, modifier=Modifier.fillMaxWidth()) { Text("TXT com horários · Escolher destino") }
+        }},
+        confirmButton={
+            if (SubtitleDocumentWriter.canSaveDownloads) TextButton(onClick={
+                exportMenu=false
+                saveSubtitleFile(SubtitleFileExport.Format.SRT, inDownloads = true)
+            }) { Text("SRT direto em Downloads") }
+        },
+        dismissButton={TextButton(onClick={exportMenu=false}) { Text("Fechar") }})
     if(deleteAllConfirm) AlertDialog(onDismissRequest={deleteAllConfirm=false},
         title={Text("Apagar todas as legendas?")},
         text={Text("${p.subtitles.size} legendas serão removidas do projeto. " +

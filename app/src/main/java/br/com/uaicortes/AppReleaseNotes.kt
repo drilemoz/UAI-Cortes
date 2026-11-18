@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.307"
-    const val VERSION_CODE = 308
+    const val VERSION_NAME = "0.1.308"
+    const val VERSION_CODE = 309
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.308", listOf(
+            ReleaseFeature("subtitle-timed-files-308", "SRT sem extensão dupla e TXT com horários",
+                "Os dois formatos carregam início e fim de cada fala. Exporte como documento ou salve SRT direto em Downloads.", "check"),
+            ReleaseFeature("subtitle-proofread-503-308", "Alternativa quando o Gemini responde 503",
+                "Escolha tentar outro modelo ou copiar o bloco com horários, sem envio automático.", "check")
+        )),
         ReleaseSummary("0.1.307", listOf(
             ReleaseFeature("subtitle-proofread-307", "Corrigir português em Legendas",
                 "Revise o antes e o depois com Gemini, sem enviar vídeo nem áudio. Aplique apenas as sugestões que escolher.", "check"),

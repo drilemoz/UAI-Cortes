@@ -10,7 +10,7 @@ v = read('VoiceIaScreen')
 center = read('GeminiVoiceCenterScreen')
 mix = read('GeneratedVoiceMix')
 assert 'itemsIndexed(filtered,key=' in s
-assert 'SubtitleCompactTimeline(sorted,' in s and 'SubtitleFileExport.render(snapshot, selectedFormat)' in s
+assert 'SubtitleCompactTimeline(sorted,' in s and 'SubtitleDocumentWriter.save(context, snapshot, format' in s
 assert 'val snapshot = p.subtitles.toList()' in s
 for label in ('Importar SRT', 'Exportar legendas', 'Editar todas', 'Estilos por personagem', 'Apagar todas'):
     assert any('SubtitleActionIcon' in line and label in line for line in s.splitlines()), label

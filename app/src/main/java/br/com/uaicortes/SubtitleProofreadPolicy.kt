@@ -6,7 +6,12 @@ import org.json.JSONObject
 internal object SubtitleProofreadPolicy {
     const val MAX_CUES = 48
     private const val MAX_TEXT = 9000
-    const val MODEL = "gemini-3.5-flash"
+    enum class Model(val id: String, val label: String) {
+        FLASH("gemini-3.5-flash", "Flash"),
+        LITE("gemini-3.5-flash-lite", "Flash-Lite");
+
+        val alternative get() = if (this == FLASH) LITE else FLASH
+    }
 
     data class Change(val before: SubtitleCue, val after: SubtitleCue)
 

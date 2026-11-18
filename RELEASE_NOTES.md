@@ -1,3 +1,8 @@
+# Uai Cortes · versão 0.1.308 — Exportação de legendas
+
+- **Legendas:** SRT usa o tipo SubRip no seletor Android e tem opção de salvamento direto em Downloads. TXT passa a incluir os mesmos horários.
+- **Revisar português:** após HTTP 503, oferece nova tentativa ou outro modelo mediante toque. Copiar as legendas com horários não usa a API.
+
 # Uai Cortes · versão 0.1.307 — Legendas, nitidez e prévias
 
 - **Legenda:** revisão de português com Gemini, diferenças selecionáveis e desfazer. Envia apenas texto, mantém os horários da fala e não altera nada sem confirmação.

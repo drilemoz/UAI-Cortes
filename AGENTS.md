@@ -1,3 +1,9 @@
+# v0.1.308 — Exportação de legendas
+
+- Base v0.1.307/versionCode 308, nova v0.1.308/versionCode 309. Preservar schema 4, assinatura e variantes.
+- SRT e TXT têm o mesmo conteúdo temporizado. MIME distinto no seletor. Não inferir o nome escolhido por provedores que não o informam. Em Downloads, publicar apenas arquivo gravado e com a extensão esperada.
+- Diante de 503, oferecer nova chamada apenas por escolha explícita. Não alternar modelo sozinho, não esconder o erro e não alterar as legendas sem confirmação.
+
 # v0.1.307 — Legendas, nitidez e prévias
 
 - Base v0.1.306/versionCode 307, nova v0.1.307/versionCode 308. Preservar schema 4, assinatura e cinco variantes.
