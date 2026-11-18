@@ -1,3 +1,8 @@
+# Uai Cortes · versão 0.1.302 — Consulta do Polly
+
+- **Polly:** teste de conexão usa apenas o filtro de idioma principal pt-BR, sem o parâmetro opcional de vozes bilíngues. Paginação mantém o token codificado.
+- Respostas de erro exibem apenas status, código reconhecido e orientação local, sem chaves, tokens ou texto bruto devolvido pela AWS.
+
 # Uai Cortes · versão 0.1.301 — Configuração do Polly
 
 - **Amazon Polly em português:** credenciais em um cartão, opções avançadas recolhíveis e testes logo abaixo das chaves.

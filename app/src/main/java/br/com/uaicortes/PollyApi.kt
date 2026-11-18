@@ -3,6 +3,7 @@ package br.com.uaicortes
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.IOException
+import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.charset.StandardCharsets
@@ -84,38 +85,43 @@ internal object PollyApi {
             }
         }
     }
-    private fun readLimited(conn: HttpURLConnection, max: Int): ByteArray {
-        return conn.inputStream.use { input ->
-            val output = ByteArrayOutputStream()
-            val buf = ByteArray(8192)
-            while (true) {
-                val n = input.read(buf)
-                if (n < 0) break
-                if (n + output.size() > max) throw IOException("Resposta do Polly excede o limite de segurança.")
-                output.write(buf, 0, n)
-            }
-            output.toByteArray()
+    private fun readLimited(stream: InputStream, max: Int): ByteArray = stream.use { input ->
+        val output = ByteArrayOutputStream()
+        val buf = ByteArray(8192)
+        while (true) {
+            val n = input.read(buf)
+            if (n < 0) break
+            if (n + output.size() > max) throw IOException("Resposta do Polly excede o limite de segurança.")
+            output.write(buf, 0, n)
         }
+        output.toByteArray()
     }
-    private fun checked(conn: HttpURLConnection, action: String): HttpURLConnection {
+
+    private fun checked(conn: HttpURLConnection, action: String) {
         val status = conn.responseCode
-        if (status !in 200..299) {
-            conn.disconnect()
-            throw IOException("$action: HTTP $status. Verifique chaves, região, permissões IAM e cotas AWS.")
-        }
-        return conn
+        if (status in 200..299) return
+        val type = conn.getHeaderField("x-amzn-errortype")
+        val body = runCatching {
+            conn.errorStream?.let { String(readLimited(it, 12_288), Charsets.UTF_8) }
+        }.getOrNull()
+        // The caller disconnects in finally; do not expose the provider's free-text message.
+        throw PollyResponseError.exception(action, status, type, body)
     }
+
+    /** A native pt-BR lookup only needs LanguageCode. The optional bilingual flag is omitted. */
+    internal fun voicesQuery(token: String?): String =
+        if (token.isNullOrEmpty()) "LanguageCode=pt-BR"
+        else "LanguageCode=pt-BR&NextToken=${PollySigV4.encode(token)}"
+
     suspend fun voices(credentials: PollyCredentials): List<PollyVoice> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         val voices = linkedMapOf<String, PollyVoice>()
         var token: String? = null
         repeat(8) {
-            val params = sortedMapOf("IncludeAdditionalLanguageCodes" to "yes", "LanguageCode" to "pt-BR")
-            if (!token.isNullOrBlank()) params["NextToken"] = token!!
-            val query = params.entries.joinToString("&") { "${PollySigV4.encode(it.key)}=${PollySigV4.encode(it.value)}" }
+            val query = voicesQuery(token)
             val conn = connection(credentials, "GET", "/v1/voices", query)
             val root = try {
                 checked(conn, "Consultar vozes")
-                JSONObject(String(readLimited(conn, RESPONSE_LIMIT), Charsets.UTF_8))
+                JSONObject(String(readLimited(conn.inputStream, RESPONSE_LIMIT), Charsets.UTF_8))
             } finally { conn.disconnect() }
             val list = root.optJSONArray("Voices")
             for (i in 0 until (list?.length() ?: 0)) {
@@ -127,7 +133,7 @@ internal object PollyApi {
                 if (id.matches(Regex("[A-Za-z0-9_-]{1,100}")) && engines.isNotEmpty())
                     voices[id] = PollyVoice(id, item.optString("Name", id), item.optString("LanguageCode"), engines)
             }
-            token = root.optString("NextToken").takeIf { it.isNotEmpty() }
+            token = (root.opt("NextToken") as? String)?.takeIf { it.isNotBlank() && it.length <= 4096 }
             if (token == null) return@withContext voices.values.sortedBy { it.name }
         }
         voices.values.sortedBy { it.name }
@@ -146,7 +152,7 @@ internal object PollyApi {
                 require(conn.contentType.orEmpty().startsWith("audio/mpeg")) { "Resposta sem áudio MP3." }
                 val header = conn.getHeaderField("x-amzn-RequestCharacters")
                 val chars = header?.toIntOrNull()?.takeIf { it in 1..5000 }
-                val audio = readLimited(conn, AUDIO_LIMIT)
+                val audio = readLimited(conn.inputStream, AUDIO_LIMIT)
                 require(audio.size > 64) { "Áudio vazio ou inválido." }
                 PollyAudio(audio, chars, engine, voice.id)
             } finally { conn.disconnect() }

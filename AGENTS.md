@@ -1,3 +1,9 @@
+# v0.1.302 — Consulta e erros do Polly
+
+- Base v0.1.301/versionCode 302, nova v0.1.302/versionCode 303. Preservar esquema, assinatura e cinco variantes.
+- DescribeVoices usa o filtro principal pt-BR, sem parâmetro para idiomas adicionais. Não repetir síntese automaticamente. Não atribuir HTTP 400 a uma credencial sem código conhecido.
+- Apenas código de erro permitido pode ser mostrado. Não salvar, mostrar, copiar nem transmitir em relatórios o corpo bruto do erro, assinatura, tokens ou segredos.
+
 # v0.1.301 — Configuração do Polly em português
 
 - Base v0.1.300/versionCode 301, nova v0.1.301/versionCode 302. Preservar schema 4, assinatura e cinco variantes.
