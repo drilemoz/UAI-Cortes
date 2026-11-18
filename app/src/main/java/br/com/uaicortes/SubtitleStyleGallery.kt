@@ -1,6 +1,7 @@
 package br.com.uaicortes
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,15 +16,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -90,55 +87,26 @@ internal fun SubtitleStyleGallery(current: SubtitleCue, onChange: (SubtitleCue) 
     }
 }
 
-/** Mostra o contorno sob o preenchimento, inclusive nas palavras coloridas. */
+/** O exemplo também usa a linha única da prévia de vídeo. */
 @Composable
 internal fun SubtitleStyledSample(cue: SubtitleCue, frame: SubtitleAnimations.Frame,
     compact: Boolean = false) {
-    // Não inventar texto quando o efeito (ex.: máquina de escrever) ainda está vazio.
     if (frame.text.isBlank()) return
-    val shown=frame.text
-    val badgeMode=cue.animation==SubtitleAnimations.KARAOKE_BADGE
-    var badgeLayout by remember(cue.id,shown) { mutableStateOf<TextLayoutResult?>(null) }
-    val colored=buildAnnotatedString {
-        append(shown)
-        SubtitleWordEffects.colors(cue.copy(text=shown,textCase="original"),shown,
-            if(badgeMode) null else frame.highlighted,
-            frame.highlightColorOverride ?: cue.highlightColor).forEach { span ->
-            addStyle(SpanStyle(color=Color(span.color)),span.range.first,span.range.last+1)
+    val renderer = remember { SubtitleSingleLineRenderer() }
+    val density = LocalDensity.current
+    BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        val frameWidth = constraints.maxWidth
+        if (constraints.hasBoundedWidth && frameWidth >= 16) {
+            val style = if (compact) cue.copy(sizeSp =
+                (16f * SubtitleFrameTypography.REFERENCE_WIDTH / maxWidth.value).toInt().coerceIn(12, 48)) else cue
+            val bitmap = renderer.render(style, frame, frameWidth)
+            if (bitmap != null) {
+                val image = remember(bitmap) { bitmap.asImageBitmap() }
+                Image(image, contentDescription = SubtitleSingleLinePolicy.display(frame.text),
+                    modifier = Modifier.size(with(density) { bitmap.width.toDp() },
+                        with(density) { bitmap.height.toDp() }), contentScale = ContentScale.Fit)
+            }
         }
-        frame.highlighted?.takeIf { it.first >= 0 && it.last < shown.length }?.let { selected ->
-            if(badgeMode) addStyle(SpanStyle(color=Color.White),selected.first,selected.last+1)
-            if (frame.boldActiveWord || frame.underlineActiveWord)
-                addStyle(SpanStyle(
-                    fontWeight=if(frame.boldActiveWord) FontWeight.Bold else null,
-                    textDecoration=if(frame.underlineActiveWord)
-                        androidx.compose.ui.text.style.TextDecoration.Underline else null
-                ),selected.first,selected.last+1)
-        }
-    }
-    val weight=if(cue.bold) FontWeight.Bold else FontWeight.Normal
-    val style=if(cue.italic) FontStyle.Italic else FontStyle.Normal
-    val fontSize=if(compact) 16.sp else cue.sizeSp.coerceIn(12,38).sp
-    Box(Modifier.background(Color(cue.backgroundColor),RoundedCornerShape(4.dp))
-        .padding(horizontal=if(compact) 4.dp else 7.dp,vertical=3.dp)
-        .subtitleKaraokeBadge(cue,frame,badgeLayout),
-        contentAlignment=Alignment.Center) {
-        if(cue.outlineWidth>0) {
-            Text(shown,color=Color(cue.outlineColor),fontSize=fontSize,
-                fontWeight=weight,fontStyle=style,fontFamily=subtitleFont(cue.fontFamily),
-                maxLines=3,textAlign=TextAlign.Center,
-                style=TextStyle(drawStyle=Stroke(width=(if(compact) cue.outlineWidth*.9f else cue.outlineWidth*2f),
-                    join=StrokeJoin.Round)))
-        }
-        Text(colored,color=Color(cue.color),fontSize=fontSize,fontWeight=weight,
-            fontStyle=style,fontFamily=subtitleFont(cue.fontFamily),maxLines=3,
-            textAlign=TextAlign.Center,onTextLayout={badgeLayout=it},
-            style=TextStyle(shadow=if(cue.shadowOffsetDp>0)
-                androidx.compose.ui.graphics.Shadow(
-                    color=Color(cue.shadowColor),
-                    offset=androidx.compose.ui.geometry.Offset(
-                        cue.shadowOffsetDp.toFloat(),cue.shadowOffsetDp.toFloat()),
-                    blurRadius=0f) else null))
     }
 }
 

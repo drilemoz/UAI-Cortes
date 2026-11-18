@@ -11,7 +11,7 @@ overlay = (source / "VideoEffects.kt").read_text(encoding="utf-8").split(
 # Nos dois caminhos, os cues mantêm tempos absolutos e nenhum offset entra no overlay.
 for layer in ("textLayers", "outputLayers"):
     assert f"{layer} += TimedSubtitleOverlay(project.subtitles)" in engine
-    assert f"{layer} += TimedSubtitleOverlay(listOf(watermarkCue))" in engine
+    assert f"{layer} += TimedSubtitleOverlay(listOf(watermarkCue), singleLine = false)" in engine
 assert "clipStartInProjectMs" not in overlay
 assert overlay.count("val timelineMs = presentationTimeUs / 1000L") == 3
 assert overlay.count("val active = cueAt(timelineMs)") == 3

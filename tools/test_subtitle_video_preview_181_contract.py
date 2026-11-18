@@ -12,7 +12,7 @@ assert 'SubtitlePositionPreview(p, selected,' in s
 assert 'initialPositionMs: Long = 0L' in s
 assert 'initialPositionMs = positionMs' in (r/'app/src/main/java/br/com/uaicortes/MainActivity.kt').read_text()
 assert 'LiveSubtitleLayers(p.subtitles, subtitleClock, cursorMs, captionPlaying' in s
-assert 'SubtitlePreviewPolicy.activeAt(cues, playbackMs)' in (r/'app/src/main/java/br/com/uaicortes/SubtitleLiveClock.kt').read_text()
+assert 'SubtitlePreviewPolicy.firstAt(cues, playbackMs)' in (r/'app/src/main/java/br/com/uaicortes/SubtitleLiveClock.kt').read_text()
 assert 'player.setMediaItems(p.clips.map(ClipMediaItems::playback))' in s
 assert 'cursorMs = cursorMs, seekGeneration = seekGeneration' in s
 assert 'onCursorChange = { cursorMs =' in s

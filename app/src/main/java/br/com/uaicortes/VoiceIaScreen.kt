@@ -1765,8 +1765,8 @@ private fun VoiceIaVideoPreview(p: VideoProject, cue: SubtitleCue,
             AndroidView(factory = { ctx -> previewPlayer(ctx).apply {
                 this.player = player; useController = false
             } }, update = { it.player = player }, modifier = Modifier.fillMaxSize())
-            val visible = if (playing) SubtitlePreviewPolicy.activeAt(p.subtitles, playbackMs) else listOf(cue)
-            visible.forEach { selected ->
+            val visible = if (playing) SubtitlePreviewPolicy.firstAt(p.subtitles, playbackMs) else cue
+            visible?.let { selected ->
                 key(selected.id) { SubtitleOverlayOnFrame(selected, editable = false, playbackMs = playbackMs) }
             }
         }

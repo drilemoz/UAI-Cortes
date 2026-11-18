@@ -195,8 +195,6 @@ internal fun SubtitleVisualControls(draft: SubtitleCue, onChange: (SubtitleCue)-
                 if(draft.shadowOffsetDp>0) SubtitleTwoColumnChoices(listOf("Preta","Branca"),
                     selected={ it=="Branca" && draft.shadowColor==-1 || it=="Preta" && draft.shadowColor!=-1 },
                     choose={onChange(draft.copy(shadowColor=if(it=="Branca") -1 else 0xFF000000.toInt()))})
-                SubtitleValueSlider("Espaçamento", "${draft.lineSpacingPercent}%",draft.lineSpacingPercent.toFloat(),100f..160f,
-                    5,onChange={onChange(draft.copy(lineSpacingPercent=it.toInt()))})
             }
         } else {
             Text("Movimentos suaves e legíveis",fontWeight=FontWeight.SemiBold)

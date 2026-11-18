@@ -1,3 +1,9 @@
+# v0.1.310 — Legendas em uma linha
+
+- Base v0.1.309/versionCode 310, nova v0.1.310/versionCode 311. Preservar schema 4, assinatura e cinco variantes.
+- Prévia, galeria e MP4 usam o mesmo rasterizador de uma linha. Substituir quebras só no desenho, sem mudar índices de palavra, texto salvo, horários e arquivos SRT/TXT. Preservar relógio da 0.1.309 e a marca de texto legada.
+- O diálogo de formatos mantém SRT e TXT reimportáveis e SRT em Downloads. Revisão permanece explícita, sem nova política de troca de modelo nesta etapa.
+
 # v0.1.309 — Sincronia das legendas no MP4
 
 - Base v0.1.308/versionCode 309, nova v0.1.309/versionCode 310. Preservar schema 4, assinatura e cinco variantes.

@@ -137,7 +137,7 @@ internal fun TextWatermarkScreen(p: VideoProject, back: () -> Unit, atMs: Long,
             if (guides) Box(Modifier.fillMaxSize().padding(12.dp)
                 .border(1.dp, Color.White.copy(alpha = .70f), RoundedCornerShape(5.dp)))
             cue?.takeIf { frameMs >= it.startMs && frameMs < it.endMs }?.let { watermark ->
-                SubtitleOverlayOnFrame(watermark, editable = true, playbackMs = frameMs,
+                TextWatermarkOverlayOnFrame(watermark, editable = true, playbackMs = frameMs,
                     onPositionCommit = { x, y -> draft = draft.copy(x = x, y = y) })
             }
         }

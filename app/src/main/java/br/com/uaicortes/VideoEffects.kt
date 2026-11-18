@@ -223,30 +223,33 @@ class ClipColorTransitionEffect(
  */
 @UnstableApi
 class TimedSubtitleOverlay(
-    private val cues: List<SubtitleCue>
+    private val cues: List<SubtitleCue>,
+    private val singleLine: Boolean = true
 ) : TextOverlay() {
     // Dimensões fornecidas pelo compositor para cada vídeo (inclusive mudanças de formato).
     private var videoWidth = 720
+    private var videoHeight = 1280
+    private val singleLineRenderer = SubtitleSingleLineRenderer()
     private var cachedBitmap: Bitmap? = null
     private var cachedKey: String? = null
     private val emptyBitmap: Bitmap = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888)
 
     override fun configure(videoSize: Size) {
         super.configure(videoSize)
+        videoHeight = videoSize.height.coerceAtLeast(1)
         if (videoWidth != videoSize.width) {
             videoWidth = SubtitleExportSizing.safeFrameWidth(videoSize.width)
             cachedKey = null
         }
     }
 
-    /** Layout limitado ao quadro com quebra automática em palavras e margem lateral.
-     * TextOverlay padrão cria StaticLayout com a largura TOTAL da string, mesmo
-     * quando excede o vídeo. Assim o MP4 corta a frase no meio.
-     */
+    /** Legendas reais e prévia compartilham o bitmap. A marca de texto mantém seu layout antigo. */
     override fun getBitmap(presentationTimeUs: Long): Bitmap {
         val timelineMs = presentationTimeUs / 1000L
         val active = cueAt(timelineMs)
         val frame = active?.let { SubtitleAnimations.frame(it, timelineMs) }
+        if (singleLine) return if (active != null && frame != null)
+            singleLineRenderer.render(active, frame, videoWidth) ?: emptyBitmap else emptyBitmap
         if (!SubtitleOverlayTextSafety.isVisible(frame?.text.orEmpty())) return emptyBitmap
         // Inclui o estilo animado e a aparência na chave: evita reutilizar bitmap desatualizado.
         val contentKey = "${active?.hashCode()}:${frame?.text}:${frame?.highlighted}:" +
@@ -298,7 +301,8 @@ class TimedSubtitleOverlay(
         // Media3 TextOverlay.getBitmap mede o texto e cria Bitmap(width, height).
         // Retornar "" provoca width=0 entre legendas e no primeiro frame do typewriter.
         // O NBSP garante dimensões válidas; quando inativo, nunca desenhamos esse caractere.
-        val rendered = frame?.text.orEmpty()
+        val raw = frame?.text.orEmpty()
+        val rendered = if (singleLine) SubtitleSingleLinePolicy.display(raw) else raw
         val text = SpannableString(SubtitleOverlayTextSafety.bitmapSafeText(rendered))
         if (!SubtitleOverlayTextSafety.isVisible(rendered)) {
             text.setSpan(ForegroundColorSpan(Color.TRANSPARENT), 0, text.length, 0)
@@ -378,6 +382,20 @@ class TimedSubtitleOverlay(
         val timelineMs = presentationTimeUs / 1000L
         val active = cueAt(timelineMs)
         val frame = active?.let { SubtitleAnimations.frame(it, timelineMs) }
+        if (singleLine) {
+            val bitmap = if (active != null && frame != null)
+                singleLineRenderer.render(active, frame, videoWidth) else null
+            if (active == null || frame == null || bitmap == null)
+                return StaticOverlaySettings.Builder().setAlphaScale(0f).build()
+            val position = SubtitleSingleLinePolicy.place(active.x, active.y, frame.slideX, frame.slideY,
+                frame.scale, bitmap.width, bitmap.height, videoWidth, videoHeight)
+            return StaticOverlaySettings.Builder()
+                .setBackgroundFrameAnchor(position.centerX * 2f - 1f, 1f - position.bottomY * 2f)
+                .setOverlayFrameAnchor(0f, -1f)
+                .setScale(position.scale, position.scale)
+                .setAlphaScale(frame.alpha.coerceIn(0f, 1f))
+                .build()
+        }
         val textWidth = if (active != null && SubtitleOverlayTextSafety.isVisible(frame?.text.orEmpty()))
             getBitmap(presentationTimeUs).width else 2
         val centerX = SubtitleExportSizing.centerX(active?.x ?: .5f, textWidth,

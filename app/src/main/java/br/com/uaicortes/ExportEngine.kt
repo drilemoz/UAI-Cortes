@@ -438,7 +438,7 @@ class ExportEngine(private val context: Context) {
                 watermark?.takeIf {
                     it.startMs < globalStartMs + clip.durationMs && it.endMs > globalStartMs
                 }?.let { watermarkCue ->
-                    textLayers += TimedSubtitleOverlay(listOf(watermarkCue))
+                    textLayers += TimedSubtitleOverlay(listOf(watermarkCue), singleLine = false)
                 }
                 if (textLayers.isNotEmpty()) videoEffects += OverlayEffect(textLayers)
             }
@@ -565,7 +565,7 @@ class ExportEngine(private val context: Context) {
                 if (project.subtitles.isNotEmpty())
                     outputLayers += TimedSubtitleOverlay(project.subtitles)
                 watermark?.let { watermarkCue ->
-                    outputLayers += TimedSubtitleOverlay(listOf(watermarkCue))
+                    outputLayers += TimedSubtitleOverlay(listOf(watermarkCue), singleLine = false)
                 }
                 if (outputLayers.isNotEmpty()) setEffects(Effects(emptyList(),
                     listOf(OverlayEffect(outputLayers))))

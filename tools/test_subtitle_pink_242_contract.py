@@ -20,7 +20,8 @@ assert 'if(badgeMode) null else frame.highlighted' in v
 assert 'SubtitleAnimations.frame(it,' in v
 assert 'drawRoundRect' in bridge and 'getBoundingBox' in bridge
 assert '.subtitleKaraokeBadge(cue,animationFrame,badgeLayout)' in preview
-assert '.subtitleKaraokeBadge(cue,frame,badgeLayout)' in style
+assert 'SubtitleSingleLineRenderer()' in style
+assert 'outline.getSelectionPath(' in read('SubtitleSingleLineRenderer.kt')
 assert 'SubtitleAppearanceMode.KARAOKE_ROSA' in ui
 assert 'SubtitleAppearanceMode.KARAOKE_ROSA' in preview
 assert 'subtitleKaraokeBadge' not in read('SubtitleStyles.kt') # salvo somente efeito, dados legados intactos

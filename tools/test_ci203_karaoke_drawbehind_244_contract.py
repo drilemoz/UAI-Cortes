@@ -9,5 +9,5 @@ assert 'import androidx.compose.foundation.drawBehind' not in src, 'import invá
 assert 'return drawBehind {' in src and 'drawRoundRect(' in src
 preview = (root / 'app/src/main/java/br/com/uaicortes/SubtitleScreen.kt').read_text(encoding='utf-8')
 gallery = (root / 'app/src/main/java/br/com/uaicortes/SubtitleStyleGallery.kt').read_text(encoding='utf-8')
-assert '.subtitleKaraokeBadge(' in preview and '.subtitleKaraokeBadge(' in gallery
+assert '.subtitleKaraokeBadge(' in preview and 'SubtitleSingleLineRenderer()' in gallery
 print('OK: CI 203 — import Compose UI correto e tarja rosa integrada em prévia/galeria')

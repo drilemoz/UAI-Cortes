@@ -193,7 +193,9 @@ assert '.put("fontFamily", fontFamily)' in model and '.put("outlineColor", outli
 assert 'SubtitleStyles.normalizeFont(j.optString(' in model
 assert 'j.optInt("outlineWidth", 0).coerceIn(0, 4)' in model
 assert 'SubtitleStyles.fonts.map' in ui and 'SubtitleValueSlider("Contorno"' in ui
-assert 'subtitleFont(cue.fontFamily)' in ui and 'drawStyle=Stroke(' in ui
+single_line=(root/'app/src/main/java/br/com/uaicortes/SubtitleSingleLineRenderer.kt').read_text()
+assert 'SubtitleStyles.androidFamily(cue.fontFamily)' in single_line and 'Paint.Style.STROKE' in single_line
+assert 'drawStyle=Stroke(' in ui
 assert 'TypefaceSpan(family)' in fx and 'SubtitleOutlineSpan(' in fx
 assert 'fontFamily = source.fontFamily' in styles and 'outlineWidth = source.outlineWidth' in styles
 assert (root/'app/src/test/java/br/com/uaicortes/SubtitleTypographyTest.kt').exists()
@@ -208,7 +210,7 @@ assert 'SubtitleStyles.normalizeAlignment(j.optString(' in model
 assert 'j.optInt("shadowOffsetDp", 0).coerceIn(0, 6)' in model
 assert 'SubtitleStyles.normalizeLineSpacing(j.optInt(' in model
 assert all(x in ui for x in [
-    'SubtitleValueSlider("Sombra"', 'SubtitleValueSlider("Espaçamento"',
+    'SubtitleValueSlider("Sombra"',
     'SubtitleStyles.alignments.map', 'Shadow(', 'lineHeight=textLineHeight',
     'textAlign=alignment'
 ])
@@ -486,7 +488,7 @@ assert '"watermark" -> project?.let' in ui and 'internal fun TextWatermarkScreen
 assert 'Triple("Camadas", Icons.Default.Layers, "pip")' in ui and 'LayersTabs("watermark")' in ui
 assert 'p.textWatermark?.toSubtitle(p.clips)' in ui
 assert 'project.textWatermark?.toSubtitle(project.clips)' in source
-assert 'textLayers += TimedSubtitleOverlay(listOf(watermarkCue))' in source
+assert 'textLayers += TimedSubtitleOverlay(listOf(watermarkCue), singleLine = false)' in source
 assert 'OverlayEffect(textLayers)' in source
 assert (root/'app/src/test/java/br/com/uaicortes/TextWatermarkTest.kt').exists()
 print('OK: v0.1.64 / versionCode 74, marca de texto em prévia/editor/MP4 e JSON legado')
@@ -1092,7 +1094,7 @@ assert 'projectPosition(player,p.clips,p.durationMs)>=cue.endMs' not in subtitle
 assert 'if (player.playbackState == Player.STATE_ENDED)' in subtitle
 assert 'LiveSubtitleLayers(p.subtitles, subtitleClock, cursorMs, captionPlaying' in subtitle
 live_layers = (root/'app/src/main/java/br/com/uaicortes/SubtitleLiveClock.kt').read_text()
-assert 'visible.forEach' in live_layers and 'key(cue.id)' in live_layers
+assert 'SubtitlePreviewPolicy.firstAt(cues, playbackMs)' in live_layers and 'key(cue.id)' in live_layers
 assert 'if (playing) clock.value else fallbackMs' in live_layers
 assert 'seekProjectPosition(player, p.clips, 0L)' in subtitle
 assert 'AudioQuickAction("Extrair"' not in audio

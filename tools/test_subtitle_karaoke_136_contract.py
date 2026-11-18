@@ -7,6 +7,7 @@ a=(s/'SubtitleAnimations.kt').read_text()
 w=(s/'SubtitleWordEffects.kt').read_text()
 ui=(s/'SubtitleScreen.kt').read_text()
 g=(s/'SubtitleStyleGallery.kt').read_text()
+raster=(s/'SubtitleSingleLineRenderer.kt').read_text()
 v=(s/'VideoEffects.kt').read_text()
 style=(s/'SubtitleStyles.kt').read_text()
 for name in ('KARAOKE_PULSE','KARAOKE_BOLD','KARAOKE_UNDERLINE'):
@@ -18,7 +19,8 @@ assert 'frame.underlineActiveWord' in v and 'animationFrame.underlineActiveWord'
 assert 'frame.boldActiveWord' in v and 'animationFrame.boldActiveWord' in ui
 assert 'UnderlineSpan()' in v
 assert 'active?.hashCode()' in v and 'frame?.highlightColorOverride' in v
-assert 'frame.underlineActiveWord' in g and 'frame.boldActiveWord' in g
+assert 'SubtitleSingleLineRenderer()' in g
+assert 'frame.underlineActiveWord' in raster and 'frame.boldActiveWord' in raster
 assert 'SubtitleAnimations.isKaraoke' in (s/'SubtitleVisualEditor.kt').read_text()
 assert 'SubtitleAnimations.isKaraoke(cue.animation)' in (s/'SubtitleWordTimingEditor.kt').read_text()
 from check_version_sync import check

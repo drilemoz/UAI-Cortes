@@ -1,3 +1,10 @@
+# Uai Cortes · versão 0.1.310 — Legendas em uma linha
+
+- **Uma linha:** a prévia, a galeria e o MP4 usam o mesmo desenho para cada legenda. Frases longas encolhem sem virar duas linhas. Em horários sobrepostos, só uma legenda aparece.
+- **Diálogos:** SRT e TXT lado a lado. Revisão de português mostra as ações principais e os erros com mais clareza, sem alterar as opções do Gemini.
+
+Validação em [docs/VALIDATION_0.1.310.md](docs/VALIDATION_0.1.310.md).
+
 # Uai Cortes · versão 0.1.309 — Sincronia no MP4
 
 - **Sincronia do MP4:** legendas, palavras animadas e marca de texto usam o horário do quadro já convertido pelo Media3. Não somar de novo a duração da abertura ou dos clipes anteriores.

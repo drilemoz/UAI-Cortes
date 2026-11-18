@@ -332,7 +332,7 @@ internal fun EditorScreen(p:VideoProject, selectedId:String, currentMs:Long,
                 LiveSubtitleLayers(p.subtitles, subtitleClock, currentMs, captionPlaying)
                 watermarkCue
                     ?.takeIf { currentMs >= it.startMs && currentMs < it.endMs }?.let { watermark ->
-                    SubtitleOverlayOnFrame(watermark, editable = false, playbackMs=currentMs)
+                    TextWatermarkOverlayOnFrame(watermark, editable = false, playbackMs=currentMs)
                 }
             }
         }

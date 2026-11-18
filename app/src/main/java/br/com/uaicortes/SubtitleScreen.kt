@@ -112,7 +112,7 @@ internal fun previewSubtitleScale(cue: SubtitleCue, widthPx: Int, textSizePx: Fl
 /** A mesma coordenada x/y usada pelo exportador Media3: centro na horizontal,
  * base do texto na vertical. Nunca usar deslocamento fixo em dp para a legenda. */
 @Composable
-internal fun SubtitleOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
+internal fun TextWatermarkOverlayOnFrame(cue: SubtitleCue, editable: Boolean,
     playbackMs: Long = cue.startMs, onPositionCommit: (Float,Float)->Unit = { _,_ -> }) {
     val animationFrame=SubtitleAnimations.frame(cue,playbackMs)
     var frameSize by remember { mutableStateOf(IntSize.Zero) }
@@ -311,7 +311,7 @@ internal fun SubtitlePositionPreview(p: VideoProject, cue: SubtitleCue?,
                         translationY = (imageTransform?.offsetY ?: 0f) * size.height / 2f
                     })
                 LiveSubtitleLayers(p.subtitles, subtitleClock, cursorMs, captionPlaying,
-                    selectedId = cue?.id?.takeUnless { playing }, showAll = true,
+                    selectedId = cue?.id?.takeUnless { playing },
                     onPositionCommit = onPositionCommit)
             } else Text("Adicione um vídeo ou uma imagem ao projeto",
                 color = Color.White, fontSize = 12.sp,
@@ -957,26 +957,20 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
             "diretamente sobre a prévia para mudar sua posição. " +
             "Use Editar todas para aplicar a mesma posição às demais.")},
         confirmButton={TextButton(onClick={helpPosition=false}) {Text("Entendi")}})
-    if(exportMenu) AlertDialog(onDismissRequest={exportMenu=false},
-        title={Text("Exportar legendas")},
-        text={Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("SRT e TXT incluem início e fim de cada fala, com milissegundos. Os dois podem ser reimportados. Cores e animações não são incluídas.")
-            OutlinedButton(onClick={
-                exportMenu=false
-                srtExporter.launch(SubtitleFileExport.Format.SRT.fileName)
-            }, modifier=Modifier.fillMaxWidth()) { Text("SRT · Escolher destino") }
-            OutlinedButton(onClick={
-                exportMenu=false
-                txtExporter.launch(SubtitleFileExport.Format.TXT.fileName)
-            }, modifier=Modifier.fillMaxWidth()) { Text("TXT com horários · Escolher destino") }
-        }},
-        confirmButton={
-            if (SubtitleDocumentWriter.canSaveDownloads) TextButton(onClick={
-                exportMenu=false
-                saveSubtitleFile(SubtitleFileExport.Format.SRT, inDownloads = true)
-            }) { Text("SRT direto em Downloads") }
+    if (exportMenu) SubtitleExportDialog(
+        onClose = { exportMenu = false },
+        canSaveDownloads = SubtitleDocumentWriter.canSaveDownloads,
+        onChooseDestination = { format ->
+            exportMenu = false
+            when (format) {
+                SubtitleFileExport.Format.SRT -> srtExporter.launch(format.fileName)
+                SubtitleFileExport.Format.TXT -> txtExporter.launch(format.fileName)
+            }
         },
-        dismissButton={TextButton(onClick={exportMenu=false}) { Text("Fechar") }})
+        onSaveSrtToDownloads = {
+            exportMenu = false
+            saveSubtitleFile(SubtitleFileExport.Format.SRT, inDownloads = true)
+        })
     if(deleteAllConfirm) AlertDialog(onDismissRequest={deleteAllConfirm=false},
         title={Text("Apagar todas as legendas?")},
         text={Text("${p.subtitles.size} legendas serão removidas do projeto. " +

@@ -34,11 +34,9 @@ internal fun rememberSubtitleLiveClock(player: Player, clips: List<Clip>, totalM
 @Composable
 internal fun LiveSubtitleLayers(cues: List<SubtitleCue>, clock: State<Long>,
     fallbackMs: Long, playing: Boolean, selectedId: String? = null,
-    showAll: Boolean = false, onPositionCommit: (Float, Float) -> Unit = { _, _ -> }) {
+    onPositionCommit: (Float, Float) -> Unit = { _, _ -> }) {
     val playbackMs = if (playing) clock.value else fallbackMs
-    val visible = if (showAll) SubtitlePreviewPolicy.activeAt(cues, playbackMs)
-        else listOfNotNull(SubtitlePreviewPolicy.firstAt(cues, playbackMs))
-    visible.forEach { cue ->
+    SubtitlePreviewPolicy.firstAt(cues, playbackMs)?.let { cue ->
         key(cue.id) {
             SubtitleOverlayOnFrame(cue, editable = !playing && cue.id == selectedId,
                 playbackMs = playbackMs, onPositionCommit = onPositionCommit)

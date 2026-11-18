@@ -6,6 +6,8 @@ import android.content.ClipboardManager
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,6 +33,7 @@ internal fun SubtitleProofreadDialog(cues: List<SubtitleCue>, total: Int,
     var failureHttp by remember { mutableStateOf<Int?>(null) }
     var model by remember { mutableStateOf(SubtitleProofreadPolicy.Model.FLASH) }
     var copied by remember { mutableStateOf(false) }
+    var help by remember { mutableStateOf(false) }
     var changes by remember { mutableStateOf<List<SubtitleProofreadPolicy.Change>?>(null) }
     var selected by remember { mutableStateOf(emptySet<String>()) }
     DisposableEffect(client) { onDispose { client.cancel() } }
@@ -65,17 +68,25 @@ internal fun SubtitleProofreadDialog(cues: List<SubtitleCue>, total: Int,
         }
     }
     AlertDialog(onDismissRequest = close, shape = UaiShapes.dialog,
-        title = { Text("Corrigir português") },
+        title = {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Corrigir português", Modifier.weight(1f))
+                IconButton(onClick = { help = !help }) { Icon(Icons.Default.Info, "Sobre a revisão") }
+            }
+        },
         text = { Column(Modifier.heightIn(max = 430.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(9.dp)) {
             val suggested = changes
+            if (help) Text("O Gemini não recebe vídeo nem áudio. Você confere as sugestões antes de aplicar. " +
+                "Os horários de início e fim das legendas são mantidos.",
+                style = MaterialTheme.typography.bodySmall)
             when {
                 running -> {
                     LinearProgressIndicator(Modifier.fillMaxWidth())
                     Text("Revisando o texto das legendas…")
                 }
                 suggested == null -> {
-                    Text("Envia somente o texto de ${cues.size} legenda(s) ao Gemini. Não envia o áudio nem o vídeo. Pode consumir cota.")
+                    Text("Só o texto de ${cues.size} legenda(s) vai ao Gemini. Pode consumir cota.")
                     if (cues.size < total) Text("Revise este bloco e selecione outra legenda para continuar.",
                         style = MaterialTheme.typography.bodySmall)
                     if (!hasKey) Text("Configure a chave Gemini em Integrações e APIs.",
@@ -102,33 +113,47 @@ internal fun SubtitleProofreadDialog(cues: List<SubtitleCue>, total: Int,
                     }
                 }
             }
-            issue?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            issue?.let { message ->
+                Surface(shape = UaiShapes.dialog, color = MaterialTheme.colorScheme.errorContainer) {
+                    Column(Modifier.fillMaxWidth().padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(message, color = MaterialTheme.colorScheme.onErrorContainer)
+                        if (suggested == null) Text("Gemini ${model.label} · Nenhuma legenda foi alterada.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer)
+                    }
+                }
+            }
             if (!running && suggested == null && failureHttp == 503) {
-                Text("Modelo usado: Gemini ${model.label}. Nenhuma legenda foi alterada.",
-                    style = MaterialTheme.typography.bodySmall)
-                TextButton(onClick = { request(model.alternative) }, enabled = hasKey) {
+                OutlinedButton(onClick = { request(model.alternative) }, enabled = hasKey,
+                    modifier = Modifier.fillMaxWidth()) {
                     Text("Tentar com ${model.alternative.label}")
                 }
             }
             if (!running && suggested == null && issue != null && cues.isNotEmpty()) {
-                TextButton(onClick = {
+                OutlinedButton(onClick = {
                     val clipboard = context.getSystemService(ClipboardManager::class.java)
                     clipboard?.setPrimaryClip(ClipData.newPlainText("Legendas com horários", SubtitleFileExport.render(cues)))
                     copied = clipboard != null
-                }) { Text(if (copied) "Copiado com horários" else "Copiar texto com horários") }
+                }, modifier = Modifier.fillMaxWidth()) {
+                    Text(if (copied) "Copiado com horários" else "Copiar texto com horários")
+                }
             }
         } },
         confirmButton = {
             when {
-                changes == null -> TextButton(onClick = { request(model) }, enabled = !running && hasKey && cues.isNotEmpty()) {
+                changes == null -> Button(onClick = { request(model) }, enabled = !running && hasKey && cues.isNotEmpty()) {
                     Text(if (issue == null) "Revisar com Gemini" else "Tentar novamente")
                 }
-                changes.orEmpty().isEmpty() -> TextButton(onClick = close) { Text("Entendi") }
-                else -> TextButton(onClick = {
+                changes.orEmpty().isEmpty() -> Button(onClick = close) { Text("Entendi") }
+                else -> Button(onClick = {
                     if (apply(changes.orEmpty().filter { it.before.id in selected })) close()
                     else issue = "Não há revisão aplicável. As legendas podem ter mudado; revise novamente."
                 }, enabled = selected.isNotEmpty()) { Text("Aplicar selecionadas") }
             }
         },
-        dismissButton = { TextButton(onClick = close) { Text(if (running) "Cancelar" else "Fechar") } })
+        dismissButton = {
+            if (changes?.isEmpty() != true)
+                OutlinedButton(onClick = close) { Text(if (running) "Cancelar" else "Fechar") }
+        })
 }

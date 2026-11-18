@@ -7,7 +7,7 @@ get=lambda name:(p/name).read_text()
 ui=get('TextWatermarkScreen.kt')
 style=get('WatermarkStylePanel.kt')
 mark=get('TextWatermark.kt')
-assert 'SubtitleOverlayOnFrame(watermark, editable = true' in ui
+assert 'TextWatermarkOverlayOnFrame(watermark, editable = true' in ui
 assert 'onPositionCommit = { x, y -> draft = draft.copy(x = x, y = y) }' in ui
 assert 'WatermarkStepSlider("Opacidade (%)"' in style
 assert 'WatermarkStepSlider("Tamanho"' in style

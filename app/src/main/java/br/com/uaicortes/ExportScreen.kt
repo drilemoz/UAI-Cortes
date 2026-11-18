@@ -367,12 +367,11 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                                 }
                             }
                         }
-                        p.subtitles.firstOrNull { cue ->
-                            exportPreviewMs>=cue.startMs && exportPreviewMs<cue.endMs && cue.text.isNotBlank()
-                        }?.let { cue -> SubtitleOverlayOnFrame(cue,editable=false,playbackMs=exportPreviewMs) }
+                        SubtitlePreviewPolicy.firstAt(p.subtitles, exportPreviewMs)
+                            ?.let { cue -> SubtitleOverlayOnFrame(cue,editable=false,playbackMs=exportPreviewMs) }
                         watermarkCue
                             ?.takeIf { exportPreviewMs >= it.startMs && exportPreviewMs < it.endMs }?.let { watermark ->
-                            SubtitleOverlayOnFrame(watermark,editable=false,playbackMs=exportPreviewMs)
+                            TextWatermarkOverlayOnFrame(watermark,editable=false,playbackMs=exportPreviewMs)
                         }
                         if(destination.isVertical && showFrameGuides) {
                             if(guideKind != "UI") {
