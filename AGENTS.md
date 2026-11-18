@@ -1,3 +1,9 @@
+# v0.1.300 — Fotos PiP sem troca de trilha no início
+
+- Base v0.1.299/versionCode 300, nova v0.1.300/versionCode 301. Preservar schema 4, assinatura e cinco variantes.
+- Renderizar as fotos consecutivas no topo da pilha como BitmapOverlay temporizado sobre a composição. Fora do intervalo, usar textura transparente e alfa zero. O restante fica no compositor existente para preservar a ordem entre fotos e vídeos.
+- Não alterar o projeto, adaptar o horário do logo, modificar áudio ou tentar corrigir a ordem de quadros dos clipes nesta revisão. Verificar regressão de dois quadros no Android antes de declarar confirmação no dispositivo.
+
 # v0.1.299 — Diagnóstico de engasgos da exportação
 
 - Base v0.1.298/versionCode 299, nova v0.1.299/versionCode 300. Preservar schema 4, assinatura e cinco variantes.

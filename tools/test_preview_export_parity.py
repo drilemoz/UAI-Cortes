@@ -10,8 +10,8 @@ motion=(b/'ClipMotionTransitionEffect.kt').read_text()
 order=(b/'ExportLayerOrder.kt').read_text()
 smoke=(r/'app/src/androidTest/java/br/com/uaicortes/ExportPipelineSmokeAndroidTest.kt').read_text()
 assert 'val pipsTopFirst = ExportLayerOrder.media3TopFirst(' in e
-assert 'for (pip in pipsTopFirst)' in e
-assert 'PipCompositor(pipsTopFirst)' in e
+assert 'for (pip in pipsTopFirst)' in e and 'for (pip in compositorPips)' in e
+assert 'PipCompositor(compositorPips)' in e
 assert 'setEffects(Effects(emptyList(),' in e
 assert 'TimedSubtitleOverlay(project.subtitles, 0L)' in e
 assert 'if (!postCompositionText)' in e

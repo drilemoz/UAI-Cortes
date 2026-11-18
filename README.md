@@ -1,4 +1,12 @@
-# Uai Cortes · v0.1.299 — Diagnóstico de engasgos
+# Uai Cortes · v0.1.300 — Entrada de logo e fotos PiP
+
+- **Entrada de logo e fotos PiP:** as imagens das camadas superiores passam a ser desenhadas sobre o quadro já composto. A entrada atrasada do logo não cria uma trilha de vídeo extra.
+- Intervalo, posição, tamanho, opacidade e ordem das camadas preservados. Vídeos PiP e fotos abaixo deles mantêm o método anterior.
+- Áudio, transições, FPS configurado e diagnóstico de engasgos não foram alterados.
+
+Validação em [docs/VALIDATION_0.1.300.md](docs/VALIDATION_0.1.300.md).
+
+## v0.1.299 — Diagnóstico de engasgos
 
 - **Analisar engasgos:** aparece na tela de exportação e no painel de vídeo salvo. Compare até cinco segundos de um clipe com o MP4 e com um teste isolado do mesmo trecho.
 - **Relatório local:** identifica padrões em que um quadro volta na sequência. Distingue repetição normal por conversão de FPS e sinaliza quando a amostra é inconclusiva.

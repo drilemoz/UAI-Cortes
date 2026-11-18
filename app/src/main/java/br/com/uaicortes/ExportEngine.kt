@@ -49,6 +49,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /** Metadados do arquivo de fato salvo, sem inferir orientação pela configuração solicitada. */
 private fun savedMp4Geometry(context: Context, uri: Uri): Triple<Int, Int, Int?>? {
@@ -133,8 +135,15 @@ class PipCompositor(private val overlays: List<Overlay>) : VideoCompositorSettin
 class ExportEngine(private val context: Context) {
     private var transformer: Transformer? = null
     private var tempFile: File? = null
-    private var preparingTransitions: Job? = null
+    private var preparingVisuals: Job? = null
     private var transitionFramesDir: File? = null
+
+    private data class PreparedVisuals(
+        val joins: List<JunctionTransitionPlan.Join>,
+        val held: Map<JunctionTransitionPlan.Side, File> = emptyMap(),
+        val canvas: Pair<Int, Int>? = null,
+        val photosTopFirst: List<TimedImagePipOverlay> = emptyList()
+    )
 
     private fun clearTransitionFrames() {
         transitionFramesDir?.deleteRecursively()
@@ -220,8 +229,8 @@ class ExportEngine(private val context: Context) {
     fun cancel() {
         // A cópia MediaStore precisa chegar ao fim, com rollback próprio em caso de erro.
         if (isSavingToGallery) return
-        preparingTransitions?.cancel()
-        preparingTransitions = null
+        preparingVisuals?.cancel()
+        preparingVisuals = null
         transformer?.cancel()
         transformer = null
         tempFile?.delete()
@@ -249,15 +258,18 @@ class ExportEngine(private val context: Context) {
                 TransitionDiagnosticContext(error.boundary, error.kind))
             throw error
         }
-        fun begin(preparedJoins: List<JunctionTransitionPlan.Join>,
-                  held: Map<JunctionTransitionPlan.Side, File>, canvas: Pair<Int, Int>?) =
+        require(project.overlays.size <= OverlayPlacement.MAX_PIPS) { "O limite é de 4 PiPs" }
+        val topFirst = ExportLayerOrder.media3TopFirst(project.overlays)
+        val photos = topFirst.take(ImagePipExportPlan.timedCount(topFirst))
+        fun begin(visuals: PreparedVisuals) =
             startPrepared(project, height, fileName, preset, destination, frameMode, onSaving,
-                onSuccess, onError, onRenderedFrame, onPreviewReady, preparedJoins, held, canvas)
-        if (joins.isEmpty()) {
-            begin(joins, emptyMap(), null)
+                onSuccess, onError, onRenderedFrame, onPreviewReady, visuals.joins, visuals.held,
+                visuals.canvas, visuals.photosTopFirst)
+        if (joins.isEmpty() && photos.isEmpty()) {
+            begin(PreparedVisuals(joins))
             return
         }
-        val dir = try {
+        val dir = if (joins.isEmpty()) null else try {
             require(context.cacheDir.usableSpace > VideoExportQuality.minimumFreeBytes(
                 project.durationMs, height, true, preset)) { "Libere espaço para preparar as transições." }
             File(context.cacheDir, "uai-transition-frames-${java.util.UUID.randomUUID()}").also {
@@ -268,10 +280,26 @@ class ExportEngine(private val context: Context) {
             throw error
         }
         transitionFramesDir = dir
-        preparingTransitions = CoroutineScope(Dispatchers.Main.immediate).launch {
+        preparingVisuals = CoroutineScope(Dispatchers.Main.immediate).launch {
             var handedOff = false
             try {
-                val (preparedJoins, held, canvas) = withContext(Dispatchers.IO) {
+                val visuals = withContext(Dispatchers.IO) {
+                    val maxEdge = (height * 2).coerceIn(720, 2560)
+                    val photoLayers = photos.map { photo ->
+                        currentCoroutineContext().ensureActive()
+                        val uri = Uri.parse(photo.uri)
+                        checkReadable(photo.uri, "Imagem do PiP", Target.PIP_IMAGE)
+                        try {
+                            TimedImagePipOverlay(photo, TimedImagePipOverlay.read(context, uri, maxEdge))
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (error: Exception) {
+                            DiagnosticRecorder.editorMedia(Target.PIP_IMAGE, MediaStage.EXPORT_READ, MediaResult.INVALID_IMAGE)
+                            throw IllegalStateException(
+                                "Não foi possível abrir a imagem do PiP para exportar. Selecione a imagem novamente.", error)
+                        }
+                    }
+                    if (dir == null) return@withContext PreparedVisuals(joins, photosTopFirst = photoLayers)
                     val first = project.clips.first()
                     val geometry = VideoExportFormatPolicy.dimensions(destination, height)
                         ?: transitionOutputSize(originalAspectOverride
@@ -289,19 +317,19 @@ class ExportEngine(private val context: Context) {
                         DiagnosticRecorder.transitionStage(preview, TransitionStage.FRAME_PREP_FAILED,
                             TransitionDiagnosticContext(join.boundary, join.kind))
                     }
-                    Triple(prepared, held, geometry)
+                    PreparedVisuals(prepared, held, geometry, photoLayers)
                 }
-                preparingTransitions = null
-                begin(preparedJoins, held, canvas)
+                preparingVisuals = null
+                begin(visuals)
                 handedOff = true
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
                 cancel()
-                DiagnosticRecorder.exception("transition_render_start", error)
-                onError(error.message ?: "Não foi possível preparar a transição.")
+                DiagnosticRecorder.exception("export_visual_preparation", error)
+                onError(error.message ?: "Não foi possível preparar as camadas de vídeo.")
             } finally {
-                if (!handedOff) dir.deleteRecursively()
+                if (!handedOff) dir?.deleteRecursively()
             }
         }
     }
@@ -311,7 +339,8 @@ class ExportEngine(private val context: Context) {
               onSaving: () -> Unit, onSuccess: (Uri, ExportQualityReport) -> Unit,
               onError: (String) -> Unit, onRenderedFrame: ((File) -> Unit)?,
               onPreviewReady: ((File) -> Unit)?, joins: List<JunctionTransitionPlan.Join>,
-              heldFrames: Map<JunctionTransitionPlan.Side, File>, transitionCanvas: Pair<Int, Int>?) {
+              heldFrames: Map<JunctionTransitionPlan.Side, File>, transitionCanvas: Pair<Int, Int>?,
+              timedPhotosTopFirst: List<TimedImagePipOverlay>) {
         require(!isSavingToGallery) { "Aguarde a conclusão do salvamento anterior." }
         require(project.clips.isNotEmpty()) { "Projeto sem vídeos" }
         val bitrateBps = VideoExportQuality.videoBitrateBps(height, preset)
@@ -324,6 +353,9 @@ class ExportEngine(private val context: Context) {
         require(project.overlays.size <= OverlayPlacement.MAX_PIPS) { "O limite é de 4 PiPs" }
         validateSources(project)
         val pipsTopFirst = ExportLayerOrder.media3TopFirst(project.overlays.take(OverlayPlacement.MAX_PIPS))
+        // Topmost stills are painted after composition, so they cannot drive timestamps
+        // when their media would otherwise enter a previously empty sequence.
+        val compositorPips = pipsTopFirst.drop(timedPhotosTopFirst.size)
         // Alguns MP4s PiP são somente vídeo; não criar trilha sonora artificial
         // nem exigir AAC no MP4 salvo quando a origem não oferece áudio.
         val pipAudioAvailability = mutableMapOf<String, Boolean>()
@@ -424,7 +456,7 @@ class ExportEngine(private val context: Context) {
         else EditedMediaItemSequence.withAudioAndVideoFrom(mainItems)
         val sequences = mutableListOf<EditedMediaItemSequence>()
         // Ordem estável das entradas de vídeo; áudio é adicionado DEPOIS do vídeo principal.
-        for (pip in pipsTopFirst) {
+        for (pip in compositorPips) {
             val media = if (pip.isImage) MediaItem.Builder().setUri(pip.uri)
                 .setImageDurationMs(pip.durationMs).build()
                 else MediaItem.Builder().setUri(pip.uri).setClippingConfiguration(
@@ -516,21 +548,23 @@ class ExportEngine(private val context: Context) {
             if (joins.isNotEmpty()) {
                 // The compositor can mix compatible SDR textures, including cached edge images.
                 setHdrMode(Composition.HDR_MODE_TONE_MAP_HDR_TO_SDR_USING_OPEN_GL)
-                setVideoCompositorSettings(JunctionVideoCompositor(pipsTopFirst, joins))
-            } else if (pipsTopFirst.isNotEmpty()) {
-                setVideoCompositorSettings(PipCompositor(pipsTopFirst))
+                setVideoCompositorSettings(JunctionVideoCompositor(compositorPips, joins))
+            } else if (compositorPips.isNotEmpty()) {
+                setVideoCompositorSettings(PipCompositor(compositorPips))
             }
             if (postCompositionText) {
                 // DefaultGlFrameProcessor: efeitos por clipe -> compositor -> efeitos
                 // por composição. Tempos das legendas são ABSOLUTOS no projeto.
-                val textLayers = mutableListOf<androidx.media3.effect.TextureOverlay>()
+                val outputLayers = mutableListOf<androidx.media3.effect.TextureOverlay>()
+                // OverlayEffect draws last on top. Text remains above every PiP.
+                outputLayers += timedPhotosTopFirst.asReversed()
                 if (project.subtitles.isNotEmpty())
-                    textLayers += TimedSubtitleOverlay(project.subtitles, 0L)
+                    outputLayers += TimedSubtitleOverlay(project.subtitles, 0L)
                 watermark?.let { watermarkCue ->
-                    textLayers += TimedSubtitleOverlay(listOf(watermarkCue), 0L)
+                    outputLayers += TimedSubtitleOverlay(listOf(watermarkCue), 0L)
                 }
-                if (textLayers.isNotEmpty()) setEffects(Effects(emptyList(),
-                    listOf(OverlayEffect(textLayers))))
+                if (outputLayers.isNotEmpty()) setEffects(Effects(emptyList(),
+                    listOf(OverlayEffect(outputLayers))))
             }
         }.build()
         val target = File(context.cacheDir, "uai-export-${java.util.UUID.randomUUID()}.mp4")

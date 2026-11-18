@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.299"
-    const val VERSION_CODE = 300
+    const val VERSION_NAME = "0.1.300"
+    const val VERSION_CODE = 301
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.300", listOf(
+            ReleaseFeature("image-pip-flash-300", "Logo sem trilha de vídeo separada",
+                "Imagens PiP superiores são desenhadas sobre o quadro final no horário configurado, evitando que a entrada do logo ocupe a tela.", "check")
+        )),
         ReleaseSummary("0.1.299", listOf(
             ReleaseFeature("export-stutter-299", "Diagnóstico de engasgos no MP4",
                 "Compara até cinco segundos da origem e do MP4 e testa o clipe sem camadas. O relatório aponta quadros que voltaram.", "check")
