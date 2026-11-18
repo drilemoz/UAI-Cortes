@@ -250,7 +250,7 @@ print('OK: corte visual v0.1.171, persistência, retorno ao editor, divisão e r
 assert 'internal fun SubtitleCompactTimeline(' in ui
 assert 'SubtitleCompactTimeline(sorted, p.clips, p.durationMs, selectedId, cursorMs,' in ui
 assert 'internal fun SubtitlePositionPreview(' in ui and 'player = remember(p.id)' in ui
-assert 'LazyColumn(state=captionsState' in ui and 'itemsIndexed(filtered,key=' in ui
+assert 'LazyColumn(state=captionsState' in ui and 'itemsIndexed(pageCues,key=' in ui
 assert 'SubtitleEditDialog(cue=selected,totalMs=p.durationMs' in ui
 assert 'internal fun SubtitleEditDialog(' in ui and 'TimeDigitsField("Início",draft.startMs,totalMs' in ui
 assert 'SubtitleTimelineEditor(p.subtitles,p.durationMs' not in ui
@@ -263,7 +263,7 @@ print('OK: versão atual 0.1.64 / versionCode 74, timeline unica, video fixo e l
 nav=(root/'app/src/main/java/br/com/uaicortes/SubtitleListNavigation.kt').read_text()
 assert 'fun matches(' in nav and 'Normalizer.Form.NFD' in nav
 assert 'fun adjacentIndex(' in nav and 'fun newInterval(' in nav
-assert 'itemsIndexed(filtered,key=' in ui and 'Buscar texto da legenda' in ui
+assert 'itemsIndexed(pageCues,key=' in ui and 'Buscar texto da legenda' in ui
 assert 'hasPrevious = SubtitleListNavigation.adjacentIndex' in ui
 assert 'hasNext = SubtitleListNavigation.adjacentIndex' in ui
 assert 'pendingDeleteId?.let' in ui and 'Excluir esta legenda?' in ui

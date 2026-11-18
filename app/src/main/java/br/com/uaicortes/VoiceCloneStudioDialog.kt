@@ -153,12 +153,14 @@ internal fun VoiceCloneStudioDialog(project: VideoProject, cue: SubtitleCue?,
                             val audio = withContext(Dispatchers.IO) {
                                 VoiceCloneAudio.prepare(generated, current, currentCue, profile)
                             }
-                            val revised = current.copy(audioTracks = current.audioTracks.filterNot {
-                                it.kind == VoiceIaPolicy.KIND && it.subtitleId == currentCue.id
-                            } + audio)
+                            val revised = current.copy(
+                                clips = GeneratedVoiceMix.lowerOriginal(current.clips, audio.startMs, audio.durationMs),
+                                audioTracks = current.audioTracks.filterNot {
+                                    it.kind == VoiceIaPolicy.KIND && it.subtitleId == currentCue.id
+                                } + audio)
                             if (!onSave(revised)) throw IllegalStateException("Falha ao salvar a faixa no projeto.")
                             output = null // Arquivo agora pertence ao projeto; não apagar.
-                            message = "WAV gerado e inserido na timeline. Reprodução disponível na lista de falas."
+                            message = "WAV inserido. O áudio original dos clipes com esta voz fica em até 10%."
                         } catch (e: CancellationException) { throw e }
                         catch (e: Exception) {
                             message = (e.message ?: "Falha ao gerar a voz.") +

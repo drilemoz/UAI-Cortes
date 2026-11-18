@@ -1,4 +1,12 @@
-# Uai Cortes · v0.1.303 — Áudios do aparelho
+# Uai Cortes · v0.1.304 — Vozes e Legendas
+
+- **Legendas:** cinco por página, com busca e timeline integrais. Importar SRT, exportar, editar todas, estilos por personagem e apagar todas ficam em uma faixa de ícones.
+- **Vozes IA:** a inserção de falas geradas limita a 10% o volume original dos clipes de vídeo que cruzam essas falas. Música, outras faixas, legendas e arquivos originais continuam intactos.
+- **Não mostrar novamente:** opcional nas confirmações de prévia e inserção. Preferência local e reversível. Não elimina validações, não inicia requisições sozinho e não remove a confirmação de exclusão.
+
+Validação em [docs/VALIDATION_0.1.304.md](docs/VALIDATION_0.1.304.md).
+
+## v0.1.303 — Áudios do aparelho
 
 - **Áudios do aparelho:** uma lista pesquisável, com os arquivos mais recentes primeiro, sem precisar abrir pastas.
 - O novo seletor aparece no áudio do clipe, nas faixas, na música, no editor de áudio, nas referências de voz e no reparo de áudio. O seletor da clonagem destaca somente WAVs na lista.

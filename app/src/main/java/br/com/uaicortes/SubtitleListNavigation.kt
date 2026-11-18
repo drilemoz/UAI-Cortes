@@ -6,6 +6,17 @@ import java.util.Locale
 
 /** Navegação e busca da lista compacta, sem dependência de Compose/Android. */
 internal object SubtitleListNavigation {
+    const val PAGE_SIZE = 5
+
+    fun pageCount(count: Int): Int = if (count <= 0) 1 else (count - 1) / PAGE_SIZE + 1
+
+    fun pageForIndex(index: Int): Int = index.coerceAtLeast(0) / PAGE_SIZE
+
+    fun <T> page(items: List<T>, page: Int): List<T> {
+        val start = page.coerceIn(0, pageCount(items.size) - 1) * PAGE_SIZE
+        return items.subList(start, start + minOf(PAGE_SIZE, items.size - start))
+    }
+
     /** Busca também funciona sem acentos (ex.: "sao" encontra "São"). */
     fun matches(text: String, query: String): Boolean {
         val searched = normalize(query.trim())

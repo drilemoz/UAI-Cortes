@@ -574,7 +574,6 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
     var autoSubtitlesMenu by remember(p.id) { mutableStateOf(false) }
     var speakerManagerOpen by remember(p.id) { mutableStateOf(false) }
     var speakerPickerCueId by remember(p.id) { mutableStateOf<String?>(null) }
-    var moreSubtitleTools by remember(p.id) { mutableStateOf(false) }
     LaunchedEffect(p.subtitleSpeakers.map { it.id }) {
         if (speakerFilter != null && speakerFilter != "__unassigned__" &&
             p.subtitleSpeakers.none { it.id == speakerFilter }) speakerFilter = null
@@ -589,18 +588,26 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
     }
     val originalNumbers=remember(sorted) { sorted.mapIndexed { index,cue -> cue.id to index+1 }.toMap() }
     val captionsState=rememberLazyListState()
-    // Conteúdo alterado não é motivo para rolar: conserva o ID e o offset do LazyColumn.
-    // Somente uma nova seleção/filtro/busca ou acompanhamento explicitamente ativado move a lista.
+    var page by remember(p.id) { mutableIntStateOf(0) }
+    val pageCount = SubtitleListNavigation.pageCount(filtered.size)
+    val visiblePage = page.coerceIn(0, pageCount - 1)
+    val pageCues = remember(filtered, visiblePage) { SubtitleListNavigation.page(filtered, visiblePage) }
+    // A paginação limita somente a lista. Timeline, busca e ações em lote mantêm o projeto inteiro.
     var followPlayback by remember(p.id) { mutableStateOf(true) }
     LaunchedEffect(selectedId, searchQuery, speakerFilter) {
-        val index=filtered.indexOfFirst { it.id==selectedId }
-        if(index>=0) captionsState.animateScrollToItem(index)
-        else if(searchQuery.isNotBlank() && filtered.isNotEmpty()) captionsState.scrollToItem(0)
+        val index = filtered.indexOfFirst { it.id == selectedId }
+        page = SubtitleListNavigation.pageForIndex(index)
+        if (index >= 0) captionsState.requestScrollToItem(index % SubtitleListNavigation.PAGE_SIZE)
+        else captionsState.requestScrollToItem(0)
     }
+    LaunchedEffect(pageCount) { page = page.coerceIn(0, pageCount - 1) }
     LaunchedEffect(activeCue?.id, followPlayback) {
         if (followPlayback && !editorOpen && searchQuery.isBlank()) {
             val index = filtered.indexOfFirst { it.id == activeCue?.id }
-            if (index >= 0) captionsState.animateScrollToItem(index)
+            if (index >= 0) {
+                page = SubtitleListNavigation.pageForIndex(index)
+                captionsState.requestScrollToItem(index % SubtitleListNavigation.PAGE_SIZE)
+            }
         }
     }
     LaunchedEffect(p.subtitles.size) {
@@ -689,49 +696,28 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                         leadingIcon={Icon(Icons.Default.Groups,null)})
                 }
             }
-            TextButton(onClick=onSaveEditor,modifier=Modifier.widthIn(min=49.dp),
-                contentPadding=PaddingValues(horizontal=2.dp,vertical=4.dp)) {
-                Icon(Icons.Default.Save,"Salvar legendas e voltar ao editor",modifier=Modifier.size(19.dp))
-                Spacer(Modifier.width(2.dp))
-                Text("Salvar",fontSize=11.sp)
-            }
-            IconButton(onClick={if(undoAvailable)undoLatestChange()},enabled=undoAvailable,
-                modifier=Modifier.size(34.dp)) {
-                Icon(Icons.Default.Undo,undoDescription,
-                    tint=if(undoAvailable)MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier=Modifier.size(20.dp))
-            }
-            IconButton(onClick={searchOpen=!searchOpen;if(!searchOpen)searchQuery=""},
-                modifier=Modifier.size(34.dp)) {
-                Icon(if(searchOpen)Icons.Default.SearchOff else Icons.Default.Search,
-                    if(searchOpen)"Fechar busca" else "Buscar legendas",modifier=Modifier.size(20.dp))
-            }
-            Box {
-                IconButton(onClick={moreSubtitleTools=true},modifier=Modifier.size(34.dp)) {
-                    Icon(Icons.Default.MoreVert,"Mais ferramentas de legendas",modifier=Modifier.size(21.dp))
+            SubtitleActionIcon(Icons.Default.Save, "Salvar legendas e voltar ao editor",
+                onClick = onSaveEditor)
+            SubtitleActionIcon(Icons.Default.Undo, undoDescription, enabled = undoAvailable,
+                onClick = ::undoLatestChange)
+            SubtitleActionIcon(if(searchOpen) Icons.Default.SearchOff else Icons.Default.Search,
+                if(searchOpen) "Fechar busca" else "Buscar legendas",
+                onClick = { searchOpen = !searchOpen; if(!searchOpen) searchQuery = "" })
+        }
+        Surface(Modifier.fillMaxWidth(), shape = UaiShapes.card,
+            color = MaterialTheme.colorScheme.surfaceContainerLow) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                SubtitleActionIcon(Icons.Default.FileOpen, "Importar SRT") {
+                    importer.launch(arrayOf("text/*","application/x-subrip","*/*"))
                 }
-                DropdownMenu(expanded=moreSubtitleTools,onDismissRequest={moreSubtitleTools=false}) {
-                    DropdownMenuItem(text={Text("Importar SRT")},onClick={
-                        moreSubtitleTools=false
-                        importer.launch(arrayOf("text/*","application/x-subrip","*/*"))
-                    },leadingIcon={Icon(Icons.Default.FileOpen,null)})
-                    DropdownMenuItem(text={Text("Exportar legendas")},enabled=p.subtitles.isNotEmpty(),
-                        onClick={moreSubtitleTools=false;exportMenu=true},
-                        leadingIcon={Icon(Icons.Default.FileUpload,null)})
-                    DropdownMenuItem(text={Text("Editar todas")},enabled=p.subtitles.isNotEmpty(),
-                        onClick={moreSubtitleTools=false;batchOpen=true;followPlayback=false},
-                        leadingIcon={Icon(Icons.Default.Tune,null)})
-                    DropdownMenuItem(text={Text("Estilos por personagem")},
-                        enabled=p.subtitleSpeakers.isNotEmpty(),
-                        onClick={moreSubtitleTools=false;speakerStyleMenu=true;followPlayback=false},
-                        leadingIcon={Icon(Icons.Default.Palette,null)})
-                    HorizontalDivider()
-                    DropdownMenuItem(text={Text("Apagar todas")},enabled=p.subtitles.isNotEmpty(),
-                        onClick={moreSubtitleTools=false;deleteAllConfirm=true},
-                        leadingIcon={Icon(Icons.Default.DeleteSweep,null,
-                            tint=MaterialTheme.colorScheme.error)})
-                }
+                SubtitleActionIcon(Icons.Default.FileUpload, "Exportar legendas",
+                    enabled = p.subtitles.isNotEmpty()) { exportMenu = true }
+                SubtitleActionIcon(Icons.Default.Tune, "Editar todas",
+                    enabled = p.subtitles.isNotEmpty()) { batchOpen = true; followPlayback = false }
+                SubtitleActionIcon(Icons.Default.Palette, "Estilos por personagem",
+                    enabled = p.subtitleSpeakers.isNotEmpty()) { speakerStyleMenu = true; followPlayback = false }
+                SubtitleActionIcon(Icons.Default.DeleteSweep, "Apagar todas",
+                    enabled = p.subtitles.isNotEmpty(), destructive = true) { deleteAllConfirm = true }
             }
         }
         Row(Modifier.fillMaxWidth().padding(vertical=1.dp),
@@ -787,6 +773,24 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
         }
         if(status.isNotBlank()) Text(status,fontSize=12.sp,
             color=MaterialTheme.colorScheme.primary)
+        if (pageCount > 1) {
+            val first = visiblePage * SubtitleListNavigation.PAGE_SIZE + 1
+            val last = first + pageCues.size - 1
+            fun turnPage(target: Int) {
+                followPlayback = false
+                page = target
+                // Os cinco itens de cada página reaproveitam a mesma lista.
+                captionsState.requestScrollToItem(0)
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                SubtitleActionIcon(Icons.Default.ChevronLeft, "Página anterior",
+                    enabled = visiblePage > 0) { turnPage(visiblePage - 1) }
+                Text("$first–$last de ${filtered.size}", modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center)
+                SubtitleActionIcon(Icons.Default.ChevronRight, "Próxima página",
+                    enabled = visiblePage < pageCount - 1) { turnPage(visiblePage + 1) }
+            }
+        }
         LazyColumn(state=captionsState, modifier=Modifier.fillMaxWidth().weight(1f)
             .pointerInput(p.id) {
                 awaitPointerEventScope {
@@ -805,7 +809,7 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                     color=MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier=Modifier.padding(vertical=20.dp))
             }
-            itemsIndexed(filtered,key={_,cue->cue.id}) { _,cue ->
+            itemsIndexed(pageCues,key={_,cue->cue.id}) { _,cue ->
                 val number=originalNumbers[cue.id] ?: 0
                 Column {
                     Surface(onClick={
@@ -1009,6 +1013,22 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
             }) {Text("Excluir")}},
             dismissButton={TextButton(onClick={pendingDeleteId=null}) {Text("Cancelar")}})
         else LaunchedEffect(id) { pendingDeleteId=null }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SubtitleActionIcon(icon: ImageVector, label: String, enabled: Boolean = true,
+    destructive: Boolean = false, onClick: () -> Unit) {
+    TooltipBox(positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        tooltip = { PlainTooltip { Text(label) } }, state = rememberTooltipState()) {
+        IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(48.dp)) {
+            Icon(icon, label, modifier = Modifier.size(21.dp), tint = when {
+                !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = .38f)
+                destructive -> MaterialTheme.colorScheme.error
+                else -> MaterialTheme.colorScheme.onSurface
+            })
+        }
     }
 }
 

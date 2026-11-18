@@ -1,3 +1,10 @@
+# v0.1.304 — Vozes e Legendas
+
+- Base v0.1.303/versionCode 304, nova v0.1.304/versionCode 305. Preservar schema 4, assinatura e variantes.
+- Não mostrar novamente só vale para a ação confirmada. Prévia usa cache quando possível e, se necessário, uma chamada explícita. Comparação cega continua offline. Não pular confirmação de geração de falas ou exclusão.
+- Aplicar teto de volume no mesmo salvamento de cada voz gerada inserida. Só clipes de vídeo da faixa principal que cruzam a fala, preservando volumes já menores e sem alterar fontes.
+- Paginar somente a lista de legendas. Busca, filtros, ações em lote, timeline, salvamento e exportação continuam trabalhando com o conjunto completo.
+
 # v0.1.303 — Seletor de áudio compartilhado
 
 - Base v0.1.302/versionCode 303, nova v0.1.303/versionCode 304. Preservar schema 4, assinatura e variantes.

@@ -57,9 +57,11 @@ internal object VoiceIaPolicy {
             kind = KIND, subtitleId = cue.id, voiceId = take.voiceId,
             ttsModel = take.model, ttsStyle = take.style,
             subtitleFingerprint = take.cueFingerprint)
-        return project.copy(audioTracks = project.audioTracks.filterNot {
-            it.kind == KIND && it.subtitleId == cue.id
-        } + replacement)
+        return project.copy(
+            clips = GeneratedVoiceMix.lowerOriginal(project.clips, start, take.durationMs),
+            audioTracks = project.audioTracks.filterNot {
+                it.kind == KIND && it.subtitleId == cue.id
+            } + replacement)
     }
 }
 

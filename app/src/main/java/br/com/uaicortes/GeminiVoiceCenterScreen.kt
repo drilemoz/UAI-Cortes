@@ -36,7 +36,7 @@ import java.util.Date
 private data class VoiceCenterFilterResult(val voices: List<GeminiVoice>, val elapsedMs: Long)
 
 /** Central compartilhada: a seleção não gera áudio; catálogo/identificadores jamais são reescritos.
- * Toda síntese é voluntária, com confirmação de possível consumo da API.
+ * Toda síntese parte de um toque explícito. A confirmação de prévia pode ser dispensada pelo usuário.
  */
 @Composable
 internal fun GeminiVoiceCenterScreen(
@@ -50,6 +50,9 @@ internal fun GeminiVoiceCenterScreen(
 ) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
+    val actionPrefs = remember(ctx) { VoiceActionPreferences(ctx) }
+    val previewAction = VoiceActionPreferences.Action.PREVIEW
+    var skipPreview by remember(ctx) { mutableStateOf(actionPrefs.skips(previewAction)) }
     val library = remember(ctx) { GeminiVoiceLibrary(ctx) }
     val cache = remember(ctx) { GeminiVoicePreviewCache(ctx) }
     val favorites = remember(ctx) { GeminiVoiceFavorites(ctx) }
@@ -366,8 +369,45 @@ internal fun GeminiVoiceCenterScreen(
         }
     }
 
-    fun listen(voice: GeminiVoice, blindLabel: String? = null) {
+    fun generateSample(voice: GeminiVoice) {
+        if (working) return
         scope.launch {
+            working = true
+            try {
+                // Fixar configuração ANTES da primeira suspensão: trocar modelo/frase na tela
+                // não pode salvar um WAV de outro perfil sob a chave da configuração antiga.
+                val requestedModel = sampleModel
+                val requestedText = sampleText()
+                val requestedStyle = styleInstruction
+                val requestedLanguage = sampleLanguage
+                val id = GeminiPreviewIdentity.idForText("", requestedModel,
+                    voice.id, GeminiSpeechLanguage.style(requestedStyle, requestedLanguage), requestedText)
+                val existing = withContext(Dispatchers.IO) { cache.find(id) }
+                val file = if (existing != null) existing else {
+                    val key = withContext(Dispatchers.IO) { credentials.read() }
+                        ?: error("Chave Gemini ausente.")
+                    withContext(Dispatchers.IO) { pacing.beforeRequest(requestedModel) { } }
+                    val wave = client.synthesize(key, requestedModel, voice.id,
+                        requestedStyle, requestedText, requestedLanguage)
+                    withContext(Dispatchers.IO) { cache.save(id, wave.bytes, voice.id) }
+                }
+                player.setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
+                player.prepare(); player.play()
+                updatePreviewIndicators()
+                status = if (existing == null) "Prévia salva e reproduzida."
+                    else "Prévia local reutilizada; sem nova chamada."
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                status = "Prévia não concluída: ${GeminiVoiceCatalog.safeMessage(e)} " +
+                    "Se a requisição chegou ao Google, poderá ter consumido cota."
+            } finally { working = false }
+        }
+    }
+
+    fun listen(voice: GeminiVoice, blindLabel: String? = null) {
+        if (working) return
+        scope.launch {
+            var generateDirectly = false
             working = true
             try {
                 // Voz e modelo/tipo de prévia devem corresponder exatamente ao cache.
@@ -379,10 +419,12 @@ internal fun GeminiVoiceCenterScreen(
                         else "Reproduzindo ${title(voice)} sem chamada Gemini."
                 } else if (blindLabel != null) {
                     status = "Prévia offline indisponível. Reconfigure o teste; nada foi enviado ao Gemini."
-                } else pendingSample = voice
+                } else if (actionPrefs.skips(previewAction)) generateDirectly = true
+                else pendingSample = voice
             } catch (e: CancellationException) { throw e }
             catch (_: Exception) { status = "Falha ao ler prévia. Tente gerar uma nova." }
             finally { working = false }
+            if (generateDirectly) generateSample(voice)
         }
     }
 
@@ -400,7 +442,7 @@ internal fun GeminiVoiceCenterScreen(
                 Icon(Icons.Default.Refresh, "Atualizar catálogo manualmente")
             }
             IconButton(onClick = { sampleDraftMode = sampleMode; sampleDraftText = customText;
-                sampleDraftLanguage = sampleLanguage; settingsOpen = true }) {
+                sampleDraftLanguage = sampleLanguage; skipPreview = actionPrefs.skips(previewAction); settingsOpen = true }) {
                 Icon(Icons.Default.Settings, "Configurações de prévia e armazenamento")
             }
         }
@@ -727,6 +769,14 @@ internal fun GeminiVoiceCenterScreen(
                     })
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Confirmar antes de gerar prévia", modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall)
+                    Switch(checked = !skipPreview, enabled = !working, onCheckedChange = {
+                        skipPreview = !it
+                        actionPrefs.setSkipping(previewAction, !it)
+                    })
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Modelo da prévia", modifier = Modifier.weight(1f))
                     Box {
                         TextButton(onClick = { modelMenu = true }) {
@@ -980,47 +1030,24 @@ internal fun GeminiVoiceCenterScreen(
             dismissButton = { TextButton(onClick = { editVoice = null }) { Text("Cancelar") } })
     }
     pendingSample?.let { voice ->
+        var hideNext by remember(voice.id) { mutableStateOf(false) }
         AlertDialog(onDismissRequest = { pendingSample = null },
             title = { Text("Gerar prévia de ${title(voice)}?") },
-            text = { Text("Será gerada uma amostra com a frase escolhida. Isso envia texto ao Google " +
-                "e pode consumir cota ou gerar cobrança. Depois a reprodução será local até você apagar o arquivo. " +
-                "Não será inserida no vídeo." +
-                (if (GeminiVoiceDiscovery.isPortuguese(voice)) "" else
-                    " A narração tentará português brasileiro, mas o sotaque pode variar.")) },
+            text = { Column {
+                Text("A frase será enviada ao Google e pode consumir cota ou gerar cobrança. " +
+                    "Depois, a reprodução fica no aparelho. A prévia não entra no vídeo." +
+                    (if (GeminiVoiceDiscovery.isPortuguese(voice)) "" else
+                        " A narração tentará português brasileiro, mas o sotaque pode variar."))
+                VoiceSkipPromptOption(hideNext) { hideNext = it }
+            } },
             confirmButton = { TextButton(onClick = {
-                pendingSample = null
-                scope.launch {
-                    working = true
-                    try {
-                        // Fixar configuração ANTES da primeira suspensão: trocar modelo/frase na tela
-                        // não pode salvar um WAV de outro perfil sob a chave da configuração antiga.
-                        val requestedModel = sampleModel
-                        val requestedText = sampleText()
-                        val requestedStyle = styleInstruction
-                        val requestedLanguage = sampleLanguage
-                        val id = GeminiPreviewIdentity.idForText("", requestedModel,
-                            voice.id, GeminiSpeechLanguage.style(requestedStyle, requestedLanguage), requestedText)
-                        val existing = withContext(Dispatchers.IO) { cache.find(id) }
-                        val file = if (existing != null) existing else {
-                            val key = withContext(Dispatchers.IO) { credentials.read() }
-                                ?: error("Chave Gemini ausente.")
-                            withContext(Dispatchers.IO) { pacing.beforeRequest(requestedModel) { } }
-                            val wave = client.synthesize(key, requestedModel, voice.id,
-                                requestedStyle, requestedText, requestedLanguage)
-                            withContext(Dispatchers.IO) { cache.save(id, wave.bytes, voice.id) }
-                        }
-                        player.setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
-                        player.prepare(); player.play()
-                        updatePreviewIndicators()
-                        status = if (existing == null) "Prévia salva e reproduzida."
-                            else "Prévia local reutilizada; sem nova chamada."
-                    } catch (e: CancellationException) { throw e }
-                    catch (e: Exception) {
-                        status = "Prévia não concluída: ${GeminiVoiceCatalog.safeMessage(e)} " +
-                            "Se a requisição chegou ao Google, poderá ter consumido cota."
-                    } finally { working = false }
+                if (hideNext) {
+                    actionPrefs.setSkipping(previewAction, true)
+                    skipPreview = true
                 }
-            }) { Text("Gerar e salvar") } },
+                pendingSample = null
+                generateSample(voice)
+            }, enabled = !working) { Text("Gerar e salvar") } },
             dismissButton = { TextButton(onClick = { pendingSample = null }) { Text("Cancelar") } })
     }
     if (pendingDelete) AlertDialog(onDismissRequest = { pendingDelete = false },

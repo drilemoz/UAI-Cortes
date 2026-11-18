@@ -42,6 +42,11 @@ import java.io.File
 import java.text.Collator
 import java.util.Locale
 
+private data class VoiceBatchInsertPlan(
+    val validCues: List<Pair<SubtitleCue, VoiceIaTake>>,
+    val skipped: Int, val overlapCount: Int, val late: List<Int>
+)
+
 /** Vozes IA: as legendas são fonte somente leitura. Áudio tradicional continua separado. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -49,6 +54,10 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
     onSave: (VideoProject) -> Boolean, openGeminiSettings: () -> Unit,
     initialCueId: String? = null) {
     val context = LocalContext.current
+    val actionPrefs = remember(context) { VoiceActionPreferences(context) }
+    val previewAction = VoiceActionPreferences.Action.PREVIEW
+    val singleInsertAction = VoiceActionPreferences.Action.INSERT_VOICE
+    val batchInsertAction = VoiceActionPreferences.Action.INSERT_BATCH
     val scope = rememberCoroutineScope()
     val store = remember(project.id) { VoiceIaDraftStore(context, project.id) }
     val queueStore = remember(project.id) { VoiceIaQueueStore(context, project.id) }
@@ -367,9 +376,75 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
         val changed = runCatching { VoiceIaPolicy.merge(current, cue, take) }.getOrElse {
             status = it.message ?: "A narração ultrapassa a duração do vídeo."; return
         }
-        if (onSave(changed)) status = "Voz salva na linha Vozes. Toque na faixa no editor para ajustar ou substituir."
+        val inserted = changed.audioTracks.first { it.kind == VoiceIaPolicy.KIND && it.subtitleId == cue.id }
+        val end = inserted.startMs + inserted.durationMs
+        val clashes = current.audioTracks.any { it.kind == VoiceIaPolicy.KIND &&
+            it.subtitleId != cue.id && it.startMs < end && it.startMs + it.durationMs > inserted.startMs }
+        if (onSave(changed)) status = "Voz inserida. Áudio original dos clipes com a fala em até 10%." +
+            (if (end > cue.endMs) " A fala ultrapassa a legenda." else "") +
+            (if (clashes) " Há vozes sobrepostas." else "")
         else status = "Falha ao salvar o projeto. O WAV preparado continua disponível."
     }
+    fun batchInsertPlan(current: VideoProject): VoiceBatchInsertPlan {
+        val validCues = cues.mapNotNull { cue ->
+            if (importedFor(cue) != null) return@mapNotNull null
+            readyFor(cue)?.takeIf { take ->
+                current.subtitles.any { it.id == cue.id && VoiceIaPolicy.fingerprint(it) == take.cueFingerprint } &&
+                    File(take.filePath).isFile &&
+                    VoiceIaPolicy.fits(current.audioTracks.firstOrNull {
+                        it.kind == VoiceIaPolicy.KIND && it.subtitleId == cue.id
+                    }?.startMs ?: cue.startMs, take.durationMs, current.durationMs)
+            }?.let { cue to it }
+        }
+        val skipped = cues.size - validCues.size
+        val candidateIds = validCues.mapTo(mutableSetOf()) { it.first.id }
+        val intervals = validCues.map { (cue, take) ->
+            val start = current.audioTracks.firstOrNull {
+                it.kind == VoiceIaPolicy.KIND && it.subtitleId == cue.id
+            }?.startMs ?: cue.startMs
+            start to (start + take.durationMs)
+        }
+        val otherIntervals = current.audioTracks.filter {
+            it.kind == VoiceIaPolicy.KIND && it.subtitleId !in candidateIds
+        }.map { it.startMs to (it.startMs + it.durationMs) }
+        val overlapCount = intervals.count { (start, end) ->
+            (intervals + otherIntervals).count { (secondStart, secondEnd) ->
+                secondStart < end && secondEnd > start
+            } > 1
+        }
+        val cueNumbers = cues.mapIndexed { index, cue -> cue.id to (index + 1) }.toMap()
+        val late = validCues.mapNotNull { (cue, take) ->
+            val start = current.audioTracks.firstOrNull { it.kind == VoiceIaPolicy.KIND &&
+                it.subtitleId == cue.id }?.startMs ?: cue.startMs
+            val limit = cues.firstOrNull { it.startMs > cue.startMs }
+                ?.let { minOf(it.startMs, cue.endMs) } ?: cue.endMs
+            cueNumbers[cue.id]?.takeIf { start + take.durationMs > limit }
+        }
+        return VoiceBatchInsertPlan(validCues, skipped, overlapCount, late)
+    }
+    fun applyBatchInsert() {
+        val current = latestProject
+        val (validCues, skipped, overlapCount, late) = batchInsertPlan(current)
+        if (busy) return
+        if (validCues.isEmpty()) {
+            status = "Nenhuma voz pronta que caiba inteira na timeline."
+            return
+        }
+        var changed = current
+        var count = 0
+        for ((cue, take) in validCues) {
+            val next = runCatching { VoiceIaPolicy.merge(changed, cue, take) }.getOrNull()
+            if (next != null) { changed = next; count++ }
+        }
+        status = if (count > 0 && onSave(changed)) {
+            "$count voz(es) salva(s). Original dos clipes com voz em até 10%." +
+                (if (late.isNotEmpty()) " Ajustar sincronia: ${late.take(5).joinToString(", ")}" +
+                    (if (late.size > 5) " e mais ${late.size - 5}." else ".") else "") +
+                (if (overlapCount > 0) " $overlapCount com sobreposição." else "") +
+                (if (skipped > 0) " $skipped não inserida(s)." else "")
+        } else "Falha ao salvar: os WAVs preparados continuam disponíveis."
+    }
+
     /** Registra cada transição antes da chamada de rede e após salvar o WAV. */
     suspend fun saveQueue(snapshot: VoiceIaQueueSnapshot): VoiceIaQueueSnapshot {
         withContext(Dispatchers.IO) { queueStore.save(snapshot) }
@@ -554,6 +629,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
         }
     }
     fun previewSpeaker(speakerId: String) {
+        if (busy) return
         val speaker = project.subtitleSpeakers.firstOrNull { it.id == speakerId } ?: return
         if (cues.none { it.speakerId == speakerId }) return
         // A amostra representa a preferência do personagem, não uma exceção de fala.
@@ -732,7 +808,10 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                 VoiceIaToolbarAction(label = "Inserir $preparedCount", accessibilityLabel =
                     "Inserir vozes prontas: $preparedCount", modifier = Modifier.weight(1.12f),
                     enabled = !busy && loaded && preparedCount > 0,
-                    onClick = { pendingBatchInsert = true })
+                    onClick = {
+                        if (actionPrefs.skips(batchInsertAction)) applyBatchInsert()
+                        else pendingBatchInsert = true
+                    })
             }
             TextButton(onClick = { showVoiceCloneStudio = true }, enabled = !busy,
                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
@@ -745,7 +824,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (status.isNotBlank()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(status, fontSize = 10.sp, maxLines = if (showTechnicalDetails) 6 else 1,
+                    Text(status, fontSize = 10.sp, maxLines = if (showTechnicalDetails) 6 else 3,
                         overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -811,7 +890,8 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                                                 val cached = withContext(Dispatchers.IO) {
                                                     GeminiVoicePreviewCache(context).find(cacheId)
                                                 }
-                                                if (cached != null) previewSpeaker(speaker.id)
+                                                if (cached != null || actionPrefs.skips(previewAction))
+                                                    previewSpeaker(speaker.id)
                                                 else pendingPreviewSpeakerId = speaker.id
                                             }
                                         }
@@ -1070,7 +1150,11 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                         Text("WAV ${formatPipMs(take.durationMs)}" +
                             if ((review?.excessMs ?: 0L) > 0L) " · Revisar sincronização" else " · Pronto",
                             fontSize = 11.sp)
-                        TextButton(onClick = { advancedCueId = null; pendingInsertId = cue.id },
+                        TextButton(onClick = {
+                            advancedCueId = null
+                            if (actionPrefs.skips(singleInsertAction)) insert(cue, take)
+                            else pendingInsertId = cue.id
+                        },
                             enabled = !busy) {
                             Icon(if (inserted == null) Icons.Default.AddCircleOutline else Icons.Default.SwapHoriz,
                                 null, Modifier.size(18.dp))
@@ -1227,16 +1311,20 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
             dismissButton = { TextButton(onClick = { pendingSpeakerStyle = null }) { Text("Cancelar") } })
     }
     pendingPreviewSpeakerId?.let { speakerId ->
+        var hideNext by remember(speakerId) { mutableStateOf(false) }
         val speaker = project.subtitleSpeakers.firstOrNull { it.id == speakerId }
         val chosenVoice = speakerVoiceOverrides[speakerId]
         val chosenStyle = speakerStyleOverrides[speakerId] ?: defaultStyle
         AlertDialog(onDismissRequest = { pendingPreviewSpeakerId = null },
             title = { Text("Testar voz de ${speaker?.name ?: "personagem"}?") },
-            text = { Text("O Gemini produzirá uma amostra curta com a voz " +
-                "${displayVoiceName(chosenVoice)} e interpretação $chosenStyle. " +
-                "Isso faz UMA chamada de API e pode consumir cota ou gerar cobrança. " +
-                "A amostra ficará armazenada na Central de Vozes e não será inserida no projeto.") },
+            text = { Column {
+                Text("O Gemini produzirá uma amostra curta com a voz " +
+                    "${displayVoiceName(chosenVoice)} e interpretação $chosenStyle. " +
+                    "A chamada pode consumir cota ou gerar cobrança. A amostra não entra no projeto.")
+                VoiceSkipPromptOption(hideNext) { hideNext = it }
+            } },
             confirmButton = { TextButton(onClick = {
+                if (hideNext) actionPrefs.setSkipping(previewAction, true)
                 pendingPreviewSpeakerId = null
                 previewSpeaker(speakerId)
             }, enabled = chosenVoice != null && !busy) { Text("Gerar e ouvir") } },
@@ -1444,45 +1532,14 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
             dismissButton = { TextButton(onClick = { promptGenerate = null; quickGenerateId = null }) { Text("Cancelar") } })
     }
     if (pendingBatchInsert) {
-        val validCues = cues.mapNotNull { cue ->
-            if (importedFor(cue) != null) return@mapNotNull null
-            readyFor(cue)?.takeIf { take ->
-                latestProject.subtitles.any { it.id == cue.id && VoiceIaPolicy.fingerprint(it) == take.cueFingerprint } &&
-                    File(take.filePath).isFile &&
-                    VoiceIaPolicy.fits(latestProject.audioTracks.firstOrNull {
-                        it.kind == VoiceIaPolicy.KIND && it.subtitleId == cue.id
-                    }?.startMs ?: cue.startMs, take.durationMs, latestProject.durationMs)
-            }?.let { cue to it }
-        }
-        val skipped = cues.size - validCues.size
-        val candidateIds = validCues.mapTo(mutableSetOf()) { it.first.id }
-        val intervals = validCues.map { (cue, take) ->
-            val start = latestProject.audioTracks.firstOrNull {
-                it.kind == VoiceIaPolicy.KIND && it.subtitleId == cue.id
-            }?.startMs ?: cue.startMs
-            start to (start + take.durationMs)
-        }
-        val otherIntervals = latestProject.audioTracks.filter {
-            it.kind == VoiceIaPolicy.KIND && it.subtitleId !in candidateIds
-        }.map { it.startMs to (it.startMs + it.durationMs) }
-        val overlapCount = intervals.count { (start, end) ->
-            (intervals + otherIntervals).count { (secondStart, secondEnd) ->
-                secondStart < end && secondEnd > start
-            } > 1
-        }
-        val cueNumbers = cues.mapIndexed { index, cue -> cue.id to (index + 1) }.toMap()
-        val late = validCues.mapNotNull { (cue, take) ->
-            val start = latestProject.audioTracks.firstOrNull { it.kind == VoiceIaPolicy.KIND &&
-                it.subtitleId == cue.id }?.startMs ?: cue.startMs
-            val limit = cues.firstOrNull { it.startMs > cue.startMs }
-                ?.let { minOf(it.startMs, cue.endMs) } ?: cue.endMs
-            cueNumbers[cue.id]?.takeIf { start + take.durationMs > limit }
-        }
+        val (validCues, skipped, overlapCount, late) = batchInsertPlan(latestProject)
+        var hideNext by remember(project.id) { mutableStateOf(false) }
         AlertDialog(onDismissRequest = { pendingBatchInsert = false },
             title = { Text("Inserir ${validCues.size} vozes na timeline?") },
             text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("As vozes serão inseridas ou substituídas em uma única gravação do projeto, " +
-                    "mantendo as legendas e músicas intactas. Arquivos WAV não serão cortados.")
+                    "mantendo as legendas e músicas intactas. O áudio original dos clipes com voz fica em até 10%. " +
+                    "Os WAVs não serão cortados.")
                 if (late.isNotEmpty()) {
                     val list = late.take(6).joinToString(", ")
                     val extra = if (late.size > 6) " e mais ${late.size - 6}" else ""
@@ -1494,18 +1551,12 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                 if (skipped > 0) Text("$skipped legenda(s) não serão inseridas: não foram geradas " +
                     "com as configurações atuais ou ultrapassariam o final do vídeo.",
                     color = MaterialTheme.colorScheme.error)
+                if (validCues.isNotEmpty()) VoiceSkipPromptOption(hideNext) { hideNext = it }
             } },
             confirmButton = { TextButton(onClick = {
+                if (hideNext) actionPrefs.setSkipping(batchInsertAction, true)
                 pendingBatchInsert = false
-                var changed = latestProject
-                var count = 0
-                for ((cue, take) in validCues) {
-                    val next = runCatching { VoiceIaPolicy.merge(changed, cue, take) }.getOrNull()
-                    if (next != null) { changed = next; count++ }
-                }
-                status = if (count > 0 && onSave(changed))
-                    "$count faixa(s) de voz salvas. Revise a sincronização no editor."
-                else "Falha ao salvar: os WAVs preparados continuam disponíveis."
+                applyBatchInsert()
             }, enabled = validCues.isNotEmpty() && !busy) { Text("Inserir faixas") } },
             dismissButton = { TextButton(onClick = { pendingBatchInsert = false }) { Text("Cancelar") } })
     }
@@ -1568,11 +1619,12 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                 it.subtitleId != cue.id && it.startMs < end && it.startMs + it.durationMs > start }
             val overshoot = end > cue.endMs
             val fits = VoiceIaPolicy.fits(start, take.durationMs, project.durationMs)
+            var hideNext by remember(id) { mutableStateOf(false) }
             AlertDialog(onDismissRequest = { pendingInsertId = null },
                 title = { Text(if (installed == null) "Inserir voz na timeline?" else "Substituir esta voz?") },
                 text = { Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     Text("Início: ${formatPipMs(start)} · duração: ${formatPipMs(take.durationMs)}. " +
-                        "O áudio original e a legenda permanecem intactos.")
+                        "O áudio original dos clipes com voz fica em até 10%. A legenda não muda.")
                     if (!fits) Text("O áudio ultrapassa o final do projeto. Ajuste a posição ou gere outra fala.",
                         color = MaterialTheme.colorScheme.error)
                     if (overshoot) Text("A fala ultrapassa o horário final da legenda. A sincronização pode ficar diferente.",
@@ -1580,8 +1632,10 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                     if (clashes) Text("Há sobreposição com outra voz. As duas faixas poderão tocar juntas.",
                         color = MaterialTheme.colorScheme.error)
                     if (installed != null) Text("O WAV anterior continuará armazenado; somente a referência da faixa será substituída.")
+                    if (fits) VoiceSkipPromptOption(hideNext) { hideNext = it }
                 } },
                 confirmButton = { TextButton(onClick = {
+                    if (hideNext) actionPrefs.setSkipping(singleInsertAction, true)
                     pendingInsertId = null
                     insert(cue, take)
                 }, enabled = fits) { Text(if (installed == null) "Inserir" else "Substituir") } },

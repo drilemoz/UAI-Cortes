@@ -309,6 +309,13 @@ internal fun GeminiSettingsScreen(back: () -> Unit) {
     Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())
         .padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
         Heading("Google Gemini", back)
+        val ctx = LocalContext.current
+        val prompts = remember(ctx) { VoiceActionPreferences(ctx) }
+        var canRestore by remember(ctx) { mutableStateOf(VoiceActionPreferences.Action.entries.any(prompts::skips)) }
+        if (canRestore) OutlinedButton(onClick = {
+            VoiceActionPreferences.Action.entries.forEach { prompts.setSkipping(it, false) }
+            canRestore = false
+        }, modifier = Modifier.fillMaxWidth()) { Text("Restaurar confirmações de Vozes IA") }
         GeminiSettingsSection()
         GeminiUsagePanel()
         GeminiBatchSection()

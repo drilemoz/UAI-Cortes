@@ -11,7 +11,7 @@ assert 'Icon(if(compactPreview) Icons.Default.Fullscreen' in s
 assert 'onTimelineHelp: () -> Unit' in s
 assert 'DropdownMenu(expanded=zoomMenuExpanded' in s
 assert 'DropdownMenu(expanded=speakerFilterMenu' in s
-assert 'DropdownMenu(expanded=moreSubtitleTools' in s
+assert 'moreSubtitleTools' not in s and 'SubtitleActionIcon(Icons.Default.FileOpen' in s
 assert 'DropdownMenu(expanded=autoSubtitlesMenu' in s
 assert 'SubtitleCompactTimeline(sorted, p.clips, p.durationMs, selectedId, cursorMs,' in s
 assert 'emphasizedIds = filtered.map { it.id }.toSet()' in s
@@ -21,7 +21,7 @@ assert 'if (filtered.none { it.id == id })' in s
 assert 'followPlayback=false' in s and 'PointerEventType.Press' in s
 assert 'Text("Em reprodução: "' not in s
 assert '"Legenda: ${formatPipMs(selected.startMs)}' not in s
-assert 'deleteAllConfirm=true' in s and 'DropdownMenuItem(text={Text("Apagar todas")}' in s
+assert 'deleteAllConfirm = true' in s and 'SubtitleActionIcon(Icons.Default.DeleteSweep, "Apagar todas"' in s
 assert 'onSaveEditor' in s and 'SubtitleListNavigation.newInterval(p.durationMs,cursorMs)' in s
 assert 'schemaVersion", 4' in (r/'app/src/main/java/br/com/uaicortes/ProjectStore.kt').read_text()
 print('OK: player compacto, menus acessíveis, timeline integral, filtros visuais e edição preservada')
