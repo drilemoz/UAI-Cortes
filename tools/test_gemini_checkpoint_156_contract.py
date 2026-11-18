@@ -25,7 +25,8 @@ class GeminiRecovery156Contract(unittest.TestCase):
         self.assertIn('geminiCheckpoint.subtitles(persisted)', screen)
         self.assertIn('GeminiTaskStage.REVIEW', screen)
         self.assertIn('Text("Continuar revisão")', screen)
-        self.assertIn('Repetir pode consumir cota novamente', screen)
+        self.assertIn('A tentativa anterior pode ter consumido cota', screen)
+        self.assertIn('issue?.needsRecoveryReview == true', screen)
         self.assertIn('NonCancellable + Dispatchers.IO', screen)
 
     def test_description_manual_restore_and_project_persistence(self):

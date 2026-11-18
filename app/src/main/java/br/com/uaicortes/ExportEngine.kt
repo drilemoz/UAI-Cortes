@@ -251,6 +251,8 @@ class ExportEngine(private val context: Context) {
         require(!isSavingToGallery) { "Aguarde a conclusão do salvamento anterior." }
         cancel()
         val preview = onPreviewReady != null
+        val previewCanvas = originalAspectOverride?.takeIf { preview && !destination.isVertical }
+            ?.let { transitionOutputSize(it, height) }
         val joins = try {
             JunctionTransitionPlan.project(project)
         } catch (error: JunctionTransitionPlan.InvalidJoin) {
@@ -266,7 +268,7 @@ class ExportEngine(private val context: Context) {
                 onSuccess, onError, onRenderedFrame, onPreviewReady, visuals.joins, visuals.held,
                 visuals.canvas, visuals.photosTopFirst)
         if (joins.isEmpty() && photos.isEmpty()) {
-            begin(PreparedVisuals(joins))
+            begin(PreparedVisuals(joins, canvas = previewCanvas))
             return
         }
         val dir = if (joins.isEmpty()) null else try {
@@ -299,7 +301,8 @@ class ExportEngine(private val context: Context) {
                                 "Não foi possível abrir a imagem do PiP para exportar. Selecione a imagem novamente.", error)
                         }
                     }
-                    if (dir == null) return@withContext PreparedVisuals(joins, photosTopFirst = photoLayers)
+                    if (dir == null) return@withContext PreparedVisuals(
+                        joins, canvas = previewCanvas, photosTopFirst = photoLayers)
                     val first = project.clips.first()
                     val geometry = VideoExportFormatPolicy.dimensions(destination, height)
                         ?: transitionOutputSize(originalAspectOverride

@@ -1,3 +1,11 @@
+# v0.1.307 — Legendas, nitidez e prévias
+
+- Base v0.1.306/versionCode 307, nova v0.1.307/versionCode 308. Preservar schema 4, assinatura e cinco variantes.
+- Gemini transcreve mídia autorizada após toque explícito. Diagnóstico registra fase, categoria e HTTP permitido, nunca resposta, credencial, prompt, texto ou nomes de arquivos.
+- Revisão de português é textual, mantém janelas de legendas e só salva sugestões selecionadas. Não fingir que horários reestimados por mudança de palavras foram medidos.
+- Resolução e bitrate escolhidos não mudam ao alternar proporção. O atalho pede 1080p e 28 Mb/s; o Media3 pode usar valores diferentes, que devem ser relatados.
+- Prévia reduzida só para corte simples quando relógio de legendas e vídeo são preserváveis. Mixagem/composição complexas mantêm o relógio integral. Distinguir MP4 pronto e primeiro quadro exibido.
+
 # v0.1.306 — Correção do build 262
 
 - Base v0.1.305/versionCode 306, nova v0.1.306/versionCode 307. Preservar schema 4, assinatura e cinco variantes.

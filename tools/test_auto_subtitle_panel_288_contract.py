@@ -7,9 +7,9 @@ read = lambda name: (base / f'{name}.kt').read_text()
 ui, panel, speech, words = map(read, ['AutoSubtitleScreen', 'AutoSubtitlePanel',
     'SubtitleSpeechSource', 'SubtitleTextRetiming'])
 assert 'Offline · Vosk' in ui and 'Online · Gemini' in ui and 'ModalBottomSheet(' in ui
-assert 'SETUP, GENERATING, REVIEW' in ui and 'AlertDialog(' not in ui
-assert 'short_cloud_notice' in ui and 'Não mostrar esta explicação novamente' in ui
-assert 'Envia áudio ao Gemini' in ui and 'Enviar e gerar' in ui
+assert 'SETUP, GENERATING, REVIEW' in ui and 'if (showDetails && open == SubtitleEngine.GEMINI) AlertDialog(' in ui
+assert 'Ajuda sobre transcrição Gemini' in ui
+assert 'Só envia áudio ao Gemini' in ui and 'Enviar e gerar' in ui
 assert 'geminiCheckpoint.subtitles(persisted)' in ui and 'if (!previousReady)' in ui
 assert 'SubtitleSpeechDraft.place(generated, source.offsetMs, actual)' in ui
 assert 'startMs = word.startMs + offset, endMs = word.endMs + offset' in speech

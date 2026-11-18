@@ -15,7 +15,7 @@ assert 'item.optString("speaker")' in parser and 'word.speakerId != buffer.last(
 assert 'UUID.randomUUID()' in parser and 'provisionalId(sessionId, raw)' in parser
 assert 'spk_[1-8]' in policy and 'SubtitleSpeakerPolicy.MAX_SPEAKERS' in policy
 assert 'fun prepare(' in policy and 'project.copy(subtitles' in policy
-assert 'GeminiVoiceReviewUi(results' in (src/'AutoSubtitlePanel.kt').read_text() and 'Sugerir Voz' in auto
+assert 'GeminiVoiceReviewUi(results' in (src/'AutoSubtitlePanel.kt').read_text() and 'Identificar vozes' in auto
 assert 'GeminiDiarizationPolicy.prepare(base' in auto and 'else onApply(proposal.copy(' in auto
 assert 'geminiClient.transcribe(context, source.project, apiKey, detect, report)' in auto
 assert 'onApply = { reviewed ->' in main and 'write(reviewed)' in main

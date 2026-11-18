@@ -31,6 +31,7 @@ import androidx.media3.common.util.UnstableApi
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** One private, small MP4 via the exporter. No still-frame animation or server upload. */
 @OptIn(UnstableApi::class)
@@ -43,12 +44,16 @@ internal fun TransitionVideoPreview(project: VideoProject, boundary: Int, kind: 
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val diagnosis = TransitionDiagnosticContext(boundary, kind)
     val job = remember(project, boundary, kind, durationMs) {
-        JunctionPreviewProject.prepare(project, boundary, kind, durationMs)
+        JunctionPreviewProject.prepare(project, boundary, kind, durationMs)?.let {
+            JunctionPreviewProject.compactDirectCut(it, boundary, kind)
+        }
     }
     if (job == null) {
         LaunchedEffect(boundary, kind) {
             DiagnosticRecorder.transitionStage(true, TransitionStage.PLAN_FAILED, diagnosis)
         }
+        Text("Esta junção não permite gerar prévia. Confira a duração dos clipes.",
+            color = MaterialTheme.colorScheme.error)
         return
     }
     val engine = remember { ExportEngine(context) }
@@ -60,11 +65,20 @@ internal fun TransitionVideoPreview(project: VideoProject, boundary: Int, kind: 
     var error by remember { mutableStateOf<String?>(null) }
     var progress by remember { mutableStateOf<Int?>(null) }
     var playing by remember { mutableStateOf(false) }
+    var firstFrame by remember { mutableStateOf(false) }
+    var renderRequested by remember { mutableStateOf(true) }
     var attempt by remember { mutableIntStateOf(0) }
     val latestAudioOn by rememberUpdatedState(audioOn)
     DisposableEffect(engine, player, lifecycle) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) { playing = isPlaying }
+            override fun onRenderedFirstFrame() {
+                if (file != null && error == null && !firstFrame) {
+                    firstFrame = true
+                    DiagnosticRecorder.previewEvent("transition", "first_frame")
+                    DiagnosticRecorder.transitionStage(true, TransitionStage.FIRST_FRAME, diagnosis)
+                }
+            }
             override fun onPlayerError(failure: PlaybackException) {
                 DiagnosticRecorder.previewEvent("transition", "play_error")
                 DiagnosticRecorder.transitionStage(true, TransitionStage.PLAY_FAILED, diagnosis, failure.errorCode)
@@ -85,7 +99,7 @@ internal fun TransitionVideoPreview(project: VideoProject, boundary: Int, kind: 
         }
     }
     LaunchedEffect(player, audioOn) { player.volume = if (audioOn) 1f else 0f }
-    LaunchedEffect(engine, attempt) {
+    LaunchedEffect(engine, attempt, renderRequested) {
         engine.cancel()
         player.stop()
         player.clearMediaItems()
@@ -93,18 +107,29 @@ internal fun TransitionVideoPreview(project: VideoProject, boundary: Int, kind: 
         file = null
         error = null
         progress = null
+        firstFrame = false
+        if (!renderRequested) return@LaunchedEffect
         delay(220L) // Coalesce rapid selection changes without holding multiple Transformer jobs.
         val started = android.os.SystemClock.elapsedRealtime()
         DiagnosticRecorder.previewEvent("transition", "start", job.project.subtitles)
         DiagnosticRecorder.transitionStage(true, TransitionStage.RENDER_START, diagnosis)
+        var timedOut = false
         try {
             engine.start(job.project, 360, "preview-transicao.mp4",
                 preset = ExportBitratePreset.COMPACT, originalAspectOverride = canvasAspect,
                 destination = outputMode.destination, frameMode = outputMode.frameMode,
                 onSuccess = { _, _ -> }, onError = { error = it }, onPreviewReady = { file = it })
-            while (file == null && error == null) {
-                progress = engine.progressOrNull()
-                delay(180L)
+            val completed = withTimeoutOrNull(45_000L) {
+                while (file == null && error == null) {
+                    progress = engine.progressOrNull()
+                    delay(180L)
+                }
+                true
+            }
+            if (completed == null && file == null && error == null) {
+                timedOut = true
+                engine.cancel()
+                error = "A montagem demorou mais de 45 segundos para renderizar."
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -112,12 +137,18 @@ internal fun TransitionVideoPreview(project: VideoProject, boundary: Int, kind: 
             engine.cancel()
             error = failure.message ?: "Não foi possível renderizar esta junção."
         } finally {
-            val outcome = when { file != null -> "ready"; error != null -> "failed"; else -> "cancelled" }
+            val outcome = when {
+                timedOut -> "render_timeout"
+                file != null -> "ready"
+                error != null -> "failed"
+                else -> "cancelled"
+            }
             DiagnosticRecorder.previewEvent("transition", outcome,
                 elapsedMs = android.os.SystemClock.elapsedRealtime() - started)
             DiagnosticRecorder.transitionStage(true, when (outcome) {
                 "ready" -> TransitionStage.RENDER_READY
                 "failed" -> TransitionStage.RENDER_FAILED
+                "render_timeout" -> TransitionStage.RENDER_TIMEOUT
                 else -> TransitionStage.CANCELLED
             }, diagnosis)
         }
@@ -132,6 +163,17 @@ internal fun TransitionVideoPreview(project: VideoProject, boundary: Int, kind: 
                 .setClippingConfiguration(window).build())
             player.prepare()
             if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) player.play()
+            val displayed = withTimeoutOrNull(9_000L) {
+                while (!firstFrame && error == null &&
+                    lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) delay(100L)
+                true
+            }
+            if (displayed == null && !firstFrame && error == null) {
+                player.stop()
+                error = "O vídeo da prévia foi gerado, mas o primeiro quadro não apareceu."
+                DiagnosticRecorder.previewEvent("transition", "play_timeout")
+                DiagnosticRecorder.transitionStage(true, TransitionStage.PLAY_TIMEOUT, diagnosis)
+            }
         }
     }
 
@@ -142,19 +184,30 @@ internal fun TransitionVideoPreview(project: VideoProject, boundary: Int, kind: 
             failure != null -> Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Prévia indisponível", color = Color.White, style = MaterialTheme.typography.labelLarge)
                 Text(failure, color = Color.White, style = MaterialTheme.typography.bodySmall, maxLines = 3)
-                TextButton(onClick = { attempt++ }) { Text("Tentar de novo", color = Color.White) }
+                TextButton(onClick = { renderRequested = true; attempt++ }) {
+                    Text("Tentar de novo", color = Color.White)
+                }
+            }
+            !renderRequested -> TextButton(onClick = { renderRequested = true; attempt++ }) {
+                Text("Carregar prévia", color = Color.White)
             }
             ready == null -> Column(horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 val p = progress
                 if (p == null) CircularProgressIndicator(Modifier.size(24.dp), color = Color.White)
                 else CircularProgressIndicator(progress = { p / 100f }, modifier = Modifier.size(24.dp), color = Color.White)
-                Text("Renderizando a montagem para a prévia…", color = Color.White, style = MaterialTheme.typography.bodySmall)
+                Text(if (p == null) "Preparando a prévia…" else "Renderizando prévia · $p%",
+                    color = Color.White, style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = { renderRequested = false }) { Text("Cancelar", color = Color.White) }
             }
-            else -> AndroidView(factory = { ctx -> previewPlayer(ctx).apply {
-                this.player = player
-                useController = false
-            } }, update = { it.player = player }, modifier = Modifier.fillMaxSize())
+            else -> {
+                AndroidView(factory = { ctx -> previewPlayer(ctx).apply {
+                    this.player = player
+                    useController = false
+                } }, update = { it.player = player }, modifier = Modifier.fillMaxSize())
+                if (!firstFrame) Text("Abrindo o vídeo da prévia…", color = Color.White,
+                    style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

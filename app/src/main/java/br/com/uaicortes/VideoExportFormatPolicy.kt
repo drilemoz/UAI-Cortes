@@ -40,7 +40,9 @@ internal object VideoExportFormatPolicy {
             ?: "Lado menor: ${shortSide}px · proporção original"
 
     fun recommendedBitrate(destination: ExportDestination): ExportBitratePreset =
-        if (destination.isVertical) ExportBitratePreset.COMPACT else ExportBitratePreset.HIGH
+        when (destination) {
+            ExportDestination.ORIGINAL, ExportDestination.VERTICAL -> ExportBitratePreset.HIGH
+        }
 
     fun framingDescription(mode: VerticalFrameMode): String = when (mode) {
         VerticalFrameMode.FIT ->

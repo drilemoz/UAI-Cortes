@@ -16,11 +16,19 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.306"
-    const val VERSION_CODE = 307
+    const val VERSION_NAME = "0.1.307"
+    const val VERSION_CODE = 308
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.307", listOf(
+            ReleaseFeature("subtitle-proofread-307", "Corrigir português em Legendas",
+                "Revise o antes e o depois com Gemini, sem enviar vídeo nem áudio. Aplique apenas as sugestões que escolher.", "check"),
+            ReleaseFeature("subtitle-diagnostics-307", "Transcrição com mensagens claras",
+                "O painel Online informa onde houve falha e registra o código no diagnóstico. Consumo e recuperação ficam na ajuda.", "check"),
+            ReleaseFeature("export-preview-quality-307", "MP4 e prévia da transição",
+                "Priorize a nitidez sem alterar configurações ao trocar de proporção. A prévia do corte simples renderiza só o trecho quando possível.", "check")
+        )),
         ReleaseSummary("0.1.306", listOf(
             ReleaseFeature("build-regression-306", "Correção do build 262",
                 "O teste agora diferencia o SRT clássico do novo karaokê rosa, sem alterar os estilos do aplicativo.", "check")

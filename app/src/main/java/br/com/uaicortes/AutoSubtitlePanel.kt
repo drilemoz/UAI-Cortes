@@ -45,8 +45,8 @@ internal fun AutoSubtitleSetup(sources: List<AudioTrack>, selected: String?, onS
     full: SubtitleSpeechRange, range: SubtitleSpeechRange, custom: Boolean,
     onCustom: (Boolean) -> Unit, onRange: (SubtitleSpeechRange) -> Unit) {
     var showSources by remember { mutableStateOf(false) }
-    Text("Fonte da fala", style = MaterialTheme.typography.titleSmall)
-    Box {
+    if (sources.isEmpty()) Text("Fonte · Áudio dos clipes", style = MaterialTheme.typography.titleSmall)
+    else Box {
         OutlinedButton(onClick = { showSources = true }, enabled = sources.isNotEmpty(),
             modifier = Modifier.fillMaxWidth()) {
             Text(sources.firstOrNull { it.id == selected }?.title?.ifBlank { "Narração escolhida" }

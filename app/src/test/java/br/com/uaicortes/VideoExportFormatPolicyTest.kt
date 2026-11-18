@@ -11,7 +11,7 @@ class VideoExportFormatPolicyTest {
             assertEquals(720 to 1280, VideoExportFormatPolicy.dimensions(destination, 720))
             assertEquals(1080 to 1920, VideoExportFormatPolicy.dimensions(destination, 1080))
             assertEquals("1080 × 1920 (9:16)", VideoExportFormatPolicy.requestedLabel(destination,1080))
-            assertEquals(ExportBitratePreset.COMPACT,
+            assertEquals(ExportBitratePreset.HIGH,
                 VideoExportFormatPolicy.recommendedBitrate(destination))
         }
     }

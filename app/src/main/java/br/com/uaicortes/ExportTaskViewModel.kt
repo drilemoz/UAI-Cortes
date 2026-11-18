@@ -85,6 +85,7 @@ internal class ExportTaskViewModel(application: Application) : AndroidViewModel(
                         savedVideo = uri
                         savedName = requestedName
                         qualityReport = report
+                        DiagnosticRecorder.exportQuality(report)
                         DiagnosticRecorder.action("export", "export_success")
                         DiagnosticRecorder.exportEvent("success", quality,
                             elapsedMs = SystemClock.elapsedRealtime() - task.startedAtMs)

@@ -16,7 +16,8 @@ assert 'SubtitleWordEffects.singleWordIndex(cue, absoluteMs)' in word
 assert 'hasIndividualTimes(cue)' in files('SubtitleWordEffects')
 sample = files('JunctionPreviewProject')
 assert 'TransitionBatch.apply(project, index' in sample
-assert 'copy(' not in sample
+assert 'copy(' not in sample.split('fun compactDirectCut',1)[0]
+assert 'return original' in sample and 'p.audioTracks.isNotEmpty()' in sample
 assert 'setStartPositionMs(job.playbackStartMs).setEndPositionMs(job.playbackEndMs)' in files('TransitionVideoPreview')
 assert all('frameMode = outputMode.frameMode' in files(x) for x in ('TransitionVideoPreview', 'SubtitleExportPreview'))
 assert 'CompactActionTile("Rascunho"' in files('ProjectDraftUi')

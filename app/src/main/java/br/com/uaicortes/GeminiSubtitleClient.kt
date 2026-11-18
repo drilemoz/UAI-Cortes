@@ -2,6 +2,7 @@ package br.com.uaicortes
 
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.delay
@@ -14,8 +15,6 @@ import java.io.IOException
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
-import java.net.UnknownHostException
-import java.net.SocketTimeoutException
 import java.util.concurrent.atomic.AtomicReference
 
 /** Gemini ASR opcional: só envia áudio após confirmação visível. Não reutiliza o TTS. */
@@ -75,7 +74,8 @@ internal class GeminiSubtitleClient(context: Context? = null) {
     }
 
     private suspend fun upload(file: File, key: String,
-        onProgress: suspend (Int?, String) -> Unit): Triple<String,String,String> {
+        onProgress: suspend (Int?, String) -> Unit,
+        onPhase: (SubtitleCloudPhase) -> Unit): Triple<String,String,String> {
         val start = connection("https://generativelanguage.googleapis.com/upload/v1beta/files",key,"POST")
         active.set(start)
         val uploadUrl: String
@@ -92,6 +92,7 @@ internal class GeminiSubtitleClient(context: Context? = null) {
                 ?: throw IOException("Servidor não retornou endereço de upload.")
         } finally { active.compareAndSet(start,null); start.disconnect() }
         currentCoroutineContext().ensureActive()
+        onPhase(SubtitleCloudPhase.UPLOAD_BYTES)
         val conn = connection(uploadUrl,key,"POST")
         active.set(conn)
         try {
@@ -146,19 +147,23 @@ internal class GeminiSubtitleClient(context: Context? = null) {
             active.set(conn)
             val response=try { checkedResult(conn) }
                 finally {active.compareAndSet(conn,null);conn.disconnect()}
-            val state=response.optJSONObject("file")?.optString("state").orEmpty()
+            val state = response.optString("state").ifBlank {
+                response.optJSONObject("file")?.optString("state").orEmpty()
+            }
             if(state == "ACTIVE") return
-            if(state == "FAILED") throw IOException("O Gemini não conseguiu processar o áudio.")
+            if(state == "FAILED" || state.isBlank()) throw SubtitleCloudException(
+                SubtitleCloudIssue(SubtitleCloudPhase.PROCESS_FILE, SubtitleCloudReason.FILE_PROCESSING))
             delay(1300L)
         }
-        throw IOException("O áudio ainda não ficou disponível no Gemini. Tente novamente depois.")
+        throw SubtitleCloudException(
+            SubtitleCloudIssue(SubtitleCloudPhase.PROCESS_FILE, SubtitleCloudReason.TIMEOUT))
     }
 
     private fun interaction(uri: String, key: String, withSpeakerLabels: Boolean): JSONObject {
         val body=JSONObject()
-            .put("model","gemini-3.5-transcribe")
-            .put("input",JSONArray().put(JSONObject().put("type","audio")
-                .put("uri",uri).put("mime_type","audio/wav")))
+            .put("model","models/gemini-3.5-transcribe")
+            .put("input",JSONArray().put(JSONObject().put("type","file")
+                .put("file_uri",uri)))
             .put("generation_config", JSONObject().put("transcription_config",
                 JSONObject().put("language_codes",JSONArray().put("pt-BR"))
                     .put("mode",JSONObject().put("type","verbatim")
@@ -187,28 +192,41 @@ internal class GeminiSubtitleClient(context: Context? = null) {
     private suspend fun transcribeOnce(context: Context, project: VideoProject, key: String,
         withSpeakerLabels: Boolean,
         onProgress: suspend (Int?,String) -> Unit): List<SubtitleCue> = withContext(Dispatchers.IO) {
-        val valid=GeminiKeyParser.validate(key)
-        val wav=SubtitleAudioCache.getOrPrepare(context,project,onProgress)
+        var phase = SubtitleCloudPhase.KEY
+        var valid = ""
         var remote: String? = null
         var interactionStartedNs: Long? = null
         fun elapsedMs(): Long? = interactionStartedNs?.let {
             ((System.nanoTime() - it) / 1_000_000L).coerceAtLeast(0L)
         }
         try {
+            valid = GeminiKeyParser.validate(key)
+            phase = SubtitleCloudPhase.AUDIO
+            val wav = SubtitleAudioCache.getOrPrepare(context,project,onProgress)
+            phase = SubtitleCloudPhase.UPLOAD_START
             onProgress(60,"Preparando envio do áudio ao Gemini…")
-            val (uri,name,state)=upload(wav,valid,onProgress)
+            val (uri,name,state)=upload(wav,valid,onProgress) { phase = it }
             remote=name
             if(state != "ACTIVE") {
+                phase = SubtitleCloudPhase.PROCESS_FILE
                 onProgress(null,"Aguardando o processamento do áudio no Gemini…")
                 waitForFile(name,valid)
             }
             currentCoroutineContext().ensureActive()
             onProgress(null,"Transcrevendo fala e identificando horários…")
+            phase = SubtitleCloudPhase.TRANSCRIBE
             interactionStartedNs = System.nanoTime()
             val response=interaction(uri,valid,withSpeakerLabels)
+            phase = SubtitleCloudPhase.READ_RESULT
             usage?.safeRecord(valid, "gemini-3.5-transcribe", "legendas", response, latencyMs = elapsedMs())
             currentCoroutineContext().ensureActive()
-            val parsed=GeminiSubtitleParser.parse(response,project.durationMs,withSpeakerLabels)
+            val parsed = try {
+                val resultState = response.optString("status")
+                require(resultState.isBlank() || resultState == "completed")
+                GeminiSubtitleParser.parse(response,project.durationMs,withSpeakerLabels)
+            } catch (_: Exception) {
+                throw SubtitleCloudException(SubtitleCloudIssue(phase, SubtitleCloudReason.INVALID_RESULT))
+            }
             // Confere os horários do Gemini com a energia real do áudio enviado.
             val refined=runCatching {
                 SubtitleTimingRefiner.refine(parsed,SubtitleVoiceEnvelope.read(wav),project.durationMs)
@@ -219,13 +237,16 @@ internal class GeminiSubtitleClient(context: Context? = null) {
             else "Transcrição concluída"
             onProgress(100,note)
             cues
-        } catch(e: GeminiHttpException) {
-            usage?.safeRecord(valid, "gemini-3.5-transcribe", "legendas",
-                status = if (e.statusCode == 429) "429" else "erro_${e.statusCode}",
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: Exception) {
+            if (failure is GeminiHttpException) usage?.safeRecord(valid, "gemini-3.5-transcribe", "legendas",
+                status = if (failure.statusCode == 429) "429" else "erro_${failure.statusCode}",
                 latencyMs = elapsedMs())
-            throw e
-        } catch(e: UnknownHostException) {throw IOException("Sem conexão com a internet.")}
-        catch(e: SocketTimeoutException) {throw IOException("O Gemini demorou a responder.")}
+            val issue = SubtitleCloudIssue.from(phase, failure)
+            DiagnosticRecorder.subtitleCloudFailure("transcribe", issue)
+            throw SubtitleCloudException(issue)
+        }
         finally {
             // O WAV permanece em cache privado por até 3 horas, sujeito à limpeza.
             remote?.let { runCatching { deleteUploaded(it,valid) } }

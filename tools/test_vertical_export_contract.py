@@ -12,7 +12,7 @@ assert 'ORIGINAL("Original"), VERTICAL("Vertical 9:16")' in policy
 assert 'VERTICAL.name, "SHORTS", "REELS", "TIKTOK" -> VERTICAL' in policy
 assert 'shortSide to vertical' in policy and 'val vertical =' in policy
 assert 'shortSide in listOf(360, 480, 720, 1080)' in policy
-assert 'ExportBitratePreset.COMPACT' in policy
+assert 'ExportBitratePreset.HIGH' in policy
 assert 'FIT("Mostrar tudo")' in policy and 'CENTER_CROP("Preencher tela")' in policy
 assert 'Presentation.createForWidthAndHeight(' in engine
 assert 'Presentation.createForShortSide(height)' in engine

@@ -235,6 +235,12 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                     }
                 }
             }
+            if (quality != 1080 || bitratePreset != ExportBitratePreset.MAXIMUM) {
+                TextButton(onClick = {
+                    quality = 1080
+                    bitratePresetName = ExportBitratePreset.MAXIMUM.name
+                }, enabled = !working) { Text("Priorizar nitidez · 1080p / 28 Mb/s") }
+            }
             ExportSourceQualityPolicy.warning(sourceShortSide, quality)?.let { notice ->
                 Text(notice,fontSize=11.sp,color=MaterialTheme.colorScheme.tertiary,
                     modifier=Modifier.padding(top=5.dp))
@@ -251,7 +257,6 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                         Modifier.weight(1f).height(62.dp)) {
                         if (destination.isVertical != item.isVertical) {
                             destinationId=item.name
-                            bitratePresetName=VideoExportFormatPolicy.recommendedBitrate(item).name
                         }
                     }
                 }

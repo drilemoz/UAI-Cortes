@@ -572,6 +572,7 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
     var speakerFilter by remember(p.id) { mutableStateOf<String?>(null) }
     var speakerFilterMenu by remember(p.id) { mutableStateOf(false) }
     var autoSubtitlesMenu by remember(p.id) { mutableStateOf(false) }
+    var proofreadTargets by remember(p.id) { mutableStateOf<List<SubtitleCue>?>(null) }
     var speakerManagerOpen by remember(p.id) { mutableStateOf(false) }
     var speakerPickerCueId by remember(p.id) { mutableStateOf<String?>(null) }
     LaunchedEffect(p.subtitleSpeakers.map { it.id }) {
@@ -723,6 +724,13 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                         DropdownMenuItem(text={Text("Gerar legendas")},onClick={
                             autoSubtitlesMenu=false;onAutoSubtitles()
                         },leadingIcon={Icon(Icons.Default.AutoAwesome,null)})
+                        DropdownMenuItem(text = { Text("Corrigir português · Gemini") },
+                            enabled = sorted.isNotEmpty(), onClick = {
+                                autoSubtitlesMenu = false
+                                val from = sorted.indexOfFirst { it.id == selectedId }.coerceAtLeast(0)
+                                proofreadTargets = SubtitleProofreadPolicy.batch(sorted,
+                                    if (SubtitleProofreadPolicy.batch(sorted, 0).size == sorted.size) 0 else from)
+                            }, leadingIcon = { Icon(Icons.Default.Spellcheck, null) })
                         DropdownMenuItem(text={Text("Sincronia labial · Gemini")},
                             enabled=p.subtitles.isNotEmpty() && p.clips.any { !it.isImage }, onClick={
                                 val first = sorted.indexOfFirst { it.id == selectedId }.takeIf { it >= 0 }
@@ -813,6 +821,18 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                     }
                 }
             }
+        }
+    }
+    proofreadTargets?.let { targets ->
+        SubtitleProofreadDialog(targets, sorted.size, close = { proofreadTargets = null }) { changes ->
+            val revised = SubtitleProofreadPolicy.apply(p.subtitles, changes)
+            if (revised != p.subtitles && update(p.copy(subtitles = revised))) {
+                batchUndo = SubtitleBatchUndo(p.subtitles, revised)
+                batchUndoSpeakerStyles = p.subtitleSpeakerStyles
+                deletedSnapshot = null
+                status = "Revisão aplicada. Use Desfazer para voltar."
+                true
+            } else false
         }
     }
     pendingImport?.let { original ->

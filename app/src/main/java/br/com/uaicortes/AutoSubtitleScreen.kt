@@ -1,6 +1,5 @@
 package br.com.uaicortes
 
-import android.content.Context
 import android.os.SystemClock
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -35,7 +34,6 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
     val scope = rememberCoroutineScope()
     val geminiStore = remember(context) { GeminiCredentialStore(context) }
     val geminiClient = remember(context) { GeminiSubtitleClient(context) }
-    val settings = remember(context) { context.getSharedPreferences("auto_subtitle_ui", Context.MODE_PRIVATE) }
     val installed = AutoSubtitleEngine.installed(context)
     val geminiConfigured = geminiStore.hasKey()
     val full = SubtitleSpeechRange(0L, project.durationMs)
@@ -54,8 +52,8 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
     var needsReview by remember(project.id) { mutableStateOf(emptySet<String>()) }
     var replace by remember(project.id) { mutableStateOf(false) }
     var detectSpeakers by remember(project.id) { mutableStateOf(true) }
-    var hideExplanation by remember { mutableStateOf(settings.getBoolean("short_cloud_notice", false)) }
-    var showDetails by remember { mutableStateOf(!hideExplanation) }
+    var showDetails by remember { mutableStateOf(false) }
+    var cloudIssue by remember(project.id) { mutableStateOf<SubtitleCloudIssue?>(null) }
     var appearanceMode by remember(project.id) { mutableStateOf(SubtitleAppearanceMode.KARAOKE_ROSA) }
     var generatedSize by remember(project.id) { mutableIntStateOf(SubtitleAppearancePolicy.ROSA_SIZE_SP) }
     var selectedCueId by remember(project.id) { mutableStateOf<String?>(null) }
@@ -105,7 +103,7 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
         if (busy) return
         message = ""
         open = engine
-        showDetails = !hideExplanation
+        showDetails = false
         page = if (lastEngine == engine && results.isNotEmpty()) AutoSubtitleRoute.REVIEW else AutoSubtitleRoute.SETUP
     }
 
@@ -159,10 +157,7 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
             (lastEngine == SubtitleEngine.GEMINI && results.isNotEmpty())
         val original = results
         val priorReview = needsReview
-        if (cloud) {
-            // This function is reached only through the visible send action, including retries.
-            settings.edit().putBoolean("short_cloud_notice", hideExplanation).apply()
-        }
+        if (cloud) cloudIssue = null
         page = AutoSubtitleRoute.GENERATING
         busy = true
         runningCloud = cloud
@@ -174,6 +169,8 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
             val sourceEngine = if (cloud) "gemini" else "vosk"
             DiagnosticRecorder.subtitleGeneration(sourceEngine, "start")
             var recorded = false
+            var requestingCloud = false
+            var preflight = SubtitleCloudPhase.AUDIO
             try {
                 if (trackId != null && track == null) error("A faixa escolhida não existe mais no projeto.")
                 val source = prepareSubtitleSpeechSource(context, project, track, range)
@@ -184,6 +181,7 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                     withContext(Dispatchers.Main.immediate) { progress = pct; message = step }
                 }
                 val generated = if (cloud) {
+                    preflight = SubtitleCloudPhase.KEY
                     val apiKey = withContext(Dispatchers.IO) {
                         geminiStore.read() ?: error("Configure a chave Gemini.")
                     }
@@ -191,6 +189,7 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                         withContext(Dispatchers.IO) { geminiCheckpoint.start(mediaFingerprint, SUBTITLE_GEMINI_MODEL) }
                         recorded = true
                     }
+                    requestingCloud = true
                     geminiClient.transcribe(context, source.project, apiKey, detect, report)
                 } else AutoSubtitleEngine.transcribe(context, source.project, report)
                 val actual = SubtitleSpeechRange(source.offsetMs, source.offsetMs + source.project.durationMs)
@@ -258,18 +257,26 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                 throw cancel
             } catch (error: Exception) {
                 DiagnosticRecorder.subtitleGeneration(sourceEngine, "failed")
+                val issue = if (cloud) SubtitleCloudIssue.from(
+                    if (requestingCloud) SubtitleCloudPhase.TRANSCRIBE else preflight, error) else null
+                cloudIssue = issue
+                if (issue != null && error !is SubtitleCloudException)
+                    DiagnosticRecorder.subtitleCloudFailure("transcribe", issue)
                 if (recorded) {
+                    val review = issue?.needsRecoveryReview == true
                     withContext(Dispatchers.IO) {
-                        runCatching { geminiCheckpoint.review(mediaFingerprint, SUBTITLE_GEMINI_MODEL) }
+                        runCatching {
+                            if (review) geminiCheckpoint.review(mediaFingerprint, SUBTITLE_GEMINI_MODEL)
+                            else geminiCheckpoint.clear()
+                        }
                     }
-                    savedGeminiTask = GeminiTaskCheckpoint(mediaFingerprint, SUBTITLE_GEMINI_MODEL,
-                        GeminiTaskStage.REVIEW, System.currentTimeMillis())
+                    savedGeminiTask = if (review) GeminiTaskCheckpoint(mediaFingerprint, SUBTITLE_GEMINI_MODEL,
+                        GeminiTaskStage.REVIEW, System.currentTimeMillis()) else null
                 }
-                message = when (error) {
-                    is IllegalArgumentException, is IllegalStateException -> error.message.orEmpty().take(140)
-                    else -> if (cloud) GeminiOperationFailure.label(GeminiOperationFailure.fromThrowable(error))
-                        else "Não foi possível transcrever este áudio."
-                } + " Nada foi aplicado ao projeto."
+                message = if (issue != null) {
+                    issue.phase.label + (issue.http?.let { " · HTTP $it" }.orEmpty()) + ". " +
+                        issue.message() + (if (issue.needsRecoveryReview) " Pode ter consumido cota." else "")
+                } else "Não foi possível transcrever este áudio no aparelho."
             } finally {
                 busy = false; task = null
                 page = if (results.isEmpty() || lastEngine != engine) AutoSubtitleRoute.SETUP else AutoSubtitleRoute.REVIEW
@@ -327,13 +334,18 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true,
             confirmValueChange = { value -> value != SheetValue.Hidden || !busy })
         val height = (LocalConfiguration.current.screenHeightDp *
-            (if (page == AutoSubtitleRoute.SETUP) .64f else .90f)).dp
+            (if (page == AutoSubtitleRoute.SETUP) .73f else .90f)).dp
         ModalBottomSheet(onDismissRequest = { if (busy) stop() else open = null },
             sheetState = sheetState, shape = UaiShapes.sheet, dragHandle = null) {
             Column(Modifier.fillMaxWidth().heightIn(max = height).imePadding().navigationBarsPadding()
                 .padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(engine.title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                    if (engine == SubtitleEngine.GEMINI && page == AutoSubtitleRoute.SETUP) {
+                        IconButton(onClick = { showDetails = true }) {
+                            Icon(Icons.Default.HelpOutline, "Ajuda sobre transcrição Gemini")
+                        }
+                    }
                     IconButton(onClick = { if (busy) stop() else open = null }) {
                         Icon(Icons.Default.Close, if (busy) "Cancelar" else "Fechar painel")
                     }
@@ -349,41 +361,15 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                             }
                             if (engine == SubtitleEngine.GEMINI) {
                                 if (!geminiConfigured) OutlinedButton(onClick = onManageGemini) { Text("Configurar API Gemini") }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Checkbox(detectSpeakers, { detectSpeakers = it })
-                                    Text("Sugerir Voz 1, Voz 2… (revisão obrigatória)")
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Identificar vozes", modifier = Modifier.weight(1f))
+                                    Switch(checked = detectSpeakers, onCheckedChange = { detectSpeakers = it })
                                 }
-                                Text("Envia áudio ao Gemini e pode consumir cota ou gerar cobrança.",
-                                    style = MaterialTheme.typography.bodySmall)
-                                TextButton(onClick = { showDetails = !showDetails }) {
-                                    Text(if (showDetails) "Ocultar detalhes" else "Detalhes de consumo e privacidade")
-                                }
-                                if (showDetails) {
-                                    Text("Somente a fonte de áudio e o trecho escolhidos serão enviados. O vídeo não será enviado. " +
-                                        "Você poderá revisar tudo antes de aplicar.", style = MaterialTheme.typography.bodySmall)
-                                    GeminiUsageHint("legendas automáticas", durationMs = effectiveRange.durationMs,
-                                        model = SUBTITLE_GEMINI_MODEL)
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Checkbox(hideExplanation, { hideExplanation = it
-                                            settings.edit().putBoolean("short_cloud_notice", it).apply()
-                                        })
-                                        Text("Não mostrar esta explicação novamente",
-                                            style = MaterialTheme.typography.bodySmall)
-                                    }
-                                }
-                                if (savedGeminiTask?.stage == GeminiTaskStage.REVIEW)
-                                    Text("Resultado anterior incerto. Repetir pode consumir cota novamente.",
-                                        style = MaterialTheme.typography.bodySmall)
                                 if (savedGeminiTask?.stage == GeminiTaskStage.READY && lastEngine != engine)
                                     TextButton(onClick = ::restoreCloud) { Text("Continuar revisão") }
-                                if (savedGeminiTask != null) TextButton(onClick = {
-                                    scope.launch {
-                                        withContext(Dispatchers.IO) { geminiCheckpoint.clear() }
-                                        savedGeminiTask = null
-                                    }
-                                }) { Text("Apagar cópia de recuperação") }
                             }
-                            if (message.isNotBlank()) Text(message, style = MaterialTheme.typography.bodySmall)
+                            if (message.isNotBlank() && (engine != SubtitleEngine.GEMINI || cloudIssue == null))
+                                Text(message, style = MaterialTheme.typography.bodySmall)
                         }
                         AutoSubtitleRoute.GENERATING -> Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text(message)
@@ -405,7 +391,7 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                             replace, { replace = it }, project, draftRange, voiceDecisions, voiceNames,
                             onDecision = { id, decision -> voiceDecisions = voiceDecisions + (id to decision) },
                             onName = { id, name -> voiceNames = voiceNames + (id to name) },
-                            onNew = { page = AutoSubtitleRoute.SETUP; message = ""; showDetails = !hideExplanation },
+                            onNew = { page = AutoSubtitleRoute.SETUP; message = ""; showDetails = false },
                             onRedo = { page = AutoSubtitleRoute.REDO },
                             onEdit = { cue -> selectedCueId = cue.id; cueText = cue.text; page = AutoSubtitleRoute.CUE })
                         AutoSubtitleRoute.CUE -> activeCue?.let { cue ->
@@ -439,6 +425,24 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                     AutoSubtitleRoute.SETUP -> {
                         val ready = if (engine == SubtitleEngine.GEMINI) geminiConfigured else installed
                         val candidate = effectiveRange
+                        if (engine == SubtitleEngine.GEMINI) {
+                            cloudIssue?.let { issue ->
+                                Surface(Modifier.fillMaxWidth(), shape = UaiShapes.card,
+                                    color = MaterialTheme.colorScheme.errorContainer) {
+                                    Column(Modifier.padding(11.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        Text(issue.phase.label + (issue.http?.let { " · HTTP $it" }.orEmpty()),
+                                            style = MaterialTheme.typography.labelLarge)
+                                        Text(issue.message(), style = MaterialTheme.typography.bodySmall)
+                                        Text("Nenhuma legenda alterada.", style = MaterialTheme.typography.labelSmall)
+                                    }
+                                }
+                            }
+                            if (savedGeminiTask?.stage == GeminiTaskStage.REVIEW)
+                                Text("A tentativa anterior pode ter consumido cota. Nada foi aplicado.",
+                                    style = MaterialTheme.typography.bodySmall)
+                            Text("Só envia áudio ao Gemini. Pode consumir cota.",
+                                style = MaterialTheme.typography.labelSmall)
+                        }
                         Button(onClick = { generate(engine, candidate) }, enabled = ready && !busy &&
                             candidate.durationMs > 0 && (referenceId != null ||
                             candidate.durationMs <= SubtitleSpeechDraft.MAX_OPERATION_MS), modifier = Modifier.fillMaxWidth()) {
@@ -453,4 +457,24 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
             }
         }
     }
+    if (showDetails && open == SubtitleEngine.GEMINI) AlertDialog(
+        onDismissRequest = { showDetails = false },
+        title = { Text("Sobre a transcrição com Gemini") },
+        text = { Column(Modifier.verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("O app envia apenas o áudio da fonte e do trecho selecionados. O vídeo não é enviado.")
+            Text("Identificar vozes sugere quem falou cada trecho. Revise os personagens antes de aplicar.")
+            Text("A consulta pode consumir cota. Tentativas com falha de conexão não serão repetidas automaticamente.")
+            GeminiUsageHint("legendas automáticas", durationMs = effectiveRange.durationMs,
+                model = SUBTITLE_GEMINI_MODEL)
+            if (savedGeminiTask != null) TextButton(onClick = {
+                scope.launch {
+                    withContext(Dispatchers.IO) { geminiCheckpoint.clear() }
+                    savedGeminiTask = null
+                    showDetails = false
+                }
+            }) { Text("Apagar cópia de recuperação") }
+        } },
+        confirmButton = { TextButton(onClick = { showDetails = false }) { Text("Entendi") } })
+
 }

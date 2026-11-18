@@ -42,11 +42,14 @@ internal fun SrtImportReview(project: VideoProject, original: List<SubtitleCue>,
             busy = true
             error = ""
             progress = "Preparando áudio…"
+            var phase = SubtitleCloudPhase.AUDIO
             try {
                 val source = prepareSubtitleSpeechSource(context, project, track)
                 val transcript = if (useCloud) {
+                    phase = SubtitleCloudPhase.KEY
                     val key = withContext(Dispatchers.IO) { credentials.read() }
                         ?: error("Configure sua chave Gemini antes de conferir.")
+                    phase = SubtitleCloudPhase.TRANSCRIBE
                     gemini.transcribe(context, source.project, key, false) { _, step ->
                         withContext(Dispatchers.Main) { progress = step }
                     }
@@ -59,8 +62,12 @@ internal fun SrtImportReview(project: VideoProject, original: List<SubtitleCue>,
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                DiagnosticRecorder.exception("srt_speech_review", e)
-                error = "Não foi possível conferir a fala. Você ainda pode manter os horários do SRT."
+                if (useCloud) {
+                    val issue = SubtitleCloudIssue.from(phase, e)
+                    if (e !is SubtitleCloudException) DiagnosticRecorder.subtitleCloudFailure("transcribe", issue)
+                    error = issue.phase.label + (issue.http?.let { " · HTTP $it" }.orEmpty()) + ". " +
+                        issue.message() + " Você ainda pode manter os horários do SRT."
+                } else error = "Não foi possível conferir a fala. Você ainda pode manter os horários do SRT."
             } finally { busy = false }
         }
     }

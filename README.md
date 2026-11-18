@@ -1,4 +1,12 @@
-# Uai Cortes · v0.1.306 — Correção do build 262
+# Uai Cortes · v0.1.307 — Legendas, nitidez e prévias
+
+- **Legenda:** revisão de português com Gemini, diferenças selecionáveis e desfazer. Envia apenas texto, mantém os horários da fala e não altera nada sem confirmação.
+- **Online:** pedido REST atualizado, erro com etapa/código e ajuda compacta. O diagnóstico registra apenas categorias e números.
+- **Exportação e Transição:** alternar proporção não reduz bitrate. Atalho 1080p / 28 Mb/s e medidas reais do MP4. Prévia curta para corte simples e tempos máximos separados para renderização e reprodução.
+
+Validação em [docs/VALIDATION_0.1.307.md](docs/VALIDATION_0.1.307.md).
+
+## v0.1.306 — Correção do build 262
 
 - **Build 262:** o teste de regressão separa o padrão de 14 sp ao importar SRT do modelo karaokê rosa de 20 sp, contorno 4 e sombra 1.
 - O estilo novo, a lista de cinco modelos e o ajuste de voz da versão anterior foram preservados.

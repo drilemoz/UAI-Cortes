@@ -56,6 +56,7 @@ internal class GeminiKeyFailover(context: Context) {
     private fun quota429(error: Exception): Boolean = when (error) {
         is GeminiApiError -> error.http == 429
         is GeminiHttpException -> error.statusCode == 429
+        is SubtitleCloudException -> error.issue.http == 429
         else -> false
     }
 }

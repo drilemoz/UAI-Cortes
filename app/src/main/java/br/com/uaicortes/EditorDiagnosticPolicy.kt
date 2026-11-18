@@ -26,7 +26,8 @@ internal object EditorDiagnosticPolicy {
     enum class TransitionStage(val code: String) {
         PLAN_FAILED("plan_failed"), FRAME_PREP_FAILED("frame_prep_failed"),
         RENDER_START("render_start"), RENDER_READY("render_ready"), RENDER_FAILED("render_failed"),
-        CANCELLED("cancelled"), PLAY_FAILED("play_failed")
+        CANCELLED("cancelled"), PLAY_FAILED("play_failed"), FIRST_FRAME("first_frame"),
+        RENDER_TIMEOUT("render_timeout"), PLAY_TIMEOUT("play_timeout")
     }
 
     fun media(target: Target, stage: MediaStage, result: Result, playerCode: Int? = null) =

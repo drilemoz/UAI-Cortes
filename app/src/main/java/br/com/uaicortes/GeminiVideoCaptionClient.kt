@@ -122,7 +122,7 @@ CONTEXTO:\n${contextText.take(1200)}"""
     suspend fun generateStudioJson(key: String, instruction: String, model: String,
         operation: String): JSONObject = withContext(Dispatchers.IO) {
         require(GeminiCaptionModelPolicy.validId(model)) { "Selecione um modelo de texto válido." }
-        require(operation in setOf("voice_studio_tone", "voice_studio_text"))
+        require(operation in setOf("voice_studio_tone", "voice_studio_text", "subtitle_proofread"))
         require(instruction.length in 10..45000) { "O roteiro excede o limite desta operação." }
         val payload = JSONObject().put("contents", JSONArray().put(JSONObject()
             .put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", instruction)))))
@@ -139,6 +139,9 @@ CONTEXTO:\n${contextText.take(1200)}"""
             parts.optJSONObject(it)?.optString("text").orEmpty()
         }.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
         try { JSONObject(answer) } catch (_: Exception) {
+            if (operation == "subtitle_proofread")
+                throw SubtitleCloudException(SubtitleCloudIssue(
+                    SubtitleCloudPhase.PROOFREAD, SubtitleCloudReason.INVALID_RESULT))
             throw IOException("A resposta não estava em JSON válido; revise antes de gerar novamente.")
         }
     }
@@ -189,9 +192,11 @@ CONTEXTO:\n${contextText.take(1200)}"""
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
-        } catch (_: UnknownHostException) {
+        } catch (failure: UnknownHostException) {
+            if (operation == "subtitle_proofread") throw failure
             throw IOException("Sem conexão com a internet.")
-        } catch (_: SocketTimeoutException) {
+        } catch (failure: SocketTimeoutException) {
+            if (operation == "subtitle_proofread") throw failure
             throw IOException("Tempo esgotado sem resposta confirmada. Confira o consumo antes de tentar novamente.")
         } finally {
             connection.compareAndSet(http, null)

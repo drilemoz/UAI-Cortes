@@ -8,13 +8,13 @@ g=(r/'GeminiVoiceReviewUi.kt').read_text()
 h=(r/'SubtitleHelpUi.kt').read_text()
 panel=(r/'AutoSubtitlePanel.kt').read_text()
 assert 'Modelo offline PT-BR pronto' in a and 'Gerar offline' in a
-assert 'Enviar e gerar' in a and 'Sugerir Voz 1, Voz 2' in a
-assert 'ModalBottomSheet(' in a and 'AlertDialog(' not in a
+assert 'Enviar e gerar' in a and 'Identificar vozes' in a
+assert 'ModalBottomSheet(' in a and 'if (showDetails && open == SubtitleEngine.GEMINI) AlertDialog(' in a
 assert 'AutoSubtitleEngineCard(' in a and 'Revisar ${results.size} legendas' in panel
-assert 'O vídeo não será enviado.' in a
-assert 'Envia áudio ao Gemini e pode consumir cota ou gerar cobrança.' in a
-assert 'Detalhes de consumo e privacidade' in a and 'if (showDetails)' in a
-assert 'Não mostrar esta explicação novamente' in a
+assert 'O vídeo não é enviado.' in a
+assert 'Só envia áudio ao Gemini. Pode consumir cota.' in a
+assert 'Ajuda sobre transcrição Gemini' in a
+assert 'mutableStateOf(false)' in a.split('var showDetails', 1)[1].splitlines()[0]
 assert 'GeminiUsageHint("legendas automáticas"' in a
 assert 'GeminiTaskCheckpointStore' in a and 'geminiCheckpoint.saveSubtitles' in a
 assert 'geminiClient.transcribe(context, source.project, apiKey, detect, report)' in a

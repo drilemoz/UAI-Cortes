@@ -102,7 +102,7 @@ object DiagnosticRecorder {
         elapsedMs: Long? = null) {
         if (!active.get()) return
         val safeRoute = route.takeIf { it == "transition" || it == "subtitles" || it == "editor" } ?: return
-        val safeStage = stage.takeIf { it in setOf("start", "ready", "failed", "cancelled", "play_error") } ?: return
+        val safeStage = stage.takeIf { it in setOf("start", "ready", "failed", "cancelled", "play_error", "first_frame", "render_timeout", "play_timeout") } ?: return
         val timing = if (stage == "start") " cues=${cues.size} exact=${cues.count(SubtitleWordEffects::hasIndividualTimes)}"
             else elapsedMs?.let { " elapsed_ms=${it.coerceAtLeast(0L)}" }.orEmpty()
         log("PREVIEW", "screen=$safeRoute stage=$safeStage$timing")
@@ -153,6 +153,11 @@ object DiagnosticRecorder {
             count?.let { " count=${it.coerceAtLeast(0)}" }.orEmpty())
     }
 
+    internal fun subtitleCloudFailure(operation: String, issue: SubtitleCloudIssue) {
+        if (operation !in setOf("transcribe", "proofread")) return
+        log("SUBTITLE_CLOUD", "operation=$operation ${issue.diagnostic()}")
+    }
+
     /** Telemetria de atualização sem URL, nome de APK ou headers de autenticação. */
     fun update(event: String, bytes: Long? = null) {
         val allowed = setOf("started", "pause_requested", "paused", "resumed", "stop_requested",
@@ -200,6 +205,19 @@ object DiagnosticRecorder {
         log("EXPORT", "stage=$phase${quality?.let { " quality=$it" }.orEmpty()}" +
             "${percent?.let { " percent=$it" }.orEmpty()}" +
             "${seconds?.let { " elapsed_s=$it" }.orEmpty()}")
+    }
+
+    /** Medições agregadas do MP4 salvo, sem nome, URI, codec ou outro dado de mídia. */
+    internal fun exportQuality(report: ExportQualityReport) {
+        if (!active.get()) return
+        val geometry = report.displayDimensions?.let { (w, h) ->
+            " width=${w.coerceIn(1, 16384)} height=${h.coerceIn(1, 16384)}"
+        }.orEmpty()
+        log("EXPORT_QUALITY", "requested_short=${report.requestedShortSide}$geometry" +
+            " requested_kbps=${report.requestedVideoBitrateBps.coerceAtLeast(0) / 1000}" +
+            (report.videoBitrateBps.takeIf { it > 0 }?.let { " measured_kbps=${it / 1000}" } ?: "") +
+            " dimension_mismatch=${report.fellBackInResolution}" +
+            " bitrate_below_half=${report.bitrateWellBelowRequest}")
     }
 
     /** Só números e estágios. Não persiste as assinaturas visuais nem o MP4. */
