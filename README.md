@@ -1,4 +1,11 @@
-# Uai Cortes · v0.1.305 — Modelos e encaixe de voz
+# Uai Cortes · v0.1.306 — Correção do build 262
+
+- **Build 262:** o teste de regressão separa o padrão de 14 sp ao importar SRT do modelo karaokê rosa de 20 sp, contorno 4 e sombra 1.
+- O estilo novo, a lista de cinco modelos e o ajuste de voz da versão anterior foram preservados.
+
+Validação em [docs/VALIDATION_0.1.306.md](docs/VALIDATION_0.1.306.md).
+
+## v0.1.305 — Modelos e encaixe de voz
 
 - **Legendas:** só cinco modelos de fábrica, sem limitar a lista de falas. Atalhos de Nova, Automáticas e Personagens nas barras de ícones.
 - **Karaokê rosa:** letras maiores e pesadas, contorno negro e tarja rosa na palavra ativa. Estilos já salvos não são migrados.

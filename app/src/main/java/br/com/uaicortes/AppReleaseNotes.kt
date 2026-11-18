@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.305"
-    const val VERSION_CODE = 306
+    const val VERSION_NAME = "0.1.306"
+    const val VERSION_CODE = 307
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.306", listOf(
+            ReleaseFeature("build-regression-306", "Correção do build 262",
+                "O teste agora diferencia o SRT clássico do novo karaokê rosa, sem alterar os estilos do aplicativo.", "check")
+        )),
         ReleaseSummary("0.1.305", listOf(
             ReleaseFeature("subtitle-five-models-305", "Cinco modelos e karaokê mais legível",
                 "O limite é para modelos de fábrica. Todas as falas voltam à lista normal. Nova, Automáticas e Personagens ficam nas barras de ícones.", "check"),

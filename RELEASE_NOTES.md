@@ -1,3 +1,8 @@
+# Uai Cortes · versão 0.1.306 — Correção do build 262
+
+- **Build 262:** o teste de regressão separa o padrão de 14 sp ao importar SRT do modelo karaokê rosa de 20 sp, contorno 4 e sombra 1.
+- O estilo novo, a lista de cinco modelos e o ajuste de voz da versão anterior foram preservados.
+
 # Uai Cortes · versão 0.1.305 — Modelos e encaixe de voz
 
 - **Legendas:** só cinco modelos de fábrica, sem limitar a lista de falas. Atalhos de Nova, Automáticas e Personagens nas barras de ícones.

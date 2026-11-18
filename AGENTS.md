@@ -1,3 +1,9 @@
+# v0.1.306 — Correção do build 262
+
+- Base v0.1.305/versionCode 306, nova v0.1.306/versionCode 307. Preservar schema 4, assinatura e cinco variantes.
+- A correção está no contrato JUnit de aparência. SRT importado em 14 sp, karaokê rosa em 20 sp com contorno 4 e tamanho explícito respeitado. Não reverter o visual nem a lógica de voz.
+- O build 262 compilou Kotlin, mas o Gradle parou no teste da expectativa antiga. Confirmar o novo job antes de afirmar publicação de APK.
+
 # v0.1.305 — Modelos e encaixe de voz
 
 - Base v0.1.304/versionCode 305, nova v0.1.305/versionCode 306. Preservar schema 4, assinatura e variantes.

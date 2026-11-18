@@ -51,15 +51,23 @@ class SrtSpeechAlignmentTest {
         assertEquals(imported, SrtSpeechAlignment.align(imported, transcript, 5_000).cues)
     }
 
-    @Test fun newCaptionsUse14WhileSavedSizesAndOverridesRemainAdjustable() {
+    @Test fun importedSrtUses14AndKeepsSavedSize() {
         val parsed = EditFeatures.parseSrt("1\n00:00:01,000 --> 00:00:02,000\nOlá\n").single()
         assertEquals(14, parsed.sizeSp)
         assertEquals(14, SubtitleAppearancePolicy.defaultSize())
-        val newPink = SubtitleAppearancePolicy.generated(parsed,
-            SubtitleAppearanceMode.KARAOKE_ROSA, SubtitleAppearancePolicy.defaultSize())
-        assertEquals(14, newPink.sizeSp)
-        assertEquals(2, newPink.outlineWidth)
-        assertEquals(0, newPink.shadowOffsetDp)
         assertEquals(24, SubtitleCue.read(parsed.copy(sizeSp = 24).json()).sizeSp)
+    }
+
+    @Test fun pinkKaraokeUsesItsOwnDefaultAndHonorsExplicitSize() {
+        val source = SubtitleCue(text = "Olá", startMs = 1000, endMs = 2000)
+        val pink = SubtitleAppearancePolicy.generated(source, SubtitleAppearanceMode.KARAOKE_ROSA,
+            SubtitleAppearancePolicy.ROSA_SIZE_SP)
+        assertEquals(20, pink.sizeSp)
+        assertEquals(4, pink.outlineWidth)
+        assertEquals(1, pink.shadowOffsetDp)
+        assertEquals(SubtitleStyles.FONT_HEAVY, pink.fontFamily)
+        val override = SubtitleAppearancePolicy.generated(source, SubtitleAppearanceMode.KARAOKE_ROSA, 14)
+        assertEquals(14, override.sizeSp)
+        assertEquals(pink.copy(sizeSp = 14), override)
     }
 }
