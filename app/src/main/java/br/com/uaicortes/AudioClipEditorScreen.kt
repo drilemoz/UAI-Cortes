@@ -92,7 +92,7 @@ internal fun AudioClipEditorScreen(onBack: () -> Unit) {
         DiagnosticRecorder.action("audio_editor", if (fromVideo) "video_audio_selected" else "source_selected")
     }
 
-    val pickAudio = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val pickAudio = rememberDeviceAudioPicker() { uri ->
         if (uri != null) {
             runCatching {
                 context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -231,7 +231,7 @@ internal fun AudioClipEditorScreen(onBack: () -> Unit) {
                             }
                         }
                     }
-                    OutlinedButton(onClick = { pickAudio.launch(arrayOf("audio/*")) },
+                    OutlinedButton(onClick = { pickAudio() },
                         enabled = !processing, modifier = Modifier.fillMaxWidth(),
                         shape = UaiShapes.button) {
                         Icon(Icons.Default.AudioFile, null, modifier = Modifier.size(18.dp))

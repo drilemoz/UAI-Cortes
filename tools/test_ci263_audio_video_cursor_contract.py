@@ -7,10 +7,10 @@ ui=(src/'AudioClipEditorScreen.kt').read_text()
 export=(src/'AudioClipExportEngine.kt').read_text()
 wave=(src/'AudioClipWaveform.kt').read_text()
 policy=(src/'AudioClipSelectionPolicy.kt').read_text()
-assert 'val pickAudio = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument())' in ui
+assert 'val pickAudio = rememberDeviceAudioPicker()' in ui
 assert 'val pickVideo = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument())' in ui
 assert 'pickVideo.launch(arrayOf("video/*"))' in ui
-assert 'pickAudio.launch(arrayOf("audio/*"))' in ui
+assert 'pickAudio()' in ui
 assert 'sourceIsVideo = fromVideo' in ui
 assert 'setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true)' in ui
 assert 'AudioClipWaveformSelection(waveform, durationMs, startMs, endMs, currentMs,' in ui

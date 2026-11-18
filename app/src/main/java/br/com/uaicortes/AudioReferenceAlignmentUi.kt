@@ -2,8 +2,6 @@ package br.com.uaicortes
 
 import android.content.Intent
 import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.Offset
@@ -21,6 +19,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -56,18 +56,30 @@ internal fun AudioReferenceAlignmentDialog(
     val referencePlayer = remember(context) { diagnosticPlayer(context) }
     val tracks = project.audioTracks.filter { it.durationMs > 0L && it.uri.isNotBlank() }
     val chosenTrack = tracks.firstOrNull { it.id == trackId }
-    val externalPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) {
-            runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-            val measuredDuration = verifiedMediaDuration(context, uri)
-            if (measuredDuration > 0L) {
-                importedUri = uri
-                importedDuration = measuredDuration
-                importedName = mediaName(context, uri)
-                source = "external"
-                externalOffset = 0L
-                feedback = "Arquivo selecionado. Informe onde o áudio começa no projeto, se necessário."
-            } else feedback = "Não foi possível verificar a duração deste áudio. Escolha outro arquivo."
+    var openingExternal by remember { mutableStateOf(false) }
+    val externalPicker = rememberDeviceAudioPicker(includeVideoInFiles = true) { uri ->
+        if (uri != null && !openingExternal) scope.launch {
+            openingExternal = true
+            try {
+                val (measuredDuration, name) = withContext(Dispatchers.IO) {
+                    runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+                    verifiedMediaDuration(context, uri) to mediaName(context, uri)
+                }
+                if (measuredDuration > 0L) {
+                    importedUri = uri
+                    importedDuration = measuredDuration
+                    importedName = name
+                    source = "external"
+                    externalOffset = 0L
+                    feedback = "Arquivo selecionado. Informe onde o áudio começa no projeto, se necessário."
+                } else feedback = "Não foi possível verificar a duração deste áudio. Escolha outro arquivo."
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                feedback = "Não foi possível abrir a referência selecionada."
+            } finally {
+                openingExternal = false
+            }
         }
     }
     DisposableEffect(referencePlayer) { onDispose {
@@ -193,9 +205,9 @@ internal fun AudioReferenceAlignmentDialog(
                         label = { Text("Vídeo") })
                     FilterChip(selected = source == "track", onClick = { source = "track" },
                         label = { Text("Faixas") })
-                    FilterChip(selected = source == "external", onClick = {
+                    FilterChip(selected = source == "external", enabled = !openingExternal, onClick = {
                         if (importedUri != null) source = "external" else
-                            externalPicker.launch(arrayOf("audio/*", "video/*"))
+                            externalPicker()
                     }, label = { Text("Arquivo") })
                 }
                 if (source == "track") {
@@ -211,7 +223,7 @@ internal fun AudioReferenceAlignmentDialog(
                 if (source == "external") {
                     Text(importedName.ifBlank { "Nenhum arquivo selecionado" },
                         style = MaterialTheme.typography.bodySmall)
-                    OutlinedButton(onClick = { externalPicker.launch(arrayOf("audio/*", "video/*")) }) {
+                    OutlinedButton(onClick = externalPicker, enabled = !openingExternal) {
                         Text("Escolher outro áudio")
                     }
                     Text("O arquivo externo começa no projeto em: " +

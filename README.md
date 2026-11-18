@@ -1,4 +1,12 @@
-# Uai Cortes · v0.1.302 — Consulta do Polly
+# Uai Cortes · v0.1.303 — Áudios do aparelho
+
+- **Áudios do aparelho:** uma lista pesquisável, com os arquivos mais recentes primeiro, sem precisar abrir pastas.
+- O novo seletor aparece no áudio do clipe, nas faixas, na música, no editor de áudio, nas referências de voz e no reparo de áudio. O seletor da clonagem destaca somente WAVs na lista.
+- **Procurar arquivos** permanece disponível para nuvem, arquivos não indexados e quando o Android não concede permissão. Os originais não são alterados.
+
+Validação em [docs/VALIDATION_0.1.303.md](docs/VALIDATION_0.1.303.md).
+
+## v0.1.302 — Consulta do Polly
 
 - **Polly:** teste de conexão usa apenas o filtro de idioma principal pt-BR, sem o parâmetro opcional de vozes bilíngues. Paginação mantém o token codificado.
 - Respostas de erro exibem apenas status, código reconhecido e orientação local, sem chaves, tokens ou texto bruto devolvido pela AWS.

@@ -1,3 +1,9 @@
+# Uai Cortes 0.1.303 (2026-11-17)
+
+- **Áudios do aparelho:** uma lista pesquisável, com os arquivos mais recentes primeiro, sem precisar abrir pastas.
+- O novo seletor aparece no áudio do clipe, nas faixas, na música, no editor de áudio, nas referências de voz e no reparo de áudio. O seletor da clonagem destaca somente WAVs na lista.
+- **Procurar arquivos** permanece disponível para nuvem, arquivos não indexados e quando o Android não concede permissão. Os originais não são alterados.
+
 # Uai Cortes 0.1.302 (2026-11-17)
 
 - **Polly:** teste de conexão usa apenas o filtro de idioma principal pt-BR, sem o parâmetro opcional de vozes bilíngues. Paginação mantém o token codificado.

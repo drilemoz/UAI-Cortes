@@ -348,7 +348,28 @@ internal fun diagnosticPlayer(context: android.content.Context, pipVideo: Boolea
             }
         }
     }
-    val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    fun back() {
+        if (screen == "whats_new" && !whatsNewSeen.markViewed()) {
+            android.widget.Toast.makeText(context, "Não foi possível registrar a leitura das novidades",
+                android.widget.Toast.LENGTH_SHORT).show()
+        }
+        DiagnosticRecorder.action(screen, "back")
+        val destination = EditorNavigation.back(screen, previous, mediaOrigin)
+        if (screen == "editor" && destination == "home") {
+            if (projectSession.hasPendingChanges) {
+                pendingExitEditor = true
+                return
+            }
+            projectSession.finishWithoutSaving()
+            draftRecoveryStore.clear()
+            workspace.reconcile(null)
+        }
+        screen = destination
+    }
+    BackHandler(screen != "home") { back() }
+    LaunchedEffect(screen, diagnosticsEnabled) { DiagnosticRecorder.screen(screen) }
+    MaterialTheme(colorScheme = palette, shapes = UaiShapes.theme) {
+    val audioPicker = rememberDeviceAudioPicker() { uri ->
         if (uri != null) {
             val initialProject = project
             val origin = MediaTaskOrigin(project?.id.orEmpty(), screen, mediaAction)
@@ -372,27 +393,6 @@ internal fun diagnosticPlayer(context: android.content.Context, pipVideo: Boolea
             }
         }
     }
-    fun back() {
-        if (screen == "whats_new" && !whatsNewSeen.markViewed()) {
-            android.widget.Toast.makeText(context, "Não foi possível registrar a leitura das novidades",
-                android.widget.Toast.LENGTH_SHORT).show()
-        }
-        DiagnosticRecorder.action(screen, "back")
-        val destination = EditorNavigation.back(screen, previous, mediaOrigin)
-        if (screen == "editor" && destination == "home") {
-            if (projectSession.hasPendingChanges) {
-                pendingExitEditor = true
-                return
-            }
-            projectSession.finishWithoutSaving()
-            draftRecoveryStore.clear()
-            workspace.reconcile(null)
-        }
-        screen = destination
-    }
-    BackHandler(screen != "home") { back() }
-    LaunchedEffect(screen, diagnosticsEnabled) { DiagnosticRecorder.screen(screen) }
-    MaterialTheme(colorScheme = palette, shapes = UaiShapes.theme) {
     val mainImagePick = MainImageInsertionUi(project, screen, mediaAction, selectedClip,
         mediaTaskCoordinator, incomingMainImage, { incomingMainImage = null },
         { openGallery("editor", "image_insert") }) { changed, clip, index ->
@@ -536,7 +536,7 @@ internal fun diagnosticPlayer(context: android.content.Context, pipVideo: Boolea
                         })
                 }
                 "audio" -> project?.let { AudioScreen(it, ::back, { write(it) },
-                    { audioPicker.launch(arrayOf("audio/*")) }, selectedAudioTrackId,
+                    { audioPicker() }, selectedAudioTrackId,
                     onSelectionConsumed = { selectedAudioTrackId = null },
                     onChooseExternalVideo = { openGallery("audio", "audio_extract") },
                     externalVideoUri = importedAudioSourceVideo,

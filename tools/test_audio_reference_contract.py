@@ -15,7 +15,7 @@ assert 'NarrationReferenceAlignment.validate(segments, referenceStarts, current.
 assert 'GeminiAudioFiles.save(ctx, wave)' in ui
 assert 'referenceStarts = emptyMap()' in ui
 assert 'AudioReferenceAlignmentDialog' in dialog
-assert 'ActivityResultContracts.OpenDocument()' in dialog
+assert 'rememberDeviceAudioPicker(includeVideoInFiles = true)' in dialog
 assert 'verifiedMediaDuration' in dialog
 assert 'takePersistableUriPermission' in dialog
 assert '"Aplicar horários"' in dialog and '"Cancelar"' in dialog

@@ -818,7 +818,7 @@ main=(root/'app/src/main/java/br/com/uaicortes/MainActivity.kt').read_text()
 editor=(root/'app/src/main/java/br/com/uaicortes/EditorScreen.kt').read_text()
 assert all(token in clip_screen for token in [
     'Importar áudio', 'Trocar áudio', 'Pré-escuta do áudio', 'Aplicar somente a este clipe',
-    'Remover áudio deste clipe', 'ActivityResultContracts.OpenDocument()', 'Dispatchers.IO'
+    'Remover áudio deste clipe', 'rememberDeviceAudioPicker()', 'Dispatchers.IO'
 ])
 assert 'clip_audio' in nav and '"clip_audio" -> project?.let' in main
 assert 'onClipAudio(active.id)' in editor and 'ClipAudioBindings.cloneAttached(' in editor
@@ -1283,7 +1283,7 @@ print('OK: v0.1.111 geração por trechos, alinhamento, revisão, cota e sem cor
 # v0.1.112: áudio de referência local e marcação de início por fala, sem nova transcrição.
 reference_ui = (app_files/'AudioReferenceAlignmentUi.kt').read_text()
 reference_logic = (app_files/'NarrationReferenceAlignment.kt').read_text()
-assert 'ActivityResultContracts.OpenDocument()' in reference_ui
+assert 'rememberDeviceAudioPicker(includeVideoInFiles = true)' in reference_ui
 assert '"Aplicar horários"' in reference_ui and '"Marcar aqui"' in reference_ui
 assert 'NarrationReferenceAlignment.placed(it.segment, referenceStarts)' in narration
 assert 'startMs = NarrationReferenceAlignment.start(result.segment, referenceStarts)' in narration

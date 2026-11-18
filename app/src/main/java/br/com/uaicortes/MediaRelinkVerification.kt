@@ -8,7 +8,7 @@ import kotlinx.coroutines.withContext
 
 /** Verifica duração, formato e permissão durável antes de alterar o projeto. */
 internal object MediaRelinkVerification {
-    suspend fun prepare(context: Context, uri: Uri, target: MediaRelinkEntry): String =
+    suspend fun prepare(context: Context, uri: Uri, target: MediaRelinkEntry, projectId: String): String =
         withContext(Dispatchers.IO) {
             require(uri.scheme == "content") { "Selecione a mídia pelo armazenamento Android." }
             val resolver = context.contentResolver
@@ -33,6 +33,12 @@ internal object MediaRelinkVerification {
                 require(length > 0L) { "Não foi possível verificar a duração do arquivo." }
                 require(length >= target.minimumSourceEndMs) {
                     "O arquivo é curto demais para os cortes salvos (${target.minimumSourceEndMs} ms necessários)."
+                }
+                // Unlike SAF, MediaStore does not give a per-file persistable grant.
+                // Keep repaired project audio readable even if library access is later revoked.
+                if (target.mimePrefix == "audio/") {
+                    return@withContext ProjectMediaCopies.copy(context, uri, projectId,
+                        ProjectMediaCopies.Kind.AUDIO).toString()
                 }
                 try {
                     resolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)

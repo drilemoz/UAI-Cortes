@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.302"
-    const val VERSION_CODE = 303
+    const val VERSION_NAME = "0.1.303"
+    const val VERSION_CODE = 304
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.303", listOf(
+            ReleaseFeature("device-audio-list-303", "Áudios do aparelho em uma lista",
+                "Busque pelo nome e escolha gravações, músicas ou narrações recentes sem abrir pastas. Se precisar, use Procurar arquivos.", "check")
+        )),
         ReleaseSummary("0.1.302", listOf(
             ReleaseFeature("polly-http-302", "Consulta do Polly e diagnóstico",
                 "Teste a lista de vozes com um pedido pt-BR simplificado e veja o motivo do erro quando a AWS informar um código reconhecido.", "check")

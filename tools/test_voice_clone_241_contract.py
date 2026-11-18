@@ -17,7 +17,7 @@ class VoiceClone241(unittest.TestCase):
         data = self.read('VoiceIaVoiceAssignments.kt')
         ui = self.read('VoiceIaScreen.kt')
         for key in ('VoiceClonePolicy.CHATTERBOX', 'VoiceClonePolicy.COQUI',
-            'referencePicker.launch(', 'consent && !working', 'onSave(project.copy(voiceIaVoices = revised))',
+            'referencePicker()', 'rememberDeviceAudioPicker(wavOnly = true)', 'consent && !working', 'onSave(project.copy(voiceIaVoices = revised))',
             'VoiceCloneClient.synthesize(', 'VoiceCloneAudio.prepare(',
             '"Gerar e inserir esta fala"', 'VoiceCloneStudioDialog('):
             self.assertIn(key, dialog + ui)

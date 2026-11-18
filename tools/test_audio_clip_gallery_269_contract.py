@@ -19,7 +19,7 @@ assert 'changeSource(media.uri, fromVideo = true)' in audio
 assert 'Text(if (sourceIsVideo && source != null) "Trocar vídeo" else "Importar vídeo")' in audio
 assert 'openDocuments = {' in audio and 'pickVideo.launch(arrayOf("video/*"))' in audio
 assert 'if (videoGalleryOpen) videoGalleryOpen = false else exit()' in audio
-assert 'pickAudio.launch(arrayOf("audio/*"))' in audio
+assert 'pickAudio()' in audio
 assert 'GalleryScope.VIDEOS -> "Galeria de vídeos"' in browser
 assert 'GalleryScope.VIDEOS -> listOf(GalleryTab.VIDEOS)' in browser
 assert 'val videos = if (scope != GalleryScope.IMAGES_ONLY)' in browser
@@ -31,7 +31,7 @@ for command in ['ClipSheetAction("Duplicar"', 'ClipSheetAction("Antes"', 'ClipSh
                 'ClipSheetAction("Excluir"', 'ClipSheetAction("Editar"', 'ClipSheetAction(if (active.isImage)']:
     assert command in menu, command
 assert 'ClipAudioBindings.cloneAttached(' in menu
-assert 'onClick = { picker.launch(arrayOf("audio/*")) }' in linked
+assert 'onClick = { picker() }' in linked
 assert '"Aplicar somente a este clipe"' in linked
 assert '"Remover áudio deste clipe"' in linked
 assert 'detectDragGestures(onDragStart=' in timeline

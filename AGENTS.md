@@ -1,3 +1,10 @@
+# v0.1.303 — Seletor de áudio compartilhado
+
+- Base v0.1.302/versionCode 303, nova v0.1.303/versionCode 304. Preservar schema 4, assinatura e variantes.
+- Consultar áudio do MediaStore em volumes públicos montados, no dispatcher de IO, somente ao abrir a lista com permissão. Preservar o OpenDocument como alternativa, inclusive para referências de vídeo.
+- Não filtrar por IS_MUSIC. Para clonagem, listar WAV e manter as validações de formato e duração do importador.
+- Projetos gravados e reparos de áudio usam cópia privada, nunca alteram o original e não dependem da permissão de catálogo após salvo.
+
 # v0.1.302 — Consulta e erros do Polly
 
 - Base v0.1.301/versionCode 302, nova v0.1.302/versionCode 303. Preservar esquema, assinatura e cinco variantes.

@@ -1,7 +1,5 @@
 package br.com.uaicortes
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -40,7 +38,7 @@ internal fun VoiceCloneStudioDialog(project: VideoProject, cue: SubtitleCue?,
     var working by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     var deleteTarget by remember { mutableStateOf<VoiceCloneProfile?>(null) }
-    val referencePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val referencePicker = rememberDeviceAudioPicker(wavOnly = true) { uri ->
         if (uri != null && consent && !working) scope.launch {
             working = true
             try {
@@ -80,7 +78,7 @@ internal fun VoiceCloneStudioDialog(project: VideoProject, cue: SubtitleCue?,
                     Text("Tenho autorização para clonar e usar esta voz.",
                         style = MaterialTheme.typography.bodySmall)
                 }
-                OutlinedButton(onClick = { referencePicker.launch(arrayOf("audio/wav", "audio/x-wav", "audio/*")) },
+                OutlinedButton(onClick = { referencePicker() },
                     enabled = !working && consent && voiceName.isNotBlank()) {
                     Text("Importar WAV de 3 a 30 segundos")
                 }

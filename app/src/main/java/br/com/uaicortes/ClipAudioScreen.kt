@@ -2,8 +2,6 @@ package br.com.uaicortes
 
 import android.content.Intent
 import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -49,7 +47,7 @@ internal fun ClipAudioScreen(
     var error by remember(project.id, clipId) { mutableStateOf("") }
     var confirmRemove by remember(project.id, clipId) { mutableStateOf(false) }
 
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val picker = rememberDeviceAudioPicker() { uri ->
         if (uri != null) {
             scope.launch {
                 loading = true
@@ -146,9 +144,9 @@ internal fun ClipAudioScreen(
                         Text("Nenhum arquivo selecionado.",
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    OutlinedButton(onClick = { picker.launch(arrayOf("audio/*")) },
+                    OutlinedButton(onClick = { picker() },
                         modifier = Modifier.fillMaxWidth(), enabled = !loading) {
-                        Icon(Icons.Default.FolderOpen, null)
+                        Icon(Icons.Default.AudioFile, null)
                         Spacer(Modifier.width(8.dp))
                         Text(if (sourceUri.isBlank()) "Importar áudio" else "Trocar áudio")
                     }
@@ -189,7 +187,23 @@ internal fun ClipAudioScreen(
                         existing.copy(volume = volume)
                     } else AudioTrack(uri=sourceUri, title=sourceName,
                         durationMs=minOf(sourceDuration, clip.durationMs), volume=volume)
-                    if (!onApply(track)) error = "Não foi possível salvar a narração no projeto."
+                    scope.launch {
+                        loading = true
+                        error = ""
+                        try {
+                            val saved = if (existing?.uri == track.uri) track else track.copy(
+                                uri = ProjectMediaCopies.copy(context.applicationContext, Uri.parse(track.uri),
+                                    project.id, ProjectMediaCopies.Kind.AUDIO).toString())
+                            if (!onApply(saved)) error = "Não foi possível salvar a narração no projeto."
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (failure: Exception) {
+                            DiagnosticRecorder.exception("clip_audio_apply", failure)
+                            error = "Não foi possível guardar uma cópia do áudio no projeto."
+                        } finally {
+                            loading = false
+                        }
+                    }
                 }, modifier = Modifier.fillMaxWidth(), enabled = !loading && sourceUri.isNotBlank()) {
                     Icon(Icons.Default.Check, null)
                     Spacer(Modifier.width(8.dp))

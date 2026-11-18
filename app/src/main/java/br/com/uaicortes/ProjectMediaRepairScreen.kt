@@ -41,7 +41,7 @@ internal fun ProjectMediaRepairScreen(
             }
         }
     }
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { picked: Uri? ->
+    val replaceMedia: (Uri?) -> Unit = { picked ->
         val target = entries.firstOrNull { it.key == requestedKey }
         requestedKey = ""
         if (picked != null && target != null && !busy) {
@@ -49,7 +49,7 @@ internal fun ProjectMediaRepairScreen(
                 busy = true
                 var provisionalCopy: String? = null
                 try {
-                    val replacement = MediaRelinkVerification.prepare(context.applicationContext, picked, target)
+                    val replacement = MediaRelinkVerification.prepare(context.applicationContext, picked, target, project.id)
                     if (target.mimePrefix == "image/") provisionalCopy = replacement
                     val corrected = ProjectMediaRelink.replace(project, target, replacement)
                     if (save(corrected)) {
@@ -74,6 +74,8 @@ internal fun ProjectMediaRepairScreen(
             }
         }
     }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument(), replaceMedia)
+    val audioPicker = rememberDeviceAudioPicker(onResult = replaceMedia)
     Column(Modifier.fillMaxSize()) {
         Heading("Reparar mídias", back)
         Text("Se um vídeo, foto ou áudio deixou de abrir, localize novamente o arquivo original. " +
@@ -113,7 +115,8 @@ internal fun ProjectMediaRepairScreen(
                                 }
                                 Button(enabled = !busy, onClick = {
                                     requestedKey = target.key
-                                    picker.launch(arrayOf("${target.mimePrefix}*"))
+                                    if (target.mimePrefix == "audio/") audioPicker()
+                                    else picker.launch(arrayOf("${target.mimePrefix}*"))
                                 }) { Text("Localizar") }
                             }
                         }

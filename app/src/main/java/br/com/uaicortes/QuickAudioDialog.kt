@@ -1,8 +1,6 @@
 package br.com.uaicortes
 
 import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -80,7 +78,7 @@ internal fun QuickAudioDialog(
             }
         }
     }
-    val choose = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val choose = rememberDeviceAudioPicker() { uri ->
         if (uri != null) scope.launch {
             busy = true
             error = ""
@@ -150,7 +148,7 @@ internal fun QuickAudioDialog(
         },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (track == null) OutlinedButton(onClick = { choose.launch(arrayOf("audio/*")) },
+                if (track == null) OutlinedButton(onClick = { choose() },
                     enabled = !busy, modifier = Modifier.fillMaxWidth()) {
                     Text(if (musicMode) (if (uriText == null) "Escolher música" else "Trocar música")
                         else (if (uriText == null) "Escolher áudio" else "Trocar áudio"))

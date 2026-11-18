@@ -20,8 +20,8 @@ assert 'if (project.subtitleSpeakers.isEmpty()) "Vozes" else "Personagens"' in u
 assert 'if (character == null) IconButton(' in ui
 assert 'onClick = { selectedCueId = cue.id; advancedCueId = cue.id }' in ui
 assert 'Icon(Icons.Default.Close, "Fechar lembrete de pendências")' in ui
-assert 'rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument())' in ui
-assert 'externalPicker.launch(arrayOf("audio/*"))' in ui
+assert 'rememberDeviceAudioPicker()' in ui
+assert 'externalPicker()' in ui
 assert 'VoiceIaExternalAudio.prepare(context, uri, current, cue)' in ui
 assert 'if (!runCatching { onSave(updated) }.getOrDefault(false)) {' in ui and 'file.delete()' in ui
 assert 'val imported = importedFor(cue)' in ui and 'val importedCount' in ui

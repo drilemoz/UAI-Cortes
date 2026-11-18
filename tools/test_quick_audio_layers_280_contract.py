@@ -11,7 +11,7 @@ probe, apply = quick.split('        confirmButton = {', 1)
 assert '"audio" -> openQuickAudio("")' in editor
 assert 'onOpenAudio={openQuickAudio("")}' in editor
 assert 'track?.clipId != null || track?.kind == VoiceIaPolicy.KIND' in editor
-assert 'OpenDocument()' in probe and 'media.duration(uri)' in probe
+assert 'rememberDeviceAudioPicker()' in probe and 'media.duration(uri)' in probe
 assert 'protectedCopy(' not in probe and 'AudioTrack(savedUri' not in probe
 assert 'media.protectedCopy(' in apply and 'current.audioTracks + updated' in apply
 assert 'window.omittedMs > 0L' in quick and 'quickAudioCoverage(window, project.clips)' in quick

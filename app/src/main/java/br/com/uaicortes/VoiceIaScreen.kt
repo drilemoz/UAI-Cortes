@@ -1,8 +1,6 @@
 package br.com.uaicortes
 
 import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -107,7 +105,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
     var cloneProfiles by remember(context) { mutableStateOf(cloneLibrary.load()) }
     var importCueId by remember { mutableStateOf<String?>(null) }
     var importedUri by remember { mutableStateOf<Uri?>(null) }
-    val externalPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val externalPicker = rememberDeviceAudioPicker() { uri ->
         if (uri == null) importCueId = null else importedUri = uri
     }
     var speakerFilter by remember(project.id) { mutableStateOf<String?>(null) }
@@ -1062,7 +1060,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                     TextButton(onClick = {
                         advancedCueId = null
                         importCueId = cue.id
-                        externalPicker.launch(arrayOf("audio/*"))
+                        externalPicker()
                     }, enabled = !busy) {
                         Icon(Icons.Default.FileUpload, null, Modifier.size(18.dp))
                         Text(if (importedFor(cue) != null) "Substituir áudio externo"
