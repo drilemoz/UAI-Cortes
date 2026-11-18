@@ -1,3 +1,10 @@
+# v0.1.305 — Modelos e encaixe de voz
+
+- Base v0.1.304/versionCode 305, nova v0.1.305/versionCode 306. Preservar schema 4, assinatura e variantes.
+- Galeria de fábrica limitada a cinco. Não limitar número de legendas no projeto, navegação da lista, modelos pessoais ou renderização de projetos salvos.
+- Encaixe automático é local e opcional por trecho quando possível. Não reescrever texto, editar lábios ou cortar palavras intencionalmente. Preservar o áudio original e não executar outra chamada de síntese.
+- Ao contar falas para inserir, excluir exatamente as versões já gravadas na timeline. Versão nova continua disponível para substituir.
+
 # v0.1.304 — Vozes e Legendas
 
 - Base v0.1.303/versionCode 304, nova v0.1.304/versionCode 305. Preservar schema 4, assinatura e variantes.

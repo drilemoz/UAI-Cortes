@@ -13,7 +13,7 @@ bridge=read('SubtitleKaraokeBadge.kt')
 ui=read('AutoSubtitleScreen.kt')
 assert 'const val KARAOKE_BADGE = "karaoke_badge"' in a
 assert 'KARAOKE_PULSE, KARAOKE_BOLD, KARAOKE_UNDERLINE, KARAOKE_BADGE -> {' in a
-assert 'Karaokê rosa do vídeo' in p and '0xFFE81050' in p
+assert 'Karaokê rosa do vídeo' in p and 'SubtitleAppearancePolicy.ROSA_HIGHLIGHT' in p
 assert 'class SubtitleActiveWordBadgeSpan' in v
 assert 'text.setSpan(SubtitleActiveWordBadgeSpan' in v
 assert 'if(badgeMode) null else frame.highlighted' in v

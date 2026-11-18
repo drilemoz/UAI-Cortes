@@ -46,6 +46,13 @@ internal object VoiceIaPolicy {
     fun fits(start: Long, duration: Long, projectDuration: Long): Boolean =
         start >= 0L && duration >= SubtitleNarrationTimeline.MIN_AUDIO_MS &&
             start < projectDuration && duration <= projectDuration - start
+    fun alreadyInserted(project: VideoProject, cue: SubtitleCue, take: VoiceIaTake): Boolean {
+        val uri = GeminiAudioFiles.uri(File(take.filePath))
+        return project.audioTracks.any {
+            it.kind == KIND && it.subtitleId == cue.id && it.uri == uri &&
+                it.subtitleFingerprint == take.cueFingerprint
+        }
+    }
     fun merge(project: VideoProject, cue: SubtitleCue, take: VoiceIaTake): VideoProject {
         val old = project.audioTracks.firstOrNull { it.kind == KIND && it.subtitleId == cue.id }
         val start = old?.startMs ?: cue.startMs

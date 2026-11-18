@@ -12,6 +12,7 @@ import java.io.File
 import java.io.IOException
 import java.net.URI
 import java.util.UUID
+import kotlinx.coroutines.CancellationException
 
 /** Áudio fornecido pelo usuário: vinculado à fala, nunca é rotulado como síntese IA. */
 internal object VoiceIaExternalAudio {
@@ -32,6 +33,27 @@ internal object VoiceIaExternalAudio {
         project.audioTracks.firstOrNull { isImported(it) && it.subtitleId == cue.id &&
             it.subtitleFingerprint == VoiceIaPolicy.fingerprint(cue) &&
             runCatching { File(URI(it.uri)).isFile }.getOrDefault(false) }
+
+    suspend fun fitTrack(context: Context, project: VideoProject, cue: SubtitleCue,
+        track: AudioTrack): Pair<AudioTrack, File?> = withContext(Dispatchers.IO) {
+        val target = VoiceWindowFit.targetMs(project, cue)
+        val adjusted = if (target < 250L || track.sourceStartMs != 0L) null else try {
+            val origin = File(URI(track.uri))
+            val wave = ImportedVoicePcm.read(origin, track.durationMs)
+            if (wave != null && kotlin.math.abs(wave.durationMs - track.durationMs) <= 150L)
+                VoiceWindowFit.adjust(wave, target) else null
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { null }
+        val revisedDuration = adjusted?.durationMs ?: track.durationMs
+        val start = if (VoiceIaPolicy.fits(cue.startMs, revisedDuration, project.durationMs))
+            cue.startMs else track.startMs
+        require(VoiceIaPolicy.fits(start, revisedDuration, project.durationMs)) {
+            "A fala não cabe até o fim do projeto. Selecione um áudio mais curto."
+        }
+        val copy = adjusted?.let { GeminiAudioFiles.save(context, it) }
+        track.copy(startMs = start, durationMs = revisedDuration,
+            uri = copy?.let(GeminiAudioFiles::uri) ?: track.uri) to copy
+    }
 
     suspend fun prepare(context: Context, source: Uri, project: VideoProject,
         cue: SubtitleCue): Pair<AudioTrack, File> = withContext(Dispatchers.IO) {
@@ -91,9 +113,6 @@ internal object VoiceIaExternalAudio {
                 it.kind == VoiceIaPolicy.KIND && it.subtitleId == cue.id
             }
             val start = old?.startMs ?: cue.startMs
-            require(VoiceIaPolicy.fits(start, durationMs, project.durationMs)) {
-                "A fala não cabe até o fim do projeto. Ajuste o áudio externamente."
-            }
             if (!part.renameTo(file)) throw IOException("Falha ao finalizar a cópia privada.")
             val replacement = AudioTrack(
                 uri = GeminiAudioFiles.uri(file),
@@ -103,7 +122,8 @@ internal object VoiceIaExternalAudio {
                 kind = VoiceIaPolicy.KIND, subtitleId = cue.id, ttsModel = MODEL,
                 subtitleFingerprint = VoiceIaPolicy.fingerprint(cue)
             )
-            replacement to file
+            val (fitted, fittedFile) = fitTrack(context, project, cue, replacement)
+            fitted to (fittedFile ?: file)
         } catch (e: Exception) {
             file.delete()
             throw e

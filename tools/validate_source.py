@@ -250,7 +250,7 @@ print('OK: corte visual v0.1.171, persistência, retorno ao editor, divisão e r
 assert 'internal fun SubtitleCompactTimeline(' in ui
 assert 'SubtitleCompactTimeline(sorted, p.clips, p.durationMs, selectedId, cursorMs,' in ui
 assert 'internal fun SubtitlePositionPreview(' in ui and 'player = remember(p.id)' in ui
-assert 'LazyColumn(state=captionsState' in ui and 'itemsIndexed(pageCues,key=' in ui
+assert 'LazyColumn(state=captionsState' in ui and 'itemsIndexed(filtered,key=' in ui
 assert 'SubtitleEditDialog(cue=selected,totalMs=p.durationMs' in ui
 assert 'internal fun SubtitleEditDialog(' in ui and 'TimeDigitsField("Início",draft.startMs,totalMs' in ui
 assert 'SubtitleTimelineEditor(p.subtitles,p.durationMs' not in ui
@@ -263,7 +263,7 @@ print('OK: versão atual 0.1.64 / versionCode 74, timeline unica, video fixo e l
 nav=(root/'app/src/main/java/br/com/uaicortes/SubtitleListNavigation.kt').read_text()
 assert 'fun matches(' in nav and 'Normalizer.Form.NFD' in nav
 assert 'fun adjacentIndex(' in nav and 'fun newInterval(' in nav
-assert 'itemsIndexed(pageCues,key=' in ui and 'Buscar texto da legenda' in ui
+assert 'itemsIndexed(filtered,key=' in ui and 'Buscar texto da legenda' in ui
 assert 'hasPrevious = SubtitleListNavigation.adjacentIndex' in ui
 assert 'hasNext = SubtitleListNavigation.adjacentIndex' in ui
 assert 'pendingDeleteId?.let' in ui and 'Excluir esta legenda?' in ui
@@ -1034,7 +1034,7 @@ auto_ui=(app_files/'AutoSubtitleScreen.kt').read_text()
 assert 'preset.shadowOffsetDp ?: cue.shadowOffsetDp' in styles
 assert 'SubtitleFileExport.Format.SRT' in screen and 'SubtitleFileExport.Format.TXT' in screen
 assert 'deleteAllConfirm' in screen and 'deletedSnapshot' in screen
-assert 'RoundedCornerShape(8.dp)' in screen and 'SubtitleToolButton' in screen
+assert 'RoundedCornerShape(8.dp)' in screen and 'SubtitleActionIcon' in screen
 assert 'gemini-3.5-transcribe' in remote and 'timestamp_granularities' in remote
 assert 'Enviar e gerar' in auto_ui and 'GeminiCredentialStore(context)' in auto_ui
 assert 'word_info' in parser and 'GeminiSubtitleParser.parse' in remote
@@ -1046,7 +1046,7 @@ print('OK: v0.1.90 presets, exportação SAF, exclusão total, Gemini consentido
 
 # v0.1.91: faixas horizontais finitas, animação junto ao preset, cache e fontes reduzidas.
 assert 'LazyRow(' in subtitle_gallery and 'itemsIndexed(visiblePresets' in subtitle_gallery
-assert 'SubtitleStudioPresets.recommended' in subtitle_gallery and 'SubtitleStyles.presets' in subtitle_gallery
+assert 'SubtitleStudioPresets.recommended' in subtitle_gallery and 'SubtitleStyles.presets' not in subtitle_gallery
 assert 'LazyRow(' in (app_files/'SubtitleVisualEditor.kt').read_text()
 assert 'animation=preset.animation ?: cue.animation' in styles
 assert all(x in sub_animation for x in ['BOUNCE', 'PULSE', 'ZOOM_OUT'])

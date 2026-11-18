@@ -26,8 +26,10 @@ internal fun Modifier.subtitleKaraokeBadge(
         val end = measured.getBoundingBox(active.last)
         // São palavras sem espaços: não atravessam duas linhas do layout.
         val height = (start.bottom - start.top).coerceAtLeast(1f)
-        val padX = height * .12f
-        val padY = height * .035f
+        val heavy = cue.fontFamily == SubtitleStyles.FONT_HEAVY
+        val padX = height * if (heavy) .18f else .12f
+        val padY = height * if (heavy) .055f else .035f
+        val radius = height * if (heavy) .19f else .14f
         val left = start.left - padX
         val right = end.right + padX
         val top = minOf(start.top,end.top) - padY
@@ -35,6 +37,6 @@ internal fun Modifier.subtitleKaraokeBadge(
         if (right <= left || bottom <= top) return@drawBehind
         drawRoundRect(Color(cue.highlightColor),
             topLeft=Offset(left,top),size=Size(right-left,bottom-top),
-            cornerRadius=CornerRadius(height*.14f,height*.14f))
+            cornerRadius=CornerRadius(radius,radius))
     }
 }

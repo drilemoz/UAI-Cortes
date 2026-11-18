@@ -16,11 +16,17 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.304"
-    const val VERSION_CODE = 305
+    const val VERSION_NAME = "0.1.305"
+    const val VERSION_CODE = 306
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.305", listOf(
+            ReleaseFeature("subtitle-five-models-305", "Cinco modelos e karaokê mais legível",
+                "O limite é para modelos de fábrica. Todas as falas voltam à lista normal. Nova, Automáticas e Personagens ficam nas barras de ícones.", "check"),
+            ReleaseFeature("voice-fit-305", "Encaixe de voz e inserção sem repetição",
+                "O app tenta encaixar falas geradas e importadas no tempo das legendas. Uma versão já inserida não volta à contagem.", "check")
+        )),
         ReleaseSummary("0.1.304", listOf(
             ReleaseFeature("subtitle-toolbar-304", "Legendas de cinco em cinco",
                 "Importar, exportar, editar, estilizar e apagar aparecem juntos em uma faixa de ícones. As setas mostram as próximas cinco legendas.", "check"),

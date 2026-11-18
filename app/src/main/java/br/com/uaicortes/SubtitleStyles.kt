@@ -9,7 +9,8 @@ data class SubtitleStylePreset(
     val shadowOffsetDp: Int? = null, val fontFamily: String = "sans", val italic: Boolean = false,
     val highlightColor: Int = SubtitleWordEffects.DEFAULT_HIGHLIGHT,
     val animation: String? = null,
-    val textCase: String = br.com.uaicortes.subtitles.core.SubtitleTextCasePolicy.ORIGINAL
+    val textCase: String = br.com.uaicortes.subtitles.core.SubtitleTextCasePolicy.ORIGINAL,
+    val sizeSp: Int? = null
 )
 
 object SubtitleStyles {
@@ -122,7 +123,7 @@ object SubtitleStyles {
             outlineWidth=preset.outlineWidth,outlineColor=preset.outlineColor,
             shadowOffsetDp=preset.shadowOffsetDp ?: cue.shadowOffsetDp,fontFamily=preset.fontFamily,
             italic=preset.italic,highlightColor=preset.highlightColor,
-            textCase=preset.textCase,
+            textCase=preset.textCase,sizeSp=preset.sizeSp ?: cue.sizeSp,
             animation=preset.animation ?: cue.animation)
 
     data class CopyOptions(val appearance: Boolean = true, val position: Boolean = false,

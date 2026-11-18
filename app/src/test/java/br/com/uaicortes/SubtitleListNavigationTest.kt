@@ -49,14 +49,4 @@ class SubtitleListNavigationTest {
             SubtitleListNavigation.newInterval(20_000L, 19_900L))
     }
 
-    @Test fun subtitleListKeepsEveryItemAcrossGroupsOfFive() {
-        val items = (1..12).toList()
-        assertEquals(3, SubtitleListNavigation.pageCount(items.size))
-        assertEquals(items, (0..2).flatMap { SubtitleListNavigation.page(items, it) })
-        assertEquals(listOf(1, 2, 3, 4, 5), SubtitleListNavigation.page(items, 0))
-        assertEquals(listOf(11, 12), SubtitleListNavigation.page(items, 99))
-        assertEquals(1, SubtitleListNavigation.pageForIndex(5))
-        assertEquals(1, SubtitleListNavigation.pageCount(0))
-        assertTrue(SubtitleListNavigation.page(emptyList<Int>(), 4).isEmpty())
-    }
 }

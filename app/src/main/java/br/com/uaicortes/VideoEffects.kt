@@ -160,9 +160,10 @@ class SubtitleActiveWordBadgeSpan(
         if (highlightedWidth<=0f) return
         val fm=font.fontMetrics
         val height=(fm.descent-fm.ascent).coerceAtLeast(1f)
-        val padX=height*.12f
-        val padY=height*.035f
-        val radius=height*.14f
+        val heavy = family == SubtitleStyles.FONT_HEAVY
+        val padX = height * if (heavy) .18f else .12f
+        val padY = height * if (heavy) .055f else .035f
+        val radius = height * if (heavy) .19f else .14f
         val badge=Paint(Paint.ANTI_ALIAS_FLAG).apply { color=background; style=Paint.Style.FILL }
         canvas.drawRoundRect(lineX+before-padX,baseline+fm.ascent-padY,
             lineX+before+highlightedWidth+padX,baseline+fm.descent+padY,
@@ -271,8 +272,13 @@ class TimedSubtitleOverlay(
         // pode deixar a textura do overlay desatualizada no GL (o Media3 compara a
         // referência do Bitmap), causando quadros com texto antigo ("piscada").
         // Nunca reciclar o anterior: o Media3 ainda pode estar usando-o.
-        val target = Bitmap.createBitmap(tightWidth, finalLayout.height.coerceAtLeast(2), Bitmap.Config.ARGB_8888)
+        val edgeInset = if (active?.animation == SubtitleAnimations.KARAOKE_BADGE &&
+            active.fontFamily == SubtitleStyles.FONT_HEAVY)
+            ceil((longestLine * .04f).coerceIn(16f, 56f)).toInt() else 0
+        val target = Bitmap.createBitmap(tightWidth + 2 * edgeInset,
+            finalLayout.height.coerceAtLeast(2), Bitmap.Config.ARGB_8888)
         val canvas = Canvas(target)
+        canvas.translate(edgeInset.toFloat(), 0f)
         finalLayout.draw(canvas)
         cachedBitmap = target
         cachedKey = contentKey

@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.305 — Modelos e encaixe de voz
+
+- **Legendas:** só cinco modelos de fábrica, sem limitar a lista de falas. Atalhos de Nova, Automáticas e Personagens nas barras de ícones.
+- **Karaokê rosa:** letras maiores e pesadas, contorno negro e tarja rosa na palavra ativa. Estilos já salvos não são migrados.
+- **Vozes IA:** tentativa local de encaixar o áudio no tempo da legenda, sem nova chamada ao Gemini. “Inserir” conta só versões ainda não colocadas na timeline.
+
 # Uai Cortes · versão 0.1.304 — Vozes e Legendas
 
 - **Legendas:** cinco por página, com busca e timeline integrais. Importar SRT, exportar, editar todas, estilos por personagem e apagar todas ficam em uma faixa de ícones.

@@ -8,10 +8,12 @@ class SubtitleKaraokeBadge242Test {
 
     @Test fun styleHasSameColorsAndNoWholeCaptionBackground() {
         assertEquals(SubtitleAnimations.KARAOKE_BADGE,preset.animation)
-        assertEquals(0xFFE81050.toInt(),preset.highlightColor)
+        assertEquals(SubtitleAppearancePolicy.ROSA_HIGHLIGHT,preset.highlightColor)
         assertEquals(0xFFFFFFFF.toInt(),preset.foreground)
         assertEquals(SubtitleStyles.NO_BACKGROUND,preset.background)
-        assertEquals(2,preset.outlineWidth)
+        assertEquals(4,preset.outlineWidth)
+        assertEquals(SubtitleStyles.FONT_HEAVY,preset.fontFamily)
+        assertEquals(SubtitleAppearancePolicy.ROSA_SIZE_SP, preset.sizeSp)
         assertEquals("upper",preset.textCase)
     }
 

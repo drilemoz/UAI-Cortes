@@ -34,11 +34,9 @@ internal fun SubtitleStyleGallery(current: SubtitleCue, onChange: (SubtitleCue) 
     LaunchedEffect(Unit) {
         while (true) { delay(80L); sampleMs = (sampleMs + 80L) % 2500L }
     }
-    var showLegacy by remember { mutableStateOf(false) }
-    val visiblePresets = if (showLegacy) SubtitleStyles.presets else SubtitleStudioPresets.recommended
+    val visiblePresets = SubtitleStudioPresets.recommended
     Column(verticalArrangement=Arrangement.spacedBy(6.dp)) {
-        Text(if (showLegacy) "Modelos clássicos · ${visiblePresets.size}"
-            else "Subtitle Studio · ${visiblePresets.size} estilos selecionados",
+        Text("Modelos de legenda · ${visiblePresets.size}",
             style=MaterialTheme.typography.labelSmall,
             color=MaterialTheme.colorScheme.onSurfaceVariant)
         LazyRow(horizontalArrangement=Arrangement.spacedBy(9.dp),
@@ -46,15 +44,16 @@ internal fun SubtitleStyleGallery(current: SubtitleCue, onChange: (SubtitleCue) 
             itemsIndexed(visiblePresets, key={ index,preset -> "${index}:${preset.name}" }) { _,preset ->
                 val selected=SubtitleStyles.matches(current,preset)
                 val example=remember(preset) {
-                    SubtitleCue(text="Uai Cortes!",startMs=0,endMs=2500,
+                    val rose = preset.animation == SubtitleAnimations.KARAOKE_BADGE
+                    SubtitleCue(text=if (rose) "Você trata quem" else "Uai Cortes!",startMs=0,endMs=2500,
                         color=preset.foreground,backgroundColor=preset.background,
                         bold=preset.bold,italic=preset.italic,fontFamily=preset.fontFamily,
                         outlineWidth=preset.outlineWidth,outlineColor=preset.outlineColor,
                         shadowOffsetDp=preset.shadowOffsetDp ?: 0,
                         highlightColor=preset.highlightColor,
                         animation=preset.animation ?: SubtitleAnimations.NONE,
-                        wordColors=listOf(SubtitleWordColor(1,preset.highlightColor)),
-                        textCase=preset.textCase)
+                        wordColors=if (rose) emptyList() else listOf(SubtitleWordColor(1,preset.highlightColor)),
+                        textCase=preset.textCase, sizeSp=preset.sizeSp ?: DEFAULT_SUBTITLE_SIZE_SP)
                 }
                 val frame=SubtitleAnimations.frame(example,sampleMs)
                 Surface(onClick={onChange(SubtitleStyles.applyToCue(current,preset))},
@@ -87,10 +86,7 @@ internal fun SubtitleStyleGallery(current: SubtitleCue, onChange: (SubtitleCue) 
                 }
             }
         }
-        TextButton(onClick={showLegacy=!showLegacy},shape=UaiShapes.button) {
-            Text(if (showLegacy) "Voltar aos 8 estilos principais"
-                else "Ver modelos antigos (${SubtitleStyles.presets.size})")
-        }
+
     }
 }
 

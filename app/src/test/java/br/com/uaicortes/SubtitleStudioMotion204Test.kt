@@ -10,7 +10,7 @@ class SubtitleStudioMotion204Test {
             textCase="upper", speakerId="voz-2", x=.3f, y=.82f,
             wordTimings=listOf(SubtitleWordTiming(300L,700L)))
         assertTrue(SubtitleStudioPresets.recommended.any { it.animation == SubtitleAnimations.SINGLE_WORD })
-        assertTrue(SubtitleStudioPresets.recommended.count { it.animation in SubtitleMotionPolicy.styles } >= 6)
+        assertTrue(SubtitleStudioPresets.recommended.any { it.animation in SubtitleMotionPolicy.styles })
         for (preset in SubtitleStudioPresets.recommended) {
             val modified = SubtitleStyles.applyToCue(old, preset)
             assertEquals(old.id, modified.id)

@@ -373,6 +373,10 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
             it.id == cue.id && VoiceIaPolicy.fingerprint(it) == take.cueFingerprint
         }) { status = "A legenda foi alterada. Revise a geração antes de inserir."; return }
         if (!File(take.filePath).isFile) { status = "Arquivo de voz não encontrado. Gere a fala novamente."; return }
+        if (VoiceIaPolicy.alreadyInserted(current, cue, take)) {
+            status = "Esta versão da voz já está na timeline."
+            return
+        }
         val changed = runCatching { VoiceIaPolicy.merge(current, cue, take) }.getOrElse {
             status = it.message ?: "A narração ultrapassa a duração do vídeo."; return
         }
@@ -385,10 +389,14 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
             (if (clashes) " Há vozes sobrepostas." else "")
         else status = "Falha ao salvar o projeto. O WAV preparado continua disponível."
     }
+    fun pendingInsertion(cue: SubtitleCue, current: VideoProject): VoiceIaTake? {
+        if (cloneIdFor(cue) != null || importedFor(cue) != null) return null
+        return readyFor(cue)?.takeIf { File(it.filePath).isFile &&
+            !VoiceIaPolicy.alreadyInserted(current, cue, it) }
+    }
     fun batchInsertPlan(current: VideoProject): VoiceBatchInsertPlan {
         val validCues = cues.mapNotNull { cue ->
-            if (importedFor(cue) != null) return@mapNotNull null
-            readyFor(cue)?.takeIf { take ->
+            pendingInsertion(cue, current)?.takeIf { take ->
                 current.subtitles.any { it.id == cue.id && VoiceIaPolicy.fingerprint(it) == take.cueFingerprint } &&
                     File(take.filePath).isFile &&
                     VoiceIaPolicy.fits(current.audioTracks.firstOrNull {
@@ -396,7 +404,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                     }?.startMs ?: cue.startMs, take.durationMs, current.durationMs)
             }?.let { cue to it }
         }
-        val skipped = cues.size - validCues.size
+        val skipped = cues.count { pendingInsertion(it, current) != null } - validCues.size
         val candidateIds = validCues.mapTo(mutableSetOf()) { it.first.id }
         val intervals = validCues.map { (cue, take) ->
             val start = current.audioTracks.firstOrNull {
@@ -559,13 +567,20 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                             val requestStyle = task?.requestStyle
                                 ?: VoiceIaSync.guidance(direction, available, quickId == cue.id)
                             val response = api.synthesize(key, usedModel, voiceId, requestStyle, cue.text)
-                            val savedFile = withContext(Dispatchers.IO) {
+                            val take = withContext(Dispatchers.IO) {
                                 coroutineContext.ensureActive()
-                                GeminiAudioFiles.save(context, response)
+                                val fitted = runCatching { VoiceWindowFit.adjust(response,
+                                    VoiceWindowFit.targetMs(latestProject, cue)) }.getOrNull()
+                                val selected = fitted ?: response
+                                val original = fitted?.let { GeminiAudioFiles.save(context, response) }
+                                val savedFile = GeminiAudioFiles.save(context, selected)
+                                VoiceIaTake(cue.id, VoiceIaPolicy.fingerprint(cue), voiceId, usedModel,
+                                    direction, savedFile.absolutePath, selected.durationMs,
+                                    GeminiNarrationCheckpoint.hash(selected.bytes),
+                                    sourceFilePath = original?.absolutePath,
+                                    sourceDurationMs = if (original != null) response.durationMs else null,
+                                    requestStyle = requestStyle)
                             }
-                            val take = VoiceIaTake(cue.id, VoiceIaPolicy.fingerprint(cue), voiceId,
-                                usedModel, direction, savedFile.absolutePath, response.durationMs,
-                                GeminiNarrationCheckpoint.hash(response.bytes), requestStyle = requestStyle)
                             val updated = takes.filterNot { it.cueId == cue.id } + take
                             withContext(Dispatchers.IO) { store.save(updated) }
                             takes = updated
@@ -667,6 +682,38 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
             } finally { busy = false }
         }
     }
+    fun externalFitStatus(current: VideoProject, cue: SubtitleCue, track: AudioTrack): String =
+        if (track.startMs == cue.startMs && track.durationMs <= VoiceWindowFit.targetMs(current, cue))
+            "Áudio externo encaixado no tempo da legenda. Confira os lábios na prévia."
+        else "Áudio externo salvo, mas ainda ultrapassa a janela da fala. Revise a sincronia."
+
+    fun refitExternal(cue: SubtitleCue, track: AudioTrack) {
+        if (busy) return
+        scope.launch {
+            busy = true
+            var unused: File? = null
+            try {
+                val snapshot = latestProject
+                val (adjusted, file) = VoiceIaExternalAudio.fitTrack(context, snapshot, cue, track)
+                unused = file
+                val current = latestProject
+                if (current != snapshot || current.audioTracks.none { it == track }) {
+                    status = "O projeto mudou durante o ajuste. Tente novamente."
+                    return@launch
+                }
+                val updated = current.copy(
+                    clips = GeneratedVoiceMix.lowerOriginal(current.clips, adjusted.startMs, adjusted.durationMs),
+                    audioTracks = current.audioTracks.map { if (it.id == track.id) adjusted else it })
+                if (onSave(updated)) {
+                    unused = null
+                    status = externalFitStatus(current, cue, adjusted)
+                } else status = "Não foi possível salvar. O áudio anterior foi mantido."
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { status = "Não foi possível ajustar a voz. O áudio anterior foi mantido." }
+            finally { unused?.delete(); busy = false }
+        }
+    }
+
     fun adjustWav(cue: SubtitleCue, take: VoiceIaTake, targetMs: Long) {
         if (busy) return
         scope.launch {
@@ -752,7 +799,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
         })
         val pending = batchPlan.toGenerate
         val importedCount = cues.count { importedFor(it) != null }
-        val preparedCount = cues.count { importedFor(it) == null && readyForFile(it) }
+        val preparedCount = cues.count { pendingInsertion(it, project) != null }
         val readyCount = batchPlan.reusable
         val reviewItems = cues.map { cue ->
             val wav = readyFor(cue)?.takeIf { File(it.filePath).isFile }
@@ -805,13 +852,16 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                     "Gerar vozes pendentes: $pending", accent = true,
                     modifier = Modifier.weight(1.15f), enabled = !busy && loaded && pending > 0,
                     onClick = { requestPendingGeneration() })
-                VoiceIaToolbarAction(label = "Inserir $preparedCount", accessibilityLabel =
+                if (preparedCount > 0) VoiceIaToolbarAction(label = "Inserir $preparedCount", accessibilityLabel =
                     "Inserir vozes prontas: $preparedCount", modifier = Modifier.weight(1.12f),
                     enabled = !busy && loaded && preparedCount > 0,
                     onClick = {
                         if (actionPrefs.skips(batchInsertAction)) applyBatchInsert()
                         else pendingBatchInsert = true
                     })
+                else if (project.audioTracks.any { it.kind == VoiceIaPolicy.KIND })
+                    Text("Inseridas", modifier = Modifier.weight(1.12f), fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             TextButton(onClick = { showVoiceCloneStudio = true }, enabled = !busy,
                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)) {
@@ -1146,11 +1196,17 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                         Text(if (importedFor(cue) != null) "Substituir áudio externo"
                             else "Importar áudio externo")
                     }
+                    importedFor(cue)?.takeIf { it.ttsModel == VoiceIaExternalAudio.MODEL }?.let { external ->
+                        TextButton(onClick = {
+                            advancedCueId = null
+                            refitExternal(cue, external)
+                        }, enabled = !busy) { Text("Ajustar voz à legenda") }
+                    }
                     if (take != null) {
                         Text("WAV ${formatPipMs(take.durationMs)}" +
                             if ((review?.excessMs ?: 0L) > 0L) " · Revisar sincronização" else " · Pronto",
                             fontSize = 11.sp)
-                        TextButton(onClick = {
+                        if (!VoiceIaPolicy.alreadyInserted(project, cue, take)) TextButton(onClick = {
                             advancedCueId = null
                             if (actionPrefs.skips(singleInsertAction)) insert(cue, take)
                             else pendingInsertId = cue.id
@@ -1469,7 +1525,8 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
             text = { Text("O Uai Cortes copiará o arquivo para uma pasta privada, confirmará " +
                 "o formato e a duração e substituirá somente a faixa de áudio desta fala. " +
                 "Aceita WAV, MP3, M4A, AAC ou OGG até 64 MiB. " +
-                "Não altera a legenda, as outras falas, nem consome API Gemini. " +
+                "O ajuste local tenta encaixar o áudio no tempo da legenda, sem consumir Gemini. " +
+                "Nos vídeos que cruzam a fala, o áudio original fica em até 10%. " +
                 "O arquivo anterior não será apagado automaticamente.") },
             confirmButton = { TextButton(enabled = !busy && cue != null, onClick = {
                 importedUri = null; importCueId = null
@@ -1479,14 +1536,22 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                         val current = latestProject
                         require(current.id == project.id) { "O projeto foi alterado." }
                         val (track, file) = VoiceIaExternalAudio.prepare(context, uri, current, cue)
-                        val updated = current.copy(audioTracks = current.audioTracks.filterNot {
-                            it.kind == VoiceIaPolicy.KIND && it.subtitleId == cue.id
-                        } + track)
+                        if (latestProject != current) {
+                            file.delete()
+                            status = "O projeto mudou durante a importação. Selecione o áudio novamente."
+                            return@launch
+                        }
+                        val updated = current.copy(
+                            clips = GeneratedVoiceMix.lowerOriginal(current.clips, track.startMs, track.durationMs),
+                            audioTracks = current.audioTracks.filterNot {
+                                it.kind == VoiceIaPolicy.KIND && it.subtitleId == cue.id
+                            } + track)
                         if (!runCatching { onSave(updated) }.getOrDefault(false)) {
                             file.delete()
                             status = "Não foi possível salvar a faixa. Nenhum áudio foi substituído."
-                        } else status = "Áudio externo inserido somente na fala ${cues.indexOf(cue) + 1}."
-                    } catch (e: Exception) {
+                        } else status = externalFitStatus(current, cue, track)
+                    } catch (cancelled: CancellationException) { throw cancelled }
+                    catch (e: Exception) {
                         status = "Importação não concluída: ${e.message?.take(140) ?: "arquivo inválido"}"
                     } finally { busy = false }
                 }

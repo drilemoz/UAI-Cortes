@@ -9,8 +9,7 @@ prefs = read('VoiceActionPreferences')
 v = read('VoiceIaScreen')
 center = read('GeminiVoiceCenterScreen')
 mix = read('GeneratedVoiceMix')
-assert 'const val PAGE_SIZE = 5' in read('SubtitleListNavigation')
-assert 'itemsIndexed(pageCues,key=' in s and 'SubtitleListNavigation.page(filtered, visiblePage)' in s
+assert 'itemsIndexed(filtered,key=' in s
 assert 'SubtitleCompactTimeline(sorted,' in s and 'SubtitleFileExport.render(snapshot, selectedFormat)' in s
 assert 'val snapshot = p.subtitles.toList()' in s
 for label in ('Importar SRT', 'Exportar legendas', 'Editar todas', 'Estilos por personagem', 'Apagar todas'):
@@ -35,4 +34,4 @@ assert 'GeneratedVoiceMix.lowerOriginal(current.clips, audio.startMs, audio.dura
 assert 'GeneratedVoiceMix' not in read('VoiceIaExternalAudio')
 assert 'voiceProcessors(clip.volume, clip.voiceTone)' in read('ExportEngine')
 assert '?.volume ?: 1f' in read('EditorScreen')
-print('OK: lote de cinco, ícones acessíveis, confirmações opcionais e volume aplicado a clipes afetados')
+print('OK: lista de legendas, ícones acessíveis, confirmações opcionais e volume aplicado a clipes afetados')

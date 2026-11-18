@@ -588,26 +588,17 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
     }
     val originalNumbers=remember(sorted) { sorted.mapIndexed { index,cue -> cue.id to index+1 }.toMap() }
     val captionsState=rememberLazyListState()
-    var page by remember(p.id) { mutableIntStateOf(0) }
-    val pageCount = SubtitleListNavigation.pageCount(filtered.size)
-    val visiblePage = page.coerceIn(0, pageCount - 1)
-    val pageCues = remember(filtered, visiblePage) { SubtitleListNavigation.page(filtered, visiblePage) }
-    // A paginação limita somente a lista. Timeline, busca e ações em lote mantêm o projeto inteiro.
+    // Lista completa com rolagem. O limite de cinco vale só para os modelos visuais.
     var followPlayback by remember(p.id) { mutableStateOf(true) }
     LaunchedEffect(selectedId, searchQuery, speakerFilter) {
         val index = filtered.indexOfFirst { it.id == selectedId }
-        page = SubtitleListNavigation.pageForIndex(index)
-        if (index >= 0) captionsState.requestScrollToItem(index % SubtitleListNavigation.PAGE_SIZE)
-        else captionsState.requestScrollToItem(0)
+        if (index >= 0) captionsState.requestScrollToItem(index)
+        else if (filtered.isNotEmpty()) captionsState.requestScrollToItem(0)
     }
-    LaunchedEffect(pageCount) { page = page.coerceIn(0, pageCount - 1) }
     LaunchedEffect(activeCue?.id, followPlayback) {
         if (followPlayback && !editorOpen && searchQuery.isBlank()) {
             val index = filtered.indexOfFirst { it.id == activeCue?.id }
-            if (index >= 0) {
-                page = SubtitleListNavigation.pageForIndex(index)
-                captionsState.requestScrollToItem(index % SubtitleListNavigation.PAGE_SIZE)
-            }
+            if (index >= 0) captionsState.requestScrollToItem(index)
         }
     }
     LaunchedEffect(p.subtitles.size) {
@@ -667,21 +658,17 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
             emphasizedIds = filtered.map { it.id }.toSet())
         Row(Modifier.fillMaxWidth().padding(vertical=2.dp),
             verticalAlignment=Alignment.CenterVertically) {
-            Text("Legendas (${p.subtitles.size})",fontSize=13.sp,maxLines=1,
+            Text("${p.subtitles.size} falas",fontSize=13.sp,maxLines=1,
                 fontWeight=FontWeight.SemiBold,modifier=Modifier.weight(1f))
             Box {
-                val filterLabel = when(speakerFilter) {
-                    null -> "Todas"
-                    "__unassigned__" -> "Sem personagem"
-                    else -> p.subtitleSpeakers.firstOrNull { it.id==speakerFilter }?.name ?: "Todas"
-                }
-                TextButton(onClick={speakerFilterMenu=true},
-                    contentPadding=PaddingValues(horizontal=2.dp,vertical=3.dp),
-                    modifier=Modifier.widthIn(max=110.dp)) {
-                    Text(filterLabel,fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
-                    Icon(Icons.Default.ArrowDropDown,"Filtrar por personagem",modifier=Modifier.size(16.dp))
+                SubtitleActionIcon(Icons.Default.Groups, "Personagens e filtro") {
+                    speakerFilterMenu = true
                 }
                 DropdownMenu(expanded=speakerFilterMenu,onDismissRequest={speakerFilterMenu=false}) {
+                    DropdownMenuItem(text={Text("Definir personagens")},onClick={
+                        speakerFilterMenu=false;speakerManagerOpen=true },
+                        leadingIcon={Icon(Icons.Default.Groups,null)})
+                    HorizontalDivider()
                     DropdownMenuItem(text={Text("Todas as legendas")},onClick={
                         speakerFilter=null;speakerFilterMenu=false })
                     DropdownMenuItem(text={Text("Sem personagem")},onClick={
@@ -690,10 +677,20 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                         DropdownMenuItem(text={Text(speaker.name,maxLines=1)},onClick={
                             speakerFilter=speaker.id;speakerFilterMenu=false })
                     }
-                    HorizontalDivider()
-                    DropdownMenuItem(text={Text("Gerenciar personagens")},onClick={
-                        speakerFilterMenu=false;speakerManagerOpen=true },
-                        leadingIcon={Icon(Icons.Default.Groups,null)})
+
+                }
+            }
+            SubtitleActionIcon(Icons.Default.Add, "Nova legenda", enabled = p.durationMs > 0) {
+                SubtitleListNavigation.newInterval(p.durationMs,cursorMs)?.let { (start,end) ->
+                    val cue=SubtitleAppearancePolicy.generated(
+                        SubtitleCue(text="Nova legenda",startMs=start,endMs=end),
+                        SubtitleAppearanceMode.KARAOKE_ROSA,SubtitleAppearancePolicy.ROSA_SIZE_SP)
+                    if(update(p.copy(subtitles=p.subtitles+cue))) {
+                        batchUndo=null;deletedSnapshot=null
+                        searchQuery="";speakerFilter=null;selectedId=cue.id
+                        editorOpen=true;showAdvanced=false
+                        requestSeek(cue.startMs)
+                    }
                 }
             }
             SubtitleActionIcon(Icons.Default.Save, "Salvar legendas e voltar ao editor",
@@ -718,46 +715,25 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                     enabled = p.subtitleSpeakers.isNotEmpty()) { speakerStyleMenu = true; followPlayback = false }
                 SubtitleActionIcon(Icons.Default.DeleteSweep, "Apagar todas",
                     enabled = p.subtitles.isNotEmpty(), destructive = true) { deleteAllConfirm = true }
-            }
-        }
-        Row(Modifier.fillMaxWidth().padding(vertical=1.dp),
-            horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            SubtitleToolButton(Icons.Default.Add,"Nova",p.durationMs>0,
-                Modifier.weight(1f)) {
-                SubtitleListNavigation.newInterval(p.durationMs,cursorMs)?.let { (start,end) ->
-                    val cue=SubtitleAppearancePolicy.generated(
-                        SubtitleCue(text="Nova legenda",startMs=start,endMs=end),
-                        SubtitleAppearanceMode.KARAOKE_ROSA,SubtitleAppearancePolicy.defaultSize())
-                    if(update(p.copy(subtitles=p.subtitles+cue))) {
-                        batchUndo=null;deletedSnapshot=null
-                        searchQuery="";speakerFilter=null;selectedId=cue.id
-                        editorOpen=true;showAdvanced=false
-                        requestSeek(cue.startMs)
+                Box {
+                    SubtitleActionIcon(Icons.Default.AutoAwesome, "Legendas automáticas") {
+                        autoSubtitlesMenu = true
                     }
-                }
-            }
-            Box(Modifier.weight(1f)) {
-                OutlinedButton(onClick={autoSubtitlesMenu=true},modifier=Modifier.fillMaxWidth().heightIn(min=48.dp),
-                    contentPadding=PaddingValues(horizontal=4.dp,vertical=6.dp), shape = UaiShapes.button) {
-                    Icon(Icons.Default.AutoAwesome,"Legendas automáticas",modifier=Modifier.size(17.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Automáticas",fontSize=12.sp,maxLines=1)
-                    Icon(Icons.Default.ArrowDropDown,null,modifier=Modifier.size(16.dp))
-                }
-                DropdownMenu(expanded=autoSubtitlesMenu,onDismissRequest={autoSubtitlesMenu=false}) {
-                    DropdownMenuItem(text={Text("Gerar legendas")},onClick={
-                        autoSubtitlesMenu=false;onAutoSubtitles()
-                    },leadingIcon={Icon(Icons.Default.AutoAwesome,null)})
-                    DropdownMenuItem(text={Text("Sincronia labial · Gemini")},
-                        enabled=p.subtitles.isNotEmpty() && p.clips.any { !it.isImage }, onClick={
-                            val first = sorted.indexOfFirst { it.id == selectedId }.takeIf { it >= 0 }
-                                ?: sorted.indexOfFirst { it.endMs > cursorMs }.coerceAtLeast(0)
-                            lipSyncCues = sorted.drop(first).take(SubtitleLipSyncPolicy.MAX_CUES)
-                            autoSubtitlesMenu=false
+                    DropdownMenu(expanded=autoSubtitlesMenu,onDismissRequest={autoSubtitlesMenu=false}) {
+                        DropdownMenuItem(text={Text("Gerar legendas")},onClick={
+                            autoSubtitlesMenu=false;onAutoSubtitles()
                         },leadingIcon={Icon(Icons.Default.AutoAwesome,null)})
-                    DropdownMenuItem(text={Text("Ajustar sincronia")},enabled=p.subtitles.isNotEmpty(),onClick={
-                        autoSubtitlesMenu=false;syncOpen=true
-                    },leadingIcon={Icon(Icons.Default.Settings,null)})
+                        DropdownMenuItem(text={Text("Sincronia labial · Gemini")},
+                            enabled=p.subtitles.isNotEmpty() && p.clips.any { !it.isImage }, onClick={
+                                val first = sorted.indexOfFirst { it.id == selectedId }.takeIf { it >= 0 }
+                                    ?: sorted.indexOfFirst { it.endMs > cursorMs }.coerceAtLeast(0)
+                                lipSyncCues = sorted.drop(first).take(SubtitleLipSyncPolicy.MAX_CUES)
+                                autoSubtitlesMenu=false
+                            },leadingIcon={Icon(Icons.Default.AutoAwesome,null)})
+                        DropdownMenuItem(text={Text("Ajustar sincronia")},enabled=p.subtitles.isNotEmpty(),onClick={
+                            autoSubtitlesMenu=false;syncOpen=true
+                        },leadingIcon={Icon(Icons.Default.Settings,null)})
+                    }
                 }
             }
         }
@@ -773,24 +749,6 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
         }
         if(status.isNotBlank()) Text(status,fontSize=12.sp,
             color=MaterialTheme.colorScheme.primary)
-        if (pageCount > 1) {
-            val first = visiblePage * SubtitleListNavigation.PAGE_SIZE + 1
-            val last = first + pageCues.size - 1
-            fun turnPage(target: Int) {
-                followPlayback = false
-                page = target
-                // Os cinco itens de cada página reaproveitam a mesma lista.
-                captionsState.requestScrollToItem(0)
-            }
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                SubtitleActionIcon(Icons.Default.ChevronLeft, "Página anterior",
-                    enabled = visiblePage > 0) { turnPage(visiblePage - 1) }
-                Text("$first–$last de ${filtered.size}", modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center)
-                SubtitleActionIcon(Icons.Default.ChevronRight, "Próxima página",
-                    enabled = visiblePage < pageCount - 1) { turnPage(visiblePage + 1) }
-            }
-        }
         LazyColumn(state=captionsState, modifier=Modifier.fillMaxWidth().weight(1f)
             .pointerInput(p.id) {
                 awaitPointerEventScope {
@@ -809,7 +767,7 @@ internal fun SubtitleScreen(p:VideoProject,back:()->Unit,update:(VideoProject)->
                     color=MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier=Modifier.padding(vertical=20.dp))
             }
-            itemsIndexed(pageCues,key={_,cue->cue.id}) { _,cue ->
+            itemsIndexed(filtered,key={_,cue->cue.id}) { _,cue ->
                 val number=originalNumbers[cue.id] ?: 0
                 Column {
                     Surface(onClick={
@@ -1109,20 +1067,8 @@ internal fun SubtitleEditDialog(cue: SubtitleCue,totalMs: Long,number: Int,
     if(wordTimingOpen) SubtitleWordTimingEditor(draft,
         onDismiss={wordTimingOpen=false},
         onSave={times ->
-            draft=draft.copy(wordTimings=times, animation=if (draft.animation == SubtitleAnimations.SINGLE_WORD)
-                draft.animation else SubtitleAnimations.KARAOKE)
+            draft=draft.copy(wordTimings=times, animation=if (SubtitleAnimations.isKaraoke(draft.animation) ||
+                draft.animation == SubtitleAnimations.SINGLE_WORD) draft.animation else SubtitleAnimations.KARAOKE)
             wordTimingOpen=false
         })
-}
-
-/** Botões compactos e consistentes em celulares estreitos, sem formato de cápsula. */
-@Composable
-private fun SubtitleToolButton(icon: ImageVector, label: String, enabled: Boolean,
-    modifier: Modifier = Modifier, onClick: () -> Unit) {
-    OutlinedButton(onClick=onClick,enabled=enabled,modifier=modifier.heightIn(min=46.dp),
-        shape=RoundedCornerShape(8.dp),contentPadding=PaddingValues(horizontal=3.dp,vertical=5.dp)) {
-        Icon(icon,label,modifier=Modifier.size(16.dp))
-        Spacer(Modifier.width(3.dp))
-        Text(label,fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
-    }
 }

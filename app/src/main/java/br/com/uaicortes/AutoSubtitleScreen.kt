@@ -57,7 +57,7 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
     var hideExplanation by remember { mutableStateOf(settings.getBoolean("short_cloud_notice", false)) }
     var showDetails by remember { mutableStateOf(!hideExplanation) }
     var appearanceMode by remember(project.id) { mutableStateOf(SubtitleAppearanceMode.KARAOKE_ROSA) }
-    var generatedSize by remember(project.id) { mutableIntStateOf(SubtitleAppearancePolicy.defaultSize()) }
+    var generatedSize by remember(project.id) { mutableIntStateOf(SubtitleAppearancePolicy.ROSA_SIZE_SP) }
     var selectedCueId by remember(project.id) { mutableStateOf<String?>(null) }
     var cueText by remember(project.id) { mutableStateOf("") }
     var lipsReturn by remember(project.id) { mutableStateOf(AutoSubtitleRoute.REVIEW) }
@@ -394,7 +394,14 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                             OutlinedButton(onClick = ::stop) { Text("Cancelar transcrição") }
                         }
                         AutoSubtitleRoute.REVIEW -> AutoSubtitleReviewList(results, needsReview, message,
-                            appearanceMode, { appearanceMode = it }, generatedSize, { generatedSize = it },
+                            appearanceMode, { next ->
+                                val oldDefault = if (appearanceMode == SubtitleAppearanceMode.KARAOKE_ROSA)
+                                    SubtitleAppearancePolicy.ROSA_SIZE_SP else SubtitleAppearancePolicy.defaultSize()
+                                if (generatedSize == oldDefault)
+                                    generatedSize = if (next == SubtitleAppearanceMode.KARAOKE_ROSA)
+                                        SubtitleAppearancePolicy.ROSA_SIZE_SP else SubtitleAppearancePolicy.defaultSize()
+                                appearanceMode = next
+                            }, generatedSize, { generatedSize = it },
                             replace, { replace = it }, project, draftRange, voiceDecisions, voiceNames,
                             onDecision = { id, decision -> voiceDecisions = voiceDecisions + (id to decision) },
                             onName = { id, name -> voiceNames = voiceNames + (id to name) },

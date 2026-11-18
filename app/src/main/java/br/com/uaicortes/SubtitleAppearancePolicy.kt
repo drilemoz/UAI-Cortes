@@ -6,6 +6,9 @@ internal enum class SubtitleAppearanceMode { CLASSIC_SRT, KARAOKE_IA, KARAOKE_RO
 internal const val DEFAULT_SUBTITLE_SIZE_SP = 14
 
 internal object SubtitleAppearancePolicy {
+    const val ROSA_SIZE_SP = 20
+    val ROSA_HIGHLIGHT = 0xFFF31350.toInt()
+
     fun defaultSize(): Int = DEFAULT_SUBTITLE_SIZE_SP
 
     fun generated(cue: SubtitleCue, mode: SubtitleAppearanceMode, requestedSize: Int): SubtitleCue {
@@ -30,9 +33,9 @@ internal object SubtitleAppearancePolicy {
             SubtitleAppearanceMode.KARAOKE_ROSA -> cue.copy(
                 sizeSp=size, x=.5f,y=.79f,
                 color=0xFFFFFFFF.toInt(), backgroundColor=SubtitleStyles.NO_BACKGROUND,
-                bold=true,outlineWidth=2,outlineColor=0xFF000000.toInt(),
-                shadowOffsetDp=0,shadowColor=0xFF000000.toInt(),
-                highlightColor=0xFFE81050.toInt(),
+                bold=true,outlineWidth=4,outlineColor=0xFF000000.toInt(),
+                shadowOffsetDp=1,shadowColor=0xFF000000.toInt(),fontFamily=SubtitleStyles.FONT_HEAVY,
+                highlightColor=ROSA_HIGHLIGHT,
                 textCase=br.com.uaicortes.subtitles.core.SubtitleTextCasePolicy.UPPER,
                 animation=SubtitleAnimations.KARAOKE_BADGE
             )
