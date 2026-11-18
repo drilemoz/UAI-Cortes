@@ -19,12 +19,12 @@ internal data class PollyCredentials(
         val id = accessKeyId.trim()
         val secret = secretAccessKey.trim()
         val location = region.trim().lowercase()
-        require(id.matches(Regex("[A-Z0-9]{16,128}"))) { "Access Key ID inválido." }
-        require(secret.length in 20..256 && !secret.any(Char::isWhitespace)) { "Secret Access Key inválido." }
+        require(id.matches(Regex("[A-Z0-9]{16,128}"))) { "ID da chave de acesso inválido." }
+        require(secret.length in 20..256 && !secret.any(Char::isWhitespace)) { "Chave de acesso secreta inválida." }
         require(location.matches(Regex("[a-z]{2}(?:-[a-z0-9]+)+-[0-9]")) && location.length <= 30) {
             "Região inválida, por exemplo us-east-1." }
         require(sessionToken.length <= 8192 && !sessionToken.any { it == '\r' || it == '\n' }) {
-            "Token temporário inválido." }
+            "Token de sessão inválido." }
         return copy(accessKeyId = id, secretAccessKey = secret, region = location,
             sessionToken = sessionToken.trim())
     }

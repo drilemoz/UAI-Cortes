@@ -1,3 +1,9 @@
+# v0.1.301 — Configuração do Polly em português
+
+- Base v0.1.300/versionCode 301, nova v0.1.301/versionCode 302. Preservar schema 4, assinatura e cinco variantes.
+- Testar conexão consulta DescribeVoices. Testar voz exige confirmação e respeita limites locais antes do POST, sem repetição automática. A interface indica a origem das credenciais usadas e nunca combina chave preenchida com a salva.
+- Credenciais não aparecem em notas, capturas de demonstração ou registros. Preservar o armazenamento protegido e as confirmações para cópia/exportação.
+
 # v0.1.300 — Fotos PiP sem troca de trilha no início
 
 - Base v0.1.299/versionCode 300, nova v0.1.300/versionCode 301. Preservar schema 4, assinatura e cinco variantes.

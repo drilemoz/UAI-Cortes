@@ -16,11 +16,15 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.300"
-    const val VERSION_CODE = 301
+    const val VERSION_NAME = "0.1.301"
+    const val VERSION_CODE = 302
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.301", listOf(
+            ReleaseFeature("polly-setup-301", "Amazon Polly em português",
+                "Teste a conexão ou ouça uma prévia sem salvar as chaves antes. Os campos e as ações avançadas ocupam menos espaço.", "check")
+        )),
         ReleaseSummary("0.1.300", listOf(
             ReleaseFeature("image-pip-flash-300", "Logo sem trilha de vídeo separada",
                 "Imagens PiP superiores são desenhadas sobre o quadro final no horário configurado, evitando que a entrada do logo ocupe a tela.", "check")

@@ -1,3 +1,9 @@
+# Uai Cortes · versão 0.1.301 — Configuração do Polly
+
+- **Amazon Polly em português:** credenciais em um cartão, opções avançadas recolhíveis e testes logo abaixo das chaves.
+- **Testar conexão** consulta as vozes pt-BR sem sintetizar áudio. **Testar voz** pede confirmação do consumo estimado e reproduz o MP3 se a AWS responder.
+- Testes funcionam com as chaves preenchidas antes de salvar ou com as credenciais já salvas. O armazenamento protegido, os limites locais e o histórico continuam disponíveis.
+
 # Uai Cortes · versão 0.1.300 — Entrada de logo e fotos PiP
 
 - **Entrada de logo e fotos PiP:** as imagens das camadas superiores passam a ser desenhadas sobre o quadro já composto. A entrada atrasada do logo não cria uma trilha de vídeo extra.
