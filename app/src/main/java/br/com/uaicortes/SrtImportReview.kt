@@ -21,6 +21,7 @@ internal fun SrtImportReview(project: VideoProject, original: List<SubtitleCue>,
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val gemini = remember(context) { GeminiSubtitleClient(context) }
+    val recovery = rememberGeminiRecovery()
     val credentials = remember(context) { GeminiCredentialStore(context) }
     val hasGemini = remember(credentials) { credentials.hasKey() }
     val hasVosk = remember(context) { AutoSubtitleEngine.installed(context) }
@@ -50,8 +51,10 @@ internal fun SrtImportReview(project: VideoProject, original: List<SubtitleCue>,
                     val key = withContext(Dispatchers.IO) { credentials.read() }
                         ?: error("Configure sua chave Gemini antes de conferir.")
                     phase = SubtitleCloudPhase.TRANSCRIBE
-                    gemini.transcribe(context, source.project, key, false) { _, step ->
-                        withContext(Dispatchers.Main) { progress = step }
+                    recovery.track {
+                        gemini.transcribe(context, source.project, key, false) { _, step ->
+                            withContext(Dispatchers.Main) { progress = step }
+                        }
                     }
                 } else AutoSubtitleEngine.transcribe(context, source.project) { _, step ->
                     withContext(Dispatchers.Main) { progress = step }
@@ -114,6 +117,7 @@ internal fun SrtImportReview(project: VideoProject, original: List<SubtitleCue>,
                         style = MaterialTheme.typography.bodySmall)
                 }
                 if (error.isNotEmpty()) Text(error, color = MaterialTheme.colorScheme.error)
+                if (cloud) GeminiRecoveryFeedback(recovery)
                 if (!busy) TextButton(onClick = { onImport(original, null) }) { Text("Manter horários e importar") }
             }
         },

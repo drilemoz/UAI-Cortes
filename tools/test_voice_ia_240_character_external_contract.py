@@ -13,7 +13,7 @@ assert 'speakerVoices = updated, cueVoices = if (voice == null)' in policy
 assert 'cue.speakerId != null && project.subtitleSpeakers.any' in policy
 assert 'VoiceIaStylePolicy.cueStyle(latestProject' in ui
 assert 'GeminiNarrationStyling.instruction(styleFor(cue))' in ui
-assert 'api.synthesize(key, usedModel, voiceId, requestStyle, cue.text)' in ui
+assert 'api.synthesize(key, usedModel, voiceId, requestStyle, cue.text,' in ui
 assert 'val chosen = cues.filter { it.id in selectedIds &&' in ui
 assert '(it.id == regenerateId || importedFor(it) == null)' in ui
 assert 'if (project.subtitleSpeakers.isEmpty()) "Vozes" else "Personagens"' in ui

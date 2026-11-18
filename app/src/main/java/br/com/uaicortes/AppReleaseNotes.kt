@@ -16,11 +16,29 @@ internal data class ReleaseSummary(
 )
 
 internal object AppReleaseNotes {
-    const val VERSION_NAME = "0.1.310"
-    const val VERSION_CODE = 311
+    const val VERSION_NAME = "0.1.313"
+    const val VERSION_CODE = 314
 
     /** Atualizar a entrada mais recente quando houver uma novidade publicável. */
     val recent: List<ReleaseSummary> = listOf(
+        ReleaseSummary("0.1.313", listOf(
+            ReleaseFeature("gemini-subtitles-lite-313", "Alternativa leve para legendas Gemini",
+                "Se o Transcribe ficar sem cota, estiver indisponível ou sobrecarregado, o app tenta Flash-Lite com a mesma chave.", "check"),
+            ReleaseFeature("gemini-subtitles-lite-review-313", "Horários por frase no modo leve",
+                "Confira os tempos aproximados antes de aplicar. A alternativa não inventa palavras marcadas nem personagens.", "check")
+        )),
+        ReleaseSummary("0.1.312", listOf(
+            ReleaseFeature("gemini-transcribe-default-312", "Gemini como padrão nas legendas",
+                "Defina Gemini 3.5 Transcribe em Serviços e APIs sem mudar o modelo de revisão ou de voz.", "check"),
+            ReleaseFeature("gemini-transcribe-probe-312", "Teste de transcrição com a sua chave",
+                "Teste com uma amostra do próprio app. Se falhar, confira a etapa e exporte o relatório.", "check")
+        )),
+        ReleaseSummary("0.1.311", listOf(
+            ReleaseFeature("gemini-model-recovery-311", "Outro modelo quando o Gemini falha",
+                "Se a operação aceitar uma alternativa compatível, o aplicativo tenta uma vez sem mudar o modelo escolhido nos ajustes.", "check"),
+            ReleaseFeature("gemini-operation-report-311", "Relatório do Gemini",
+                "Exporte os modelos tentados, etapas e códigos de erro. O relatório não inclui chaves, textos nem arquivos de mídia.", "check")
+        )),
         ReleaseSummary("0.1.310", listOf(
             ReleaseFeature("subtitle-single-line-310", "Legendas em uma linha",
                 "A prévia e o MP4 compartilham o mesmo desenho. Frases longas encolhem sem quebrar e apenas uma legenda aparece por vez.", "check"),

@@ -20,6 +20,7 @@ internal fun GeminiBatchSection() {
     val credentials = remember(ctx) { GeminiCredentialStore(ctx) }
     val storage = remember(ctx) { GeminiBatchStore(ctx) }
     val client = remember { GeminiBatchClient() }
+    val recovery = rememberGeminiRecovery()
     val scope = rememberCoroutineScope()
     DisposableEffect(client) { onDispose { client.cancel() } }
     var expanded by remember { mutableStateOf(false) }
@@ -76,6 +77,7 @@ internal fun GeminiBatchSection() {
                 catch (e: IllegalStateException) { e.message.orEmpty() }
             }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text("Revisar e enviar lote de texto") }
             if (info.isNotBlank()) Text(info, style = MaterialTheme.typography.bodySmall)
+            GeminiRecoveryFeedback(recovery)
             if (busy) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             HorizontalDivider()
             Text("Consultar ou recuperar job", style = MaterialTheme.typography.titleSmall)
@@ -182,7 +184,8 @@ internal fun GeminiBatchSection() {
         AlertDialog(onDismissRequest = { confirmSubmit = false },
             title = { Text("Confirmar Batch pago") },
             text = { Text("Enviar $count pedidos de texto ao Google Gemini? A operação pode gerar cobrança, " +
-                "não tem resultado imediato e NÃO será repetida automaticamente em falhas de rede.") },
+                "não tem resultado imediato e não será reenviada se o resultado for incerto. " +
+                "Só tentamos um modelo compatível se o Google confirmar que o original não está disponível.") },
             confirmButton = { Button(onClick = {
                 confirmSubmit = false
                 scope.launch {
@@ -196,8 +199,9 @@ internal fun GeminiBatchSection() {
                         // Persistir estado incerto ANTES de tocar na rede. Não criar o job novamente.
                         val pending = storage.start(p.id, p.projectId, id, prompts.size)
                         reload()
-                        val remote = client.create(key, id, prompts)
-                        storage.accept(pending, remote)
+                        val submitted = recovery.track { client.create(key, id, prompts) }
+                        val remote = submitted.remoteName
+                        storage.accept(pending, remote, submitted.model)
                         reload()
                         textInput = ""
                         info = "Job enviado: $remote. Consulte quando desejar; processamento assíncrono."
@@ -208,7 +212,7 @@ internal fun GeminiBatchSection() {
                             " Se o envio foi iniciado, confira os jobs antes de reenviar."
                     } finally { busy = false }
                 }
-            }) { Text("Enviar uma vez") } },
+            }) { Text("Enviar lote") } },
             dismissButton = { TextButton(onClick = { confirmSubmit = false }) { Text("Cancelar") } })
     }
 }

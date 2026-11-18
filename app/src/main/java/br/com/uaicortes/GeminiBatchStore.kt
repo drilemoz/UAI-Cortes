@@ -65,15 +65,16 @@ internal class GeminiBatchStore(context: Context) {
         persist(list() + record)
         return record
     }
-    @Synchronized fun accept(record: GeminiBatchRecord, name: String) {
+    @Synchronized fun accept(record: GeminiBatchRecord, name: String, usedModel: String = record.model) {
         val jobs = list()
         val existing = jobs.firstOrNull { it.localId == record.localId }
             ?: error("Lote não encontrado.")
-        require(existing.remoteName.isBlank() || existing.remoteName == name) {
+        require(existing.remoteName.isBlank() || (existing.remoteName == name && existing.model == usedModel)) {
             "Não é permitido trocar o identificador remoto deste job."
         }
         persist(jobs.map { if (it.localId == record.localId)
-            it.copy(remoteName = GeminiBatchPolicy.jobName(name), state = "JOB_STATE_PENDING") else it })
+            it.copy(remoteName = GeminiBatchPolicy.jobName(name), state = "JOB_STATE_PENDING",
+                model = GeminiBatchPolicy.model(usedModel)) else it })
     }
     @Synchronized fun update(record: GeminiBatchRecord, newState: String) {
         persist(list().map { if (it.localId == record.localId) it.copy(state = newState) else it })

@@ -27,6 +27,7 @@ internal fun SubtitleLipSyncDialog(project: VideoProject, candidates: List<Subti
     val scope = rememberCoroutineScope()
     val credentials = remember(context) { GeminiCredentialStore(context) }
     val client = remember(context) { GeminiSubtitleLipSync(context) }
+    val recovery = rememberGeminiRecovery()
     val modelLookup = remember { GeminiVideoCaptionClient() }
     val tasks = remember(project, candidates) { SubtitleLipSyncPolicy.tasks(project, candidates) }
     var configured by remember { mutableStateOf<Boolean?>(null) }
@@ -78,7 +79,7 @@ internal fun SubtitleLipSyncDialog(project: VideoProject, candidates: List<Subti
                 val model = preferred ?: modelLookup.listModels(key).let { available ->
                     (available.lastOrNull { it.id.endsWith("-flash") } ?: available.first()).id
                 }
-                val report = client.analyze(key, model, decoded)
+                val report = recovery.track { client.analyze(key, model, decoded) }
                 val revisions = SubtitleLipSyncPolicy.proposals(decoded.map { it.task }, report, project.subtitles,
                     project.durationMs)
                 images = if (revisions.isEmpty()) emptyList() else decoded
@@ -105,7 +106,8 @@ internal fun SubtitleLipSyncDialog(project: VideoProject, candidates: List<Subti
                     Text("Compara a boca nos quadros próximos ao início e ao fim da legenda. " +
                         "Os horários de cada palavra do karaokê ficam intactos.")
                     Text("Ao analisar, somente esses quadros serão enviados ao Gemini. Sem áudio, " +
-                        "texto da legenda ou vídeo completo. Pode usar cota ou gerar cobrança.",
+                        "texto da legenda ou vídeo completo. Se o modelo estiver indisponível, " +
+                        "o app pode tentar outro compatível. Pode usar cota ou gerar cobrança.",
                         style = MaterialTheme.typography.bodySmall)
                     if (configured == false) Text("Sem chave Gemini. Abra Ajustes e configure Gemini em Integrações e APIs.",
                         color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
@@ -125,6 +127,7 @@ internal fun SubtitleLipSyncDialog(project: VideoProject, candidates: List<Subti
                 }
                 if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
                 if (message.isNotBlank()) Text(message, style = MaterialTheme.typography.bodySmall)
+                GeminiRecoveryFeedback(recovery)
                 changes.orEmpty().forEach { item ->
                     val id = item.before.id
                     HorizontalDivider()

@@ -26,11 +26,13 @@ assert 'originProject != nextProject' in policy and 'code == 429' in policy
 assert 'onCheckedChange' in ui and 'confirmAuto' in ui and 'Text("Ativar")' in ui
 assert 'Nenhuma tentativa ocorre em segundo plano.' in ui
 assert 'GeminiKeyPoolSettings(store)' in settings
-for filename, client in [('GeminiTtsCore.kt','GeminiKeyFailover'),('GeminiVideoCaptionClient.kt','GeminiKeyFailover'),('GeminiSubtitleClient.kt','GeminiKeyFailover')]:
+for filename, client in [('GeminiTtsCore.kt','GeminiKeyFailover'),('GeminiVideoCaptionClient.kt','GeminiKeyFailover')]:
     s=(base/filename).read_text()
     assert client in s and 'failover.run(' in s, filename
 assert 'GeminiHttpException(status' in (base/'GeminiVideoCaptionClient.kt').read_text()
-assert 'GeminiHttpException(code' in (base/'GeminiSubtitleClient.kt').read_text()
+asr=(base/'GeminiSubtitleClient.kt').read_text()
+assert 'GeminiHttpException(code' in asr
+assert 'GeminiKeyFailover' not in asr and 'valid = GeminiKeyParser.validate(key)' in asr
 for filename in ('gemini_backup_rules.xml','gemini_data_extraction_rules.xml'):
     assert 'gemini_secret_local.xml' in (p/'app/src/main/res/xml'/filename).read_text()
 assert 'v0.1.130' in (p/'AGENTS.md').read_text()

@@ -18,21 +18,22 @@ internal data class GeminiBatchStatus(val name: String, val state: String,
 internal data class GeminiBatchTextRequest(
     val label: String, val prompt: String, val maxOutputTokens: Int? = null
 )
+internal data class GeminiBatchCreated(val remoteName: String, val model: String)
 
-/** API Batch oficial: somente prompts TEXTOS submetidos explicitamente; sem failover/retry de POST. */
+/** Lote de texto. Troca apenas se a rota do modelo devolver 404 antes de existir job. */
 internal class GeminiBatchClient {
     private val connection = AtomicReference<HttpURLConnection?>(null)
     fun cancel() { connection.getAndSet(null)?.disconnect() }
 
     companion object { const val MAX_FLOW_PROMPT_LENGTH = 4400 }
 
-    suspend fun create(key: String, model: String, prompts: List<String>): String =
+    suspend fun create(key: String, model: String, prompts: List<String>): GeminiBatchCreated =
         createRequests(key, model, prompts.mapIndexed { i, prompt ->
             GeminiBatchTextRequest("texto-${i + 1}", prompt)
         })
 
     suspend fun createRequests(key: String, model: String,
-        requests: List<GeminiBatchTextRequest>): String = withContext(Dispatchers.IO) {
+        requests: List<GeminiBatchTextRequest>): GeminiBatchCreated = withContext(Dispatchers.IO) {
         val id = GeminiBatchPolicy.model(model)
         require(requests.size in 2..GeminiBatchPolicy.MAX_ITEMS)
         require(requests.map { it.label }.distinct().size == requests.size)
@@ -53,9 +54,12 @@ internal class GeminiBatchClient {
         val body = JSONObject().put("batch", JSONObject()
             .put("display_name", "Uai Cortes - texto")
             .put("input_config", JSONObject().put("requests", JSONObject().put("requests", items))))
-        val response = call("https://generativelanguage.googleapis.com/v1beta/models/$id:batchGenerateContent",
-            GeminiKeyParser.validate(key), body)
-        GeminiBatchPolicy.jobName(response.optString("name"))
+        val valid = GeminiKeyParser.validate(key)
+        GeminiModelRecovery.execute(GeminiRecoveryRoute.BATCH, id) { actual, _ ->
+            val response = call("https://generativelanguage.googleapis.com/v1beta/models/$actual:batchGenerateContent",
+                valid, body)
+            GeminiBatchCreated(GeminiBatchPolicy.jobName(response.optString("name")), actual)
+        }
     }
 
     /** Consulta a lista sob ação explícita; não cria nem repete jobs. */
@@ -121,19 +125,23 @@ internal class GeminiBatchClient {
         connection.set(http)
         try {
             coroutineContext.ensureActive()
-            if (body != null) http.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+            if (body != null) {
+                val bytes = body.toString().toByteArray(Charsets.UTF_8)
+                http.setFixedLengthStreamingMode(bytes.size)
+                http.outputStream.use { it.write(bytes) }
+            }
             val status = http.responseCode
             DiagnosticRecorder.api("gemini", if (body == null) "batch_poll" else "batch_create",
                 null, status, null, outcome = if (status in 200..299) "ok" else "http_error")
             coroutineContext.ensureActive()
-            if (status !in 200..299) throw IOException(when (status) {
+            if (status !in 200..299) throw GeminiHttpException(status, when (status) {
                 400 -> "Lote ou modelo rejeitado pelo Gemini (400)."
                 401, 403 -> "A chave não possui autorização para este job (HTTP $status)."
                 402 -> "Batch exige faturamento habilitado para o projeto (402)."
                 404 -> "Modelo, job ou recurso Batch indisponível (404)."
                 429 -> "Limite da API Batch atingido (429)."
                 else -> "Falha na API Batch (HTTP $status)."
-            })
+            }, modelUnavailable = status == 404 && body != null && address.endsWith(":batchGenerateContent"))
             val reader = http.inputStream.bufferedReader()
             val text = reader.use { input ->
                 val out = StringBuilder()
@@ -150,6 +158,8 @@ internal class GeminiBatchClient {
             return JSONObject(text)
         } catch (cancel: CancellationException) {
             throw cancel
+        } catch (error: GeminiHttpException) {
+            throw error
         } catch (error: java.io.IOException) {
             DiagnosticRecorder.api("gemini", if (body == null) "batch_poll" else "batch_create",
                 null, null, null, outcome = "network_uncertain")

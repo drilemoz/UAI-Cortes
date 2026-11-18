@@ -14,7 +14,8 @@ internal data class VoiceIaTake(
     val durationMs: Long, val sha256: String,
     /** O WAV original permanece imutável após correção local. */
     val sourceFilePath: String? = null, val sourceDurationMs: Long? = null,
-    val requestStyle: String? = null
+    val requestStyle: String? = null,
+    val requestedModel: String? = null
 ) {
     fun json(): JSONObject = JSONObject().put("cueId", cueId)
         .put("cueFingerprint", cueFingerprint).put("voiceId", voiceId)
@@ -22,6 +23,7 @@ internal data class VoiceIaTake(
         .put("durationMs", durationMs).put("sha256", sha256)
         .put("sourceFilePath", sourceFilePath).put("sourceDurationMs", sourceDurationMs)
         .put("requestStyle", requestStyle)
+        .put("requestedModel", requestedModel)
     companion object {
         fun read(value: JSONObject) = VoiceIaTake(value.getString("cueId"),
             value.getString("cueFingerprint"), value.getString("voiceId"),
@@ -30,7 +32,8 @@ internal data class VoiceIaTake(
             value.getString("sha256"),
             value.optString("sourceFilePath").takeUnless { it.isBlank() || it == "null" },
             value.optLong("sourceDurationMs", 0L).takeIf { it > 0L },
-            value.optString("requestStyle").takeUnless { it.isBlank() || it == "null" })
+            value.optString("requestStyle").takeUnless { it.isBlank() || it == "null" },
+            value.optString("requestedModel").takeIf { it in GeminiModels.supported })
     }
 }
 
@@ -42,7 +45,7 @@ internal object VoiceIaPolicy {
         .digest(value.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
     fun matches(take: VoiceIaTake, cue: SubtitleCue, voiceId: String, model: String, style: String): Boolean =
         take.cueId == cue.id && take.cueFingerprint == fingerprint(cue) &&
-        take.voiceId == voiceId && take.model == model && take.style == style
+        take.voiceId == voiceId && (take.requestedModel ?: take.model) == model && take.style == style
     fun fits(start: Long, duration: Long, projectDuration: Long): Boolean =
         start >= 0L && duration >= SubtitleNarrationTimeline.MIN_AUDIO_MS &&
             start < projectDuration && duration <= projectDuration - start

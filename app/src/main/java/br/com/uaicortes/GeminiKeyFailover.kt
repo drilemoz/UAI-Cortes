@@ -5,7 +5,8 @@ import kotlinx.coroutines.CancellationException
 import java.io.IOException
 
 /** Erro HTTP tipado, sem body/prompt/chave. Usado para identificar 429 sem procurar strings localizadas. */
-internal class GeminiHttpException(val statusCode: Int, text: String) : IOException(text)
+internal class GeminiHttpException(val statusCode: Int, text: String,
+    val modelUnavailable: Boolean = false) : IOException(text)
 
 /**
  * Retentativa limitada a uma operação autorizada pelo usuário. O app não cria projetos/chaves,

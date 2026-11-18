@@ -27,7 +27,7 @@ assert 'onAddToEditor = StandaloneVoiceTimelineImport.callback(' in entry
 assert 'ProjectMediaCopies.copy(' in importer and 'verifiedMediaDuration(' in importer
 assert 'volume = 1f' in importer and 'duration > project.durationMs - cursor' in importer
 assert 'latest() === active' in importer and 'onAddToEditor != null' in s
-assert 'Nenhuma geração é feita automaticamente.' in s
+assert 'Nada é enviado antes de você confirmar.' in s
 assert 'ActivityResultContracts.CreateDocument("audio/wav")' in s
 assert 'client.cancel()' in s and 'Nenhuma nova chamada será feita automaticamente.' in s
 assert 'AudioTrack(' not in s and 'VideoProject(' not in s

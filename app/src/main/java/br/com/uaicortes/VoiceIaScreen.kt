@@ -63,6 +63,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
     val queueStore = remember(project.id) { VoiceIaQueueStore(context, project.id) }
     val credentials = remember(context) { GeminiCredentialStore(context) }
     val api = remember(context) { GeminiTtsClient(context) }
+    val speechRecovery = rememberGeminiRecovery()
     val pacing = remember(context) { GeminiLocalPacing(context) }
     val favoritesStore = remember(context) { GeminiVoiceFavorites(context) }
     var favoriteVoiceIds by remember(context) { mutableStateOf(favoritesStore.load()) }
@@ -566,7 +567,10 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                                 project.durationMs) - cue.startMs).coerceAtLeast(250L)
                             val requestStyle = task?.requestStyle
                                 ?: VoiceIaSync.guidance(direction, available, quickId == cue.id)
-                            val response = api.synthesize(key, usedModel, voiceId, requestStyle, cue.text)
+                            val response = speechRecovery.track {
+                                api.synthesize(key, usedModel, voiceId, requestStyle, cue.text,
+                                    allowModelRecovery = journal == null && chosen.size == 1)
+                            }
                             val take = withContext(Dispatchers.IO) {
                                 coroutineContext.ensureActive()
                                 val fitted = runCatching { VoiceWindowFit.adjust(response,
@@ -574,12 +578,13 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                                 val selected = fitted ?: response
                                 val original = fitted?.let { GeminiAudioFiles.save(context, response) }
                                 val savedFile = GeminiAudioFiles.save(context, selected)
-                                VoiceIaTake(cue.id, VoiceIaPolicy.fingerprint(cue), voiceId, usedModel,
+                                VoiceIaTake(cue.id, VoiceIaPolicy.fingerprint(cue), voiceId, response.modelUsed ?: usedModel,
                                     direction, savedFile.absolutePath, selected.durationMs,
                                     GeminiNarrationCheckpoint.hash(selected.bytes),
                                     sourceFilePath = original?.absolutePath,
                                     sourceDurationMs = if (original != null) response.durationMs else null,
-                                    requestStyle = requestStyle)
+                                    requestStyle = requestStyle,
+                                    requestedModel = usedModel.takeIf { response.modelUsed != null && response.modelUsed != it })
                             }
                             val updated = takes.filterNot { it.cueId == cue.id } + take
                             withContext(Dispatchers.IO) { store.save(updated) }
@@ -879,6 +884,7 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+            GeminiRecoveryFeedback(speechRecovery)
             if (generationJob != null && busy) {
                 val batchPercent = VoiceIaBatchProgress.percent(completed, total)
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1566,7 +1572,8 @@ internal fun VoiceIaScreen(project: VideoProject, back: () -> Unit,
             title = { Text("Gerar ${if (count == 1) "esta voz" else "$count vozes"}?") },
             text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Cada fala exige uma solicitação à API Gemini, que pode consumir cota ou gerar cobrança. " +
-                    "Os arquivos são salvos individualmente; falhas não geram novas tentativas automáticas. " +
+                    "Os arquivos são salvos individualmente. Só uma fala avulsa pode tentar outro modelo, " +
+                    "com a mesma voz. A fila não repete pedidos de resultado incerto. " +
                     "Nenhuma voz entra na timeline sem a sua confirmação.")
                 if (count > 1) {
                     val reusable = cues.count { cue ->

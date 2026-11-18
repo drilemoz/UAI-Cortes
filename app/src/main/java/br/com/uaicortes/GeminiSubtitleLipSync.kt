@@ -14,7 +14,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.atomic.AtomicReference
 
-/** One consented multimodal request. Sends frames only, without audio, transcript or file names. */
+/** Consented multimodal analysis. Sends frames only, without audio, transcript or file names. */
 internal class GeminiSubtitleLipSync(context: Context) {
     private val usage = GeminiUsageLedger(context)
     private val active = AtomicReference<HttpURLConnection?>(null)
@@ -49,7 +49,8 @@ internal class GeminiSubtitleLipSync(context: Context) {
                     .put("maxOutputTokens", 2048))
                 .toString().toByteArray(Charsets.UTF_8)
             require(request.size <= 6 * 1024 * 1024)
-            val conn = URL("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent")
+            GeminiModelRecovery.execute(GeminiRecoveryRoute.VISUAL, model) { actualModel, _ ->
+            val conn = URL("https://generativelanguage.googleapis.com/v1beta/models/$actualModel:generateContent")
                 .openConnection() as HttpURLConnection
             active.set(conn)
             val started = System.nanoTime()
@@ -70,14 +71,14 @@ internal class GeminiSubtitleLipSync(context: Context) {
                 val code = conn.responseCode
                 context.ensureActive()
                 if (code !in 200..299) {
-                    usage.safeRecord(valid, model, "legendas_visual", status = if (code == 429) "429" else "erro_$code",
+                    usage.safeRecord(valid, actualModel, "legendas_visual", status = if (code == 429) "429" else "erro_$code",
                         latencyMs = elapsed())
                     throw GeminiHttpException(code, when (code) {
                         400, 404 -> "O modelo Gemini não aceitou a análise de imagens. Confira o modelo disponível."
                         401, 403 -> "API Gemini sem autorização. Confira a chave nos ajustes."
                         429 -> "Limite do Gemini atingido. Nenhuma legenda foi alterada."
                         else -> "Gemini indisponível (HTTP $code)."
-                    })
+                    }, modelUnavailable = code == 404)
                 }
                 val response = conn.inputStream.use { input ->
                     val out = ByteArrayOutputStream()
@@ -91,12 +92,12 @@ internal class GeminiSubtitleLipSync(context: Context) {
                     }
                     JSONObject(out.toString("UTF-8"))
                 }
-                usage.safeRecord(valid, model, "legendas_visual", response, latencyMs = elapsed())
+                usage.safeRecord(valid, actualModel, "legendas_visual", response, latencyMs = elapsed())
                 val candidate = response.optJSONArray("candidates")?.optJSONObject(0)
-                    ?: throw IOException("Gemini não devolveu candidato visual.")
-                if (candidate.optString("finishReason") != "STOP") throw IOException("Análise visual incompleta.")
+                    ?: throw GeminiInvalidResult("Gemini não devolveu candidato visual.")
+                if (candidate.optString("finishReason") != "STOP") throw GeminiInvalidResult("Análise visual incompleta.")
                 val reply = candidate.optJSONObject("content")?.optJSONArray("parts")
-                    ?: throw IOException("Gemini não devolveu análise visual.")
+                    ?: throw GeminiInvalidResult("Gemini não devolveu análise visual.")
                 val raw = (0 until reply.length()).mapNotNull { i ->
                     reply.optJSONObject(i)?.takeUnless { it.optBoolean("thought") }?.optString("text")
                 }.joinToString("").trim()
@@ -104,6 +105,7 @@ internal class GeminiSubtitleLipSync(context: Context) {
             } finally {
                 active.compareAndSet(conn, null)
                 conn.disconnect()
+            }
             }
         }
 

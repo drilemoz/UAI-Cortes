@@ -51,6 +51,7 @@ internal fun VideoSavedDialog(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val generator = remember(uri) { GeminiVideoCaptionClient(context) }
+    val descriptionRecovery = rememberGeminiRecovery()
     val captionPrefs = remember(context) {
         context.applicationContext.getSharedPreferences("caption_model_preferences", android.content.Context.MODE_PRIVATE)
     }
@@ -517,6 +518,7 @@ internal fun VideoSavedDialog(
                             style = MaterialTheme.typography.labelSmall)
                         failure?.let { Text(it, color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.labelSmall) }
+                        GeminiRecoveryFeedback(descriptionRecovery)
                     }
                     TextButton(onClick = { if (persistDraft()) showCaptionDialog = false },
                         modifier = Modifier.align(Alignment.End)) {
@@ -530,7 +532,8 @@ internal fun VideoSavedDialog(
         AlertDialog(onDismissRequest = { showGeminiConsent = false },
             title = { Text("Gerar descrição pelo Gemini?") },
             text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Modelo: $selectedModel. Somente o texto abaixo será enviado ao Google Gemini. O MP4, as imagens e o áudio não serão enviados. A chamada pode consumir sua cota.")
+                Text("Modelo: $selectedModel. Somente o texto abaixo será enviado ao Google Gemini. " +
+                    "Se o modelo falhar, o app pode tentar outro compatível. As chamadas podem consumir cota.")
                 Column(Modifier.heightIn(max = 220.dp).verticalScroll(rememberScrollState())) {
                     Text(contextToSend, style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -567,7 +570,7 @@ internal fun VideoSavedDialog(
                         }
                         savedDescriptionTask = null
                         geminiStarted = true
-                        val result = generator.generate(key, contextToSend, selectedModel)
+                        val result = descriptionRecovery.track { generator.generate(key, contextToSend, selectedModel) }
                         withContext(Dispatchers.IO) {
                             descriptionCheckpoint.saveDescription(descriptionFingerprint, selectedModel,
                                 VideoPublicationDraft(result.description, result.hashtags))

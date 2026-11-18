@@ -27,10 +27,10 @@ internal fun SubtitleProofreadDialog(cues: List<SubtitleCue>, total: Int,
     val scope = rememberCoroutineScope()
     val client = remember(context) { GeminiVideoCaptionClient(context) }
     val credentials = remember(context) { GeminiCredentialStore(context) }
+    val recovery = rememberGeminiRecovery()
     val hasKey = remember(credentials) { credentials.hasKey() }
     var running by remember { mutableStateOf(false) }
     var issue by remember { mutableStateOf<String?>(null) }
-    var failureHttp by remember { mutableStateOf<Int?>(null) }
     var model by remember { mutableStateOf(SubtitleProofreadPolicy.Model.FLASH) }
     var copied by remember { mutableStateOf(false) }
     var help by remember { mutableStateOf(false) }
@@ -41,7 +41,6 @@ internal fun SubtitleProofreadDialog(cues: List<SubtitleCue>, total: Int,
     fun request(using: SubtitleProofreadPolicy.Model) {
         if (running || !hasKey || cues.isEmpty()) return
         issue = null
-        failureHttp = null
         copied = false
         model = using
         running = true
@@ -50,11 +49,14 @@ internal fun SubtitleProofreadDialog(cues: List<SubtitleCue>, total: Int,
             try {
                 val key = withContext(Dispatchers.IO) { credentials.read() } ?: error("Chave ausente")
                 phase = SubtitleCloudPhase.PROOFREAD
-                val answer = client.generateStudioJson(key, SubtitleProofreadPolicy.prompt(cues),
-                    using.id, "subtitle_proofread")
-                val found = try { SubtitleProofreadPolicy.parse(cues, answer) }
-                catch (_: Exception) { throw SubtitleCloudException(
-                    SubtitleCloudIssue(phase, SubtitleCloudReason.INVALID_RESULT)) }
+                val found = recovery.track {
+                    client.generateStudioValidated(key, SubtitleProofreadPolicy.prompt(cues),
+                        using.id, "subtitle_proofread") { answer ->
+                        try { SubtitleProofreadPolicy.parse(cues, answer) }
+                        catch (_: Exception) { throw SubtitleCloudException(
+                            SubtitleCloudIssue(phase, SubtitleCloudReason.INVALID_RESULT)) }
+                    }
+                }
                 changes = found
                 selected = found.map { it.before.id }.toSet()
             } catch (cancelled: CancellationException) {
@@ -62,7 +64,6 @@ internal fun SubtitleProofreadDialog(cues: List<SubtitleCue>, total: Int,
             } catch (failure: Exception) {
                 val info = SubtitleCloudIssue.from(phase, failure)
                 DiagnosticRecorder.subtitleCloudFailure("proofread", info)
-                failureHttp = info.http
                 issue = (info.http?.let { "HTTP $it · " }.orEmpty()) + info.message()
             } finally { running = false }
         }
@@ -86,7 +87,8 @@ internal fun SubtitleProofreadDialog(cues: List<SubtitleCue>, total: Int,
                     Text("Revisando o texto das legendas…")
                 }
                 suggested == null -> {
-                    Text("Só o texto de ${cues.size} legenda(s) vai ao Gemini. Pode consumir cota.")
+                    Text("Só o texto de ${cues.size} legenda(s) vai ao Gemini. Se o modelo falhar, " +
+                        "o app pode tentar um compatível. Pode consumir cota.")
                     if (cues.size < total) Text("Revise este bloco e selecione outra legenda para continuar.",
                         style = MaterialTheme.typography.bodySmall)
                     if (!hasKey) Text("Configure a chave Gemini em Integrações e APIs.",
@@ -118,18 +120,13 @@ internal fun SubtitleProofreadDialog(cues: List<SubtitleCue>, total: Int,
                     Column(Modifier.fillMaxWidth().padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(message, color = MaterialTheme.colorScheme.onErrorContainer)
-                        if (suggested == null) Text("Gemini ${model.label} · Nenhuma legenda foi alterada.",
+                        if (suggested == null) Text("Nenhuma legenda foi alterada.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onErrorContainer)
                     }
                 }
             }
-            if (!running && suggested == null && failureHttp == 503) {
-                OutlinedButton(onClick = { request(model.alternative) }, enabled = hasKey,
-                    modifier = Modifier.fillMaxWidth()) {
-                    Text("Tentar com ${model.alternative.label}")
-                }
-            }
+            GeminiRecoveryFeedback(recovery)
             if (!running && suggested == null && issue != null && cues.isNotEmpty()) {
                 OutlinedButton(onClick = {
                     val clipboard = context.getSystemService(ClipboardManager::class.java)

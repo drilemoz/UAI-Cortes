@@ -20,5 +20,6 @@ assert 'Tarifas podem variar' in prices and 'não representam fatura' in (P/'Gem
 assert 'latencyMs' in ledger and 'GeminiUsageEvent(' in ledger
 for name in ('GeminiTtsCore.kt', 'GeminiVideoCaptionClient.kt', 'GeminiSubtitleClient.kt'):
     code = (P/name).read_text()
-    assert 'System.nanoTime()' in code and 'latencyMs = elapsedMs()' in code, name
+    expected_latency = 'latencyMs = elapsed()' if name == 'GeminiSubtitleClient.kt' else 'latencyMs = elapsedMs()'
+    assert 'System.nanoTime()' in code and expected_latency in code, name
 print('OK: Gemini 157 preço manual, custo parcial, gráficos, tempo real e testes')

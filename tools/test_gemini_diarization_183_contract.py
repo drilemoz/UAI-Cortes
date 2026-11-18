@@ -4,13 +4,14 @@ from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 src=root/'app/src/main/java/br/com/uaicortes'
 client=(src/'GeminiSubtitleClient.kt').read_text()
+request=(src/'GeminiTranscriptionRequest.kt').read_text()
 parser=(src/'GeminiSubtitleParser.kt').read_text()
 policy=(src/'GeminiDiarizationPolicy.kt').read_text()
 auto=(src/'AutoSubtitleScreen.kt').read_text()
 main=(src/'MainActivity.kt').read_text()
-assert 'put("diarization_mode", "speaker")' in client
-assert 'timestamp_granularities' in client and 'gemini-3.5-transcribe' in client
-assert 'interaction(uri,valid,withSpeakerLabels)' in client
+assert 'put("diarization_mode", "speaker")' in request
+assert 'timestamp_granularities' in request and 'gemini-3.5-transcribe' in request
+assert 'GeminiTranscriptionRequest.body(input, withSpeakerLabels, sample)' in client
 assert 'item.optString("speaker")' in parser and 'word.speakerId != buffer.last().speakerId' in parser
 assert 'UUID.randomUUID()' in parser and 'provisionalId(sessionId, raw)' in parser
 assert 'spk_[1-8]' in policy and 'SubtitleSpeakerPolicy.MAX_SPEAKERS' in policy

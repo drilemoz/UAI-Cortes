@@ -25,7 +25,7 @@ assert all(action in dialog for action in ('SRT em Downloads', 'Escolher destino
 assert 'onChooseDestination(format)' in dialog and 'onSaveSrtToDownloads' in dialog
 proofread = read('SubtitleProofreadDialog')
 assert 'color = MaterialTheme.colorScheme.errorContainer' in proofread
-assert 'onClick = { request(model.alternative) }' in proofread
+assert 'GeminiRecoveryFeedback(recovery)' in proofread
 assert 'request(model)' in proofread
 assert (root / 'app/src/test/java/br/com/uaicortes/SubtitleSingleLinePolicyTest.kt').is_file()
 assert (root / 'app/src/androidTest/java/br/com/uaicortes/SubtitleSingleLineRendererAndroidTest.kt').is_file()

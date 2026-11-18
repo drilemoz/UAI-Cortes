@@ -16,7 +16,7 @@ assert 'Surface(onClick = onClick, enabled = enabled' in ui
 assert 'semantics { contentDescription = accessibilityLabel }' in ui
 assert 'GeminiVoiceCenterScreen(' in ui
 assert 'GeminiNarrationStyling.presets.sortedWith' in ui
-assert 'api.synthesize(key, usedModel, voiceId, requestStyle, cue.text)' in ui
+assert 'api.synthesize(key, usedModel, voiceId, requestStyle, cue.text,' in ui
 assert 'GeminiVoiceSearch.byGender(' in center and 'GeminiVoiceSearch.byPitch(' in center
 assert 'LazyColumn(' in center
 assert 'SubtitleOverlayOnFrame(selected, editable = false' in ui

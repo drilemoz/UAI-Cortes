@@ -29,5 +29,5 @@ assert 'tokenEstimate(text)' in screen and '4.000 caracteres' in screen
 assert 'standalone_voice' in library and 'gemini_narrations' not in library
 assert 'VideoProject(' not in screen and 'AudioTrack(' not in screen
 assert 'MAX_CHARS = 4000' in policy and 'text.length <= MAX_CHARS' in policy
-assert 'Nenhuma geração é feita automaticamente.' in screen
+assert 'Nada é enviado antes de você confirmar.' in screen
 print('OK: TTS autônomo, navegação, selecção Gemini, cota, SAF, WAV e isolamento do editor')

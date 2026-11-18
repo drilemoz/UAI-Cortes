@@ -100,27 +100,30 @@ CONTEXTO:\n${contextText.take(1200)}"""
             .put("responseMimeType", "application/json")
             .put("responseJsonSchema", schema)
             .put("maxOutputTokens", 700))
-        val url = URL("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent")
-        val response = requestJson(url, validKey, payload, "descricao", model)
+        generateRecovering(validKey, model, payload, "descricao", GeminiRecoveryRoute.DESCRIPTION) { response ->
         val candidate = response.optJSONArray("candidates")?.optJSONObject(0)
-            ?: throw IOException("Gemini não gerou conteúdo. Reveja o contexto ou escolha outro modelo.")
+            ?: throw GeminiInvalidResult("Gemini não gerou conteúdo. Reveja o contexto ou escolha outro modelo.")
         val parts = candidate.optJSONObject("content")?.optJSONArray("parts")
-            ?: throw IOException("Gemini não retornou texto. Reveja o contexto ou escolha outro modelo.")
+            ?: throw GeminiInvalidResult("Gemini não retornou texto. Reveja o contexto ou escolha outro modelo.")
         val answer = (0 until parts.length()).joinToString("\n") {
-            parts.optJSONObject(it)?.optString("text").orEmpty()
+            parts.optJSONObject(it)?.takeUnless { part -> part.optBoolean("thought") }?.optString("text").orEmpty()
         }.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
         val json = runCatching { JSONObject(answer) }.getOrNull()
-            ?: throw IOException("O Gemini não retornou JSON válido. Tente outro modelo.")
+            ?: throw GeminiInvalidResult("O Gemini não retornou JSON válido. Tente outro modelo.")
         val tags = json.optJSONArray("hashtags")
-            ?: throw IOException("O Gemini não retornou as cinco hashtags.")
+            ?: throw GeminiInvalidResult("O Gemini não retornou as cinco hashtags.")
         VideoCaptionPolicy.fromModel(json.optString("description"),
             (0 until tags.length()).map { tags.optString(it) })
-            ?: throw IOException("A resposta não respeitou as cinco hashtags e os 100 caracteres. Revise o texto manualmente ou gere outra vez.")
+            ?: throw GeminiInvalidResult("A resposta não respeitou as cinco hashtags e os 100 caracteres.")
+        }
     }
 
     /** Estúdio de Voz: somente JSON textual, reaproveitando credenciais, transporte e registro de uso. */
     suspend fun generateStudioJson(key: String, instruction: String, model: String,
-        operation: String): JSONObject = withContext(Dispatchers.IO) {
+        operation: String): JSONObject = generateStudioValidated(key, instruction, model, operation) { it }
+
+    suspend fun <T> generateStudioValidated(key: String, instruction: String, model: String,
+        operation: String, validate: (JSONObject) -> T): T = withContext(Dispatchers.IO) {
         require(GeminiCaptionModelPolicy.validId(model)) { "Selecione um modelo de texto válido." }
         require(operation in setOf("voice_studio_tone", "voice_studio_text", "subtitle_proofread"))
         require(instruction.length in 10..45000) { "O roteiro excede o limite desta operação." }
@@ -128,21 +131,38 @@ CONTEXTO:\n${contextText.take(1200)}"""
             .put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", instruction)))))
             .put("generationConfig", JSONObject().put("responseMimeType", "application/json")
                 .put("maxOutputTokens", 4500))
-        // Uma ação confirmada pode usar o failover OPT-IN somente após HTTP 429 inequívoco.
-        // Falhas de rede/5xx e respostas inválidas não são reenviadas automaticamente.
-        val response = requestJson(URL(
-            "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent"),
-            GeminiKeyParser.validate(key), payload, operation, model)
+        val route = if (operation == "subtitle_proofread") GeminiRecoveryRoute.PROOFREAD
+            else GeminiRecoveryRoute.SCRIPT
+        generateRecovering(GeminiKeyParser.validate(key), model, payload, operation, route) { response ->
         val parts = response.optJSONArray("candidates")?.optJSONObject(0)?.optJSONObject("content")
-            ?.optJSONArray("parts") ?: throw IOException("Gemini não retornou dados estruturados.")
+            ?.optJSONArray("parts") ?: throw GeminiInvalidResult("Gemini não retornou dados estruturados.")
         val answer = (0 until parts.length()).joinToString("\n") {
-            parts.optJSONObject(it)?.optString("text").orEmpty()
+            parts.optJSONObject(it)?.takeUnless { part -> part.optBoolean("thought") }?.optString("text").orEmpty()
         }.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
-        try { JSONObject(answer) } catch (_: Exception) {
+        val parsed = try { JSONObject(answer) } catch (_: Exception) {
             if (operation == "subtitle_proofread")
                 throw SubtitleCloudException(SubtitleCloudIssue(
                     SubtitleCloudPhase.PROOFREAD, SubtitleCloudReason.INVALID_RESULT))
-            throw IOException("A resposta não estava em JSON válido; revise antes de gerar novamente.")
+            throw GeminiInvalidResult("A resposta não estava em JSON válido.")
+        }
+        validate(parsed)
+        }
+    }
+
+    /** O 429 ainda respeita a opção de troca de projeto já existente. A troca de
+     * modelo usa a MESMA credencial da chamada que falhou e não roda outro pool. */
+    private suspend fun <T> generateRecovering(key: String, primary: String, payload: JSONObject,
+        operation: String, route: GeminiRecoveryRoute, parse: (JSONObject) -> T): T {
+        var effectiveKey = key
+        return GeminiModelRecovery.execute(route, primary) { model, first ->
+            val url = URL("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent")
+            val transport: suspend (String) -> JSONObject = { credential ->
+                effectiveKey = credential
+                requestJsonOnce(url, credential, payload, operation, model)
+            }
+            val result = if (first && failover != null) failover.run(key, model, transport)
+                else transport(effectiveKey)
+            parse(result)
         }
     }
 
@@ -171,8 +191,10 @@ CONTEXTO:\n${contextText.take(1200)}"""
         connection.set(http)
         try {
             coroutineContext.ensureActive()
-            if (payload != null) http.outputStream.use {
-                it.write(payload.toString().toByteArray(Charsets.UTF_8))
+            if (payload != null) {
+                val bytes = payload.toString().toByteArray(Charsets.UTF_8)
+                http.setFixedLengthStreamingMode(bytes.size)
+                http.outputStream.use { it.write(bytes) }
             }
             val status = http.responseCode
             coroutineContext.ensureActive()
@@ -183,7 +205,8 @@ CONTEXTO:\n${contextText.take(1200)}"""
                 } }.getOrNull().orEmpty()
                 if (operation != null) usage?.safeRecord(validKey, model, operation,
                     status = if (status == 429) "429" else "erro_$status", latencyMs = elapsedMs())
-                throw GeminiHttpException(status, messageForStatus(status, apiStatus))
+                throw GeminiHttpException(status, messageForStatus(status, apiStatus),
+                    modelUnavailable = status == 404 && operation != null)
             }
             val body = http.inputStream.bufferedReader().use { it.readTextLimited(131072) }
             coroutineContext.ensureActive()
@@ -193,11 +216,11 @@ CONTEXTO:\n${contextText.take(1200)}"""
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failure: UnknownHostException) {
-            if (operation == "subtitle_proofread") throw failure
-            throw IOException("Sem conexão com a internet.")
+            if (operation != null) throw failure
+            throw IOException("Sem conexão com a internet.", failure)
         } catch (failure: SocketTimeoutException) {
-            if (operation == "subtitle_proofread") throw failure
-            throw IOException("Tempo esgotado sem resposta confirmada. Confira o consumo antes de tentar novamente.")
+            if (operation != null) throw failure
+            throw IOException("Tempo esgotado sem resposta confirmada. Confira o consumo antes de tentar novamente.", failure)
         } finally {
             connection.compareAndSet(http, null)
             http.disconnect()
@@ -225,7 +248,7 @@ CONTEXTO:\n${contextText.take(1200)}"""
             "Cota Gemini esgotada. Consulte os limites do seu projeto antes de tentar novamente."
         status == 429 -> "Limite de requisições Gemini atingido. Aguarde antes de tentar novamente."
         status == 408 || status == 503 || status == 504 || status in 500..599 ->
-            "Gemini indisponível (HTTP $status). Verifique o modelo e tente manualmente mais tarde; nenhuma nova geração foi iniciada automaticamente."
+            "Gemini indisponível (HTTP $status). Verifique o modelo e tente mais tarde."
         else -> "Não foi possível consultar o Gemini (HTTP $status)."
     }
 }

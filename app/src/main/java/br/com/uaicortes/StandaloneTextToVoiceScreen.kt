@@ -57,6 +57,7 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
     val scope = rememberCoroutineScope()
     val client = remember(ctx) { GeminiTtsClient(ctx) }
     val textClient = remember(ctx) { GeminiVideoCaptionClient(ctx) }
+    val recovery = rememberGeminiRecovery()
     val batchDraft = remember(ctx) { StandaloneVoiceDraftStore(ctx, batch = true) }
     val textPrefs = remember(ctx) { ctx.getSharedPreferences("voice_studio_text", android.content.Context.MODE_PRIVATE) }
     var textModel by remember {
@@ -254,8 +255,16 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
                         "Preserve história, personagens e sentido; ajuste fluidez, pontuação e pausas. " +
                         "Retorne apenas JSON com o campo text, até 4000 caracteres, sem instruções de leitura."
                 }
-                val answer = textClient.generateStudioJson(key, "$prompt\nConteúdo de referência:\n$input", resolvedModel,
-                    if (action == VoiceStudioTextAction.TONE) "voice_studio_tone" else "voice_studio_text")
+                val answer = recovery.track {
+                    textClient.generateStudioValidated(key, "$prompt\nConteúdo de referência:\n$input", resolvedModel,
+                        if (action == VoiceStudioTextAction.TONE) "voice_studio_tone" else "voice_studio_text") { json ->
+                        val valid = if (action == VoiceStudioTextAction.TONE)
+                            VoiceStudioPlan.tones.any { it.preset.equals(json.optString("tone").trim(), true) }
+                        else json.optString("text").trim().length in 1..StandaloneVoiceTextPolicy.MAX_CHARS
+                        if (!valid) throw GeminiInvalidResult("Sugestão incompatível com o roteiro.")
+                        json
+                    }
+                }
                 if (action == VoiceStudioTextAction.TONE) {
                     proposedTone = VoiceStudioPlan.tones.firstOrNull { it.preset.equals(answer.optString("tone").trim(), true) }
                         ?: throw IOException("Tom não reconhecido.")
@@ -571,7 +580,7 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
                         Text("~${StandaloneVoiceTextPolicy.tokenEstimate(text)} tokens (estimativa)",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("A geração envia o texto à API Google e pode consumir cota. Nenhuma solicitação é automática.",
+                        Text("A geração envia o texto à API Google e pode consumir cota. Nada é enviado antes de você confirmar.",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -605,6 +614,7 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
             }
             if (feedback.isNotEmpty()) Text(feedback, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.primary)
+            GeminiRecoveryFeedback(recovery)
             if (apiUsage.isNotEmpty()) Text(apiUsage, style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (busy) {
@@ -819,8 +829,10 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
                 else if (mode == VoiceStudioMode.CONTINUOUS) "O texto será enviado ao Google para gerar um WAV. "
                 else if (retryScene != null) "Somente a cena ${retryScene!! + 1} será solicitada novamente. "
                 else "Serão enviados apenas os trechos pendentes. Cada trecho pronto fica salvo. "
-            Text(details + "A solicitação poderá consumir tokens/cota ou gerar cobrança. " +
-                "Nenhuma geração é feita automaticamente.")
+            val modelNotice = if (!previewRequested && mode == VoiceStudioMode.CONTINUOUS)
+                "Se o modelo estiver indisponível, o app pode tentar outro mantendo a voz. " else ""
+            Text(details + modelNotice + "A solicitação poderá consumir cota ou gerar cobrança. " +
+                "Nada é enviado antes de você confirmar.")
         },
         confirmButton = { TextButton(onClick = {
             confirm = false
@@ -853,8 +865,11 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
                     }
                     val started = System.currentTimeMillis()
                     stage = "Aguardando resposta do Gemini..."
-                    val wave = client.synthesize(key, requestedModel, requestedVoice,
-                        requestedStyle, requestedText, requestedLanguage, useFailover = false)
+                    val wave = recovery.track {
+                        client.synthesize(key, requestedModel, requestedVoice,
+                            requestedStyle, requestedText, requestedLanguage, useFailover = false,
+                            allowModelRecovery = !sample)
+                    }
                     if (sample) {
                         val old = shortPreview
                         val file = withContext(Dispatchers.IO) {
@@ -871,7 +886,7 @@ internal fun StandaloneTextToVoiceScreen(onBack: () -> Unit, onOpenGeminiSetting
                         reloadLibrary()
                         val recorded = withContext(Dispatchers.IO) {
                             ledger.events().lastOrNull { it.at >= started && it.operation == "narracao" &&
-                                it.model == requestedModel && it.status == "ok" }
+                                it.model == (wave.modelUsed ?: requestedModel) && it.status == "ok" }
                         }
                         apiUsage = recorded?.tokens?.total?.let { "$it tokens informados pelo Gemini." }
                             ?: "Consumo real de tokens não informado pela API."

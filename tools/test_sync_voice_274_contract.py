@@ -7,7 +7,7 @@ src = root / 'app/src/main/java/br/com/uaicortes'
 engine = (src / 'AutoSubtitleEngine.kt').read_text(encoding='utf-8')
 assert 'GAP_TOLERANCE_SAMPLES' in engine and 'writeSilence(missing)' in engine and 'emitted++' in engine
 client = (src / 'GeminiSubtitleClient.kt').read_text(encoding='utf-8')
-assert 'SubtitleTimingRefiner.refine(' in client and 'SubtitleVoiceEnvelope.read(wav)' in client
+assert 'SubtitleTimingRefiner.refine(' in client and 'SubtitleVoiceEnvelope.read(checkNotNull(cachedAudio))' in client
 refiner = (src / 'SubtitleTimingRefiner.kt').read_text(encoding='utf-8')
 for token in ('estimateShift', 'nearestOnset', 'nearestOffset', 'MAX_GLOBAL_SHIFT_MS = 600'):
     assert token in refiner, token

@@ -12,7 +12,7 @@ assert 'Enviar e gerar' in a and 'Identificar vozes' in a
 assert 'ModalBottomSheet(' in a and 'if (showDetails && open == SubtitleEngine.GEMINI) AlertDialog(' in a
 assert 'AutoSubtitleEngineCard(' in a and 'Revisar ${results.size} legendas' in panel
 assert 'O vídeo não é enviado.' in a
-assert 'Só envia áudio ao Gemini. Pode consumir cota.' in a
+assert 'Só envia áudio ao Gemini. Se o Transcribe falhar por cota ou disponibilidade, pode tentar Flash-Lite uma vez.' in a
 assert 'Ajuda sobre transcrição Gemini' in a
 assert 'mutableStateOf(false)' in a.split('var showDetails', 1)[1].splitlines()[0]
 assert 'GeminiUsageHint("legendas automáticas"' in a

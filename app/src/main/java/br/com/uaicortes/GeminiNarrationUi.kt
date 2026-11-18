@@ -88,6 +88,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
     val checkpoint = remember(ctx, project.id) { GeminiNarrationCheckpoint(ctx, project.id) }
     val creds = remember(ctx) { GeminiCredentialStore(ctx) }
     val api = remember(ctx) { GeminiTtsClient(ctx) }
+    val speechRecovery = rememberGeminiRecovery()
     val previewCache = remember(ctx) { GeminiVoicePreviewCache(ctx) }
     val voiceLibrary = remember(ctx) { GeminiVoiceLibrary(ctx) }
     val aliasStore = remember(ctx) { GeminiVoiceAliases(ctx) }
@@ -733,6 +734,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                             shape = UaiShapes.card, modifier = Modifier.fillMaxWidth()) {
                             Text(status, Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
                         }
+                        GeminiRecoveryFeedback(speechRecovery)
                         Text("Amostras podem consumir cota na primeira geração; repetidas usam o cache local.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -1065,6 +1067,7 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                 "pode consumir cota ou gerar cobrança. Ela ficará no cache local para próximas reproduções " +
                 "com a mesma voz, modelo e estilo. A escolha da voz não será alterada. Continuar?"
             else "Gerar a narração pela API pode consumir cota ou gerar cobrança. " +
+                "Na geração avulsa, o app pode tentar outro modelo mantendo a voz escolhida. " +
                 "Se a geração e o salvamento forem bem-sucedidos, o áudio será incluído na " +
                 "mixagem do projeto e ficará visível na tela Áudio. O arquivo original não será alterado. " +
                 "Não haverá repetição automática em caso de falha.")
@@ -1184,7 +1187,10 @@ internal fun GeminiNarrationSection(project: VideoProject, timelinePositionMs: L
                         // Não fazer preflight GET /models: além de uma chamada extra,
                         // pode ser rejeitado por permissão mesmo quando a síntese funciona.
                         val input = if (action == "sample") GeminiPreviewIdentity.TEXT else text.trim()
-                        val wave = api.synthesize(key, model, voice.id, instruction, input)
+                        val wave = speechRecovery.track {
+                            api.synthesize(key, model, voice.id, instruction, input,
+                                allowModelRecovery = action != "sample")
+                        }
                         usageResult = GeminiUsageLedger(ctx).lastMessage("narracao")
                         file = withContext(Dispatchers.IO) {
                             coroutineContext.ensureActive()

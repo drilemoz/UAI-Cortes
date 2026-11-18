@@ -17,6 +17,6 @@ assert '"Gerando $completed/$total ($batchPercent%)"' in ui
 assert 'generatingCueId = cue.id' in ui and 'generatingCueId = null' in ui
 assert 'CircularProgressIndicator(Modifier.size(15.dp)' in ui
 assert 'if (generationJob != null && busy)' in ui
-assert 'api.synthesize(key, usedModel, voiceId, requestStyle, cue.text)' in ui
+assert 'api.synthesize(key, usedModel, voiceId, requestStyle, cue.text,' in ui
 assert '.put("schemaVersion", 4)' in (src/'ProjectStore.kt').read_text()
 print('OK: favoritos da Central e progresso por WAV concluído sem porcentagens fictícias')

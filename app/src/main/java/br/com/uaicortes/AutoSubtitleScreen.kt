@@ -24,7 +24,7 @@ import kotlinx.coroutines.withContext
 private enum class SubtitleEngine(val title: String) { VOSK("Offline · Vosk"), GEMINI("Online · Gemini") }
 private enum class AutoSubtitleRoute { SETUP, GENERATING, REVIEW, CUE, LIPS, REDO }
 
-private const val SUBTITLE_GEMINI_MODEL = "gemini-3.5-transcribe"
+private const val SUBTITLE_GEMINI_MODEL = GeminiTranscriptionRequest.MODEL
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,11 +34,15 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
     val scope = rememberCoroutineScope()
     val geminiStore = remember(context) { GeminiCredentialStore(context) }
     val geminiClient = remember(context) { GeminiSubtitleClient(context) }
+    val geminiRecovery = rememberGeminiRecovery()
     val installed = AutoSubtitleEngine.installed(context)
     val geminiConfigured = geminiStore.hasKey()
+    val preferGemini = remember(context) { GeminiTranscriptionPreferences(context).isDefault() }
     val full = SubtitleSpeechRange(0L, project.durationMs)
     val sources = remember(project.audioTracks, project.clips) { ClipAudioBindings.resolved(project) }
-    var open by remember(project.id) { mutableStateOf<SubtitleEngine?>(null) }
+    var open by remember(project.id) {
+        mutableStateOf<SubtitleEngine?>(if (preferGemini && geminiConfigured) SubtitleEngine.GEMINI else null)
+    }
     var page by remember(project.id) { mutableStateOf(AutoSubtitleRoute.SETUP) }
     var referenceId by remember(project.id) { mutableStateOf<String?>(null) }
     var requestedRange by remember(project.id, full) { mutableStateOf(full) }
@@ -134,6 +138,7 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                 voiceDecisions = emptyMap(); voiceNames = emptyMap()
                 page = if (subtitles.isEmpty()) AutoSubtitleRoute.SETUP else AutoSubtitleRoute.REVIEW
                 message = if (subtitles.isEmpty()) "A transcrição salva não encontrou fala."
+                    else if (saved.model == GeminiLiteTranscription.MODEL) GeminiLiteTranscription.NOTICE
                     else "Transcrição recuperada sem nova chamada."
             } catch (cancel: CancellationException) {
                 page = AutoSubtitleRoute.SETUP
@@ -190,12 +195,16 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                         recorded = true
                     }
                     requestingCloud = true
-                    geminiClient.transcribe(context, source.project, apiKey, detect, report)
+                    geminiRecovery.track { geminiClient.transcribe(context, source.project, apiKey, detect, report) }
                 } else AutoSubtitleEngine.transcribe(context, source.project, report)
+                val usedModel = if (cloud) geminiRecovery.trace?.attempts?.lastOrNull()?.model
+                    ?: SUBTITLE_GEMINI_MODEL else null
+                val usedLite = usedModel == GeminiLiteTranscription.MODEL
                 val actual = SubtitleSpeechRange(source.offsetMs, source.offsetMs + source.project.durationMs)
                 val placed = SubtitleSpeechDraft.place(generated, source.offsetMs, actual)
                 var verifiedAlignment = false
                 val combined = when {
+                    align && usedLite -> original
                     align && cue != null -> {
                         val revised = SrtSpeechAlignment.align(listOf(cue), placed, project.durationMs)
                         val aligned = revised.cues.singleOrNull()?.takeIf { revised.matched == 1 && actual.contains(it) }
@@ -209,8 +218,11 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                     else -> placed
                 }
                 if (partial && combined == original && !verifiedAlignment) {
-                    message = if (align) "Nenhuma correção segura pelo áudio. A legenda foi mantida."
-                        else "Nenhuma fala nova coube no trecho. As legendas anteriores foram mantidas."
+                    message = when {
+                        align && usedLite -> "O Flash-Lite estima frases e não confirma a sincronia por palavra. A legenda foi mantida."
+                        align -> "Nenhuma correção segura pelo áudio. A legenda foi mantida."
+                        else -> "Nenhuma fala nova coube no trecho. As legendas anteriores foram mantidas."
+                    }
                 } else if (!partial && combined.isEmpty()) {
                     message = "Não encontrei fala nesse trecho. Você pode escolher outra fonte ou refazer só um intervalo."
                     if (recorded) {
@@ -232,13 +244,14 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                     message = if (align) "Sincronia conferida pelo áudio."
                         else if (partial) "Trecho atualizado. As outras legendas foram mantidas."
                         else "${combined.size} legendas geradas. Revise antes de aplicar."
-                    if (cloud) {
+                    if (usedLite) message += " ${GeminiLiteTranscription.NOTICE}"
+                    if (usedModel != null) {
                         val state = SubtitleCheckpointSource(draftTrack, draftRange.startMs, draftRange.endMs, needsReview)
                         val stored = withContext(Dispatchers.IO) {
-                            runCatching { geminiCheckpoint.saveSubtitles(mediaFingerprint, SUBTITLE_GEMINI_MODEL,
+                            runCatching { geminiCheckpoint.saveSubtitles(mediaFingerprint, usedModel,
                                 combined, state) }.isSuccess
                         }
-                        if (stored) savedGeminiTask = GeminiTaskCheckpoint(mediaFingerprint, SUBTITLE_GEMINI_MODEL,
+                        if (stored) savedGeminiTask = GeminiTaskCheckpoint(mediaFingerprint, usedModel,
                             GeminiTaskStage.READY, System.currentTimeMillis(), subtitleSource = state)
                         else message += " Não foi possível salvar uma cópia de recuperação."
                     }
@@ -305,7 +318,12 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
         }
         val base = project.copy(subtitles = retained)
         val proposal = GeminiDiarizationPolicy.prepare(base,
-            candidates.map { SubtitleAppearancePolicy.generated(it, appearanceMode, generatedSize) },
+            candidates.map { cue ->
+                val styled = SubtitleAppearancePolicy.generated(cue, appearanceMode, generatedSize)
+                // O modo leve só mede frases. Não renderizar karaokê com palavras inferidas do texto.
+                if (lastEngine == SubtitleEngine.GEMINI && cue.wordTimings.isEmpty())
+                    styled.copy(animation = SubtitleAnimations.NONE) else styled
+            },
             false, voiceDecisions, voiceNames)
         if (proposal == null) message = "Revise os personagens antes de aplicar."
         else onApply(proposal.copy(subtitles = proposal.subtitles.sortedBy { it.startMs }))
@@ -322,7 +340,8 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
             openEngine(SubtitleEngine.VOSK)
         }
         AutoSubtitleEngineCard(SubtitleEngine.GEMINI.title,
-            if (geminiConfigured) "Envia somente áudio · API configurada" else "API Gemini não configurada",
+            if (geminiConfigured) "${GeminiTranscriptionRequest.LABEL} · " +
+                (if (preferGemini) "Padrão" else "Somente áudio") else "API Gemini não configurada",
             Icons.Default.AutoAwesome,
             if ((lastEngine == SubtitleEngine.GEMINI && results.isNotEmpty()) ||
                 savedGeminiTask?.stage == GeminiTaskStage.READY) ::restoreCloud else null) {
@@ -360,7 +379,9 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                                 OutlinedButton(onClick = onManageModel) { Text("Baixar modelo PT-BR") }
                             }
                             if (engine == SubtitleEngine.GEMINI) {
-                                if (!geminiConfigured) OutlinedButton(onClick = onManageGemini) { Text("Configurar API Gemini") }
+                                OutlinedButton(onClick = onManageGemini) {
+                                    Text(if (geminiConfigured) "Modelo e teste do Gemini" else "Configurar API Gemini")
+                                }
                                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                     Text("Identificar vozes", modifier = Modifier.weight(1f))
                                     Switch(checked = detectSpeakers, onCheckedChange = { detectSpeakers = it })
@@ -437,10 +458,11 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
                                     }
                                 }
                             }
+                            GeminiRecoveryFeedback(geminiRecovery)
                             if (savedGeminiTask?.stage == GeminiTaskStage.REVIEW)
                                 Text("A tentativa anterior pode ter consumido cota. Nada foi aplicado.",
                                     style = MaterialTheme.typography.bodySmall)
-                            Text("Só envia áudio ao Gemini. Pode consumir cota.",
+                            Text("Só envia áudio ao Gemini. Se o Transcribe falhar por cota ou disponibilidade, pode tentar Flash-Lite uma vez.",
                                 style = MaterialTheme.typography.labelSmall)
                         }
                         Button(onClick = { generate(engine, candidate) }, enabled = ready && !busy &&
@@ -464,6 +486,7 @@ fun AutoSubtitleScreen(project: VideoProject, back: () -> Unit,
             verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("O app envia apenas o áudio da fonte e do trecho selecionados. O vídeo não é enviado.")
             Text("Identificar vozes sugere quem falou cada trecho. Revise os personagens antes de aplicar.")
+            Text("Se for necessário usar o Flash-Lite, os horários serão aproximados por frase e as vozes não serão identificadas.")
             Text("A consulta pode consumir cota. Tentativas com falha de conexão não serão repetidas automaticamente.")
             GeminiUsageHint("legendas automáticas", durationMs = effectiveRange.durationMs,
                 model = SUBTITLE_GEMINI_MODEL)

@@ -19,7 +19,7 @@ assert 'Importar SRT ou TXT com horários' in screen and 'EditFeatures.parseSrt(
 assert 'MediaStore.Downloads.EXTERNAL_CONTENT_URI' in writer and 'IS_PENDING' in writer
 assert 'if (!published) runCatching { resolver.delete(uri, null, null) }' in writer
 assert 'hasExpectedExtension(actual)' in writer and 'hasExpectedExtension(actual)' in screen
-assert 'failureHttp == 503' in proof and 'onClick = { request(model.alternative) }' in proof
+assert 'GeminiRecoveryFeedback(recovery)' in proof and 'recovery.track' in proof
 assert 'DiagnosticRecorder.subtitleCloudFailure("proofread", info)' in proof
 assert 'using.id, "subtitle_proofread"' in proof
 assert 'ClipData.newPlainText("Legendas com horários", SubtitleFileExport.render(cues))' in proof

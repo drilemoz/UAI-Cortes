@@ -1,3 +1,23 @@
+# v0.1.313 — Flash-Lite nas legendas
+
+- Base v0.1.312/versionCode 313. Nova v0.1.313/versionCode 314; SDK 36.
+- Legendas Gemini fazem uma única tentativa com o Flash-Lite em HTTP 404, 429 ou 503 da geração do Transcribe. Não repetir após timeout ou erro de upload, não selecionar outra chave e não escalar para modelo mais caro.
+- Flash-Lite aceita áudio mas não oferece o contrato de palavras da ASR. Sem karaokê por palavra ou diarização no resultado leve; avisar da aproximação e jamais aplicar sem revisão.
+
+# v0.1.312 — Gemini nas legendas automáticas
+
+- Base v0.1.311/versionCode 312. Nova v0.1.312/versionCode 313. Preservar SDK 36 e a seleção dos demais modelos.
+- A preferência de transcrição padrão abre Gemini em Legendas automáticas quando há chave, mas não envia áudio. Vosk continua disponível.
+- Enviar WAV pequeno inline, WAV maior pela Files API. Manter transcrição por palavra e diarização opcional. Não repetir automaticamente requisição possivelmente cobrada nem trocar para modelo de revisão.
+- O teste usa uma amostra sintética incluída no app e a chave ativa, após confirmação. O relatório não contém a chave, texto nem mídia.
+
+# v0.1.311 — Recuperação Gemini
+
+- Base v0.1.310/versionCode 311. Entrega v0.1.311/versionCode 312. Preservar SDK 36, schema 4, assinatura, cinco variantes e a linha única da versão anterior.
+- Política central permite no máximo uma troca de modelo. Só usa alternativas documentadas para a modalidade. Falhas ambíguas, 429, autorização e resultados inválidos não disparam outra geração. Manter a política existente de credenciais separada da troca de modelo.
+- Transcrição com palavra e diarização não cai para texto genérico. Prévia com cache e filas persistentes mantêm modelo exato. Voz avulsa envia o mesmo ID e guarda o modelo real sem invalidar WAV já pronto. Lote só troca em 404 do envio, sem repetir criação por falha de rede.
+- Relatórios locais usam apenas campos controlados. Nunca arquivar prompts, texto, mídia, credenciais, IDs privados ou corpo de erro.
+
 # v0.1.310 — Legendas em uma linha
 
 - Base v0.1.309/versionCode 310, nova v0.1.310/versionCode 311. Preservar schema 4, assinatura e cinco variantes.

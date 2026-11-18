@@ -61,7 +61,7 @@ internal data class GeminiVoice(
     val languageCode: String = "", val accent: String = "", val persona: String = "",
     val context: String = "", val gender: String = "", val pitch: String = ""
 )
-internal data class GeminiWave(val bytes: ByteArray, val durationMs: Long)
+internal data class GeminiWave(val bytes: ByteArray, val durationMs: Long, val modelUsed: String? = null)
 
 /** Valida RIFF/WAVE PCM mono 16-bit; não cria outro cabeçalho. */
 internal object GeminiWaveParser {
@@ -106,7 +106,7 @@ internal object GeminiWaveParser {
     }
 }
 
-/** Rede: uma única solicitação por ação, sem retry automático; nenhum texto ou chave em logs. */
+/** Síntese autenticada. O fallback é opt-in por chamada para não misturar modelos em caches ou filas. */
 internal class GeminiTtsClient(context: Context? = null) {
     private val failover = context?.let { GeminiKeyFailover(it) }
     private val usage = context?.let { GeminiUsageLedger(it) }
@@ -128,6 +128,7 @@ internal class GeminiTtsClient(context: Context? = null) {
             active.set(conn)
             try {
                 conn.requestMethod = if (body == null) "GET" else "POST"
+                conn.instanceFollowRedirects = false
                 conn.setRequestProperty("x-goog-api-key", key)
                 conn.setRequestProperty("Accept", "application/json")
                 conn.connectTimeout = 12000
@@ -136,7 +137,9 @@ internal class GeminiTtsClient(context: Context? = null) {
                 if (body != null) {
                     conn.doOutput = true
                     conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-                    conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+                    val bytes = body.toString().toByteArray(Charsets.UTF_8)
+                    conn.setFixedLengthStreamingMode(bytes.size)
+                    conn.outputStream.use { it.write(bytes) }
                 }
                 val status = conn.responseCode
                 coroutineContext.ensureActive()
@@ -171,8 +174,8 @@ internal class GeminiTtsClient(context: Context? = null) {
                     if (path == "interactions") usage?.safeRecord(key, body?.optString("model").orEmpty(),
                         "narracao", response, latencyMs = elapsedMs())
                 }
-            } catch (e: UnknownHostException) { throw IOException("Sem conexão com a internet.") }
-            catch (e: SocketTimeoutException) { throw IOException("A conexão com Gemini excedeu o tempo limite.") }
+            } catch (e: UnknownHostException) { throw IOException("Sem conexão com a internet.", e) }
+            catch (e: SocketTimeoutException) { throw IOException("A conexão com Gemini excedeu o tempo limite.", e) }
             finally { active.compareAndSet(conn, null); conn.disconnect() }
         }
     private fun readLimit(input: java.io.InputStream, max: Int): ByteArray {
@@ -206,20 +209,27 @@ internal class GeminiTtsClient(context: Context? = null) {
     suspend fun voices(key: String): List<GeminiVoice> = voicesWithDiagnosis(key).voices
     suspend fun synthesize(key: String, model: String, voice: String, style: String, text: String,
                            languageMode: String = GeminiSpeechLanguage.PORTUGUESE_BR,
-                           useFailover: Boolean = true): GeminiWave {
+                           useFailover: Boolean = true, allowModelRecovery: Boolean = false): GeminiWave {
         GeminiModels.requireSupported(model)
         require(voice.isNotBlank() && voice.length <= 150) { "Selecione uma voz disponível." }
         require(text.isNotBlank() && text.length <= 4000) { "Digite entre 1 e 4.000 caracteres." }
         val content = JSONObject().put("type", "text").put("text", text)
             .put("annotations", JSONArray().put(JSONObject().put("type", "speech_metadata")
                 .put("style", GeminiSpeechLanguage.style(style, languageMode))))
-        val body = JSONObject().put("model", model)
+        var effectiveKey = key
+        return GeminiModelRecovery.execute(GeminiRecoveryRoute.VOICE, model, allowModelRecovery) { actual, first ->
+        val body = JSONObject().put("model", actual)
             .put("input", JSONArray().put(JSONObject().put("type", "user_input")
                 .put("content", JSONArray().put(content))))
             .put("response_format", JSONObject().put("type", "audio").put("mime_type", "audio/wav"))
             .put("generation_config", JSONObject().put("speech_config", JSONArray().put(JSONObject().put("voice", voice))))
-        val result = request("interactions", key, body, 44 * 1024 * 1024, useFailover)
-        val steps = result.optJSONArray("steps") ?: throw IOException("Resposta sem etapas de áudio.")
+        val transport: suspend (String) -> JSONObject = { credential ->
+            effectiveKey = credential
+            requestOnce("interactions", credential, body, 44 * 1024 * 1024)
+        }
+        val result = if (first && useFailover && failover != null) failover.run(key, actual, transport)
+            else transport(effectiveKey)
+        val steps = result.optJSONArray("steps") ?: throw GeminiInvalidResult("Resposta sem etapas de áudio.")
         var encoded: String? = null
         var mime = ""
         for (i in 0 until steps.length()) {
@@ -234,10 +244,13 @@ internal class GeminiTtsClient(context: Context? = null) {
                 }
             }
         }
-        if (encoded.isNullOrBlank()) throw IOException("Gemini não retornou áudio.")
+        if (encoded.isNullOrBlank()) throw GeminiInvalidResult("Gemini não retornou áudio.")
         val bytes = try { Base64.decode(encoded, Base64.DEFAULT) }
-            catch (_: IllegalArgumentException) { throw IOException("Áudio Base64 inválido.") }
-        return GeminiWave(bytes, GeminiWaveParser.duration(bytes, mime.ifBlank { "audio/wav" }))
+            catch (_: IllegalArgumentException) { throw GeminiInvalidResult("Áudio Base64 inválido.") }
+        val duration = try { GeminiWaveParser.duration(bytes, mime.ifBlank { "audio/wav" }) }
+            catch (_: IllegalArgumentException) { throw GeminiInvalidResult("WAV inválido.") }
+        GeminiWave(bytes, duration, actual)
+        }
     }
 }
 

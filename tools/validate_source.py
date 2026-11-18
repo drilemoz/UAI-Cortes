@@ -1037,7 +1037,9 @@ assert 'preset.shadowOffsetDp ?: cue.shadowOffsetDp' in styles
 assert 'SubtitleFileExport.Format.SRT' in screen and 'SubtitleFileExport.Format.TXT' in screen
 assert 'deleteAllConfirm' in screen and 'deletedSnapshot' in screen
 assert 'RoundedCornerShape(8.dp)' in screen and 'SubtitleActionIcon' in screen
-assert 'gemini-3.5-transcribe' in remote and 'timestamp_granularities' in remote
+transcription_request=(app_files/'GeminiTranscriptionRequest.kt').read_text()
+assert 'GeminiTranscriptionRequest.body' in remote
+assert 'gemini-3.5-transcribe' in transcription_request and 'timestamp_granularities' in transcription_request
 assert 'Enviar e gerar' in auto_ui and 'GeminiCredentialStore(context)' in auto_ui
 assert 'word_info' in parser and 'GeminiSubtitleParser.parse' in remote
 assert 'onManageGemini' in main

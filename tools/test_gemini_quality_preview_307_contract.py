@@ -3,7 +3,8 @@ from pathlib import Path
 base=Path(__file__).resolve().parents[1]/'app/src/main/java/br/com/uaicortes'
 read=lambda name: (base/(name+'.kt')).read_text()
 client=read('GeminiSubtitleClient')
-assert '.put("type","file")' in client and '.put("file_uri",uri)' in client
+request=read('GeminiTranscriptionRequest')
+assert '.put("type", "file")' in request and '.put("file_uri", uri)' in request
 assert 'val state = response.optString("state").ifBlank' in client
 assert 'DiagnosticRecorder.subtitleCloudFailure("transcribe", issue)' in client
 fault=read('SubtitleCloudFailure')

@@ -1,4 +1,27 @@
-# Uai Cortes · v0.1.310 — Legendas em uma linha
+# Uai Cortes · v0.1.313 — Flash-Lite nas legendas
+
+- Ao receber HTTP 404, 429 ou 503 na geração do Transcribe, tente uma vez o Gemini 3.5 Flash-Lite com a chave ativa. Não peça um modelo mais pesado, não troque o perfil e não repita uploads.
+- O modo alternativo transcreve áudio e estima horários por frase. O app rejeita respostas inválidas, sinaliza a aproximação e mantém revisão antes de aplicar.
+- O teste em Serviços e APIs mostra qual modelo funcionou. Vosk segue disponível offline.
+
+Validação em [docs/VALIDATION_0.1.313.md](docs/VALIDATION_0.1.313.md).
+
+## Uai Cortes · v0.1.312 — Gemini nas legendas automáticas
+ 
+- Defina o Gemini 3.5 Transcribe como padrão nas legendas automáticas em **Serviços e APIs → Gemini**. O Vosk continua disponível e o envio ao Gemini ainda exige confirmação.
+- Teste a chave com uma amostra de voz incluída no app e exporte o relatório se houver falha. O modo de teste não usa seu vídeo nem seu microfone.
+- Áudio WAV pequeno pode ir diretamente na requisição de transcrição. Arquivos maiores continuam pelo upload dedicado.
+
+Validação em [docs/VALIDATION_0.1.312.md](docs/VALIDATION_0.1.312.md).
+
+## Uai Cortes · v0.1.311 — Recuperação Gemini
+
+- **Gemini:** troca limitada para modelo compatível em revisão, descrição, roteiro, análise visual, voz avulsa e casos confirmados de modelo ausente antes de criar um lote. Não reenvia automaticamente pedidos de resultado incerto.
+- **Diagnóstico:** mostra quando outro modelo é tentado e exporta relatório local sem chave, texto nem mídia. Transcrição com horários não troca de modalidade.
+
+Validação em [docs/VALIDATION_0.1.311.md](docs/VALIDATION_0.1.311.md).
+
+## Uai Cortes · v0.1.310 — Legendas em uma linha
 
 - **Uma linha:** a prévia, a galeria e o MP4 usam o mesmo desenho para cada legenda. Frases longas encolhem sem virar duas linhas. Em horários sobrepostos, só uma legenda aparece.
 - **Diálogos:** SRT e TXT lado a lado. Revisão de português mostra as ações principais e os erros com mais clareza, sem alterar as opções do Gemini.

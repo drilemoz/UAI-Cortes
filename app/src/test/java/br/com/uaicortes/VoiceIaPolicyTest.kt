@@ -17,6 +17,14 @@ class VoiceIaPolicyTest {
         assertFalse(VoiceIaPolicy.matches(prepared, cue, "outra voz", GeminiModels.LITE, "estilo"))
     }
 
+    @Test fun alternateVoiceIsReusableForTheSameRequestAndKeepsActualModel() {
+        val prepared = VoiceIaTake(cue.id, VoiceIaPolicy.fingerprint(cue), "voz", GeminiModels.LITE,
+            "estilo", "/data/voice.wav", 900L, "a".repeat(64), requestedModel = GeminiModels.FLASH)
+        assertTrue(VoiceIaPolicy.matches(prepared, cue, "voz", GeminiModels.FLASH, "estilo"))
+        assertFalse(VoiceIaPolicy.matches(prepared, cue, "voz", GeminiModels.LITE, "estilo"))
+        assertEquals(GeminiModels.LITE, prepared.model)
+    }
+
     /** Regressão CI118: o mockable android.jar de JVM não executa Uri.fromFile(). */
     @Test fun geminiFileUriCanBeBuiltWithoutAndroidAndEscapesUnicode() {
         val path = "/tmp/voz com acento á.wav"

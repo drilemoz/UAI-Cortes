@@ -27,7 +27,7 @@ assert 'VoiceIaQueuePolicy.reconcileSelections' in ui
 assert 'currentVoices[item.cueId] != item.voiceId' in queue
 panel = (src/'AutoSubtitlePanel.kt').read_text()
 assert 'SubtitleAppearanceMode.CLASSIC_SRT to' in panel and 'FilterChip(appearance == mode' in panel
-assert 'SubtitleAppearancePolicy.generated(it, appearanceMode, generatedSize)' in auto
+assert 'SubtitleAppearancePolicy.generated(cue, appearanceMode, generatedSize)' in auto
 assert 'wordTimings' not in style  # copy preserva marcações sem reconstruir
 assert 'CLASSIC_SRT' in style and 'KARAOKE_IA' in style
 print('OK: voz por personagem e legenda, filtro, fila segura e estilo SRT/IA')

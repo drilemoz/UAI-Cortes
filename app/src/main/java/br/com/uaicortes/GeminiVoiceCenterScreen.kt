@@ -62,6 +62,7 @@ internal fun GeminiVoiceCenterScreen(
     val credentials = remember(ctx) { GeminiCredentialStore(ctx) }
     val pacing = remember(ctx) { GeminiLocalPacing(ctx) }
     val client = remember(ctx) { GeminiTtsClient(ctx) }
+    val speechRecovery = rememberGeminiRecovery()
     val player = remember(ctx) { diagnosticPlayer(ctx) }
     val frameProbe = remember { VoiceCenterFrameProbe() }
     DisposableEffect(frameProbe) {
@@ -387,8 +388,10 @@ internal fun GeminiVoiceCenterScreen(
                     val key = withContext(Dispatchers.IO) { credentials.read() }
                         ?: error("Chave Gemini ausente.")
                     withContext(Dispatchers.IO) { pacing.beforeRequest(requestedModel) { } }
-                    val wave = client.synthesize(key, requestedModel, voice.id,
-                        requestedStyle, requestedText, requestedLanguage)
+                    val wave = speechRecovery.track {
+                        client.synthesize(key, requestedModel, voice.id,
+                            requestedStyle, requestedText, requestedLanguage)
+                    }
                     withContext(Dispatchers.IO) { cache.save(id, wave.bytes, voice.id) }
                 }
                 player.setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
@@ -589,6 +592,7 @@ internal fun GeminiVoiceCenterScreen(
         if (working) LinearProgressIndicator(Modifier.fillMaxWidth())
         if (status.isNotBlank()) Text(status, fontSize = 11.sp, maxLines = 3,
             color = MaterialTheme.colorScheme.primary)
+        GeminiRecoveryFeedback(speechRecovery)
         if (!loaded) {
             Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()

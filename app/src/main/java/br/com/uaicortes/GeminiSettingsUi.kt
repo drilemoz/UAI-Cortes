@@ -219,6 +219,7 @@ internal fun GeminiSettingsSection() {
             shape = RoundedCornerShape(9.dp)) {
             Text(feedback, Modifier.padding(10.dp), style = MaterialTheme.typography.bodySmall)
         }
+        androidx.compose.runtime.key(keysRevision) { GeminiTranscriptionSettings(store, hasKey) }
         Surface(shape = RoundedCornerShape(10.dp),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f)) {
@@ -235,7 +236,7 @@ internal fun GeminiSettingsSection() {
                         if (privacyExpanded) "Recolher avisos" else "Expandir avisos", Modifier.size(20.dp))
                 }
                 if (privacyExpanded) Text(
-                    "Somente o texto e os parâmetros da narração são enviados ao Gemini. " +
+                    "Cada recurso envia apenas os dados indicados antes de confirmar. " +
                     "A chave está protegida no armazenamento privado, mas dispositivos comprometidos, " +
                     "a área de transferência e arquivos exportados ainda podem expô-la. " +
                     "Para distribuir um aplicativo com credenciais administradas pelo desenvolvedor, use backend seguro.",

@@ -30,7 +30,7 @@ assert 'store.save(key)' in settings and 'store.read()' in settings
 assert 'ClipDescription.EXTRA_IS_SENSITIVE' in settings
 assert 'visualTransformation = if (show) VisualTransformation.None else PasswordVisualTransformation()' in settings
 assert 'show = false' in settings
-assert 'Somente o texto e os parâmetros da narração' in settings
+assert 'Cada recurso envia apenas os dados indicados antes de confirmar.' in settings
 assert 'GeminiKeyPoolSettings(store)' in settings
 
 assert 'entries.size}/8 protegidas' in pool
