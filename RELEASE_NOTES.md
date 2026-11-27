@@ -1,3 +1,7 @@
+# Uai Cortes · versão 0.1.314 — Nitidez da logo no PiP
+
+A exportação reduz em etapas as imagens PiP no topo da composição conforme seu tamanho no quadro final. O aviso de ampliação diferencia a resolução dos clipes e das camadas adicionadas.
+
 # Uai Cortes · versão 0.1.313 — Flash-Lite nas legendas
 
 - Ao receber HTTP 404, 429 ou 503 na geração do Transcribe, tente uma vez o Gemini 3.5 Flash-Lite com a chave ativa. Não peça um modelo mais pesado, não troque o perfil e não repita uploads.

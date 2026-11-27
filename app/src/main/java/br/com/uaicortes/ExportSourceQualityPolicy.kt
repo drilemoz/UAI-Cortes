@@ -6,6 +6,6 @@ internal object ExportSourceQualityPolicy {
         val source = minSourceShortSide ?: return null
         if (source <= 0 || requestedShortSide <= source) return null
         return "Pelo menos um clipe de origem tem lado menor de ${source}px. " +
-            "Exportar em ${requestedShortSide}p amplia esse clipe, mas não recupera nitidez perdida."
+            "Você pode exportar em ${requestedShortSide}p. O clipe será ampliado. Logo e legendas adicionadas no editor podem aproveitar a resolução de saída."
     }
 }

@@ -13,6 +13,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.BitmapOverlay
 import androidx.media3.effect.StaticOverlaySettings
 import java.io.File
+import kotlin.math.roundToInt
 
 /** The top contiguous photos can be rendered after the video compositor without changing Z order. */
 internal object ImagePipExportPlan {
@@ -31,6 +32,7 @@ internal object ImagePipExportPlan {
 @OptIn(UnstableApi::class)
 internal class TimedImagePipOverlay(private val pip: Overlay, private val bitmap: Bitmap) : BitmapOverlay() {
     private val transparent = Bitmap.createBitmap(2, 2, Bitmap.Config.ARGB_8888)
+    private var artwork = bitmap
     private val hidden = StaticOverlaySettings.Builder().setAlphaScale(0f).build()
     private var placement: OverlaySettings = hidden
 
@@ -40,11 +42,16 @@ internal class TimedImagePipOverlay(private val pip: Overlay, private val bitmap
         val height = videoSize.height.coerceAtLeast(1).toFloat()
         val (wf, hf) = OverlayEditorLogic.dimensions(pip.scale,
             bitmap.width.toFloat() / bitmap.height, width / height, pip.fitMode)
+        val targetWidth = (wf * width).roundToInt().coerceIn(1, bitmap.width)
+        val targetHeight = (hf * height).roundToInt().coerceIn(1, bitmap.height)
+        if (artwork.width != targetWidth || artwork.height != targetHeight) {
+            artwork = reduceForOutput(bitmap, targetWidth, targetHeight)
+        }
         val x = OverlayEditorLogic.clampCenter(pip.x, wf)
         val y = OverlayEditorLogic.clampCenter(pip.y, hf)
         // BitmapOverlay's unscaled size is expressed in output pixels, not full-frame fractions.
         placement = StaticOverlaySettings.Builder()
-            .setScale(wf * width / bitmap.width, hf * height / bitmap.height)
+            .setScale(wf * width / artwork.width, hf * height / artwork.height)
             .setOverlayFrameAnchor(0f, 0f)
             .setBackgroundFrameAnchor(x * 2f - 1f, 1f - y * 2f)
             .setAlphaScale(pip.opacity.coerceIn(0f, 1f))
@@ -52,12 +59,27 @@ internal class TimedImagePipOverlay(private val pip: Overlay, private val bitmap
     }
 
     override fun getBitmap(presentationTimeUs: Long): Bitmap =
-        if (ImagePipExportPlan.contains(pip, presentationTimeUs)) bitmap else transparent
+        if (ImagePipExportPlan.contains(pip, presentationTimeUs)) artwork else transparent
 
     override fun getOverlaySettings(presentationTimeUs: Long): OverlaySettings =
         if (ImagePipExportPlan.contains(pip, presentationTimeUs)) placement else hidden
 
     companion object {
+        // Each filtered pass samples at most a 2:1 reduction per axis. Large reductions
+        // in a single bilinear pass can skip thin strokes and transparent edge pixels.
+        internal fun reduceForOutput(source: Bitmap, width: Int, height: Int): Bitmap {
+            require(width in 1..source.width && height in 1..source.height)
+            var current = source
+            while (current.width != width || current.height != height) {
+                val nextWidth = maxOf(width, (current.width + 1) / 2)
+                val nextHeight = maxOf(height, (current.height + 1) / 2)
+                val next = Bitmap.createScaledBitmap(current, nextWidth, nextHeight, true)
+                if (current !== source) current.recycle()
+                current = next
+            }
+            return current
+        }
+
         /** Caller decodes once on IO. Keep an immutable, CPU-backed bitmap with its original alpha. */
         fun read(context: Context, uri: Uri, maxEdge: Int): Bitmap {
             fun sampleFor(width: Int, height: Int): Int {

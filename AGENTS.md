@@ -1,3 +1,7 @@
+# Uai Cortes 0.1.314 — Nitidez da logo no PiP
+
+A exportação reduz em etapas as imagens PiP no topo da composição conforme seu tamanho no quadro final. O aviso de ampliação diferencia a resolução dos clipes e das camadas adicionadas.
+
 # v0.1.313 — Flash-Lite nas legendas
 
 - Base v0.1.312/versionCode 313. Nova v0.1.313/versionCode 314; SDK 36.
