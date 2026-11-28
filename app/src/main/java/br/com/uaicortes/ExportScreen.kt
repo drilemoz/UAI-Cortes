@@ -179,6 +179,7 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
             }.minOrNull()
         }
     }
+    var sampleStart by remember(p.id) { mutableStateOf<Long?>(null) }
     var showStutter by remember(p.id) { mutableStateOf(false) }
     var confirmCancelExport by remember {mutableStateOf(false)}
     var confirmStartExport by remember {mutableStateOf(false)}
@@ -448,19 +449,32 @@ internal fun ExportScreen(p:VideoProject, defaultQuality:Int, back:()->Unit,
                     fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis,
                     color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(5.dp))
-                Button(onClick={
-                    if(name.isNotBlank() && p.clips.isNotEmpty() && !working)
-                        confirmStartExport=true
-                },enabled=!working && name.isNotBlank() && p.clips.isNotEmpty(),
-                    modifier=Modifier.fillMaxWidth().height(48.dp),
-                    shape=UaiShapes.card,
-                    colors=ButtonDefaults.buttonColors(containerColor=Blue)) {
-                    Icon(Icons.Default.SaveAlt,contentDescription=null,modifier=Modifier.size(19.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Salvar vídeo",fontWeight=FontWeight.SemiBold)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = {
+                        previewPlayer.pause()
+                        previewPlaying = false
+                        sampleStart = if (previewExpanded) exportPreviewMs else initialPositionMs
+                    }, enabled = !working && p.durationMs > 0,
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp), shape = UaiShapes.card) {
+                        Text("Testar trecho")
+                    }
+                    Button(onClick={
+                        if(name.isNotBlank() && p.clips.isNotEmpty() && !working)
+                            confirmStartExport=true
+                    },enabled=!working && name.isNotBlank() && p.clips.isNotEmpty(),
+                        modifier=Modifier.weight(1f).heightIn(min = 48.dp),
+                        shape=UaiShapes.card,
+                        colors=ButtonDefaults.buttonColors(containerColor=Blue)) {
+                        Icon(Icons.Default.SaveAlt,contentDescription=null,modifier=Modifier.size(19.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Salvar vídeo",fontWeight=FontWeight.SemiBold)
+                    }
                 }
             }
         }
+    }
+    sampleStart?.let { start ->
+        ExportSampleDialog(p, start, quality, bitratePreset, destination, frameMode) { sampleStart = null }
     }
     if (confirmStartExport) {
         val safeName = ProjectNaming.exportName(name)

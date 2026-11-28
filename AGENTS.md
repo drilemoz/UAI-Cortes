@@ -1,3 +1,7 @@
+# Uai Cortes · versão 0.1.315 — Testar trecho
+
+Na exportação, escolha o início e a duração de 3, 4 ou 5 segundos. O teste usa o perfil selecionado e reproduz o MP4 temporário com o áudio e as camadas do intervalo.
+
 # Uai Cortes 0.1.314 — Nitidez da logo no PiP
 
 A exportação reduz em etapas as imagens PiP no topo da composição conforme seu tamanho no quadro final. O aviso de ampliação diferencia a resolução dos clipes e das camadas adicionadas.
